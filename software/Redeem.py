@@ -133,8 +133,12 @@ class Redeem:
         self.fan_3 = Fan(2)
         self.fans = {0: self.fan_1, 1:self.fan_2, 2:self.fan_3 }
 
+
         self.fan_1.setPWMFrequency(100)
          
+        for i in self.fans:
+            self.fans[i].set_value(0)
+
         # Make a queue of commands
         self.commands = Queue.Queue(20)
 

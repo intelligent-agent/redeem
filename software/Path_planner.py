@@ -126,20 +126,34 @@ class Path_planner:
             self.paths.task_done()            
             return                
         
-        for axis in path.get_axes():                       # Run through all the axes in the path    
-            #stepper = self.steppers[axis]                  # Get a handle of  the stepper                    
-            data = self._make_data(path, axis)     
-            #print "AXIS " + axis 
-            #print data       
+        for axis in path.get_axes():                       # Run through all the axes in the path                   
+            data = self._make_data(path, axis)        
             if len(data[0]) > 0:
                 if len(self.pru_data) == 0:
                     self.pru_data = zip(*data)
                 else:
-                    #self.pru_data = self._braid_data(self.pru_data, zip(*data))
-                    self._braid_data1(self.pru_data, zip(*data))
+                    
+                    #Debug code to make sure we have the right number of steps
+                    #orig1 = list(zip(*data))
+                    #orig2=list(self.pru_data)
+                    #orig_nb = len(orig1)
+                    #stepper         = self.steppers[axis]
+                    #step_pin    = stepper.get_step_pin()
 
-        #print "AFTER"
-        #print self.pru_data
+
+                    self._braid_data1(self.pru_data, zip(*data))
+                    #self.pru_data = self._braid_data(self.pru_data, zip(*data))
+
+
+                    #nb=0
+                    #for instr in self.pru_data:
+                    #    if instr[0] & step_pin:
+                    #       nb+=1
+                    #if orig_nb!=nb:
+                    #    print "Got "+str(orig_nb)+" and produced "+str(nb)
+                    #    print orig1
+                    #    print orig2
+                    #    #raise AttributeError()
 
         while len(self.pru_data) > 0:  
             data = self.pru_data[0:0x20000/8]
@@ -201,7 +215,9 @@ class Path_planner:
                 break
 
         if dly2 > 0:   
-            data1[line] =  (data1[line][0],data1[line][1],data1[line][2], data1[line][3]+dly2)        
+            #data1[line] =  (data1[line][0],data1[line][1],data1[line][2], data1[line][3]+dly2) 
+            data1.append((pin2, dir2,o2, dly2)) 
+            line += 1      
         elif dly1 > 0:
             data1[line] = (data1[line][0], data1[line][1],data1[line][2], data1[line][3]+dly1)  
             #data1.pop(line+1)

@@ -156,11 +156,8 @@ class Pru:
         
         data = struct.pack('L', len(self.pru_data))	    	# Pack the number of toggles. 
         #Then we have one byte, one byte, one 16 bit (dummy), and one 32 bits
-        #print "PRU"
-        #print self.pru_data
         data += ''.join([struct.pack('BBHL', instr[0],instr[1],instr[2],instr[3]) for instr in self.pru_data])
         data += struct.pack('L', 0)                             # Add a terminating 0, this keeps the fw waiting for a new command.
-        #print ":".join("{0:x}".format(ord(c)) for c in data)
         self.ddr_end = self.ddr_start+len(data)       
         if self.ddr_end >= self.DDR_END-16:                     # If the data is too long, wrap it around to the start
             multiple = (self.DDR_END-16-self.ddr_start)%8       # Find a multiple of 8: 4*(pins, delays)
@@ -173,7 +170,7 @@ class Pru:
 
             first = struct.pack('L', len(data[4:cut])/8)+data[4:cut]    # Update the loop count
             first += struct.pack('L', DDR_MAGIC)                        # Add the magic number to force a reset of DDR memory counter
-            #logging.warning("First batch starts from "+hex(self.ddr_start)+" to "+hex(self.ddr_start+len(first)))
+            #logging.debug("First batch starts from "+hex(self.ddr_start)+" to "+hex(self.ddr_start+len(first)))
             self.ddr_mem[self.ddr_start:self.ddr_start+len(first)] = first  # Write the first part of the data to the DDR memory.
 
             with Pru.ddr_lock: 
@@ -183,7 +180,7 @@ class Pru:
             if len(data[cut:-4]) > 0:                                 # If len(data) == 4, only the terminating zero is present..
                 second = struct.pack('L', (len(data[cut:-4])/8))+data[cut:]     # Add the number of steps in this iteration
                 self.ddr_end = self.DDR_START+len(second)           # Update the end counter
-                #logging.warning("Second batch starts from "+hex(self.DDR_START)+" to "+hex(self.ddr_end))
+                #logging.debug("Second batch starts from "+hex(self.DDR_START)+" to "+hex(self.ddr_end))
                 self.ddr_mem[self.DDR_START:self.ddr_end] = second  # Write the second half of data to the DDR memory.
                 with Pru.ddr_lock: 
                     self.ddr_mem_used += len(second)
@@ -192,7 +189,7 @@ class Pru:
             else:
                 self.ddr_end = self.DDR_START+4
                 self.ddr_mem[self.DDR_START:self.ddr_end] = struct.pack('L', 0) # Terminate the first word
-                logging.debug("Second batch skipped, 0 length")
+                #logging.debug("Second batch skipped, 0 length")
             #logging.warning("")
         else:
 
