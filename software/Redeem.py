@@ -16,6 +16,8 @@ import traceback
 import os
 import sys 
 import ConfigParser
+import signal
+import sys
 
 import profile
 
@@ -51,6 +53,7 @@ sys.excepthook = log_ex
 version = "0.7.2"
 
 print "Redeem v. "+version
+
 
 class Redeem:
     ''' Init '''
@@ -125,10 +128,10 @@ class Redeem:
         self.end_stops = {}
         self.end_stops["X1"] = EndStop("GPIO2_2", self.steppers, 1, "X1")
         self.end_stops["Y1"] = EndStop("GPIO0_14", self.steppers, 2, "Y1")
-        self.end_stops["Z1"] = EndStop("GPIO0_30", self.steppers, 3, "Z1")
+        #self.end_stops["Z1"] = EndStop("GPIO0_30", self.steppers, 3, "Z1")
         self.end_stops["Y2"] = EndStop("GPIO3_21", self.steppers, 4, "Y2")
         self.end_stops["X2"] = EndStop("GPIO0_31", self.steppers, 5, "X2")
-        self.end_stops["Z2"] = EndStop("GPIO0_4", self.steppers, 6, "Z2")
+        #self.end_stops["Z2"] = EndStop("GPIO0_4", self.steppers, 6, "Z2")
          
         # Make a queue of commands
         self.commands = Queue.Queue(20)
@@ -153,7 +156,7 @@ class Redeem:
         self.path_planner = Path_planner(self.steppers, self.current_pos)         
         self.path_planner.set_acceleration(self.acceleration) 
 
-        
+        self.running = True
 
         # Signal everything ready
         logging.info("Redeem ready")
@@ -162,7 +165,7 @@ class Redeem:
     ''' When a new gcode comes in, excute it '''
     def loop(self):
         try:
-            while True:
+            while self.running:
                 try:
                     gcode = Gcode(self.commands.get(True,1), self)
                 except Queue.Empty as e:
@@ -178,6 +181,10 @@ class Redeem:
         except Exception as e:
             logging.exception("Ooops: ")
 		
+    def exit(self):
+        self.running = False
+        self.path_planner.force_exit()
+
     ''' Execute a G-code '''
     def _execute(self, g):
         if g.code() == "G1":                                        # Move (G1 X0.1 Y40.2 F3000)                        
@@ -298,7 +305,10 @@ class Redeem:
         elif g.code() == "M109":
              self.hbp.setTargetTemperature(float(g.getValueByLetter("S")))
         elif g.code() == "M110":                                    # Reset the line number counter 
-            Gcode.line_number = 0       
+            Gcode.line_number = 0      
+        elif g.code() == "M112":                                    # Emergency stop
+            #Reset PRU
+            pass              
         elif g.code() == "M114": 
              g.setAnswer("ok C: "+' '.join('%s:%s' % i for i in self.current_pos.iteritems()))
         elif g.code() == "M130":                                    # Set PID P-value, Format (M130 P0 S8.0)
@@ -331,5 +341,14 @@ class Redeem:
             logging.warning("Unknown command: "+g.message)
    
 r = Redeem()
+
+
+def signal_handler(signal, frame):
+        print 'Cleaning up...'
+        r.exit()
+        sys.exit(0)
+
+signal.signal(signal.SIGINT, signal_handler)
+
 r.loop()
 

@@ -189,6 +189,11 @@ class Pru:
         self.old_events = self.new_events
         return ret
 
+    def force_exit(self):
+        self.running = False  
+        pypruss.pru_disable(0)                                  # Disable PRU 0, this is already done by the firmware
+        pypruss.exit()                                          # Exit, don't know what this does. 
+
     ''' Close shit up '''
     def join(self):
         logging.debug("joining")

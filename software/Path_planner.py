@@ -99,7 +99,7 @@ class Path_planner:
                 logging.debug("Long path segment is cut. remaining: "+str(len(self.pru_data)))       
             while not self.pru.has_capacity_for(len(data)*8):          
                 #logging.debug("Pru full")              
-                time.sleep(1)               
+                time.sleep(0.5)               
             self.pru.add_data(zip(*data))
             self.pru.commit_data()                            # Commit data to ddr
         
@@ -158,6 +158,10 @@ class Path_planner:
         self.pru.join()
         self.t.join()
 
+
+    def force_exit(self):
+        self.running = False
+        self.pru.force_exit()
 
     ''' Make the data for the PRU or steppers '''
     def _make_data(self, path, axis):  
