@@ -245,8 +245,13 @@ class Redeem:
             Stepper.commit() 
         elif g.code() == "M84":                                     # Disable all steppers           
             self.path_planner.wait_until_done()
-            for name, stepper in self.steppers.iteritems():
-            	stepper.setDisabled()
+            if g.numTokens() == 0:
+                g.setTokens(["X", "Y", "Z", "E", "H"])         # If no token is present, do this for all
+                                             # All steppers 
+            for i in range(g.numTokens()):                          # Run through all tokens
+                axis = g.tokenLetter(i)                             # Get the axis, X, Y, Z or E
+                self.steppers[axis].setDisabled()
+
             Stepper.commit()           
         elif g.code() == "M92":                                     # M92: Set axis_steps_per_unit
             for i in range(g.numTokens()):                          # Run through all tokens
@@ -281,7 +286,7 @@ class Redeem:
                 fan = self.fans[int(g.getValueByLetter("P"))]
                 fan.set_value(float(g.getValueByLetter("S"))/255.0)	# According to reprap wiki, the number is 0..255
             else: # if there is no fan-number present, do it for the first fan
-                self.fan_1.set_value(float(g.tokenValue(0))/255.0)	
+                self.fan_1.set_value(float(g.tokenValue(0) if g.numTokens() > 0 else 255)/255.0)	
         elif g.code() == "M107":                                    # Fan on
             if g.hasLetter("P"):
                 fan = self.fans[int(g.getValueByLetter("P"))]
