@@ -20,4 +20,5 @@ Features include:
 -   Microstepping individually programmable for each SMD from 1 to 32.  
 -   X, Y and Ext 1 SMDs wired to PRUICSS for hard real time operation.  
 -   Option for stackable LCD cape.  
-
+  
+Blog: http://hipstercircuits.com
