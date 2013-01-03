@@ -1,2 +1,5 @@
-Add an aluminum electrolyt cap: 
-http://www.digikey.com/product-detail/en/EEE-1HA101UP/PCE3917CT-ND/766293
+ - Add an aluminum electrolyt cap: http://www.digikey.com/product-detail/en/EEE-1HA101UP/PCE3917CT-ND/766293
+ - Add one more 0.1uF ceramic cap near VMM2. 
+ - Consider increasing the width of the VMM tracks. 
+ - Add more thermal vias for the SMDs
+ - Consider adding a coil for noise suppression near the DAC. 
