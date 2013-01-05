@@ -1,0 +1,58 @@
+SPI 2.1 does not work out of the box, perhaps it can be enabled in the 
+kernel. 
+Thus the spi1_cs1 pin must be toggled manually: 
+nCS1 = p9_42 = GPIO0_7 = ecap0_
+echo 0x7 > /sys/kernel/debug/omap_mux/ecap0_in_pwm0_out
+echo 7 > /sys/class/gpio/export
+echo out >  /sys/class/gpio/gpio7/direction
+echo 1 > /sys/class/gpio/gpio7/value
+echo 0 > /sys/class/gpio/gpio7/value
+
+
+For manually stepping SMD X: 
+DirX   = pin11 = GPIO1_13 = gpmc_ad13
+StepX  = pin12 = GPIO1_12 = gpmc_ad12
+FaultX = pin13 = GPIO0_23 = gpmc_ad9 
+
+echo 44 > /sys/class/gpio/export
+echo 45 > /sys/class/gpio/export
+echo 23 > /sys/class/gpio/export
+
+Set the nFault pin to input, disable pullup 
+echo 0x2F > /sys/kernel/debug/omap_mux/gpmc_ad9
+
+Both should be muxed to mode 7 on boot. 
+
+echo out > /sys/class/gpio/gpio44/direction 
+echo out > /sys/class/gpio/gpio45/direction 
+
+Value for SMD: 
+D0 = DECAY   = X
+D1 = MODE0   = X
+D2 = MODE1   = X
+D3 = MODE2 	 = X
+D4 = nRESET  = 1
+D5 = nSLEEP  = 1
+D6 = nENABLE = 0
+D7 = 		 = 0
+Trying 0x30..
+
+
+Configuration of EEPROM
+i2cset -y 3 0x50 0x00 0xaa
+i2cset -y 3 0x50 0x01 0x55 
+i2cset -y 3 0x50 0x02 0x33
+i2cset -y 3 0x50 0x03 0xEE
+
+# Set the EEPROM revision to A1
+i2cset -y 3 0x50 0x04 0x41
+i2cset -y 3 0x50 0x05 0x31
+
+
+# DAC control
+DAC is located on spi2.0. 
+Use mode 1 (CPOL = 0, CPHA = 1).
+for 16bit words, the bytes have changed position??
+ 
+
+

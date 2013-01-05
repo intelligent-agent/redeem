@@ -1,5 +1,14 @@
- - Add an aluminum electrolyt cap: http://www.digikey.com/product-detail/en/EEE-1HA101UP/PCE3917CT-ND/766293
- - Add one more 0.1uF ceramic cap near VMM2. 
+Todo list for rev. 0
+ - Add an aluminum electrolyt cap to limit LC spikes: http://www.digikey.com/product-detail/en/EEE-1HA101UP/PCE3917CT-ND/766293
+ - Add one more 0.1uF ceramic cap near VMM2.
+ - Switch places for the caps near Y, Z, Ext1, Ext2 
  - Consider increasing the width of the VMM tracks. 
  - Add more thermal vias for the SMDs
  - Consider adding a coil for noise suppression near the DAC. 
+ - Switch the M24C16 EEPROM out with M24C256 to allow for proper addressing, 
+ - Switch the 3-switch dip with a two-switch or jumpers. 
+ - Add 5.6K pullups on all four i2c lines
+ - connect p9_1 to ground.
+ - Change the X2 connector, it does not fit ATX power supplies
+ - Move the MOSFETs further apart, consider a way to keep them separated.. 
+
