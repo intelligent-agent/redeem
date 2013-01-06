@@ -1,4 +1,4 @@
-Todo list for rev. 0
+Todo list going from rev. 0 to rev. 1
  - Add an aluminum electrolyt cap to limit LC spikes: http://www.digikey.com/product-detail/en/EEE-1HA101UP/PCE3917CT-ND/766293
  - Add one more 0.1uF ceramic cap near VMM2.
  - Switch places for the caps near Y, Z, Ext1, Ext2 
@@ -12,4 +12,5 @@ Todo list for rev. 0
  - Change the X2 connector, it does not fit ATX power supplies
  - Move the MOSFETs further apart, consider a way to keep them separated.. 
  - Consider placing the PWM circuit on the I2C2-bus with the EEPROM. 
+ - Place the two heaters on the PWM chip output instead of on P9_14 and P9_16 (which is not even PWM outputs)
 
