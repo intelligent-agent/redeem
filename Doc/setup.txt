@@ -39,20 +39,46 @@ Trying 0x30..
 
 
 Configuration of EEPROM
-i2cset -y 3 0x50 0x00 0xaa
-i2cset -y 3 0x50 0x01 0x55 
-i2cset -y 3 0x50 0x02 0x33
-i2cset -y 3 0x50 0x03 0xEE
-
-# Set the EEPROM revision to A1
-i2cset -y 3 0x50 0x04 0x41
-i2cset -y 3 0x50 0x05 0x31
+=======================
+Use the mkeeprom utility..
 
 
-# DAC control
+DAC control
+=============
 DAC is located on spi2.0. 
 Use mode 1 (CPOL = 0, CPHA = 1).
-for 16bit words, the bytes have changed position??
- 
+for 16bit words, the bytes have changed position?? - Instead, go for 8-bit words
+See scripts/dac.py for testing
+
+# Heaters
+=========
+Heater2 = Ext1 = p8_16 = GPIO1_14 = gpmc_ad14
+To turn on: 
+echo 0x07 >  /sys/kernel/debug/omap_mux/gpmc_ad14
+echo 46 > /sys/class/gpio/export
+echo out > /sys/class/gpio/gpio46/direction
+echo 1 > /sys/class/gpio/gpio46/value
+
+Heater1 = Ext2 = p8_14 = GPIO0_26 = gpmc_ad10
+echo 0x07 > /sys/kernel/debug/omap_mux/gpmc_ad10
+echo 26 > /sys/class/gpio/export
+echo out > /sys/class/gpio/gpio26/direction
+echo 1 > /sys/class/gpio/gpio26/value 
+
+
+PCA9685PW
+=========
+I2C2 connected together with I2C1 for now. 
+Adress: 0x70
+NIF5002 are N-channel MOSFETs, thus use INVRT = 0, OUTDR = 1
+MODE2 (0x01) bit 4 = INVRT = 0, bit 2 = 1
+i2cset -y 3 0x70 0x01 0x03
+
+i2cset -y 3 0x70 0x01 0x02 # Read mode1
+
+
+I2C for python
+==============
+
 
 

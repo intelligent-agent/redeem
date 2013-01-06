@@ -7,8 +7,9 @@ Todo list for rev. 0
  - Consider adding a coil for noise suppression near the DAC. 
  - Switch the M24C16 EEPROM out with M24C256 to allow for proper addressing, 
  - Switch the 3-switch dip with a two-switch or jumpers. 
- - Add 5.6K pullups on all four i2c lines
+ - Consider adding 5.6K pullups on all four i2c lines, (might not be necessary due to pull-ups on beaglebone)
  - connect p9_1 to ground.
  - Change the X2 connector, it does not fit ATX power supplies
  - Move the MOSFETs further apart, consider a way to keep them separated.. 
+ - Consider placing the PWM circuit on the I2C2-bus with the EEPROM. 
 
