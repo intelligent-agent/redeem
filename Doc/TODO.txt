@@ -14,3 +14,5 @@ Todo list going from rev. 0 to rev. 1
  - Consider placing the PWM circuit on the I2C2-bus with the EEPROM. 
  - Place the two heaters on the PWM chip output instead of on P9_14 and P9_16 (which is not even PWM outputs)
  - Levelshift the PWM signals to the heaters with comparator/op-amp (296-9544-1-ND)
+ - Move Fault_x to GPIO1_7 = P8_4, the current pin is a PWM..
+
