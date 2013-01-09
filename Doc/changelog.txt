@@ -1,8 +1,15 @@
 Changelog
 =========
  - Changed SCL and SDA for PCA9685 to I2C2 (i2c-3), the same as the EEPROM
- - Changed the PWM line of Heater_1 and Heater_2 to the PCA9685-chip
+ - Changed the PWM line of Heater_ext_1 to P9_14
+ - Changed the PWM line of Heater_HBP to P9_16
+ - Changed the PWM line of Heater_ext_2 to P8_13
+ - Changed the Fault_x pin to P8_4
  - Changed the 3 pin dip switch for a 2-pin dip switch
- - Moved X10 further out to not be in conflict with the 5mm jack on the BB. 
- - Moved the "Fans" silkscreen
+ - Moved X10, X11, X12 out on a lim.
+ - Added three more endstops
  - Added comparator LM339 as a driver (in progress)
+ - Moved the MOSFETs further apart
+ - Made a separate ground domain (AGND) for the thermistors
+
+
