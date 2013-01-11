@@ -2,7 +2,7 @@
 
 # Import PyBBIO library:
 from bbio import *
-from pylab import *
+import numpy as np
 
 therm1 = AIN6 # pin 37 on header P9
 
@@ -75,37 +75,27 @@ temp_chart = map(list, zip(*temp_chart))
 
 # Return the temperature nearest to the resistor value
 def resistance_to_degrees(resistor_val):
-    idx = (np.abs(array(temp_chart[1])-resistor_val)).argmin()
+    idx = (np.abs(np.array(temp_chart[1])-resistor_val)).argmin()
     return temp_chart[0][idx]
 
 # Convert the voltage to a resistance value
 def voltage_to_resistance(v_sense):
-    return  4700.0*((1.8/v_sense)-1.0)
+    return  4700.0/((1.8/v_sense)-1.0)
 
 # Read thermistor value and print the result
 def readThermistor():
     # Get the ADC values
-    val1 = analogRead(therm1)
-    # Convert to voltage
-    voltage1 = inVolts(val1)
-    # Convert to resistance
-    res_val = voltage_to_resistance(voltage1)
-    # COnvert tot temperature
-    temperature = resistance_to_degrees(res_val)
-    print " AIN6 ADC value: %i - voltage: %fv - thermistor res: %f - Temperature: %f deg." % (val1, voltage1, rev_val, temperature)
-    delay(500)
+    adc_val = 0
+    for i in range(1000):
+        adc_val+= analogRead(therm1)
+    adc_val /= 1000.0
+    voltage = inVolts(adc_val)                 # Convert to voltage
+    res_val = voltage_to_resistance(voltage)    # Convert to resistance    
+    temperature = resistance_to_degrees(res_val) # Convert to degrees
+    print " AIN6 ADC value: %i - voltage: %fv - thermistor res: %f - Temperature: %f deg." % (adc_val, voltage, res_val, temperature)
+    #delay(500)
 
 # Start the loop:
 while 1:
     readThermistor()
 
-# Make a test-case: 
-#res_val = np.random.random()*300.0
-#print "When the resistor val is "+str(res_val)+", the temperature is "+str(resistance_to_degrees(res_val))
-
-
-
-#xlabel("Degrees")
-#ylabel("Resistance")
-#plot(temp_chart[0], temp_chart[1])
-#show()
