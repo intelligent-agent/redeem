@@ -1,15 +1,20 @@
 Changelog
 =========
- - Changed SCL and SDA for PCA9685 to I2C2 (i2c-3), the same as the EEPROM
  - Changed the PWM line of Heater_ext_1 to P9_14
  - Changed the PWM line of Heater_HBP to P9_16
  - Changed the PWM line of Heater_ext_2 to P8_13
  - Changed the Fault_x pin to P8_4
  - Changed the 3 pin dip switch for a 2-pin dip switch
- - Moved X10, X11, X12 out on a lim.
- - Added three more endstops
- - Added comparator LM339 as a driver (in progress)
+ - Added a DNP pull-up on the CAT24C256 EEPROM memory.
+ - Changed SCL and SDA for PCA9685 to I2C2 (i2c-3), the same as the EEPROM
+ - Moved X10, X11, X12 out on lims.
+ - Added three more end stops.
+ - Added comparator LM339 as a driver
  - Moved the MOSFETs further apart
  - Made a separate ground domain (AGND) for the thermistors
-
+ - Added three connectors for servos - should not be populated
+ - Switched to 2x23 pins on both sides
+ - Added a 100uF cap to compensate LC spikes
+ - Switched sides for the MOSFET drivers (for easier debugging)
+ 
 
