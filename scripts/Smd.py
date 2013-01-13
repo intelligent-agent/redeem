@@ -16,11 +16,11 @@ from bbio import *
 # init the SPI for the DAC
 spi2_0 = SPI(2, 0)
 spi2_0.bpw = 8
-spi2_0.mode = 0
+spi2_0.mode = 1
 # Init the SPI for the serial to parallel
 spi2_1 = SPI(2, 1)
 spi2_1.bpw = 8
-spi2_1.mode = 1
+spi2_1.mode = 0
 
 class SMD:
 
@@ -31,16 +31,16 @@ class SMD:
 		# First, update the serial to parallel reg
 		for smd in SMD.all_smds:
 			print "comitting to SMD: "+hex(smd.getState())
-			spi.writebytes([smd.getState()])
+			spi2_1.writebytes([smd.getState()])
 
 	def __init__(self, stepPin, dirPin, faultPin, dac_channel):
 		self.dac_channel = dac_channel # Which channel on the dac is connected to this SMD
 		self.stepPin  = stepPin
 		self.dirPin   = dirPin
 		self.faultPin = faultPin
-		#pinMode(stepPin,   0, 0) # Output, no pull up
-		#pinMode(dirPin,    0, 0) # Output, no pull up
-		#pinMode(faultPin,  1, 0) # Input, no pull up
+		pinMode(stepPin,   0, 0) # Output, no pull up
+		pinMode(dirPin,    0, 0) # Output, no pull up
+		pinMode(faultPin,  1, 0) # Input, no pull up
 		self.state 		= 0x70   # The state of the inputs
 		self.dacvalue 	= 0x00   # The voltage value on the VREF
 		

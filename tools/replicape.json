@@ -1,0 +1,286 @@
+{
+ "Replicape.eeprom": {
+    "type": "cape",
+    "header": "aa5533ee",
+    "formatRev": "0",
+    "boardName": "Replicape 3D printer cape",
+    "version": "0",
+    "manufacturer": "Elias Bakken",
+    "partNumber": "BB-REPLICAPE-01",
+    "numPins": 18,
+    "serialNumber": "00000000001",
+    "currentVDD_3V3EXP": 40,
+    "currentVDD_5V": 0,
+    "currentSYS_5V": 0,
+    "DCSupplied": 0,
+    "mux": {
+      "P9_12": {
+        "used": "used",
+        "direction": "in",
+        "pullup": "pullup",
+        "rx": "disabled",
+        "mode": 7,
+        "function": "gpio1_28"
+      },     
+ 	  "P9_14": {
+        "used": "used",
+        "direction": "out",
+        "pullup": "pulldown",
+        "rx": "disabled",
+        "mode": 6,
+        "function": "ehrpwm1A_mux1"
+      },	
+      "P9_15": {
+        "used": "used",
+        "direction": "in",
+        "pullup": "pullup",
+        "rx": "disabled",
+        "mode": 7,
+        "function": "gpio1_16"
+      },
+      "P9_16": {
+        "used": "used",
+        "direction": "out",
+        "pullup": "pulldown",
+        "rx": "disabled",
+        "mode": 6,
+        "function": "ehrpwm1B_mux1"
+      },	
+
+      "P9_23": {
+        "used": "used",
+        "direction": "in",
+        "pullup": "pullup",
+        "rx": "disabled",
+        "mode": 6,
+        "function": "ehrpwm1B_mux1"
+      },
+      "P9_25": {
+        "used": "used",
+        "direction": "out",
+        "pullup": "pullup",
+        "rx": "disabled",
+        "mode": 7,
+        "function": "gpio3_21"
+      },
+      "P9_27": {
+        "used": "used",
+        "direction": "out",
+        "pullup": "pullup",
+        "rx": "disabled",
+        "mode": 7,
+        "function": "gpio3_19"
+      },
+      "P9_28": {
+        "used": "used",
+        "direction": "out",
+		"slew": "fast",
+        "pullup": "pullup",
+        "rx": "disabled",
+        "mode": 3,
+        "function": "spi1_cs0"
+      },
+      "P9_29": {
+        "used": "used",
+        "direction": "in",
+		"slew": "fast",
+        "pullup": "pullup",
+        "rx": "disabled",
+        "mode": 3,
+        "function": "spi1_d0"
+      },
+      "P9_30": {
+        "used": "used",
+        "direction": "out",
+        "slew": "fast",
+        "rx": "disabled",
+        "pullup": "pulldown",
+        "mode": 3,
+        "function": "spi1_d1"
+      },
+      "P9_31": {
+        "used": "used",
+        "direction": "out",
+        "slew": "fast",
+        "rx": "disabled",
+        "pullup": "pulldown",
+        "mode": 3,
+        "function": "spi1_sclk"
+      },
+      "P9_42": {
+        "used": "used",
+        "direction": "out",
+        "slew": "fast",
+        "rx": "disabled",
+        "pullup": "pulldown",
+        "mode": 2,
+        "function": "spi1_cs1"
+	  },
+
+
+
+      "P8_3": {
+        "used": "used",
+        "direction": "in",
+        "slew": "fast",
+        "rx": "disabled",
+        "pullup": "pullup",
+        "mode": 7,
+        "function": "gpio1_6"
+	  },
+      "P8_4": {
+        "used": "used",
+        "direction": "in",
+        "slew": "fast",
+        "rx": "disabled",
+        "pullup": "disabled",
+        "mode": 7,
+        "function": "gpio1_7"
+	  },
+      "P8_5": {
+        "used": "used",
+        "direction": "out",
+        "slew": "fast",
+        "rx": "disabled",
+        "pullup": "pullup",
+        "mode": 7,
+        "function": "gpio1_2"
+	  },
+      "P8_6": {
+        "used": "used",
+        "direction": "in",
+        "slew": "fast",
+        "rx": "disabled",
+        "pullup": "disabled",
+        "mode": 7,
+        "function": "gpio1_3"
+	  },
+      "P8_11": {
+        "used": "used",
+        "direction": "out",
+        "slew": "fast",
+        "rx": "disabled",
+        "pullup": "disabled",
+        "mode": 7,
+        "function": "gpio1_13"
+	  },
+      "P8_12": {
+        "used": "used",
+        "direction": "out",
+        "slew": "fast",
+        "rx": "disabled",
+        "pullup": "disabled",
+        "mode": 7,
+        "function": "gpio1_12"
+	  },
+      "P8_13": {
+        "used": "used",
+        "direction": "out",
+        "slew": "fast",
+        "rx": "disabled",
+        "pullup": "disabled",
+        "mode": 4,
+        "function": "ehrpwm2B"
+	  },
+      "P8_14": {
+        "used": "used",
+        "direction": "in",
+        "slew": "fast",
+        "rx": "disabled",
+        "pullup": "disabled",
+        "mode": 7,
+        "function": "gpio0_26"
+	  },
+      "P8_15": {
+        "used": "used",
+        "direction": "in",
+        "slew": "fast",
+        "rx": "disabled",
+        "pullup": "disabled",
+        "mode": 7,
+        "function": "gpio1_15"
+	  },
+      "P8_16": {
+        "used": "used",
+        "direction": "in",
+        "slew": "fast",
+        "rx": "disabled",
+        "pullup": "disabled",
+        "mode": 7,
+        "function": "gpio1_14"
+	  },
+      "P8_17": {
+        "used": "used",
+        "direction": "in",
+        "slew": "fast",
+        "rx": "disabled",
+        "pullup": "disabled",
+        "mode": 7,
+        "function": "gpio0_27"
+	  },
+      "P8_18": {
+        "used": "used",
+        "direction": "in",
+        "slew": "fast",
+        "rx": "disabled",
+        "pullup": "disabled",
+        "mode": 7,
+        "function": "gpio2_1"
+	  },
+      "P8_19": {
+        "used": "used",
+        "direction": "out",
+        "slew": "fast",
+        "rx": "disabled",
+        "pullup": "disabled",
+        "mode": 4,
+        "function": "ehrpwm2A"
+	  },
+      "P8_20": {
+        "used": "used",
+        "direction": "out",
+        "slew": "fast",
+        "rx": "disabled",
+        "pullup": "disabled",
+        "mode": 7,
+        "function": "gpio1_31"
+	  },
+      "P8_21": {
+        "used": "used",
+        "direction": "out",
+        "slew": "fast",
+        "rx": "disabled",
+        "pullup": "disabled",
+        "mode": 7,
+        "function": "gpio1_30"
+	  },
+      "P8_22": {
+        "used": "used",
+        "direction": "in",
+        "slew": "fast",
+        "rx": "disabled",
+        "pullup": "disabled",
+        "mode": 7,
+        "function": "gpio1_5"
+	  },
+      "P8_24": {
+        "used": "used",
+        "direction": "out",
+        "slew": "fast",
+        "rx": "disabled",
+        "pullup": "disabled",
+        "mode": 7,
+        "function": "gpio1_1"
+	  },
+      "P8_26": {
+        "used": "used",
+        "direction": "in",
+        "slew": "fast",
+        "rx": "disabled",
+        "pullup": "disabled",
+        "mode": 7,
+        "function": "gpio1_29"
+	  }
+    }
+  }
+}
