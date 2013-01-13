@@ -13,13 +13,14 @@ D7 = 		 = 0
 from spi import SPI
 from bbio import *
 
-# init the SPI
-spi = SPI(2, 0)
-spi.bpw = 8
-
-# init the cs1-pin
-pinMode(GPIO0_7, 0, 0)
-digitalWrite(GPIO0_7, 0)
+# init the SPI for the DAC
+spi2_0 = SPI(2, 0)
+spi2_0.bpw = 8
+spi2_0.mode = 0
+# Init the SPI for the serial to parallel
+spi2_1 = SPI(2, 1)
+spi2_1.bpw = 8
+spi2_1.mode = 1
 
 class SMD:
 
@@ -27,24 +28,19 @@ class SMD:
 
 	@staticmethod
 	def commit():
-		print "SMD commit"
 		# First, update the serial to parallel reg
-		spi.mode = 0
 		for smd in SMD.all_smds:
 			print "comitting to SMD: "+hex(smd.getState())
 			spi.writebytes([smd.getState()])
-		# toggle the cs1-pin
-		digitalWrite(GPIO0_7, 0)
-		digitalWrite(GPIO0_7, 1)
 
 	def __init__(self, stepPin, dirPin, faultPin, dac_channel):
 		self.dac_channel = dac_channel # Which channel on the dac is connected to this SMD
 		self.stepPin  = stepPin
 		self.dirPin   = dirPin
 		self.faultPin = faultPin
-		pinMode(stepPin,   0, 0) # Output, no pull up
-		pinMode(dirPin,    0, 0) # Output, no pull up
-		pinMode(faultPin,  1, 0) # Input, no pull up
+		#pinMode(stepPin,   0, 0) # Output, no pull up
+		#pinMode(dirPin,    0, 0) # Output, no pull up
+		#pinMode(faultPin,  1, 0) # Input, no pull up
 		self.state 		= 0x70   # The state of the inputs
 		self.dacvalue 	= 0x00   # The voltage value on the VREF
 		
@@ -93,8 +89,13 @@ class SMD:
 		vRef = 3.3 # Voltage reference on the DAC
 		rSense = 0.1 # Resistance for the 
 		vOut = iChop*5.0*rSense # Calculated voltage out from the DAC (See page 9 in the datasheet for the DAC)
+
 		self.dacval = int((vOut*256.0)/vRef)
-		self.update()
+		byte1 = ((self.dacval & 0xF0)>>4) + (self.dac_channel<<4)
+		byte2 = (self.dacval & 0x0F)<<4
+		spi2_0.writebytes([byte1, byte2])
+		# Update all channels
+		spi2_0.writebytes([0xA0, 0xFF]) # TODO: Change to only this channel (1<<dac_channel) ?
 
 	# Set the step-delay
 	def setDelay(self, delay):
@@ -114,12 +115,6 @@ class SMD:
 	def update(self):
 		# Commit the serial to parallel
 		SMD.commit()
-		# Update the DAC
-		spi.mode = 1
-		byte1 = ((self.dacval & 0xF0)>>4) + (self.dac_channel<<4)
-		byte2 = (self.dacval & 0x0F)<<4
-		spi.writebytes([byte1, byte2])
-		# Update all channels
-		spi.writebytes([0xA0, 0xFF]) # TODO: Change to only this channel (1<<dac_channel) ?
+		
 			
-
+	
