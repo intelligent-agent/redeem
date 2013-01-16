@@ -33,30 +33,43 @@ class SMD:
 			print "comitting to SMD: "+hex(smd.getState())
 			spi2_1.writebytes([smd.getState()])
 
-	def __init__(self, stepPin, dirPin, faultPin, dac_channel):
+	def __init__(self, stepPin, dirPin, faultPin, dac_channel, name):
 		self.dac_channel = dac_channel # Which channel on the dac is connected to this SMD
 		self.stepPin  = stepPin
 		self.dirPin   = dirPin
 		self.faultPin = faultPin
+		self.name = name
 		pinMode(stepPin,   0, 0) # Output, no pull up
 		pinMode(dirPin,    0, 0) # Output, no pull up
 		pinMode(faultPin,  1, 0) # Input, no pull up
 		self.state 		= 0x70   # The state of the inputs
 		self.dacvalue 	= 0x00   # The voltage value on the VREF
 		
-		self.setDelay(10)
+		self.setDelay(1)
+		self.setMMPrstep(0.1)
 		SMD.all_smds.append(self) # Add to list of smds
 						
-	# Sets the SMD enabled
+	''' Sets the SMD enabled '''
 	def setEnabled(self):
 		print "Enabling SMD"
 		self.state &= ~(1<<6)
 		self.update()
-		
-	# Sets the SMD disabled
+	
+	''' Sets the SMD disabled '''
 	def setDisabled(self):
 		self.state |= (1<<6)
 		self.update()
+
+	''' Move a certain distance '''
+	def move(self, mm):
+		if mm > 0:
+			digitalWrite(self.dirPin, 1)
+		else:
+			digitalWrite(self.dirPin, 0)
+
+		self.step(int(abs(mm)/self.mmPrStep))
+
+
 	
 	'''Logic high to enable device, logic low to enter
 	low-power sleep mode. Internal pulldown.'''
@@ -101,20 +114,31 @@ class SMD:
 	def setDelay(self, delay):
 		self.stepDelay = delay
 
-	# Toggle the "step" pin n times. 
+	''' Toggle the "step" pin n times. '''
 	def step(self, steps):
+		print self.name+"Stepping %d times "%steps 
 		for i in range(steps):
 			toggle(self.stepPin)
 			delay(self.stepDelay)
 
-	# Returns the current state
+	''' Returns the current state '''
 	def getState(self):
 		return self.state
 
-	# Commits the changes	
+	''' Commits the changes	'''
 	def update(self):
 		# Commit the serial to parallel
 		SMD.commit()
 		
+	''' Set the feed rate '''
+	def setFeedRate(self, feed_rate):
+		self.feed_rate = feed_rate
+
+	''' Sets the number of mm the stepper moves pr step. 
+		This must be measured and calibrated '''
+	def setMMPrstep(self, mmPrStep):
+		self.mmPrStep = mmPrStep
 			
+
+	
 	

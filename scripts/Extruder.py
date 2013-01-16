@@ -79,7 +79,7 @@ class Extruder(Heater):
         self.smd = smd
         self.enable()
         # Should be read from file
-        self.setPIDvalues(P=0.01, I=0, D=0)
+        self.setPIDvalues(P=0.1, I=0, D=0)
 
 ''' Subclass for heater, this is a Heated build platform '''
 class HBP(Heater):
@@ -87,7 +87,7 @@ class HBP(Heater):
         Heater.__init__(self, thermistor, mosfet, "HBP")
         self.enable()
         # Should be read from file
-        self.setPIDvalues(P=0.05, I=0, D=0)
+        self.setPIDvalues(P=0.1, I=0, D=0)
 
 	
 

@@ -17,3 +17,5 @@ Todo list going from rev. 0 to rev. 1
  + Move Fault_x to GPIO1_7 = P8_4, the current pin is a PWM..
  - Add a decoupeling cap to the levelshifter
  - Add lables to the SMD outputs (A1, A2, B1, B2)
+ - Switch channels for ADC on Ext1 and Ext2?
+ - Consider adding a voltage regulator to the 5V PSU. It gives too much voltage so the board will not start!
