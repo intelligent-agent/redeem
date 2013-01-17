@@ -35,8 +35,8 @@ class Fan:
 
 	# Set the mount of "on"-time
 	def setValue(self, value):
-		off = min(1, value)
-		off = int(cycle*4095)
+		off = min(1.0, value)
+		off = int(value*4095)
 		bytes = [0x00, 0x00, off & 0xFF, off >> 8]
 		pwm.writeList(0x06+(4*self.channel), bytes)
 

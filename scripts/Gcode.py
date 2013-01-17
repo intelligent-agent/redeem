@@ -13,46 +13,91 @@ You can use and change this, but keep this heading :)
 
 # A command received from pronterface or whatever
 class Gcode:
-	def __init__(self, message, printer):
-		self.p = printer		
-		# Parse 
-		self.tokens = message.split(" ")
-		self.type = self.tokens[0][0] # M or G
-		self.code = int(self.tokens[0][1::]) # gcode number
-		self.debug = 0
-		self.answer = None
 
-		if self.debug > 1:
-			print "Type: '"+self.type+"'"
-			print "Code: '"+str(self.code)+"'"
+    line_number = 0
+    ''' Init; parse the token '''
+    def __init__(self, message, printer):
+        self.message = message
+        self.p = printer		
 
-	# Execute and return the answer
-	def execute(self):
-		if self.type == "G": 
-			if self.code == 1: # Move (G1 X0.1 F3000)
-				axis = self.tokens[1][0] 
-				print "Axis is '"+axis+"'"
-				mm = float(self.tokens[1][1::])
-				feed_rate = int(self.tokens[2][1::])
-				self.p.move(axis, mm, feed_rate)
-			if self.code == 90: # Absolute positioning
-				self.p.setPositionAbsolute()
-			if self.code == 91: # Relative positioning 
-				self.p.setPositionRelative()				
-		if self.type == "M":
-			if self.code == 84: 
-				self.p.disableAllSteppers()
-			if self.code == 104: # Extruder temperature
-				self.p.ext1.setTargetTemperature(float(self.tokens[1][1::]))
-			if self.code == 105: # Get Temperature
-				self.answer = "T:"+str(int(self.p.ext1.getTemperature()))+" B:"+str(int(self.p.hbp.getTemperature()))
-			if self.code == 140: # Bed temperature
-				self.p.hbp .setTargetTemperature(float(self.tokens[1][1::]))
-			
-	# Is there an answer?
-	def hasAnswer(self):
-		return True if self.answer != None else False
+        self.tokens = message.split(" ")
+        if self.tokens[0][0] == "N":                                # Ok, checksum
+            line_num = message.split(" ")[0][1::]
+            cmd = message.split("*")[0]                             # Command
+            csc = message.split("*")[1]                             # Command to compare with
+            if int(csc) != self.getCS(cmd):
+                print "CRC error!"            
+            message =  message.split("*")[0][(1+len(line_num)+1)::] # Remove crc stuff
+            self.line_number = int(line_num)                        # Set the line number
+            Gcode.line_number += 1                                  # Increase the global counter 
+                    
+        # Parse 
+        self.tokens = message.split(" ")    
+        self.gcode = self.tokens.pop(0) # gcode number
+        self.debug = 2
+        self.answer = "ok"
 
-	# Get the result of the execution
-	def getAnswer(self):
-		return self.answer
+        if self.debug > 1:           
+            print "Code: '"+str(self.gcode)+"'"
+
+    ''' The machinecode '''
+    def code(self):
+        return self.gcode
+
+    ''' Get the letter '''
+    def tokenLetter(self, index):
+        return self.tokens[index][0]
+
+    ''' Get the value aafter the letter '''
+    def tokenValue(self, index):
+        return self.tokens[index][1::]
+     
+    ''' Return the tokens '''
+    def tokens(self):
+        return self.tokens   
+
+    ''' Set the tokens '''
+    def setTokens(self, tokens):
+        self.tokens = tokens
+
+    ''' Get a token value by the token letter '''
+    def getValueByLetter(self, letter):
+        for token in self.tokens:
+            if token[0] == letter:
+                return token[1::]
+        return None
+
+    ''' Remove a token by it's letter '''
+    def removeTokenByLetter(self, letter):
+         for i, token in enumerate(self.tokens):
+            if token[0] == letter:
+                print token+" "+str(i)  
+                self.tokens.pop(i)
+
+    def numTokens(self):
+        return len(self.tokens)
+
+    ''' Get the tokens '''
+    def getTokens(self):
+        return self.tokens
+
+    ''' Compute a Checksum of the letters in the command '''
+    def getCS(self, cmd):
+        cs = 0
+        for c in cmd:            
+            cs = cs ^ ord(c)
+        return cs
+
+    ''' Get the result of the execution '''
+    def getAnswer(self):
+        return self.answer
+    
+    ''' Set a new answer other than 'ok'  '''
+    def setAnswer(self, answer):
+        self.answer = answer
+
+
+
+
+
+
