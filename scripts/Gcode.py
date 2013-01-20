@@ -34,7 +34,10 @@ class Gcode:
         # Parse 
         self.tokens = message.split(" ")    
         self.gcode = self.tokens.pop(0) # gcode number
-        self.debug = 2
+        for i, token in enumerate(self.tokens):
+            if len(token) == 0:
+                self.tokens.pop(i)
+        self.debug = 1
         self.answer = "ok"
 
         if self.debug > 1:           
@@ -60,9 +63,16 @@ class Gcode:
     def setTokens(self, tokens):
         self.tokens = tokens
 
+    ''' Check if the letter exists as token '''
+    def hasLetter(self, letter):
+        for token in self.tokens:
+            if token[0] == letter:
+                return True
+        return False
+    
     ''' Get a token value by the token letter '''
     def getValueByLetter(self, letter):
-        for token in self.tokens:
+        for token in self.tokens:           
             if token[0] == letter:
                 return token[1::]
         return None
@@ -90,6 +100,7 @@ class Gcode:
 
     ''' Get the result of the execution '''
     def getAnswer(self):
+        print self.message + " = " +self.answer
         return self.answer
     
     ''' Set a new answer other than 'ok'  '''

@@ -99,8 +99,7 @@ class Extruder(Heater):
         Heater.__init__(self, thermistor, mosfet, "Ext1")
         self.smd = smd
         self.enable()  
-        self.setDvalue(0.1)     
-        self.setIvalue(0.001)
+
 
 ''' Subclass for heater, this is a Heated build platform '''
 class HBP(Heater):
@@ -108,5 +107,4 @@ class HBP(Heater):
         Heater.__init__(self, thermistor, mosfet, "HBP")
         self.enable()
 
-	
 

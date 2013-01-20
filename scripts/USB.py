@@ -1,8 +1,14 @@
+#!/usr/bin/env python
+'''
+USB communication file for Replicape. 
 
+Author: Elias Bakken
+email: elias.bakken@gmail.com
+Website: http://www.hipstercircuits.com
+License: BSD
 
-
-
-
+You can use and change this, but keep this heading :)
+'''
 
 #from Gcode import Gcode
 from threading import Thread

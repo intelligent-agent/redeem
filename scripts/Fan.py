@@ -1,4 +1,14 @@
+#!/usr/bin/env python
+'''
+A fan is for blowing stuff away. This one is for Replicape. 
 
+Author: Elias Bakken
+email: elias.bakken@gmail.com
+Website: http://www.hipstercircuits.com
+License: BSD
+
+You can use and change this, but keep this heading :)
+'''
 
 from Adafruit_I2C import Adafruit_I2C 
 import time

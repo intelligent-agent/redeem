@@ -1,6 +1,17 @@
 #!/usr/bin/env python
+'''
+A Stepper Motor Driver class for Replicape. 
+
+Author: Elias Bakken
+email: elias.bakken@gmail.com
+Website: http://www.hipstercircuits.com
+License: BSD
+
+You can use and change this, but keep this heading :)
+'''
 
 '''
+The bits in the shift register are as follows:
 D0 = DECAY   = X
 D1 = MODE0   = X
 D2 = MODE1   = X
@@ -12,6 +23,8 @@ D7 = 		 = 0
 '''
 from spi import SPI
 from bbio import *
+from threading import Thread
+import time
 
 # init the SPI for the DAC
 spi2_0 = SPI(2, 0)
@@ -26,11 +39,10 @@ class SMD:
 
     all_smds = list()
 
+    ''' Send the values to the serial to parallel chips '''
     @staticmethod
-    def commit():
-        # First, update the serial to parallel reg
-        for smd in SMD.all_smds:
-	        #print "comitting to SMD: "+hex(smd.getState())
+    def commit():        
+        for smd in SMD.all_smds:	        
 	        spi2_1.writebytes([smd.getState()])
 
     ''' Init'''
@@ -44,9 +56,12 @@ class SMD:
         self.dacvalue 	     = 0x00   	    # The voltage value on the VREF		
         self.enabled 	     = False	    # Start disabled
         self.currentPosition = 0.0 	        # Starts in pos 0
-        self.stepDelay       = 1.0          # Delay between each step (will be set by feed rate)
-        self.debug = 1
-
+        self.set_position    = 0.0          # The desired position
+        self.seconds_pr_step = 0.001        # Delay between each step (will be set by feed rate)
+        self.steps_pr_mm     = 1            # Numer of steps pr mm. 
+        self.debug           = 1            # Debug level
+        self.direction       = 0            # Direction of movement
+        self.moving          = False
         SMD.all_smds.append(self) 	        # Add to list of smds
 
         pinMode(stepPin,   0, 0) 	        # Output, no pull up
@@ -70,21 +85,47 @@ class SMD:
     ''' Move a certain distance, relative movement '''
     def move(self, mm):
         if mm > 0:
-            digitalWrite(self.dirPin, 1)
+            self.direction = 1
         else:
-            digitalWrite(self.dirPin, 0)
+            self.direction = 0
+        digitalWrite(self.dirPin, self.direction)        
+        self.set_position = self.currentPosition+mm
 
-        self.step(int(abs(mm)/self.mmPrStep))
-        self.currentPosition += mm
+        self.moving = True
+        self.t = Thread(target=self.do_work)
+        self.t.start()		
 
     ''' Move to an absolute position '''
     def moveTo(self, pos):
         self.move(pos-self.currentPosition)
 
+    ''' Do the work '''
+    def do_work(self):
+        print "Do work, delay is "+str(self.seconds_pr_step)
+        while(abs(self.currentPosition - self.set_position) > self.mmPrStep):
+            toggle(self.stepPin)
+            time.sleep(self.seconds_pr_step/2.0)
+            toggle(self.stepPin)
+            time.sleep(self.seconds_pr_step/2.0)
+            if self.direction == 1:
+                self.currentPosition += self.mmPrStep
+            else:
+                self.currentPosition -= self.mmPrStep
+                
+        self.moving = False
+
+    ''' Returns true if the stepper is still moving '''
+    def is_moving(self):
+        return self.moving
+
     ''' Set the current position of this stepper '''
     def setCurrentPosition(self, pos):
         self.currentPosition = pos
-	
+
+    ''' Return the position this stepper has '''	
+    def get_current_position(self):
+        return self.currentPosition
+
     '''Logic high to enable device, logic low to enter
     low-power sleep mode. Internal pulldown.'''
     def enableSleepmode(self):
@@ -110,28 +151,25 @@ class SMD:
         pass   #TODO
 
     ''' Current chopping limit (This is the value you can change) '''
-    def setCurrentValue(self, iChop):
-        # Calculate the value for the DAC
-        vRef = 3.3 # Voltage reference on the DAC
-        rSense = 0.1 # Resistance for the 
-        vOut = iChop*5.0*rSense # Calculated voltage out from the DAC (See page 9 in the datasheet for the DAC)
+    def setCurrentValue(self, iChop):        
+        vRef = 3.3                              # Voltage reference on the DAC
+        rSense = 0.1                            # Resistance for the 
+        vOut = iChop*5.0*rSense                 # Calculated voltage out from the DAC (See page 9 in the datasheet for the DAC)
 
         self.dacval = int((vOut*256.0)/vRef)
         byte1 = ((self.dacval & 0xF0)>>4) + (self.dac_channel<<4)
         byte2 = (self.dacval & 0x0F)<<4
-        spi2_0.writebytes([byte1, byte2])
-        # Update all channels
-        spi2_0.writebytes([0xA0, 0xFF]) # TODO: Change to only this channel (1<<dac_channel) ?
+        spi2_0.writebytes([byte1, byte2])       # Update all channels
+        spi2_0.writebytes([0xA0, 0xFF])         # TODO: Change to only this channel (1<<dac_channel) ?
 
     ''' Set the feed rate in mm/min '''
     def setFeedRate(self, feed_rate):		
-        print "SetFeedRate"
         minutes_pr_mm = 1.0/float(feed_rate)
         seconds_pr_mm = minutes_pr_mm*60.0
-        seconds_pr_step = self.mmPrStep*seconds_pr_mm
-        self.stepDelay = seconds_pr_step*1000.0
+        self.seconds_pr_step = self.mmPrStep*seconds_pr_mm
+
         if self.debug > 0:
-            print "feed rate: %f, sec.pr.mm: %f, sec.pr.step: %f"%(feed_rate, seconds_pr_mm, seconds_pr_step)
+            print self.name+": feed rate: %f, sec.pr.mm: %f, sec.pr.step: %f"%(feed_rate, seconds_pr_mm, self.seconds_pr_step)
 
     ''' Toggle the "step" pin n times. '''
     def step(self, steps):
@@ -151,9 +189,13 @@ class SMD:
 			
     ''' Sets the number of mm the stepper moves pr step. 
 	    This must be measured and calibrated '''
+        # Depricated, use set_steps_pr_mm
     def setMMPrstep(self, mmPrStep):
         self.mmPrStep = mmPrStep
-			
 
+    ''' Set the number of steps pr mm. '''			
+    def set_steps_pr_mm(self, steps_pr_mm):
+        self.steps_pr_mm = steps_pr_mm
+        self.mmPrStep = 1.0/steps_pr_mm
 	
 	

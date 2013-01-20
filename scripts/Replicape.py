@@ -1,9 +1,17 @@
 #!/usr/bin/python
-''' 
-Replicape main program
+'''
+Replicape main program. This should run on the BeagleBone.
+
+Author: Elias Bakken
+email: elias.bakken@gmail.com
+Website: http://www.hipstercircuits.com
+License: BSD
+
+You can use and change this, but keep this heading :)
 '''
 
 import bbio as io
+from math import sqrt
 
 from Mosfet import Mosfet
 from Smd import SMD
@@ -33,18 +41,20 @@ class Replicape:
 
 
         # Enable the steppers and set current 
-        self.steppers["X"].setCurrentValue(3.0) # 2A
+        self.steppers["X"].setCurrentValue(2.0) # 2A
         self.steppers["X"].setEnabled() 
-        self.steppers["X"].setMMPrstep(0.0819)
-        self.steppers["Y"].setCurrentValue(3.0) # 2A
+        self.steppers["X"].set_steps_pr_mm(6.105)         
+        #self.steppers["X"].setMMPrstep(0.1638)
+        self.steppers["Y"].setCurrentValue(2.0) # 2A
         self.steppers["Y"].setEnabled() 
-        self.steppers["Y"].setMMPrstep(0.0857)
-        self.steppers["Z"].setCurrentValue(3.0) # 2A
+        self.steppers["Y"].set_steps_pr_mm(5.834)
+        #self.steppers["Y"].setMMPrstep(0.1714)
+        self.steppers["Z"].setCurrentValue(2.0) # 2A
         self.steppers["Z"].setEnabled() 
-        self.steppers["Z"].setMMPrstep(0.003)
-        self.steppers["E"].setCurrentValue(3.0) # 2A        
+        self.steppers["Z"].set_steps_pr_mm(149.25)
+        self.steppers["E"].setCurrentValue(2.0) # 2A        
         self.steppers["E"].setEnabled()
-        self.steppers["E"].setMMPrstep(0.07)
+        self.steppers["E"].setMMPrstep(0.14)
         self.steppers["E2"].setCurrentValue(0.0) # 2A        
         self.steppers["E2"].setEnabled()
 
@@ -67,6 +77,9 @@ class Replicape:
 
         # Make extruder 1
         self.ext1 = Extruder(self.steppers["E"], self.therm_ext1, self.mosfet_ext1)
+        self.ext1.setPvalue(0.5)
+        self.ext1.setDvalue(0.1)     
+        self.ext1.setIvalue(0.001)
         #self.ext1.debugLevel(1)
 
         # Make Heated Build platform 
@@ -91,6 +104,7 @@ class Replicape:
         self.position = {"x": 0, "y": 0, "z": 0}
         
         self.movement = "RELATIVE"
+        self.feed_rate = 3000.0
 	
     ''' When a new gcode comes in, excute it '''
     def loop(self):
@@ -110,25 +124,66 @@ class Replicape:
 		
     ''' Execute a G-code '''
     def _execute(self, g):
-        if g.code() == "G1":                            # Move (G1 X0.1 Y40.2 F3000)
-            #print g.message
-
-            feed_rate = g.getValueByLetter("F")
-            g.removeTokenByLetter("F")
-            
-            # Big TODO: Path planning: the motors must move simultaniously. 
-
-            # The remaining tokens should be traversed
-            for i in range(g.numTokens()):            
-                axis = g.tokenLetter(i)
-                if feed_rate != None:
-                    self.steppers[axis].setFeedRate(float(feed_rate))
+        if g.code() == "G1":                            # Move (G1 X0.1 Y40.2 F3000)                        
+            if g.hasLetter("F"):                        # Get the feed rate                 
+                feed_rate = float(g.getValueByLetter("F"))
+            else:                                       # If no feed rate is set in the command, use the default. 
+                feed_rate = self.feed_rate              
+           
+            x = g.getValueByLetter("X")
+            y = g.getValueByLetter("Y")
+            z = g.getValueByLetter("Z")
+            e = g.getValueByLetter("E")
+    
+            if x != None and y != None and e != None:                 # If X and Y is present, find out their feed_rates
                 if self.movement == "ABSOLUTE":
-                    pos = float(g.tokenValue(i))                
-                    self.steppers[axis].moveTo(pos)
-                else: # RELATIVE 
-                    mm =  float(g.tokenValue(i))
-                    self.steppers[axis].move(mm)                    
+                    x_vec = float(x)-self.steppers["X"].get_current_position()
+                    y_vec = float(y)-self.steppers["Y"].get_current_position()
+                    e_vec = float(e)-self.steppers["E"].get_current_position()
+                else:
+                    x_vec = float(x)
+                    y_vec = float(y)
+                    e_vec = float(e)
+
+                (feed_rate_x, feed_rate_y, feed_rate_e) = self.decompose_vector(x_vec, y_vec, e_vec, feed_rate)
+                self.steppers["X"].setFeedRate(feed_rate_x)
+                self.steppers["Y"].setFeedRate(feed_rate_y)
+                self.steppers["E"].setFeedRate(feed_rate_e)
+            else:  
+                if x != None:
+                    self.steppers["X"].setFeedRate(feed_rate)
+                if y != None:
+                    self.steppers["Y"].setFeedRate(feed_rate)
+                if e != None:
+                    self.steppers["E"].setFeedRate(feed_rate)                
+            if z != None:
+                self.steppers["Z"].setFeedRate(feed_rate)
+    
+            if self.movement == "ABSOLUTE":
+                if x:
+                    self.steppers["X"].moveTo(float(x))
+                if y:
+                    self.steppers["Y"].moveTo(float(y))
+                if z: 
+                    self.steppers["Z"].moveTo(float(z))
+                if e:
+                    self.steppers["E"].moveTo(float(e))
+            else:
+                if x: 
+                    self.steppers["X"].move(float(x))
+                if y:
+                    self.steppers["Y"].move(float(y))
+                if z: 
+                    self.steppers["Z"].move(float(z))
+                if e:
+                    self.steppers["E"].move(float(e))
+
+            # Wait while stepping 
+            while self.steppers["X"].is_moving() or self.steppers["Y"].is_moving():
+                io.delay(10)
+            
+
+
         elif g.code() == "G21":                         # Set units to mm
             self.factor = 1.0
         elif g.code() == "G28":                         # Home the steppers
@@ -152,7 +207,10 @@ class Replicape:
         elif g.code() == "M104":                        # Set extruder temperature
             self.ext1.setTargetTemperature(float(g.tokenValue(0)))
         elif g.code() == "M105":                        # Get Temperature
-            g.setAnswer("T:"+str(int(self.ext1.getTemperature()))+" B:"+str(int(self.hbp.getTemperature())))
+            answer = "ok T:"+str(self.ext1.getTemperature())
+            answer += " B:"+str(int(self.hbp.getTemperature()))
+            #answer += " PT: "+str(self.mosfet_ext1.get_power()*255)
+            g.setAnswer(answer)
         elif g.code() == "M106":                        # Fan on
             self.fan_1.setPWMFrequency(100)
             self.fan_1.setValue(float(g.tokenValue(0)))	
@@ -206,6 +264,17 @@ class Replicape:
         for name, stepper in self.steppers.iteritems():
             stepper.setEnabled()
 		
+    ''' Given an X and Y vector and a feed_rate, 
+    calculate the feed_rates of the two vectors.''' 
+    def decompose_vector(self, x, y, e, feed_rate_hyp):
+        hyp = sqrt(x**2+y**2)
+        feed_rate_ratio = feed_rate_hyp/hyp        
+        feed_rate_y = feed_rate_ratio*abs(y)
+        feed_rate_x = feed_rate_ratio*abs(x)
+        feed_rate_e = feed_rate_ratio*abs(e)
+        
+        return (feed_rate_x, feed_rate_y, feed_rate_e)
+          
 
 r = Replicape()
 r.loop()

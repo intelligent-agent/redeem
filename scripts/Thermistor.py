@@ -27,10 +27,10 @@ class Thermistor:
         try:
             io.delay(1)
             adc_val = 0
-            for i in range(10):                           # Average 10 times
+            for i in range(100):                           # Average 100 times
                 adc_val += io.analogRead(self.pin)        # Read the value 		
                 io.delay(1)                               # Make sure it has settled
-            adc_val /= 10    
+            adc_val /= 100    
         finally:
             Thermistor.mutex.release()                    # Release the mutex
         voltage = io.inVolts(adc_val)                     # Convert to voltage
