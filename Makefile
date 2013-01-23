@@ -26,4 +26,4 @@ minicom:
 
 pru:
 	scp -r PRU/stepper $(REMOTE):$(RPATH)/libs/am335x_pru_package/pru_sw/example_apps/
- 
+	ssh $(REMOTE) 'cd $(RPATH)/libs/am335x_pru_package/pru_sw/example_apps/; make CROSS_COMPILE=""'

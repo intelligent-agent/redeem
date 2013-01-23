@@ -39,7 +39,6 @@ class Replicape:
         self.steppers["E"]  = SMD(io.GPIO3_21, io.GPIO3_19, io.GPIO2_3, 4, "Ext1")  # Fault_x should be PWM2A?
         self.steppers["E2"] = SMD(io.GPIO1_12, io.GPIO1_13, io.GPIO1_7, 3, "Ext2")  # Fault_x should be PWM2A?
 
-
         # Enable the steppers and set current,  
         self.steppers["X"].setCurrentValue(2.0) # 2A
         self.steppers["X"].setEnabled() 
@@ -49,21 +48,21 @@ class Replicape:
         self.steppers["Y"].setCurrentValue(2.0) # 2A
         self.steppers["Y"].setEnabled() 
         self.steppers["Y"].set_steps_pr_mm(5.95)
-        #self.steppers["Y"].set_microstepping(2) 
+        self.steppers["Y"].set_microstepping(2) 
 
         self.steppers["Z"].setCurrentValue(1.5) # 2A
         self.steppers["Z"].setEnabled() 
         self.steppers["Z"].set_steps_pr_mm(149.25)
-        #self.steppers["Z"].set_microstepping(2) 
+        self.steppers["Z"].set_microstepping(0) 
 
         self.steppers["E"].setCurrentValue(2.0) # 2A        
         self.steppers["E"].setEnabled()
         self.steppers["E"].set_steps_pr_mm(5.0)
-        #self.steppers["E"].set_microstepping(2) # 0 = 1/1 steps: 1/(1<<0)
+        self.steppers["E"].set_microstepping(2)
 
         self.steppers["E2"].setCurrentValue(0.0) # 2A        
-        self.steppers["E2"].setEnabled()
-        self.steppers["E2"].set_steps_pr_mm(6) # was 7.1428
+        #self.steppers["E2"].setEnabled()
+        #self.steppers["E2"].set_steps_pr_mm(6) # was 7.1428
         #self.steppers["E2"].set_microstepping(2) # 0 = 1/1 steps: 1/(1<<0)
 
         # init the 3 thermistors
