@@ -13,6 +13,7 @@ class Heater(object):
         self.thermistor = thermistor     # A handle to the thermistor instance used. 
         self.mosfet = mosfet             # A handle to the mosfet instance used. 
         self.name = name                 # Name, used for debugging
+        self.current_temp = 0.0
         self.target_temp = 0.0             # Target temperature (Ts). Start off. 
         self.last_error = 0.0              # Previous error term, used in calculating the derivative
         self.error_integral = 0.0          # Accumulated integral since the temperature came within the boudry
@@ -28,7 +29,7 @@ class Heater(object):
 
     ''' get the temperature of the thermistor'''
     def getTemperature(self):
-        return self.thermistor.getTemperature()
+        return self.current_temp
 
     ''' Stops the heater and the PID controller '''
     def disable(self):
@@ -59,7 +60,7 @@ class Heater(object):
     ''' PID Thread that keeps the temperature stable '''
     def keep_temperature(self):
         while self.enabled:            			
-            self.current_temp = self.getTemperature()    # Read the current temperature		
+            self.current_temp = self.thermistor.getTemperature()    # Read the current temperature		
             error = self.target_temp-self.current_temp   # Calculate the error 
             derivative = self._getErrorDerivative(error) # Calculate the error derivative 
             integral = self._getErrorIntegral(error)     # Calculate the error integral        

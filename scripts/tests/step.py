@@ -1,10 +1,9 @@
 #!/usr/bin/env python
 
-import os
-import time
+from spi import SPI
 
+spi2_1 = SPI(2, 1)
+spi2_1.bpw = 8
+spi2_1.mode = 0
+spi2_1.writebytes([0x30])
 
-for i in range(100):
-	os.system("echo 0 > /sys/class/gpio/gpio44/value")
-	os.system("echo 1 > /sys/class/gpio/gpio44/value")
-		

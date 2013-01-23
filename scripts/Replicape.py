@@ -40,28 +40,31 @@ class Replicape:
         self.steppers["E2"] = SMD(io.GPIO1_12, io.GPIO1_13, io.GPIO1_7, 3, "Ext2")  # Fault_x should be PWM2A?
 
 
-        # Enable the steppers and set current 
+        # Enable the steppers and set current,  
         self.steppers["X"].setCurrentValue(2.0) # 2A
         self.steppers["X"].setEnabled() 
         self.steppers["X"].set_steps_pr_mm(6.105)         
-        #self.steppers["X"].setMMPrstep(0.1638)
+        self.steppers["X"].set_microstepping(2) 
+
         self.steppers["Y"].setCurrentValue(2.0) # 2A
         self.steppers["Y"].setEnabled() 
         self.steppers["Y"].set_steps_pr_mm(5.834)
-        #self.steppers["Y"].setMMPrstep(0.1714)
-        self.steppers["Z"].setCurrentValue(2.0) # 2A
+        #self.steppers["Y"].set_microstepping(2) 
+
+        self.steppers["Z"].setCurrentValue(1.5) # 2A
         self.steppers["Z"].setEnabled() 
         self.steppers["Z"].set_steps_pr_mm(149.25)
+        #self.steppers["Z"].set_microstepping(2) 
+
         self.steppers["E"].setCurrentValue(2.0) # 2A        
         self.steppers["E"].setEnabled()
-        self.steppers["E"].setMMPrstep(0.14)
+        self.steppers["E"].set_steps_pr_mm(6.0)
+        #self.steppers["E"].set_microstepping(2) # 0 = 1/1 steps: 1/(1<<0)
+
         self.steppers["E2"].setCurrentValue(0.0) # 2A        
         self.steppers["E2"].setEnabled()
-
-        # 
-        #for stepper in self.steppers:
-        #    stepper.setCurrentValue(2.0) # 2A
-        #    stepper.setEnabled()
+        self.steppers["E2"].set_steps_pr_mm(6) # was 7.1428
+        #self.steppers["E2"].set_microstepping(2) # 0 = 1/1 steps: 1/(1<<0)
 
         # init the 3 thermistors
         self.therm_ext1 = Thermistor(io.AIN4, "Ext_1", chart_name="QU-BD")
@@ -115,7 +118,7 @@ class Replicape:
                     self._execute(gcode)
                     self.usb.send_message(gcode.getAnswer())
                 else:
-                    io.delay(200)
+                    io.delay(10)
         except KeyboardInterrupt:
             print "Caught signal, exiting" 
             return
@@ -124,66 +127,45 @@ class Replicape:
 		
     ''' Execute a G-code '''
     def _execute(self, g):
-        if g.code() == "G1":                            # Move (G1 X0.1 Y40.2 F3000)                        
-            if g.hasLetter("F"):                        # Get the feed rate                 
+        if g.code() == "G1":                                # Move (G1 X0.1 Y40.2 F3000)                        
+            if g.hasLetter("F"):                            # Get the feed rate                 
                 feed_rate = float(g.getValueByLetter("F"))
-            else:                                       # If no feed rate is set in the command, use the default. 
+                g.removeTokenByLetter("F")
+            else:                                           # If no feed rate is set in the command, use the default. 
                 feed_rate = self.feed_rate              
+
+            print "numtokens: "+str(g.numTokens())            
            
-            x = g.getValueByLetter("X")
-            y = g.getValueByLetter("Y")
-            z = g.getValueByLetter("Z")
-            e = g.getValueByLetter("E")
-    
-            if x != None and y != None and e != None:                 # If X and Y is present, find out their feed_rates
-                if self.movement == "ABSOLUTE":
-                    x_vec = float(x)-self.steppers["X"].get_current_position()
-                    y_vec = float(y)-self.steppers["Y"].get_current_position()
-                    e_vec = float(e)-self.steppers["E"].get_current_position()
-                else:
-                    x_vec = float(x)
-                    y_vec = float(y)
-                    e_vec = float(e)
 
-                (feed_rate_x, feed_rate_y, feed_rate_e) = self.decompose_vector(x_vec, y_vec, e_vec, feed_rate)
-                self.steppers["X"].setFeedRate(feed_rate_x)
-                self.steppers["Y"].setFeedRate(feed_rate_y)
-                self.steppers["E"].setFeedRate(feed_rate_e)
-            else:  
-                if x != None:
-                    self.steppers["X"].setFeedRate(feed_rate)
-                if y != None:
-                    self.steppers["Y"].setFeedRate(feed_rate)
-                if e != None:
-                    self.steppers["E"].setFeedRate(feed_rate)                
-            if z != None:
-                self.steppers["Z"].setFeedRate(feed_rate)
-    
-            if self.movement == "ABSOLUTE":
-                if x:
-                    self.steppers["X"].moveTo(float(x))
-                if y:
-                    self.steppers["Y"].moveTo(float(y))
-                if z: 
-                    self.steppers["Z"].moveTo(float(z))
-                if e:
-                    self.steppers["E"].moveTo(float(e))
+            smds = {}                                               # All steppers 
+            for i in range(g.numTokens()):                          # Run through all tokens
+                axis = g.tokenLetter(i)                             # Get the axis, X, Y, Z or E
+                smds[axis] = float(g.tokenValue(i))                 # Get tha value, new position or vector 
+                if self.movement == "ABSOLUTE":                     # If absolute movement, remove 
+                    smds[axis] -= self.steppers[axis].get_current_position() #                          
+            print "SMDS: "+str(smds)              
+
+            if g.numTokens() > 1    :                          # Normal G1 code with X, Y, Z and E
+                hyp = sqrt(smds["X"]**2+smds["Y"]**2)                                    
+                feed_rate_ratio = feed_rate/hyp
+                for axis, vec in smds.items():
+                    self.steppers[axis].setFeedRate(feed_rate_ratio*abs(vec))     
             else:
-                if x: 
-                    self.steppers["X"].move(float(x))
-                if y:
-                    self.steppers["Y"].move(float(y))
-                if z: 
-                    self.steppers["Z"].move(float(z))
-                if e:
-                    self.steppers["E"].move(float(e))
-
-            # Wait while stepping 
-            while self.steppers["X"].is_moving() or self.steppers["Y"].is_moving():
+                for axis, vec in smds.items():
+                    self.steppers[axis].setFeedRate(feed_rate)                                   
+            for axis, vec in smds.items():              
+             self.steppers[axis].prepare_move(vec)               # Prepare so everyone can start at the same time            
+            for axis, vec in smds.items():              
+                self.steppers[axis].execute_move()                  # Ok, Go!
+            while True:
+                is_moving = 0
+                for axis, vec in smds.items():              
+                    is_moving += self.steppers[axis].is_moving()   # Make sure none is moving
+                if is_moving == 0:
+                    break;                    
                 io.delay(10)
-            
-
-
+            for axis, vec in smds.items():                          
+                self.steppers[axis].end_move()                     # Join threads
         elif g.code() == "G21":                         # Set units to mm
             self.factor = 1.0
         elif g.code() == "G28":                         # Home the steppers
@@ -202,6 +184,9 @@ class Replicape:
                 self.steppers[g.tokenLetter(i)].setCurrentPosition(float(g.tokenValue(i)))
         elif g.code() == "M17":                         # Enable all steppers
             self.enableAllSteppers()
+        elif g.code() == "M30":                         # Set microstepping (Propietary to Replicape)
+            for i in range(g.numTokens()):
+                self.steppers[g.tokenLetter(i)].set_microstepping(int(g.tokenValue(i)))            
         elif g.code() == "M84":                         # Disable all steppers
             self.disableAllSteppers()
         elif g.code() == "M104":                        # Set extruder temperature
@@ -209,7 +194,6 @@ class Replicape:
         elif g.code() == "M105":                        # Get Temperature
             answer = "ok T:"+str(self.ext1.getTemperature())
             answer += " B:"+str(int(self.hbp.getTemperature()))
-            #answer += " PT: "+str(self.mosfet_ext1.get_power()*255)
             g.setAnswer(answer)
         elif g.code() == "M106":                        # Fan on
             self.fan_1.setPWMFrequency(100)

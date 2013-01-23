@@ -42,8 +42,11 @@ class SMD:
     ''' Send the values to the serial to parallel chips '''
     @staticmethod
     def commit():        
-        for smd in SMD.all_smds:	        
-	        spi2_1.writebytes([smd.getState()])
+        bytes = []
+        for smd in SMD.all_smds:	   
+            bytes.append(smd.getState())
+        print "Updating registers with: "+str(bytes[::-1])
+        spi2_1.writebytes(bytes[::-1])
 
     ''' Init'''
     def __init__(self, stepPin, dirPin, faultPin, dac_channel, name):
@@ -59,9 +62,10 @@ class SMD:
         self.set_position    = 0.0          # The desired position
         self.seconds_pr_step = 0.001        # Delay between each step (will be set by feed rate)
         self.steps_pr_mm     = 1            # Numer of steps pr mm. 
-        self.debug           = 1            # Debug level
+        self.debug           = 2            # Debug level
         self.direction       = 0            # Direction of movement
         self.moving          = False
+        self.microsteps      = 1.0          # Well, this is the microstep number
         SMD.all_smds.append(self) 	        # Add to list of smds
 
         pinMode(stepPin,   0, 0) 	        # Output, no pull up
@@ -77,10 +81,12 @@ class SMD:
 	
     ''' Sets the SMD disabled '''
     def setDisabled(self):
+        print "setDisabled called"
         if self.enabled:
             self.state |= (1<<6)
             self.update()
             self.enabled = False
+            print "smd disabled, state = "+bin(self.state)
 
     ''' Move a certain distance, relative movement '''
     def move(self, mm):
@@ -95,13 +101,32 @@ class SMD:
         self.t = Thread(target=self.do_work)
         self.t.start()		
 
+    ''' Preapre a move. But do not start the thread yet. '''
+    def prepare_move(self, mm):
+        if mm > 0:
+            self.direction = 1
+        else:
+            self.direction = 0
+        digitalWrite(self.dirPin, self.direction)        
+        self.set_position = self.currentPosition+mm
+        self.t = Thread(target=self.do_work)
+        if self.debug > 1: 
+            print "Prepare done"
+
+    ''' Execute the planned move. '''
+    def execute_move(self):
+        self.moving = True
+        self.t.start()		
+
     ''' Move to an absolute position '''
     def moveTo(self, pos):
         self.move(pos-self.currentPosition)
 
     ''' Do the work '''
     def do_work(self):
-        print "Do work, delay is "+str(self.seconds_pr_step)
+        if self.debug > 1:         
+            print "Do work, delay is "+str(self.seconds_pr_step)
+        i = 0
         while(abs(self.currentPosition - self.set_position) > self.mmPrStep):
             toggle(self.stepPin)
             time.sleep(self.seconds_pr_step/2.0)
@@ -111,12 +136,18 @@ class SMD:
                 self.currentPosition += self.mmPrStep
             else:
                 self.currentPosition -= self.mmPrStep
-                
+            i += 1
+        if self.debug > 1:
+            print "Done, stepped %d times"%i
         self.moving = False
 
     ''' Returns true if the stepper is still moving '''
     def is_moving(self):
         return self.moving
+
+    ''' Join the thread '''
+    def end_move(self):
+        self.t.join()
 
     ''' Set the current position of this stepper '''
     def setCurrentPosition(self, pos):
@@ -146,9 +177,17 @@ class SMD:
         self.state &= ~(1<<4)
         self.update()
 
-    ''' Microstepping (default = 0) '''
-    def setMicrostepping(self, value):
-        pass   #TODO
+    ''' Microstepping (default = 0) 0 to 5 '''
+    def set_microstepping(self, value):
+        self.microsteps = (1<<value) 
+        self.state &= ~(7<<1)
+        self.state |= (value << 1)
+        self.update()
+        self.mmPrStep = 1.0/(self.steps_pr_mm*self.microsteps)
+        if self.debug > 2:
+            print "State is: "+bin(self.state)
+            print "Microsteps: "+str(self.microsteps)
+            print "mmPrStep is: "+str(self.mmPrStep)
 
     ''' Current chopping limit (This is the value you can change) '''
     def setCurrentValue(self, iChop):        
@@ -180,7 +219,7 @@ class SMD:
 
     ''' Returns the current state '''
     def getState(self):
-        return self.state
+        return self.state & 0xFF
 
     ''' Commits the changes	'''
     def update(self):
@@ -189,13 +228,15 @@ class SMD:
 			
     ''' Sets the number of mm the stepper moves pr step. 
 	    This must be measured and calibrated '''
-        # Depricated, use set_steps_pr_mm
-    def setMMPrstep(self, mmPrStep):
+    def _setMMPrstep(self, mmPrStep):
         self.mmPrStep = mmPrStep
 
     ''' Set the number of steps pr mm. '''			
     def set_steps_pr_mm(self, steps_pr_mm):
         self.steps_pr_mm = steps_pr_mm
-        self.mmPrStep = 1.0/steps_pr_mm
+        self.mmPrStep = 1.0/(steps_pr_mm*self.microsteps)
 	
+    ''' Well, you can only guess what this function does. '''
+    def set_max_feed_rate(self, max_feed_rate):
+        self.max_feed_rate = max_feed_rate
 	
