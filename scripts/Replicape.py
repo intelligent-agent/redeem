@@ -48,7 +48,7 @@ class Replicape:
 
         self.steppers["Y"].setCurrentValue(2.0) # 2A
         self.steppers["Y"].setEnabled() 
-        self.steppers["Y"].set_steps_pr_mm(5.834)
+        self.steppers["Y"].set_steps_pr_mm(5.95)
         #self.steppers["Y"].set_microstepping(2) 
 
         self.steppers["Z"].setCurrentValue(1.5) # 2A
@@ -58,7 +58,7 @@ class Replicape:
 
         self.steppers["E"].setCurrentValue(2.0) # 2A        
         self.steppers["E"].setEnabled()
-        self.steppers["E"].set_steps_pr_mm(6.0)
+        self.steppers["E"].set_steps_pr_mm(5.0)
         #self.steppers["E"].set_microstepping(2) # 0 = 1/1 steps: 1/(1<<0)
 
         self.steppers["E2"].setCurrentValue(0.0) # 2A        
@@ -127,55 +127,50 @@ class Replicape:
 		
     ''' Execute a G-code '''
     def _execute(self, g):
-        if g.code() == "G1":                                # Move (G1 X0.1 Y40.2 F3000)                        
-            if g.hasLetter("F"):                            # Get the feed rate                 
+        if g.code() == "G1":                                        # Move (G1 X0.1 Y40.2 F3000)                        
+            if g.hasLetter("F"):                                    # Get the feed rate                 
                 feed_rate = float(g.getValueByLetter("F"))
                 g.removeTokenByLetter("F")
-            else:                                           # If no feed rate is set in the command, use the default. 
-                feed_rate = self.feed_rate              
-
-            print "numtokens: "+str(g.numTokens())            
-           
-
+            else:                                                   # If no feed rate is set in the command, use the default. 
+                feed_rate = self.feed_rate                         
             smds = {}                                               # All steppers 
             for i in range(g.numTokens()):                          # Run through all tokens
                 axis = g.tokenLetter(i)                             # Get the axis, X, Y, Z or E
                 smds[axis] = float(g.tokenValue(i))                 # Get tha value, new position or vector 
                 if self.movement == "ABSOLUTE":                     # If absolute movement, remove 
                     smds[axis] -= self.steppers[axis].get_current_position() #                          
-            print "SMDS: "+str(smds)              
 
-            if g.numTokens() > 1    :                          # Normal G1 code with X, Y, Z and E
-                hyp = sqrt(smds["X"]**2+smds["Y"]**2)                                    
-                feed_rate_ratio = feed_rate/hyp
-                for axis, vec in smds.items():
+            if g.numTokens() > 1    :                               # Normal G1 code with at least X and Y
+                hyp = sqrt(smds["X"]**2+smds["Y"]**2)               # calculate the hypotenuse to the X-Y vectors, 
+                feed_rate_ratio = feed_rate/hyp                     # This will be the longest travel distace.
+                for axis, vec in smds.items():                      # Set the feed rate for these
                     self.steppers[axis].setFeedRate(feed_rate_ratio*abs(vec))     
-            else:
-                for axis, vec in smds.items():
+            else:                                                   # This is probably a realtive move
+                for axis, vec in smds.items():                      # Just set the feed rate
                     self.steppers[axis].setFeedRate(feed_rate)                                   
             for axis, vec in smds.items():              
-             self.steppers[axis].prepare_move(vec)               # Prepare so everyone can start at the same time            
+             self.steppers[axis].prepare_move(vec)                  # Prepare so everyone can start at the same time            
             for axis, vec in smds.items():              
                 self.steppers[axis].execute_move()                  # Ok, Go!
             while True:
                 is_moving = 0
                 for axis, vec in smds.items():              
-                    is_moving += self.steppers[axis].is_moving()   # Make sure none is moving
+                    is_moving += self.steppers[axis].is_moving()    # Make sure none is moving
                 if is_moving == 0:
                     break;                    
                 io.delay(10)
             for axis, vec in smds.items():                          
-                self.steppers[axis].end_move()                     # Join threads
-        elif g.code() == "G21":                         # Set units to mm
+                self.steppers[axis].end_move()                      # Join threads
+        elif g.code() == "G21":                                     # Set units to mm
             self.factor = 1.0
-        elif g.code() == "G28":                         # Home the steppers
-            if g.numTokens() == 0:                      # If no token is given, home all
+        elif g.code() == "G28":                                     # Home the steppers
+            if g.numTokens() == 0:                                  # If no token is given, home all
                 g.setTokens(["X", "Y", "Z"])
             for i in range(g.numTokens()):                    
                 self.moveTo(g.tokenLetter(i), 0.0)              
-        elif g.code() == "G90":                         # Absolute positioning
+        elif g.code() == "G90":                                     # Absolute positioning
             self.movement = "ABSOLUTE"
-        elif g.code() == "G91":                         # Relative positioning 
+        elif g.code() == "G91":                                     # Relative positioning 
             self.movement = "RELATIVE"		
         elif g.code() == "G92":                         # Set the current position of the following steppers
             if g.numTokens() == 0:
