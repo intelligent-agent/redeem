@@ -1,25 +1,30 @@
 #include <stdio.h>
-
+#include <string.h>
 #include <prussdrv.h>
 #include <pruss_intc_mapping.h>
 
 #define PRU_NUM 0
 #define AM33XX
-#define NUM_COMMANDS 10
-#define NUM_DELAYS 10
+#define NUM_TOGGLES 10
 
 int main (void)
 {
 	int i;
     unsigned int ret;
-	unsigned int delays[NUM_DELAYS];
-	unsigned int commands[NUM_COMMANDS];
-	for(i=0; i<NUM_DELAYS; i++)
-		delays[i] = 0x00F00000;
+	unsigned int all[(NUM_TOGGLES*2)+3]; // all[0] = abort, all[N-1] = last command
 
-	for(i=0; i<NUM_COMMANDS; i++)
-		commands[i] = (7<<22);
+	all[0] = 1; // Do not abort
+
+	for(i=0; i<NUM_TOGGLES; i++){
+		if(i%2 == 0)
+			all[i+1] = (1<<12);
+		else
+			all[i+1] = 0;
+		all[i+NUM_TOGGLES+1] = 0x01;	
+	}
 	
+	all[(NUM_TOGGLES*2)+2] = 0; // Last command
+
     tpruss_intc_initdata pruss_intc_initdata = PRUSS_INTC_INITDATA;
     
     printf("\nINFO: Starting %s example.\r\n", "stepper");
@@ -37,8 +42,7 @@ int main (void)
     prussdrv_pruintc_init(&pruss_intc_initdata);
 
 	/* load array on PRU */
-	prussdrv_pru_write_memory(PRUSS0_PRU0_DATARAM, 0, 			 delays, 	4*NUM_DELAYS);
-	prussdrv_pru_write_memory(PRUSS0_PRU0_DATARAM, NUM_DELAYS*4, commands, 	4*NUM_COMMANDS);
+	prussdrv_pru_write_memory(PRUSS0_PRU0_DATARAM, 0,  all, ((NUM_TOGGLES*2)+3)*4);// Load commands 
 
     /* Execute example on PRU */
     printf("\tINFO: Executing example.\r\n");
