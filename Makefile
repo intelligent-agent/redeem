@@ -24,6 +24,6 @@ scripts:
 minicom:
 	minicom -o -b 115200 -D /dev/ttyUSB1
 
-pru:
-	scp -r PRU/stepper $(REMOTE):$(RPATH)/libs/am335x_pru_package/pru_sw/example_apps/
-	ssh $(REMOTE) 'cd $(RPATH)/libs/am335x_pru_package/pru_sw/example_apps/; make CROSS_COMPILE=""'
+pru:	
+	scp -r PRU/PyPRUSS $(REMOTE):$(RPATH)/libs/
+	ssh $(REMOTE) 'cd $(RPATH)/libs/PyPRUSS; make && make install'
