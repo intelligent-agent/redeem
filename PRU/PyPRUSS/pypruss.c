@@ -4,71 +4,81 @@
 
 #define NUM_TOGGLES 10
 #define AM33XX
- 
-static PyObject *pypruss_init(PyObject *self, PyObject *args)
-{
+#define PIN_ADDR   0x00000004
+#define DELAY_ADDR (7)
+
+static PyObject *pypruss_init(PyObject *self, PyObject *args){
     int pru_num;
     int ret;
-
-    if (!PyArg_ParseTuple(args, "i", &pru_num)){
+	unsigned int halt[3] = {0};
+	
+    if (!PyArg_ParseTuple(args, "i", &pru_num)){					// Parse the PRU number
      	return NULL;
     }
-	
-	// Make sure the module is loaded
-	system("modprobe uio_pruss");
-
-
+	system("modprobe uio_pruss");									// Make sure the module is loaded
     tpruss_intc_initdata pruss_intc_initdata = PRUSS_INTC_INITDATA;	
-    
     prussdrv_init ();	    
     ret = prussdrv_open(PRU_EVTOUT_0);
     if (ret){
         printf("prussdrv_open open failed\n");
         return NULL;
     }
-
-    /* Get the interrupt initialized */
-    prussdrv_pruintc_init(&pruss_intc_initdata);
+    prussdrv_pruintc_init(&pruss_intc_initdata);					// Get the interrupt initialized
+    prussdrv_pru_write_memory(PRUSS0_PRU0_DATARAM, 0,  halt, 3*4);	// Load commands 
+    prussdrv_exec_program (pru_num, "./firmware.bin");				// Load and execute the program 
 
     Py_INCREF(Py_None);
     return Py_None;
 }
  
-static PyObject *pypruss_set_toggles(PyObject *self, PyObject *args){
+static PyObject *pypruss_set_data(PyObject *self, PyObject *args){
 	int pru_num;
     int i;    
+    int len;	
+	PyObject* pinObj;
+	PyObject* dlyObj;
+    PyObject* pinSeq;
+    PyObject* dlySeq;
+	PyObject* intObj;
+	unsigned int *all;
 
-    unsigned int all[(NUM_TOGGLES*2)+3]; // all[0] = abort, all[N-1] = last command
+    if (!PyArg_ParseTuple(args, "iOO", &pru_num, &pinObj, &dlyObj))
+        return NULL;
 
-    if (!PyArg_ParseTuple(args, "i", &pru_num)){
-     	return NULL;
+    pinSeq = PySequence_Fast(pinObj, "expected a sequence");
+    dlySeq = PySequence_Fast(dlyObj, "expected a sequence");
+    len = PySequence_Size(pinObj);
+
+	if(len != PySequence_Size(dlyObj)){ 						// Make sure the two tables are the same lengths
+		return NULL;	
+	}
+
+	all = (unsigned int *)malloc(sizeof(int)*200);
+	
+	*(all)  = 1;
+    for (i = 0; i < len; i++) {
+        intObj 		= PySequence_Fast_GET_ITEM(pinSeq, i);
+		*(all+1+i)  = PyInt_AsUnsignedLongMask(intObj);		
+        intObj 		= PySequence_Fast_GET_ITEM(dlySeq, i);
+		*(all+100+i)	= PyInt_AsUnsignedLongMask(intObj);		
     }
+	//*(all+10+6+1) = 0;
 
-	all[0] = 1; // Do not abort
-    for(i=0; i<NUM_TOGGLES; i++){
-		if(i%2 == 0)
-            all[i+1] = (1<<12);
-		else
-		    all[i+1] = 0;
-		all[i+NUM_TOGGLES+1] = 0x01;	
-    }
-    
-    all[(NUM_TOGGLES*2)+2] = 0; // Last command, abort
+    Py_DECREF(pinSeq);
+    Py_DECREF(dlySeq);
 
     /* load array on PRU */
-    prussdrv_pru_write_memory(PRUSS0_PRU0_DATARAM, 0,  all, ((NUM_TOGGLES*2)+3)*4);// Load commands 
+    prussdrv_pru_write_memory(PRUSS0_PRU0_DATARAM, 0,  all, 200*4);// Load commands
 
-    /* Execute example on PRU */
-    //printf("\tINFO: Executing example.\r\n");
-    prussdrv_exec_program (pru_num, "./stepper.bin");
-    
-    /* Wait until PRU0 has finished execution */
-    //printf("\tINFO: Waiting for HALT command.\r\n");
-    prussdrv_pru_wait_event (PRU_EVTOUT_0);
-    //printf("\tINFO: PRU completed transfer.\r\n");
-    prussdrv_pru_clear_event (PRU0_ARM_INTERRUPT);
+	//prussdrv_pru_write_memory(PRUSS0_PRU0_DATARAM, 0, 			 	abort, 	4);		// Set the abort to 0 = do not abort
+    //prussdrv_pru_write_memory(PRUSS0_PRU0_DATARAM, 4,   		test,   6*4);	// Load the pin data
+/*    prussdrv_pru_write_memory(PRUSS0_PRU0_DATARAM, DELAY_ADDR, 			 delays, len*4);	// Load the delay data
+    prussdrv_pru_write_memory(PRUSS0_PRU0_DATARAM, DELAY_ADDR+(len+1*4), end,	4);		// Set the last delay to 0
+*/
+	prussdrv_pru_enable ( 0 ); 	// Start the PRU
 
-	return Py_BuildValue("i", 0);	
+    Py_INCREF(Py_None);			// Return None to indicate Ok
+    return Py_None;	
 }
 
 static PyObject *pypruss_disable(PyObject *self, PyObject *args){
@@ -88,7 +98,7 @@ static PyObject *pypruss_disable(PyObject *self, PyObject *args){
 
 static PyMethodDef pypruss_methods[] = {
         { "init", (PyCFunction)pypruss_init, METH_VARARGS, NULL },
-		{ "set_toggles", (PyCFunction)pypruss_set_toggles, METH_VARARGS, NULL},
+		{ "set_data", (PyCFunction)pypruss_set_data, METH_VARARGS, NULL},
 		{ "disable", (PyCFunction)pypruss_disable, METH_VARARGS, NULL},
         { NULL, NULL, 0, NULL }
 };

@@ -24,6 +24,10 @@ scripts:
 minicom:
 	minicom -o -b 115200 -D /dev/ttyUSB1
 
-pru:	
+pru_firmware:
+	scp -r PRU/PyPRUSS/firmware $(REMOTE):$(RPATH)/libs/PyPRUSS/
+	ssh $(REMOTE) 'cd $(RPATH)/libs/PyPRUSS/firmware; make && make install'
+
+pypruss: 
 	scp -r PRU/PyPRUSS $(REMOTE):$(RPATH)/libs/
 	ssh $(REMOTE) 'cd $(RPATH)/libs/PyPRUSS; make && make install'
