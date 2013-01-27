@@ -22,6 +22,7 @@ from Gcode import Gcode
 import sys
 from Extruder import Extruder, HBP
 from Options import Options
+from Pru import Pru
 
 class Replicape:
     ''' Init '''
@@ -43,7 +44,7 @@ class Replicape:
         self.steppers["X"].setCurrentValue(2.0) # 2A
         self.steppers["X"].setEnabled() 
         self.steppers["X"].set_steps_pr_mm(6.105)         
-        self.steppers["X"].set_microstepping(2) 
+        self.steppers["X"].set_microstepping(1) 
 
         self.steppers["Y"].setCurrentValue(2.0) # 2A
         self.steppers["Y"].setEnabled() 
@@ -107,6 +108,8 @@ class Replicape:
         
         self.movement = "RELATIVE"
         self.feed_rate = 3000.0
+        
+        self.pru = Pru()
 	
     ''' When a new gcode comes in, excute it '''
     def loop(self):
@@ -139,7 +142,20 @@ class Replicape:
                 if self.movement == "ABSOLUTE":                     # If absolute movement, remove 
                     smds[axis] -= self.steppers[axis].get_current_position() #                          
 
-            if g.numTokens() > 1    :                               # Normal G1 code with at least X and Y
+            use_pru = True
+            if use_pru:
+                if not "X" in smds:
+                    smds["X"] = 0
+                if not "Y" in smds:
+                    smds["Y"] = 0
+                if not "Z" in smds:
+                    smds["Z"] = 0
+                if not "E" in smds:
+                    smds["E"] = 0
+                self.pru.move(smds["X"], smds["Y"], smds["Z"], smds["E"])
+                return 
+
+            if g.numTokens() > 1:                                   # Normal G1 code with at least X and Y
                 hyp = sqrt(smds["X"]**2+smds["Y"]**2)               # calculate the hypotenuse to the X-Y vectors, 
                 feed_rate_ratio = feed_rate/hyp                     # This will be the longest travel distace.
                 for axis, vec in smds.items():                      # Set the feed rate for these
@@ -154,7 +170,7 @@ class Replicape:
             while True:
                 is_moving = 0
                 for axis, vec in smds.items():              
-                    is_moving += self.steppers[axis].is_moving()    # Make sure none is moving
+                    is_moving += self.steppers[axis].is_moving()    # Count the number of moving steppers
                 if is_moving == 0:
                     break;                    
                 io.delay(10)
