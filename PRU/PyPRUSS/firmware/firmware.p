@@ -14,7 +14,7 @@ START:
     SBCO r0, C4, 4, 4					// Actually i have no idea what this does
 
 	MOV  r0, 0							// The first register contains the loop count
-    LBBO r1, r0, LEN_ADDR, 4			// Load the number of steps to perform into r1
+    LBBO r1, r0, 0, 4			// Load the number of steps to perform into r1
 	MOV  r4, PIN_OFFSET					// r4 is the pin and delay counter
 SET_PINS:						
     LBBO r2, r4, 0, 4					// Load pin data into r2
@@ -32,4 +32,4 @@ DELAY:
     QBNE SET_PINS, r1, 0				// Branch back to SET_PINS if r0 != 0, abort!
 
     MOV R31.b0, PRU0_ARM_INTERRUPT+16   // Send notification to Host for program completion
-HALT
+SLP 0 

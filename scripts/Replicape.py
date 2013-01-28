@@ -23,7 +23,9 @@ import sys
 from Extruder import Extruder, HBP
 from Options import Options
 from Pru import Pru
-
+from Path import Path
+from Path_planner import Path_planner
+    
 class Replicape:
     ''' Init '''
     def __init__(self):
@@ -34,59 +36,49 @@ class Replicape:
         self.steppers = {}
 
         # Init the 5 Stepper motors
-        self.steppers["X"]  = SMD(io.GPIO1_12, io.GPIO1_13, io.GPIO1_7, 7, "X")  # Fault_x should be PWM2A?
-        self.steppers["Y"]  = SMD(io.GPIO1_31, io.GPIO1_30, io.GPIO1_15, 1, "Y")  # Fault_x should be PWM2A?
-        self.steppers["Z"]  = SMD(io.GPIO1_1, io.GPIO2_2, io.GPIO0_27, 2, "Z")  # Fault_x should be PWM2A?
-        self.steppers["E"]  = SMD(io.GPIO3_21, io.GPIO3_19, io.GPIO2_3, 4, "Ext1")  # Fault_x should be PWM2A?
-        self.steppers["E2"] = SMD(io.GPIO1_12, io.GPIO1_13, io.GPIO1_7, 3, "Ext2")  # Fault_x should be PWM2A?
+        self.steppers["X"]  = SMD(io.GPIO1_12, io.GPIO1_13, io.GPIO1_7,  7, "X")  # Fault_x should be PWM2A?
+        self.steppers["Y"]  = SMD(io.GPIO1_31, io.GPIO1_30, io.GPIO1_15, 1, "Y")  
+        self.steppers["Z"]  = SMD(io.GPIO1_1,  io.GPIO2_2,  io.GPIO0_27, 2, "Z")  
+        self.steppers["E"]  = SMD(io.GPIO3_21, io.GPIO3_19, io.GPIO2_3,  4, "Ext1")
 
         # Enable the steppers and set current,  
         self.steppers["X"].setCurrentValue(2.0) # 2A
         self.steppers["X"].setEnabled() 
         self.steppers["X"].set_steps_pr_mm(6.105)         
         self.steppers["X"].set_microstepping(1) 
+        self.steppers["X"].set_pru(0)
 
         self.steppers["Y"].setCurrentValue(2.0) # 2A
         self.steppers["Y"].setEnabled() 
         self.steppers["Y"].set_steps_pr_mm(5.95)
         self.steppers["Y"].set_microstepping(2) 
+        self.steppers["Y"].set_pru(1)
 
-        self.steppers["Z"].setCurrentValue(1.5) # 2A
+        self.steppers["Z"].setCurrentValue(1.0) # 2A
         self.steppers["Z"].setEnabled() 
         self.steppers["Z"].set_steps_pr_mm(149.25)
         self.steppers["Z"].set_microstepping(0) 
 
-        self.steppers["E"].setCurrentValue(2.0) # 2A        
-        self.steppers["E"].setEnabled()
+        self.steppers["E"].setCurrentValue(0.7) # 2A        
+        #self.steppers["E"].setEnabled()
         self.steppers["E"].set_steps_pr_mm(5.0)
         self.steppers["E"].set_microstepping(2)
-
-        self.steppers["E2"].setCurrentValue(0.0) # 2A        
-        #self.steppers["E2"].setEnabled()
-        #self.steppers["E2"].set_steps_pr_mm(6) # was 7.1428
-        #self.steppers["E2"].set_microstepping(2) # 0 = 1/1 steps: 1/(1<<0)
+        #self.steppers["E"].set_pru(0)
 
         # init the 3 thermistors
         self.therm_ext1 = Thermistor(io.AIN4, "Ext_1", chart_name="QU-BD")
-        #self.therm_ext1.setDebugLevel(2)		
-        #self.therm_ext2 = Thermistor(io.AIN5, "Ext_2")
         self.therm_hbp  = Thermistor(io.AIN6, "HBP", chart_name="B57560G104F")
-        #self.therm_hbp.setDebugLevel(2)
 
         # init the 3 heaters
         self.mosfet_ext1 = Mosfet(io.PWM1A) # PWM2B on rev1
-        #self.mosfet_ext2 = Mosfet(io.PWM2A) # PWM2A on rev1
         self.mosfet_hbp  = Mosfet(io.PWM1B) # PWM1B on rev1 
-
         # Make extruder 1
         self.ext1 = Extruder(self.steppers["E"], self.therm_ext1, self.mosfet_ext1)
         self.ext1.setPvalue(0.5)
         self.ext1.setDvalue(0.1)     
         self.ext1.setIvalue(0.001)
-        #self.ext1.debugLevel(1)
-
-        # Make Heated Build platform 
-        self.hbp = HBP( self.therm_hbp, self.mosfet_hbp)
+     
+        self.hbp = HBP( self.therm_hbp, self.mosfet_hbp)        # Make Heated Build platform 
         #self.hbp.debugLevel(1)
 
         # Init the three fans
@@ -108,8 +100,10 @@ class Replicape:
         
         self.movement = "RELATIVE"
         self.feed_rate = 3000.0
-        
-        self.pru = Pru()
+
+        # Init the path planner
+        self.path_planner = Path_planner(self.steppers)         
+        self.path_planner.set_acceleration(300.0/1000.0) 
 	
     ''' When a new gcode comes in, excute it '''
     def loop(self):
@@ -138,44 +132,17 @@ class Replicape:
             smds = {}                                               # All steppers 
             for i in range(g.numTokens()):                          # Run through all tokens
                 axis = g.tokenLetter(i)                             # Get the axis, X, Y, Z or E
-                smds[axis] = float(g.tokenValue(i))                 # Get tha value, new position or vector 
-                if self.movement == "ABSOLUTE":                     # If absolute movement, remove 
-                    smds[axis] -= self.steppers[axis].get_current_position() #                          
-
-            use_pru = True
-            if use_pru:
-                if not "X" in smds:
-                    smds["X"] = 0
-                if not "Y" in smds:
-                    smds["Y"] = 0
-                if not "Z" in smds:
-                    smds["Z"] = 0
-                if not "E" in smds:
-                    smds["E"] = 0
-                self.pru.move(smds["X"], smds["Y"], smds["Z"], smds["E"])
-                return 
-
-            if g.numTokens() > 1:                                   # Normal G1 code with at least X and Y
-                hyp = sqrt(smds["X"]**2+smds["Y"]**2)               # calculate the hypotenuse to the X-Y vectors, 
-                feed_rate_ratio = feed_rate/hyp                     # This will be the longest travel distace.
-                for axis, vec in smds.items():                      # Set the feed rate for these
-                    self.steppers[axis].setFeedRate(feed_rate_ratio*abs(vec))     
-            else:                                                   # This is probably a realtive move
-                for axis, vec in smds.items():                      # Just set the feed rate
-                    self.steppers[axis].setFeedRate(feed_rate)                                   
-            for axis, vec in smds.items():              
-             self.steppers[axis].prepare_move(vec)                  # Prepare so everyone can start at the same time            
-            for axis, vec in smds.items():              
-                self.steppers[axis].execute_move()                  # Ok, Go!
-            while True:
-                is_moving = 0
-                for axis, vec in smds.items():              
-                    is_moving += self.steppers[axis].is_moving()    # Count the number of moving steppers
-                if is_moving == 0:
-                    break;                    
-                io.delay(10)
-            for axis, vec in smds.items():                          
-                self.steppers[axis].end_move()                      # Join threads
+                smds[axis] = float(g.tokenValue(i))                 # Get tha value, new position or vector             
+            if g.numTokens() > 1:                                   # This is a complex move, so send it to the path planner
+                path = Path(smds, feed_rate, self.movement)         # Make a path segment from the axes
+                while self.path_planner.nr_of_paths() > 4:          # If the queue is full, wait. 
+                    io.delay(100)                                   # This is the waiting part
+                self.path_planner.add_path(path)                    # Ok, add the path to the planner queue
+            else:                                                   # This is probably a relative move                
+                axis, vec = smds.popitem()
+                stepper = self.steppers[axis]
+                stepper.setFeedRate(feed_rate)                               
+                stepper.move(vec, self.movement)                
         elif g.code() == "G21":                                     # Set units to mm
             self.factor = 1.0
         elif g.code() == "G28":                                     # Home the steppers
@@ -187,42 +154,42 @@ class Replicape:
             self.movement = "ABSOLUTE"
         elif g.code() == "G91":                                     # Relative positioning 
             self.movement = "RELATIVE"		
-        elif g.code() == "G92":                         # Set the current position of the following steppers
+        elif g.code() == "G92":                                     # Set the current position of the following steppers
             if g.numTokens() == 0:
                  g.setTokens(["X0", "Y0", "Z0", "E0"])
             for i in range(g.numTokens()):
                 self.steppers[g.tokenLetter(i)].setCurrentPosition(float(g.tokenValue(i)))
-        elif g.code() == "M17":                         # Enable all steppers
+        elif g.code() == "M17":                                     # Enable all steppers
             self.enableAllSteppers()
-        elif g.code() == "M30":                         # Set microstepping (Propietary to Replicape)
+        elif g.code() == "M30":                                     # Set microstepping (Propietary to Replicape)
             for i in range(g.numTokens()):
                 self.steppers[g.tokenLetter(i)].set_microstepping(int(g.tokenValue(i)))            
-        elif g.code() == "M84":                         # Disable all steppers
+        elif g.code() == "M84":                                     # Disable all steppers
             self.disableAllSteppers()
-        elif g.code() == "M104":                        # Set extruder temperature
+        elif g.code() == "M104":                                    # Set extruder temperature
             self.ext1.setTargetTemperature(float(g.tokenValue(0)))
-        elif g.code() == "M105":                        # Get Temperature
+        elif g.code() == "M105":                                    # Get Temperature
             answer = "ok T:"+str(self.ext1.getTemperature())
             answer += " B:"+str(int(self.hbp.getTemperature()))
             g.setAnswer(answer)
-        elif g.code() == "M106":                        # Fan on
+        elif g.code() == "M106":                                    # Fan on
             self.fan_1.setPWMFrequency(100)
             self.fan_1.setValue(float(g.tokenValue(0)))	
-        elif g.code() == "M110":                        # Reset the line number counter 
+        elif g.code() == "M110":                                    # Reset the line number counter 
             Gcode.line_number = 0       
-        elif g.code() == "M130":                        # Set PID P-value, Format (M130 P0 S8.0)
+        elif g.code() == "M130":                                    # Set PID P-value, Format (M130 P0 S8.0)
             pass
             #if int(self.tokens[0][1]) == 0:
             #    self.ext1.setPvalue(float(self.tokens[1][1::]))
-        elif g.code() == "M131":                        # Set PID I-value, Format (M131 P0 S8.0) 
+        elif g.code() == "M131":                                    # Set PID I-value, Format (M131 P0 S8.0) 
             pass
             #if int(self.tokens[0][1]) == 0:
             #    self.p.ext1.setPvalue(float(self.tokens[1][1::]))
-        elif g.code() == "M132":                        # Set PID D-value, Format (M132 P0 S8.0)
+        elif g.code() == "M132":                                    # Set PID D-value, Format (M132 P0 S8.0)
             pass
             #if int(self.tokens[0][1]) == 0:
             #    self.p.ext1.setPvalue(float(self.tokens[1][1::]))
-        elif g.code() == "M140":                        # Set bed temperature
+        elif g.code() == "M140":                                    # Set bed temperature
             self.hbp.setTargetTemperature(float(g.tokenValue(0)))
         else:
             print "Unknown command: "+g.message	
@@ -232,6 +199,7 @@ class Replicape:
         self.ext1.disable()
         self.hbp.disable()
         self.usb.close() 
+        self.path_planner.exit()
 
     ''' Move the stepper motors '''
     def moveTo(self, stepper, pos):

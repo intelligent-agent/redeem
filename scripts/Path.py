@@ -1,47 +1,63 @@
-''' accel_test.py - test script for testing fixed speed in PyPRUSS library'''
+''' 
+Path.py - A single movement from one point to another 
 
-import numpy as np						        # Needed for braiding the pins with the delays
+Author: Elias Bakken
+email: elias.bakken@gmail.com
+Website: http://www.hipstercircuits.com
+License: BSD
+
+You can use and change this, but keep this heading :)
+'''
+
+import numpy as np                                                          # Needed for sqrt
 
 class Path: 	
-    def __init__(self, x, y, z, e):
-        self.x = x
-        self.y = y
-        self.z = z
-        self.e = e
+    ''' The axes of evil, the feed rate in mm/min and ABS or REL '''
+    def __init__(self, axes, feed_rate, movement):
+        axes["X"] = axes["X"]/1000.0 if "X" in axes else 0.0	            # Convert to SI-unit (meteres)
+        axes["Y"] = axes["Y"]/1000.0 if "Y" in axes else 0.0
+        axes["Z"] = axes["Z"]/1000.0 if "Z" in axes else 0.0
+        axes["E"] = axes["E"]/1000.0 if "E" in axes else 0.0
 
-        hyp = np.sqrt(self.x**2+self.y**2)  # calculate the hypotenuse to the X-Y vectors, 
-        self.length  = np.sqrt(hyp**2+self.z**2)     # Also include the z-travel          
+        self.axes = axes
+        self.feed_rate = feed_rate
+        self.actual_travel = axes.copy()
+
+        hyp = np.sqrt(axes["X"]**2+axes["Y"]**2)                             # calculate the hypotenuse to the X-Y vectors, 
+        self.length  = np.sqrt(hyp**2+axes["Z"]**2)                          # Also include the z-travel          
             
-    def calculate_delays(self, vec):
-        ratio = vec/self.length                 # Calculate the ratio
+    ''' Set the next path element '''
+    def set_next(self, next):
+        self.next = next
 
-        max_speed = 100					        # Top speed in mm/s
-        min_speed = 0						    # Minimum speed (V0). 
-        acceleration = 300					    # Acceleration in mm/s^2
-        microstepping = 1.0					    # With microstepping, every step need four ticks.
-        steps_pr_mm= 6.1*microstepping 	        # Number of ticks the stepper needs to go one mm
-
-        Vm = max_speed*ratio/1000.0				# The travelling speed in m/s
-        self.a  = acceleration*ratio/1000.0		# Accelleration in m/s/s
-        s  = vec/1000.0					        # Distance in m
-        ds = (1.0/(steps_pr_mm*1000.0))		    # Delta S, distance in meters travelled pr step. 
-        self.u  = ratio*min_speed/1000.0		# Minimum speed in m/s
-
-        tm = (Vm-self.u)/self.a					# Calculate the time for when max speed is met. 
-        sm = self.u*tm+0.5*self.a*tm*tm			# Calculate the distace travelled when max speed is met
+    ''' Set the previous path element '''
+    def set_prev(self, prev):
+        self.prev = prev
         
-        if sm > s/2.0:
-            sm = s/2.0            
+    ''' Get the length of this path '''
+    def get_length(self):
+        return self.length
 
-        distances = np.arange(0, sm, ds)		# Table of distances
-        t_in_s = map(self.t_by_s, distances)	# Make a table of times, the time at which a tick occurs
-        d_in_s = np.diff(t_in_s)/2.0			# We are more interested in the delays pr second. Half it, cos we will double it later
-        dd_in_s = np.array([d_in_s, d_in_s])	# Double the array so we have timings for up and down
-        dd_in_s = dd_in_s.transpose().flatten() # Transposing and flattening braids the data. 
-        
-        return dd_in_s
+    ''' Get the length of the axis '''
+    def get_axis_length(self, axis):
+        return self.axes[axis]
 
+    ''' Calculate the angle this path has with another path '''
+    def get_angle_with(self, next_path):
+        raise Exception("Not implemented!")
 
-    def t_by_s(self, s):							# Get the timestamp given a certain distance. 
-        return (-self.u+np.sqrt(2*self.a*s+self.u*self.u))/self.a	# This is the s = ut+1/2at^2 solved with reference to t
+    ''' Get the top speed of this segment '''
+    def get_max_speed(self):
+        return (self.feed_rate/60.0)/1000.0
 
+    ''' Get the lowest speed along this segment '''
+    def get_min_speed(self):
+        return 0
+
+    ''' Return the list of axes '''
+    def get_axes(self):
+        return self.axes
+
+    ''' set the distance that was actually travelled.. '''
+    def set_travelled_distance(self, axis, td):
+        self.actual_travel[axis] = td

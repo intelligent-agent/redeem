@@ -6,8 +6,8 @@ import numpy as np						# Needed for braiding the pins with the delays
 from Path import Path
 
 
-x = 50
-y = 50
+x = 30
+y = 30
 
 pru_hz 			= 200*1000*1000			# The PRU has a speed of 200 MHz
 s_pr_inst 		= 1.0/pru_hz			# I take it every instruction is a single cycle instruction
@@ -73,7 +73,7 @@ while True:
     pru.enable(0)							    # Clean shit up, we don't want to be piggies. 
     pru.enable(1)							    # Clean shit up, we don't want to be piggies. 
     pru.wait_for_event(0)					    # Wait a while for it to finish.
-    #pru.wait_for_event(1)					    # Wait a while for it to finish.
+    pru.wait_for_event(1)					    # Wait a while for it to finish.
 
     steps_x     = [(1<<12), 0]*num_steps_x	    # Make the table of ticks for the stepper. 
     steps_y 	= [(1<<31), 0]*num_steps_y
@@ -94,5 +94,5 @@ while True:
     pru.enable(0)							    # Clean shit up, we don't want to be piggies. 
     pru.enable(1)							    # Clean shit up, we don't want to be piggies. 
     pru.wait_for_event(0)					    # Wait a while for it to finish.
-    #pru.wait_for_event(1)					    # Wait a while for it to finish.
+    pru.wait_for_event(1)					    # Wait a while for it to finish.
 

@@ -55,7 +55,7 @@ class SMD:
         self.dirPin          = dirPin
         self.faultPin        = faultPin
         self.name            = name
-        self.state 		     = 0x70   	    # The state of the inputs
+        self.state           = 0x70   	    # The state of the inputs
         self.dacvalue 	     = 0x00   	    # The voltage value on the VREF		
         self.enabled 	     = False	    # Start disabled
         self.currentPosition = 0.0 	        # Starts in pos 0
@@ -64,8 +64,9 @@ class SMD:
         self.steps_pr_mm     = 1            # Numer of steps pr mm. 
         self.debug           = 2            # Debug level
         self.direction       = 0            # Direction of movement
-        self.moving          = False
+        self.moving          = False        # We start out stationary 
         self.microsteps      = 1.0          # Well, this is the microstep number
+        self.pru_num         = -1           # PRU number, if any 
         SMD.all_smds.append(self) 	        # Add to list of smds
 
         pinMode(stepPin,   0, 0) 	        # Output, no pull up
@@ -88,20 +89,95 @@ class SMD:
             self.enabled = False
             print "smd disabled, state = "+bin(self.state)
 
+    '''Logic high to enable device, logic low to enter
+    low-power sleep mode. Internal pulldown.'''
+    def enableSleepmode(self):
+        self.state &= ~(1<<5)		
+        self.update()
+
+    ''' Disables sleepmode (awake) '''
+    def disableSleepmode(self):
+        self.state |= (1<<5)		
+        self.update()
+
+    '''nReset - Active-low reset input initializes the indexer
+    logic and disables the H-bridge outputs.
+    Internal pulldown.'''
+    def reset(self):
+        self.state |= (1<<4)
+        self.update()
+        self.state &= ~(1<<4)
+        self.update()
+
+    ''' Microstepping (default = 0) 0 to 5 '''
+    def set_microstepping(self, value):
+        self.microsteps = (1<<value) 
+        self.state &= ~(7<<1)
+        self.state |= (value << 1)
+        self.update()
+        self.mmPrStep = 1.0/(self.steps_pr_mm*self.microsteps)
+        if self.debug > 2:
+            print "State is: "+bin(self.state)
+            print "Microsteps: "+str(self.microsteps)
+            print "mmPrStep is: "+str(self.mmPrStep)
+
+    ''' Current chopping limit (This is the value you can change) '''
+    def setCurrentValue(self, iChop):        
+        vRef = 3.3                              # Voltage reference on the DAC
+        rSense = 0.1                            # Resistance for the 
+        vOut = iChop*5.0*rSense                 # Calculated voltage out from the DAC (See page 9 in the datasheet for the DAC)
+
+        self.dacval = int((vOut*256.0)/vRef)
+        byte1 = ((self.dacval & 0xF0)>>4) + (self.dac_channel<<4)
+        byte2 = (self.dacval & 0x0F)<<4
+        spi2_0.writebytes([byte1, byte2])       # Update all channels
+        spi2_0.writebytes([0xA0, 0xFF])         # TODO: Change to only this channel (1<<dac_channel) ?
+
+    ''' Returns the current state '''
+    def getState(self):
+        return self.state & 0xFF				# Return the satate of the serial to parallel
+
+    ''' Commits the changes	'''
+    def update(self):
+        SMD.commit()							# Commit the serial to parallel
+
+    '''
+    Higher level commands 
+    '''
+
     ''' Move a certain distance, relative movement '''
-    def move(self, mm):
-        if mm > 0:
+    def move(self, mm, movement):
+        if movement == "ABSOLUTE":
+            self.set_position = mm
+        else:
+            self.set_position += mm
+        if self.set_position > self.currentPosition:
             self.direction = 1
         else:
             self.direction = 0
-        digitalWrite(self.dirPin, self.direction)        
-        self.set_position = self.currentPosition+mm
+        digitalWrite(self.dirPin, self.direction)            
 
-        self.moving = True
-        self.t = Thread(target=self.do_work)
-        self.t.start()		
+        while(abs(self.currentPosition - self.set_position) > self.mmPrStep):
+            toggle(self.stepPin)
+            time.sleep(self.seconds_pr_step/2.0)
+            toggle(self.stepPin)
+            time.sleep(self.seconds_pr_step/2.0)
+            if self.direction == 1:
+                self.currentPosition += self.mmPrStep
+            else:
+                self.currentPosition -= self.mmPrStep
+            #print "curr: "+str(self.currentPosition)+", set: "+str(self.set_position)+" mmPrStep: "+str(self.mmPrStep)
 
-    ''' Preapre a move. But do not start the thread yet. '''
+
+    ''' Set timing and pin data '''
+    def add_data(self, data):
+        (pins, delays) = data
+
+    ''' Ok, go! Start stepping with the just set data '''
+    def go(self):
+        pass
+
+    ''' Prepare a move. But do not start the thread yet. '''
     def prepare_move(self, mm):
         if mm > 0:
             self.direction = 1
@@ -157,49 +233,6 @@ class SMD:
     def get_current_position(self):
         return self.currentPosition
 
-    '''Logic high to enable device, logic low to enter
-    low-power sleep mode. Internal pulldown.'''
-    def enableSleepmode(self):
-        self.state &= ~(1<<5)		
-        self.update()
-
-    ''' Disables sleepmode (awake) '''
-    def disableSleepmode(self):
-        self.state |= (1<<5)		
-        self.update()
-
-    '''nReset - Active-low reset input initializes the indexer
-    logic and disables the H-bridge outputs.
-    Internal pulldown.'''
-    def reset(self):
-        self.state |= (1<<4)
-        self.update()
-        self.state &= ~(1<<4)
-        self.update()
-
-    ''' Microstepping (default = 0) 0 to 5 '''
-    def set_microstepping(self, value):
-        self.microsteps = (1<<value) 
-        self.state &= ~(7<<1)
-        self.state |= (value << 1)
-        self.update()
-        self.mmPrStep = 1.0/(self.steps_pr_mm*self.microsteps)
-        if self.debug > 2:
-            print "State is: "+bin(self.state)
-            print "Microsteps: "+str(self.microsteps)
-            print "mmPrStep is: "+str(self.mmPrStep)
-
-    ''' Current chopping limit (This is the value you can change) '''
-    def setCurrentValue(self, iChop):        
-        vRef = 3.3                              # Voltage reference on the DAC
-        rSense = 0.1                            # Resistance for the 
-        vOut = iChop*5.0*rSense                 # Calculated voltage out from the DAC (See page 9 in the datasheet for the DAC)
-
-        self.dacval = int((vOut*256.0)/vRef)
-        byte1 = ((self.dacval & 0xF0)>>4) + (self.dac_channel<<4)
-        byte2 = (self.dacval & 0x0F)<<4
-        spi2_0.writebytes([byte1, byte2])       # Update all channels
-        spi2_0.writebytes([0xA0, 0xFF])         # TODO: Change to only this channel (1<<dac_channel) ?
 
     ''' Set the feed rate in mm/min '''
     def setFeedRate(self, feed_rate):		
@@ -214,20 +247,11 @@ class SMD:
     def step(self, steps):
         print self.name+"Stepping %d times "%steps 
         for i in range(steps):
-	        toggle(self.stepPin)
-	        delay(self.stepDelay)
-
-    ''' Returns the current state '''
-    def getState(self):
-        return self.state & 0xFF
-
-    ''' Commits the changes	'''
-    def update(self):
-        # Commit the serial to parallel
-        SMD.commit()
+            toggle(self.stepPin)
+            delay(self.stepDelay)
 			
     ''' Sets the number of mm the stepper moves pr step. 
-	    This must be measured and calibrated '''
+        This must be measured and calibrated '''
     def _setMMPrstep(self, mmPrStep):
         self.mmPrStep = mmPrStep
 
@@ -239,4 +263,31 @@ class SMD:
     ''' Well, you can only guess what this function does. '''
     def set_max_feed_rate(self, max_feed_rate):
         self.max_feed_rate = max_feed_rate
-	
+
+    ''' If this can be controlled by a PRU, set the PRU number  (0 or 1) '''
+    def set_pru(self, pru_num):
+        self.pru_num = pru_num
+
+    ''' Return true is this has a PRU nmuber assiciated with it '''
+    def has_pru(self):
+        return (self.pru_num > -1)
+
+    ''' Return the pru number '''
+    def get_pru(self):
+        return self.pru_num
+
+    ''' Get the number of steps pr meter '''
+    def get_steps_pr_meter(self):        
+        return self.steps_pr_mm*1000.0
+
+    ''' The pin that steps, it looks like GPIO1_31 aso '''
+    def get_step_pin(self):
+        return (1<<int(self.stepPin.split("_")[1]))
+    
+    ''' '''
+    def get_dir_pin(self):
+        return (1<<int(self.dirPin.split("_")[1]))
+
+
+
+

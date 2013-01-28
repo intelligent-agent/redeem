@@ -93,6 +93,16 @@ static PyObject *pypruss_disable(PyObject *self, PyObject *args){
     return Py_None;	
 }
 
+// Reset a PRU
+static PyObject *pypruss_reset(PyObject *self, PyObject *args){
+	int pru_num;
+	if (!PyArg_ParseTuple(args, "i", &pru_num))
+        return NULL;
+	prussdrv_pru_reset(pru_num); 										// Enable the PRU
+    Py_INCREF(Py_None);						
+    return Py_None;	
+}
+
 
 // Wait for the "finished" event from the PRU and clear it. 
 static PyObject *pypruss_wait_for_event(PyObject *self, PyObject *args){
@@ -124,6 +134,7 @@ static PyMethodDef pypruss_methods[] = {
 		{ "wait_for_event", (PyCFunction)pypruss_wait_for_event, METH_VARARGS, NULL},
 		{ "enable", (PyCFunction)pypruss_enable, METH_VARARGS, NULL},
 		{ "disable", (PyCFunction)pypruss_disable, METH_VARARGS, NULL},
+		{ "reset", (PyCFunction)pypruss_reset, METH_VARARGS, NULL},
 		{ "exit", (PyCFunction)pypruss_exit, METH_VARARGS, NULL},
         { NULL, NULL, 0, NULL }
 };
