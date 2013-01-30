@@ -1,28 +1,106 @@
+/*
+PyPRUSS - a Python binding for the PRU driver on BeagleBone 
+
+Author: Elias Bakken
+email: elias.bakken@gmail.com
+Website: http://www.hipstercircuits.com
+License: BSD
+
+You can use and change this, but keep this heading :)
+*/
+
 #include <Python.h>
 #include <prussdrv.h>
 #include <pruss_intc_mapping.h>
 
 #define AM33XX
 
+#define PRU_NUM0 0
+#define PRU_NUM1 1
+
+// Higher level function 
+static PyObject *pypruss_init_all(PyObject *slef, PyObject *args){
+    int ret;
+	int data[1];
+	tpruss_intc_initdata pruss_intc_initdata = PRUSS_INTC_INITDATA;
+    prussdrv_init ();	
+	ret = prussdrv_open(PRU_EVTOUT_0);
+    if (ret){
+        printf("prussdrv_0_open open failed\n");
+        return (ret);
+    }
+    
+    ret = prussdrv_open(PRU_EVTOUT_1);
+    if (ret){
+        printf("prussdrv_1_open open failed\n");
+        return (ret);
+    }
+    prussdrv_pruintc_init(&pruss_intc_initdata);
+
+	data[0] = 0;
+	prussdrv_pru_write_memory(0, 0,  data, 4);
+	prussdrv_pru_write_memory(1, 0,  data, 4);
+    prussdrv_exec_program (PRU_NUM0, "./firmware_PRU0.bin");
+    prussdrv_exec_program (PRU_NUM1, "./firmware_PRU1.bin");
+
+    Py_INCREF(Py_None);
+    return Py_None;
+
+}
+
+// Wait for all PRUs to return 
+static PyObject *pypruss_wait_for_both(PyObject *self, PyObject *args){
+    prussdrv_pru_wait_event (PRU_EVTOUT_0);
+    prussdrv_pru_clear_event (PRU0_ARM_INTERRUPT);
+    prussdrv_pru_wait_event (PRU_EVTOUT_1);
+    prussdrv_pru_clear_event (PRU1_ARM_INTERRUPT);
+
+    Py_INCREF(Py_None);
+    return Py_None;	
+}
+
+
+// Modprobe 
+static PyObject *pypruss_modprobe(PyObject *self, PyObject *args){
+	system("modprobe uio_pruss");									
+    Py_INCREF(Py_None);
+    return Py_None;
+}
+
+
 // Init, mod_probe
 static PyObject *pypruss_init(PyObject *self, PyObject *args){
-    int ret;
-
-	system("modprobe uio_pruss");									// Make sure the module is loaded
-
-    tpruss_intc_initdata pruss_intc_initdata = PRUSS_INTC_INITDATA;	
     prussdrv_init ();	    
+    Py_INCREF(Py_None);
+    return Py_None;
+}
 
-    ret = prussdrv_open(PRU_EVTOUT_0);
+// Open evtout
+static PyObject *pypruss_open(PyObject *self, PyObject *args){
+    int ret;
+	int evtout;
+
+	if (!PyArg_ParseTuple(args, "i", &evtout)){
+     	return NULL;
+    }
+    ret = prussdrv_open(evtout);
     if (ret){
         printf("prussdrv_open open failed\n");
         return NULL;
     }
+    Py_INCREF(Py_None);
+    return Py_None;
+}
+
+// Interrupt init
+static PyObject *pypruss_intc_init(PyObject *self, PyObject *args){
+    tpruss_intc_initdata pruss_intc_initdata = PRUSS_INTC_INITDATA;	
     prussdrv_pruintc_init(&pruss_intc_initdata);					// Get the interrupt initialized
 
     Py_INCREF(Py_None);
     return Py_None;
 }
+
 
 // Execute a program 
 static PyObject *pypruss_exec_program(PyObject *self, PyObject *args){
@@ -41,7 +119,7 @@ static PyObject *pypruss_exec_program(PyObject *self, PyObject *args){
  
 // Write data to the memory
 static PyObject *pypruss_write_memory(PyObject *self, PyObject *args){
-	int pru_num;
+	int mem_type;		// PRUSS0_PRU0_DATARAM or PRUSS0_PRU1_DATARAM
     int i;    
     int len;	
 	int offset;
@@ -50,7 +128,7 @@ static PyObject *pypruss_write_memory(PyObject *self, PyObject *args){
 	PyObject* data_seq;
 	unsigned int *data;
 
-    if (!PyArg_ParseTuple(args, "iiO", &pru_num, &offset, &data_obj))
+    if (!PyArg_ParseTuple(args, "iiO", &mem_type, &offset, &data_obj))
         return NULL;
 
     data_seq = PySequence_Fast(data_obj, "expected a sequence");
@@ -63,19 +141,37 @@ static PyObject *pypruss_write_memory(PyObject *self, PyObject *args){
     }
     Py_DECREF(data_seq);
 
-	if(pru_num == 0)
-	    prussdrv_pru_write_memory(PRUSS0_PRU0_DATARAM, offset,  data, len*4);
-	else
-	    prussdrv_pru_write_memory(PRUSS0_PRU1_DATARAM, offset,  data, len*4);
+
+    prussdrv_pru_write_memory(mem_type, offset,  data, len*4);
 
     Py_INCREF(Py_None);													
     return Py_None;	
 }
 
+// Wait for an event from a PRU
+static PyObject *pypruss_wait_for_event(PyObject *self, PyObject *args){
+	int evtout; // PRU_EVTOUT_0 or PRU_EVTOUT_1
+    if (!PyArg_ParseTuple(args, "i", &evtout))
+     	return NULL;	
+	prussdrv_pru_wait_event (evtout);			// Wait for the event. This blocks the thread. 
+    Py_INCREF(Py_None);
+    return Py_None;
+}
+
+// Clear an event 
+static PyObject *pypruss_clear_event(PyObject *self, PyObject *args){
+	int event; // PRU0_ARM_INTERRUPT or PRU1_ARM_INTERRUPT
+    if (!PyArg_ParseTuple(args, "i", &event))
+     	return NULL;
+	prussdrv_pru_clear_event (event); 	// Clear the event 
+    Py_INCREF(Py_None);
+    return Py_None;
+}
+
+
 // Enable a PRU
 static PyObject *pypruss_enable(PyObject *self, PyObject *args){
 	int pru_num;
-	
 	if (!PyArg_ParseTuple(args, "i", &pru_num))
         return NULL;
 	prussdrv_pru_enable(pru_num); 											// Start the PRU
@@ -104,20 +200,7 @@ static PyObject *pypruss_reset(PyObject *self, PyObject *args){
 }
 
 
-// Wait for the "finished" event from the PRU and clear it. 
-static PyObject *pypruss_wait_for_event(PyObject *self, PyObject *args){
-	int pru_num;
 
-    if (!PyArg_ParseTuple(args, "i", &pru_num)){
-     	return NULL;
-    }
-	
-	prussdrv_pru_wait_event (PRU_EVTOUT_0);			// Wait for the event. This blocks the thread. 
-	prussdrv_pru_clear_event (PRU0_ARM_INTERRUPT); 	// Clear the event 
-
-    Py_INCREF(Py_None);
-    return Py_None;
-}
 
 // Exit the PRU driver
 static PyObject *pypruss_exit(PyObject *self, PyObject *args){	
@@ -128,10 +211,16 @@ static PyObject *pypruss_exit(PyObject *self, PyObject *args){
 
 // Declare the methods to export
 static PyMethodDef pypruss_methods[] = {
+		{ "init_all", (PyCFunction)pypruss_init_all, METH_VARARGS, NULL },
+		{ "wait_for_both", (PyCFunction)pypruss_wait_for_both, METH_VARARGS, NULL },
+        { "modprobe", (PyCFunction)pypruss_modprobe, METH_VARARGS, NULL },
         { "init", (PyCFunction)pypruss_init, METH_VARARGS, NULL },
+        { "open", (PyCFunction)pypruss_open, METH_VARARGS, NULL },
+        { "intc_init", (PyCFunction)pypruss_intc_init, METH_VARARGS, NULL },
         { "exec_program", (PyCFunction)pypruss_exec_program, METH_VARARGS, NULL },
 		{ "write_memory", (PyCFunction)pypruss_write_memory, METH_VARARGS, NULL},
 		{ "wait_for_event", (PyCFunction)pypruss_wait_for_event, METH_VARARGS, NULL},
+		{ "clear_event", (PyCFunction)pypruss_clear_event, METH_VARARGS, NULL},
 		{ "enable", (PyCFunction)pypruss_enable, METH_VARARGS, NULL},
 		{ "disable", (PyCFunction)pypruss_disable, METH_VARARGS, NULL},
 		{ "reset", (PyCFunction)pypruss_reset, METH_VARARGS, NULL},

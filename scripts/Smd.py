@@ -145,6 +145,10 @@ class SMD:
     Higher level commands 
     '''
 
+    ''' Move to an absolute position '''
+    def moveTo(self, pos):
+        self.move(pos-self.currentPosition)
+
     ''' Move a certain distance, relative movement '''
     def move(self, mm, movement):
         if movement == "ABSOLUTE":
@@ -166,55 +170,38 @@ class SMD:
                 self.currentPosition += self.mmPrStep
             else:
                 self.currentPosition -= self.mmPrStep
-            #print "curr: "+str(self.currentPosition)+", set: "+str(self.set_position)+" mmPrStep: "+str(self.mmPrStep)
 
 
     ''' Set timing and pin data '''
     def add_data(self, data):
         (pins, delays) = data
-
-    ''' Ok, go! Start stepping with the just set data '''
-    def go(self):
-        pass
-
+        self.pins = pins
+        self.delays = delays
+        print "steps: "+str(len(self.pins))+" delays "+str(len(self.delays))
+    
     ''' Prepare a move. But do not start the thread yet. '''
-    def prepare_move(self, mm):
-        if mm > 0:
-            self.direction = 1
-        else:
-            self.direction = 0
-        digitalWrite(self.dirPin, self.direction)        
-        self.set_position = self.currentPosition+mm
-        self.t = Thread(target=self.do_work)
-        if self.debug > 1: 
-            print "Prepare done"
+    def prepare_move(self):
+        if not hasattr(self, "pins") or len(self.pins) == 0:
+            return
+        dir_mask  = self.get_dir_pin()
+        digitalWrite(self.dirPin, dir_mask & self.pins[0])
+        self.t = Thread(target=self._do_work)
+        self.t.start()
 
     ''' Execute the planned move. '''
-    def execute_move(self):
-        self.moving = True
-        self.t.start()		
-
-    ''' Move to an absolute position '''
-    def moveTo(self, pos):
-        self.move(pos-self.currentPosition)
+    def start_move(self):
+        if not hasattr(self, "pins") or len(self.pins) == 0:
+            return
+        self.moving = True        
 
     ''' Do the work '''
-    def do_work(self):
-        if self.debug > 1:         
-            print "Do work, delay is "+str(self.seconds_pr_step)
-        i = 0
-        while(abs(self.currentPosition - self.set_position) > self.mmPrStep):
-            toggle(self.stepPin)
-            time.sleep(self.seconds_pr_step/2.0)
-            toggle(self.stepPin)
-            time.sleep(self.seconds_pr_step/2.0)
-            if self.direction == 1:
-                self.currentPosition += self.mmPrStep
-            else:
-                self.currentPosition -= self.mmPrStep
-            i += 1
-        if self.debug > 1:
-            print "Done, stepped %d times"%i
+    def _do_work(self):
+        while not self.moving: 
+            time.sleep(0.001)
+        step_mask = self.get_step_pin()
+        for i, pin in enumerate(self.pins):
+            digitalWrite(self.stepPin, pin & step_mask)
+            time.sleep(self.delays[i])
         self.moving = False
 
     ''' Returns true if the stepper is still moving '''
@@ -223,32 +210,17 @@ class SMD:
 
     ''' Join the thread '''
     def end_move(self):
+        if not hasattr(self, "pins") or len(self.pins) == 0:
+            return
         self.t.join()
-
-    ''' Set the current position of this stepper '''
-    def setCurrentPosition(self, pos):
-        self.currentPosition = pos
-
-    ''' Return the position this stepper has '''	
-    def get_current_position(self):
-        return self.currentPosition
-
+        del self.pins
+        del self.delays
 
     ''' Set the feed rate in mm/min '''
     def setFeedRate(self, feed_rate):		
         minutes_pr_mm = 1.0/float(feed_rate)
         seconds_pr_mm = minutes_pr_mm*60.0
         self.seconds_pr_step = self.mmPrStep*seconds_pr_mm
-
-        if self.debug > 0:
-            print self.name+": feed rate: %f, sec.pr.mm: %f, sec.pr.step: %f"%(feed_rate, seconds_pr_mm, self.seconds_pr_step)
-
-    ''' Toggle the "step" pin n times. '''
-    def step(self, steps):
-        print self.name+"Stepping %d times "%steps 
-        for i in range(steps):
-            toggle(self.stepPin)
-            delay(self.stepDelay)
 			
     ''' Sets the number of mm the stepper moves pr step. 
         This must be measured and calibrated '''
@@ -278,13 +250,13 @@ class SMD:
 
     ''' Get the number of steps pr meter '''
     def get_steps_pr_meter(self):        
-        return self.steps_pr_mm*1000.0
+        return self.steps_pr_mm*self.microsteps*1000.0
 
     ''' The pin that steps, it looks like GPIO1_31 aso '''
     def get_step_pin(self):
         return (1<<int(self.stepPin.split("_")[1]))
     
-    ''' '''
+    ''' Get the dir pin shifted into position '''
     def get_dir_pin(self):
         return (1<<int(self.dirPin.split("_")[1]))
 

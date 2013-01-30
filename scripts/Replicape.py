@@ -45,7 +45,7 @@ class Replicape:
         self.steppers["X"].setCurrentValue(2.0) # 2A
         self.steppers["X"].setEnabled() 
         self.steppers["X"].set_steps_pr_mm(6.105)         
-        self.steppers["X"].set_microstepping(1) 
+        self.steppers["X"].set_microstepping(2) 
         self.steppers["X"].set_pru(0)
 
         self.steppers["Y"].setCurrentValue(2.0) # 2A
@@ -59,11 +59,11 @@ class Replicape:
         self.steppers["Z"].set_steps_pr_mm(149.25)
         self.steppers["Z"].set_microstepping(0) 
 
-        self.steppers["E"].setCurrentValue(0.7) # 2A        
-        #self.steppers["E"].setEnabled()
+        self.steppers["E"].setCurrentValue(1.0) # 2A        
+        self.steppers["E"].setEnabled()
         self.steppers["E"].set_steps_pr_mm(5.0)
         self.steppers["E"].set_microstepping(2)
-        #self.steppers["E"].set_pru(0)
+        self.steppers["E"].set_pru(0)
 
         # init the 3 thermistors
         self.therm_ext1 = Thermistor(io.AIN4, "Ext_1", chart_name="QU-BD")
@@ -133,32 +133,31 @@ class Replicape:
             for i in range(g.numTokens()):                          # Run through all tokens
                 axis = g.tokenLetter(i)                             # Get the axis, X, Y, Z or E
                 smds[axis] = float(g.tokenValue(i))                 # Get tha value, new position or vector             
-            if g.numTokens() > 1:                                   # This is a complex move, so send it to the path planner
-                path = Path(smds, feed_rate, self.movement)         # Make a path segment from the axes
-                while self.path_planner.nr_of_paths() > 4:          # If the queue is full, wait. 
-                    io.delay(100)                                   # This is the waiting part
-                self.path_planner.add_path(path)                    # Ok, add the path to the planner queue
-            else:                                                   # This is probably a relative move                
-                axis, vec = smds.popitem()
-                stepper = self.steppers[axis]
-                stepper.setFeedRate(feed_rate)                               
-                stepper.move(vec, self.movement)                
+            path = Path(smds, feed_rate, self.movement)             # Make a path segment from the axes
+            while self.path_planner.nr_of_paths() > 4:              # If the queue is full, wait. 
+                io.delay(100)                                       # This is the waiting part
+            self.path_planner.add_path(path)                        # Ok, add the path to the planner queue
         elif g.code() == "G21":                                     # Set units to mm
             self.factor = 1.0
         elif g.code() == "G28":                                     # Home the steppers
             if g.numTokens() == 0:                                  # If no token is given, home all
                 g.setTokens(["X", "Y", "Z"])
-            for i in range(g.numTokens()):                    
-                self.moveTo(g.tokenLetter(i), 0.0)              
+            for i in range(g.numTokens()):                          # Run through all tokens
+                axis = g.tokenLetter(i)                             # Get the axis, X, Y, Z or E
+                val = -self.path_planner.get_pos(axis)*1000.0
+                self.steppers[axis].move(val, self.movement)        # Get tha value, new position or vector             
+            self.path_planner.reset_pos()
         elif g.code() == "G90":                                     # Absolute positioning
             self.movement = "ABSOLUTE"
         elif g.code() == "G91":                                     # Relative positioning 
             self.movement = "RELATIVE"		
         elif g.code() == "G92":                                     # Set the current position of the following steppers
             if g.numTokens() == 0:
-                 g.setTokens(["X0", "Y0", "Z0", "E0"])
+                 g.setTokens(["X0", "Y0", "Z0", "E0"])              # If no token is present, do this for all
             for i in range(g.numTokens()):
-                self.steppers[g.tokenLetter(i)].setCurrentPosition(float(g.tokenValue(i)))
+                axis = g.tokenLetter(i)
+                val = float(g.tokenValue(i))
+                self.path_planner.set_pos(axis, val)
         elif g.code() == "M17":                                     # Enable all steppers
             self.enableAllSteppers()
         elif g.code() == "M30":                                     # Set microstepping (Propietary to Replicape)
