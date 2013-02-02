@@ -45,6 +45,12 @@ import numpy as np						                            # Needed for braiding the pi
 from threading import Thread
 import time 
 
+
+DDR_BASEADDR		= 0x70000000					# The actual baseaddr is 0x80000000, but due to a bug(?), 
+DDR_HACK			= 0x10001000					# Python accept unsigned int as offset argument.
+DDR_FILELEN			= DDR_HACK+0x1000				# The amount of memory to make available
+DDR_OFFSET			= DDR_HACK						# Add the hack to the offset as well. 
+
 class Pru:
     def __init__(self):
         pru_hz 			    = 200*1000*1000		                        # The PRU has a speed of 200 MHz
@@ -53,27 +59,53 @@ class Pru:
         self.inst_pr_delay 	= 2					                        # Every loop adds two instructions: i-- and i != 0            
         self.pru_data       = [[], []]
         self.data_set       = [[],[]]                                   # Split the data up into manageble packages 
-        pypruss.modprobe()							                    # Modprobe    
-        pypruss.init_all()								                # Init
-        pypruss.wait_for_both()				                            # Wait for the PRUs to finish
+		with open("/dev/mem", "r+b") as f:					# Open the memory device
+			ddr_mem = mmap.mmap(f.fileno(), DDR_FILELEN, offset=DDR_BASEADDR) # 
+		
+		pypruss.modprobe()							       	# This only has to be called once pr boot
+		pypruss.init()										# Init the PRU
+		pypruss.open(0)										# Open PRU event 0 which is PRU0_ARM_INTERRUPT
+		#pypruss.open(1)										# Open PRU event 0 which is PRU0_ARM_INTERRUPT
+		pypruss.pruintc_init()								# Init the interrupt controller
+		pypruss.exec_program(0, "./ddr_write.bin")			# Load firmware "ddr_write.bin" on PRU 0
+		pypruss.wait_for_event(0)							# Wait for event 0 which is connected to PRU0_ARM_INTERRUPT
+		pypruss.clear_event(0)								# Clear the event
+        #pypruss.modprobe()							        # Modprobe    
+        #pypruss.init_all()								    # Init
+        #pypruss.wait_for_both()				            # Wait for the PRUs to finish
         print "PRU initialized"
 
 
     ''' Add some data to one of the PRUs '''
     def add_data(self, data, pru_num):
-        (pins, delays) = data                       # Get the data
+        (pins, delays) = data                       	# Get the data
         if len(pins) == 0:
             return 
         print "Adding data len for "+str(pru_num)+": "+str(len(pins))
-        delays = map(self._sec_to_inst, delays)     # Convert the delays in secs to delays in instructions
-        data = np.array([pins, delays])		        # Make a 2D matrix combining the ticks and delays
-        data = list(data.transpose().flatten())     # Braid the data so every other item is a pin and delay
+        delays = map(self._sec_to_inst, delays)     	# Convert the delays in secs to delays in instructions
+        data = np.array([pins, delays])		        	# Make a 2D matrix combining the ticks and delays
+        data = list(data.transpose().flatten())     	# Braid the data so every other item is a pin and delay
         
         if len(self.pru_data[pru_num]) > 0:
             self.pru_data[pru_num] = self._braid_data(data, self.pru_data[pru_num])
         else:
             self.pru_data[pru_num] = data
        
+
+	''' Commit the data '''
+	def commit_data(self):
+		for reg in self.pru_data[0]:
+			data += "".join(map(chr, [20, 0, 0, 0]))	# Make the data, it needs to be a string
+		ddr_mem[DDR_OFFSET:DDR_OFFSET+4] = data		 	# Write the data to the DDR memory, four bytes should suffice			
+
+	''' Close shit up '''
+	def close(self):
+		ddr_mem.close()									# Close the memory 
+		f.close()										# Close the file
+		pypruss.pru_disable(0)								# Disable PRU 0, this is already done by the firmware
+		pypruss.pru_disable(1)								# Disable PRU 0, this is already done by the firmware
+		pypruss.exit()										# Exit, don't know what this does. 
+
 
     ''' slice up the data into nice little packages '''
     def package_data(self):                
