@@ -76,20 +76,18 @@ class Path_planner:
                         continue
                     stepper = self.steppers[axis]                   # Get a handle of  the stepper
                     data = self._make_data(path, axis)              # Generate the timing and pin data                         
-                               # Make sure the data was actually made, TODO: cutoff before? 
                     if stepper.has_pru():                           # If this stepper has a PRU associated with it
                         pru_num = stepper.get_pru()
                         self.pru.add_data(data, pru_num) 
                     else:               
                         stepper.add_data(data)                      # If not, let the stepper fix this.     
 
-                self.pru.package_data()                             # Package the data in manageble sizes. 
                 for axis in path.get_axes():                        
                     self.steppers[axis].prepare_move()              # Make them start performing
                 for axis in path.get_axes():                        
                     self.steppers[axis].start_move()                # Make them start performing
 
-                self.pru.go()                                       # Make the PRU go as well
+                self.pru.commit_data()                              # Commit data to ddr 
                 self.pru.wait_for_event()                           # Wait for the PRU to finish execution 
                 for axis in path.get_axes():                        
                     self.steppers[axis].end_move()                  # Join threads
