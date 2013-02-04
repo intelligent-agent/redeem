@@ -37,7 +37,7 @@ class Gcode:
         for i, token in enumerate(self.tokens):
             if len(token) == 0:
                 self.tokens.pop(i)
-        self.debug = 1
+        self.debug = 0
         self.answer = "ok"
 
         if self.debug > 1:           

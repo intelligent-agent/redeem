@@ -7,6 +7,7 @@
 #define CONST_DDR 			0x80001000
 #define DDR_END				0x80002000
 #define CTPPR_1         	0x2202C 	
+#define DDR_MAGIC			0xbabe7175		// Magic number used to reset the DDR counter 
 
 START:
     LBCO r0, C4, 4, 4					// Load Bytes Constant Offset (?)
@@ -35,12 +36,14 @@ DELAY:
 
     SUB r1, r1, 1
     QBNE BLINK, r1, 0					// Still more pins to go, jump back
-
-	MOV  r3, DDR_END 		
-	QBEQ RESET_R4, r4, r3				// Check if the end of DDR is reached
-
 	ADD  r4, r4, 4			
+
     MOV R31.b0, PRU0_ARM_INTERRUPT+16   // Send notification to Host that the instructions are done
+
+	MOV  r3, DDR_MAGIC					// Load the fancy word into r3
+	LBBO r2, r4, 0, 4					// Load the next data into r2
+	QBEQ RESET_R4, r2, r3				// Check if the end of DDR is reached
+
 
 WAIT:
     LBBO r1, r4, 0, 4     				// Load values from external DDR Memory into R1
@@ -48,3 +51,8 @@ WAIT:
 	QBA WAIT							// Loop back to wait for new data
 
 	
+DEBUG:
+    MOV r2, (7<<22)						// Load pin data into r2
+    MOV r3, GPIO1 | GPIO_DATAOUT
+    SBBO r2, r3, 0, 4
+	QBA DEBUG

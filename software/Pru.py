@@ -50,11 +50,12 @@ import time
 import mmap
 import struct 
 
-DDR_BASEADDR		= 0x70000000					# The actual baseaddr is 0x80000000, but due to a bug(?), 
+DDR_BASEADDR		= 0x70000000					# The actual baseaddr is 0x80001000, but due to a bug(?), 
 DDR_HACK			= 0x10001000					# Python accept unsigned int as offset argument.
-DDR_END			    = DDR_HACK+0x1000 				# The amount of memory to make available
+DDR_END			    = DDR_HACK+0x4000 				# The amount of memory to make available
 DDR_START			= DDR_HACK						# Add the hack to the offset as well. 
 DDR_LEN             = DDR_END-DDR_START
+DDR_MAGIC			= 0xbabe7175
 
 class Pru:
     def __init__(self):
@@ -67,6 +68,7 @@ class Pru:
         with open("/dev/mem", "r+b") as f:					# Open the memory device
             self.ddr_mem = mmap.mmap(f.fileno(), DDR_HACK+DDR_LEN, offset=DDR_BASEADDR) # 
             self.ddr_mem[DDR_START:DDR_START+4] = struct.pack('L', 0) 
+
         pypruss.modprobe()							       	# This only has to be called once pr boot
         pypruss.init()										# Init the PRU
         pypruss.open(0)										# Open PRU event 0 which is PRU0_ARM_INTERRUPT
@@ -91,33 +93,35 @@ class Pru:
         else:
             self.pru_data[pru_num] = data
 
-    ''' Commit the data to thr DDR memory '''
+    ''' Commit the data to the DDR memory '''
     def commit_data(self):
         data = struct.pack('L', len(self.pru_data[0])/2)	    # Data in string form
         for reg in self.pru_data[0]:									
             data += struct.pack('L', reg) 				        # Make the data, it needs to be a string
         data += struct.pack('L', 0)                             # Add a terminating 0, this keeps it looping.
 
-        self.ddr_end = self.ddr_start+len(data)
-        print "ddr_start: "+str(self.ddr_start)
-        print "ddr_end: "+str(self.ddr_end)
-        print "data len: "+str(len(data))
-
+        self.ddr_end = self.ddr_start+len(data)       
         if self.ddr_end > DDR_END:                              # If the data is too long, wrap it around to the start
-            print "wrapping"
-            cut = DDR_END-self.ddr_start
-            first = struct.pack('L', cut/8)+data[4:cut]
-            self.ddr_mem[self.ddr_start:DDR_END] = first   # Write the first part of the data to the DDR memory.
-            print "Wrote first"
-            second = struct.pack('L', (len(data[cut:])/8))+data[cut:]
-            self.ddr_mem[DDR_START:DDR_START+len(second)] = second# Write the second half of data to the DDR memory.
-            print "Wrote second"
-            self.ddr_end = DDR_START+len(second)
+            multiple = (DDR_END-self.ddr_start)%8               # Find a multiple of 8
+            cut = DDR_END-self.ddr_start-multiple-4             # The cut must be done after a delay, so a multiple of 8 bytes +/-4
+            first = struct.pack('L', cut/8)+data[4:cut]         # Update the loop count
+            first += struct.pack('L', DDR_MAGIC)                # Add the magic number to force a reset of DDR memory counter
+            self.ddr_mem[self.ddr_start:self.ddr_start+len(first)] = first  # Write the first part of the data to the DDR memory.
+            second = struct.pack('L', (len(data[cut:-4])/8))+data[cut:]     # Add the number of steps in this iteration
+            self.ddr_end = DDR_START+len(second)                # Update the end counter
+            self.ddr_mem[DDR_START:self.ddr_end] = second       # Write the second half of data to the DDR memory.
+            self.wait_for_event()                               # Must wait for event here
         else:
             self.ddr_mem[self.ddr_start:self.ddr_end] = data    # Write the data to the DDR memory.
+            if DDR_END-self.ddr_end < 16:                       # There is no room for a complete  step, add the magic number to wrap
+                self.ddr_mem[self.ddr_end-4:self.ddr_end] = struct.pack('L', DDR_MAGIC)
+                self.ddr_mem[DDR_START:DDR_START+4] = struct.pack('L', 0) # Terminate the next instruction
+                self.ddr_end = DDR_START+4                
+                print "wrapped due to insufficient DDR"
 
         self.ddr_start = self.ddr_end-4                         # Update the start of ddr for next time 
         self.pru_data = [[],[]]                                 # Reset the pru_data list since it has been commited         
+
 
     ''' Wait for the PRU to finish '''                
     def wait_for_event(self):
