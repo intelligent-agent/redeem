@@ -1,7 +1,7 @@
 Todo list going from rev. 0 to rev. 1
  + Add an aluminum electrolyt cap to limit LC spikes: http://www.digikey.com/product-detail/en/EEE-1HA101UP/PCE3917CT-ND/766293
- - Add one more 0.1uF ceramic cap near VMM2.
- - Switch places for the caps near Y, Z, Ext1, Ext2 
+ + Add one more 0.1uF ceramic cap near VMM2.
+ + Switch places for the caps near Y, Z, Ext1, Ext2 
  - Consider increasing the width of the VMM tracks. 
  + Add more thermal vias for the SMDs
  - Consider adding a coil for noise suppression near the DAC. 
@@ -15,7 +15,7 @@ Todo list going from rev. 0 to rev. 1
  + Place the all heaters on dedicated PWM outputs form BB. 
  + Levelshift the PWM signals to the heaters with comparator/op-amp (296-9544-1-ND)
  + Move Fault_x to GPIO1_7 = P8_4, the current pin is a PWM..
- - Add a decoupeling cap to the levelshifter
+ + Add a decoupeling cap to the levelshifter
  - Add lables to the SMD outputs (A1, A2, B1, B2)
- - Switch channels for ADC on Ext1 and Ext2?
- - Consider adding a voltage regulator to the 5V PSU. It gives too much voltage so the board will not start!
+ + Switch channels for ADC on Ext1 and Ext2?
+ + Switched +5V and SYS_5V.

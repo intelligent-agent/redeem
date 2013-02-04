@@ -7,7 +7,7 @@ import numpy as np
 
 DDR_BASEADDR		= 0x70000000					# The actual baseaddr is 0x80000000, but due to a bug(?), 
 DDR_HACK			= 0x10001000					# Python accept unsigned int as offset argument.
-DDR_FILELEN			= DDR_HACK+0x4000				# The amount of memory to make available
+DDR_FILELEN			= DDR_HACK+0x1000				# The amount of memory to make available
 DDR_OFFSET			= DDR_HACK						# Add the hack to the offset as well. 
 
 with open("/dev/mem", "r+b") as f:					# Open the memory device
@@ -18,7 +18,7 @@ delays = [0xFFFFFF]*20								# number of delays. Each delay adds 2 instructions
 
 data = np.array([steps, delays])					# Make a 2D matrix combining the ticks and delays
 data = data.transpose().flatten()					# Braid the data so every other item is a 
-data = [20]+list(data)							# Make the data into a list and add the number of ticks total
+data = [20]+list(data)								# Make the data into a list and add the number of ticks total
 
 str_data = ""										# Data in string form
 for reg in data:									
