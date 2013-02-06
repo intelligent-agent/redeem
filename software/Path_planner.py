@@ -76,11 +76,11 @@ class Path_planner:
                         continue
                     stepper = self.steppers[axis]                   # Get a handle of  the stepper
                     data = self._make_data(path, axis)              # Generate the timing and pin data                         
-                    if stepper.has_pru():                           # If this stepper has a PRU associated with it
-                        pru_num = stepper.get_pru()
-                        self.pru.add_data(data, pru_num) 
-                    else:               
-                        stepper.add_data(data)                      # If not, let the stepper fix this.     
+                    #if stepper.has_pru():                           # If this stepper has a PRU associated with it
+                    pru_num = stepper.get_pru()
+                    self.pru.add_data(data, 0)#pru_num) 
+                    #else:               
+                    #    stepper.add_data(data)                      # If not, let the stepper fix this.     
 
                 for axis in path.get_axes():                        
                     self.steppers[axis].prepare_move()              # Make them start performing
