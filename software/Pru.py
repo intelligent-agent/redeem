@@ -54,61 +54,76 @@ DDR_MAGIC			= 0xbabe7175
 
 class Pru:
     def __init__(self):
-        pru_hz 			    = 200*1000*1000		            # The PRU has a speed of 200 MHz
-        self.s_pr_inst 		= 1.0/pru_hz		            # I take it every instruction is a single cycle instruction
-        self.inst_pr_loop 	= 16				            # This is the minimum number of instructions needed to step. 
-        self.inst_pr_delay 	= 2					            # Every loop adds two instructions: i-- and i != 0            
-        self.pru_data       = [[], []]                      
-        with open("/sys/class/uio/uio0/maps/map2/addr", "r") as f:
-            ddr_addr = int(f.readline(), 16)
+        pru_hz 			    = 200*1000*1000             # The PRU has a speed of 200 MHz
+        self.s_pr_inst 		= 1.0/pru_hz                # I take it every instruction is a single cycle instruction
+        self.inst_pr_loop 	= 16                        # This is the minimum number of instructions needed to step. 
+        self.inst_pr_delay 	= 2                         # Every loop adds two instructions: i-- and i != 0            
+        self.pru_data       = []      	    	        # This holds all data for one move (x,y,z,e1,e2)
+        self.ddr_used       = []                        # List of data lengths currently in DDR for execution
+        self.ddr_reserved   = 0        
 
-        with open("/sys/class/uio/uio0/maps/map2/size", "r") as f:
-            ddr_size = int(f.readline(), 16)
+        pypruss.modprobe(0x40000)    			        # This only has to be called once pr boot
+        self.ddr_addr = pypruss.ddr_addr()
+        self.ddr_size = pypruss.ddr_size()              
+        print "The DDR memory reserved for the PRU is "+hex(self.ddr_size)+" and has addr "+hex(self.ddr_addr)
 
-        ddr_offset     = ddr_addr-0x10000000
-        ddr_filelen    = ddr_size+0x10000000
+        ddr_offset     		= self.ddr_addr-0x10000000  # The Python mmap function cannot accept unsigned longs. 
+        ddr_filelen    		= self.ddr_size+0x10000000
         self.DDR_START      = 0x10000000
-        self.DDR_END        = 0x10000000+ddr_size
+        self.DDR_END        = 0x10000000+self.ddr_size
         self.ddr_start      = self.DDR_START
 
-        with open("/dev/mem", "r+b") as f:	                # Open the memory device
+        with open("/dev/mem", "r+b") as f:	            # Open the memory device
             self.ddr_mem = mmap.mmap(f.fileno(), ddr_filelen, offset=ddr_offset) # mmap the right area            
             self.ddr_mem[self.ddr_start:self.ddr_start+4] = struct.pack('L', 0)  # Add a zero to the first reg to make it wait
-
-        pypruss.modprobe()							       	# This only has to be called once pr boot
-        pypruss.init()										# Init the PRU
-        pypruss.open(0)										# Open PRU event 0 which is PRU0_ARM_INTERRUPT
-        pypruss.pruintc_init()								# Init the interrupt controller
-        pypruss.pru_write_memory(0, 0, [ddr_addr])			# Put the ddr address in the first region 
+       
+        pypruss.init()						            # Init the PRU
+        pypruss.open(0)						            # Open PRU event 0 which is PRU0_ARM_INTERRUPT
+        pypruss.pruintc_init()					        # Init the interrupt controller
+        pypruss.pru_write_memory(0, 0, [self.ddr_addr])		# Put the ddr address in the first region 
         pypruss.exec_program(0, "../firmware/firmware_pru_0.bin")	# Load firmware "ddr_write.bin" on PRU 0
         print "PRU initialized"
 
     ''' Add some data to one of the PRUs '''
-    def add_data(self, data, pru_num):
+    def add_data(self, data):
         (pins, delays) = data                       	    # Get the data
         if len(pins) == 0:
-            return 
-        print "Adding data len for "+str(pru_num)+": "+str(len(pins))
+            return 0
+        #print "Adding pru data: "+str(len(pins))
         delays = map(self._sec_to_inst, delays)     	    # Convert the delays in secs to delays in instructions
         data = np.array([pins, delays])		        	    # Make a 2D matrix combining the ticks and delays
         data = list(data.transpose().flatten())     	    # Braid the data so every other item is a pin and delay
         
-        if len(self.pru_data[pru_num]) > 0:
-            self.pru_data[pru_num] = self._braid_data(data, self.pru_data[pru_num])
+        if len(self.pru_data) > 0:
+            self.pru_data = self._braid_data(data, self.pru_data)
         else:
-            self.pru_data[pru_num] = data
+            self.pru_data = data
+        self.ddr_reserved += len(data)		            # This amount is now reserved, waiting to be committed
+        return 1
+
+    ''' Check if the PRU has capacity for a chunk of data '''
+    def has_capacity_for(self, data_len):
+        cap = self.ddr_size-sum(self.ddr_used)-self.ddr_reserved
+        return (cap > data_len)
+    
+    ''' If there is little capacity, return true '''
+    def has_little_capacity(self):
+        cap = self.ddr_size-sum(self.ddr_used)-self.ddr_reserved
+        return cap < self.ddr_size/2
+
 
     ''' Commit the data to the DDR memory '''
     def commit_data(self):
-        data = struct.pack('L', len(self.pru_data[0])/2)	    # Data in string form
-        for reg in self.pru_data[0]:									
+        data = struct.pack('L', len(self.pru_data)/2)	    	# Data in string form
+        for reg in self.pru_data:									
             data += struct.pack('L', reg) 				        # Make the data, it needs to be a string
-        data += struct.pack('L', 0)                             # Add a terminating 0, this keeps it looping.
+        data += struct.pack('L', 0)                             # Add a terminating 0, this keeps the fw waiting for a new command.
 
         self.ddr_end = self.ddr_start+len(data)       
         if self.ddr_end > self.DDR_END:                         # If the data is too long, wrap it around to the start
             multiple = (self.DDR_END-self.ddr_start)%8          # Find a multiple of 8
             cut = self.DDR_END-self.ddr_start-multiple-4        # The cut must be done after a delay, so a multiple of 8 bytes +/-4
+
             first = struct.pack('L', cut/8)+data[4:cut]         # Update the loop count
             first += struct.pack('L', DDR_MAGIC)                # Add the magic number to force a reset of DDR memory counter
             self.ddr_mem[self.ddr_start:self.ddr_start+len(first)] = first  # Write the first part of the data to the DDR memory.
@@ -117,7 +132,7 @@ class Pru:
             self.ddr_end = self.DDR_START+len(second)           # Update the end counter
             self.ddr_mem[self.DDR_START:self.ddr_end] = second  # Write the second half of data to the DDR memory.
 
-            self.wait_for_event()                               # Must wait for event here  
+            self.wait_for_event(False)                          # Must wait for event here to sync 
             print "Wrapped"
         else:
             self.ddr_mem[self.ddr_start:self.ddr_end] = data    # Write the data to the DDR memory.
@@ -126,24 +141,27 @@ class Pru:
                 self.ddr_mem[self.DDR_START:self.DDR_START+4] = struct.pack('L', 0) # Terminate the next instruction
                 self.ddr_end = self.DDR_START+4                
                 print "wrapped due to insufficient DDR"
-
-        self.ddr_start = self.ddr_end-4                         # Update the start of ddr for next time 
-        self.pru_data = [[],[]]                                 # Reset the pru_data list since it has been commited         
+     
+        self.ddr_used.append(len(data)) 		            # update the amount of memory used 
+        self.ddr_reserved 	-= len(data)		            # Remove this amount from the reserved counter 
+        self.ddr_start 		 = self.ddr_end-4               # Update the start of ddr for next time 
+        self.pru_data 		 = []                           # Reset the pru_data list since it has been commited         
 
 
     ''' Wait for the PRU to finish '''                
-    def wait_for_event(self):
-        pypruss.wait_for_event(PRU_EVTOUT_0)				    # Wait a while for it to finish.
-        pypruss.clear_event(PRU0_ARM_INTERRUPT)				    # Clear the event 
-        pypruss.wait_for_event(PRU_EVTOUT_0)				    # Wait a while for it to finish.
-        pypruss.clear_event(PRU0_ARM_INTERRUPT)				    # Clear the event 
+    def wait_for_event(self, pop=True):
+        pypruss.wait_for_event(PRU_EVTOUT_0)			# Wait a while for it to finish.
+        pypruss.clear_event(PRU0_ARM_INTERRUPT)			# Clear the event 
+        pypruss.wait_for_event(PRU_EVTOUT_0)			# Wait a while for it to finish.
+        pypruss.clear_event(PRU0_ARM_INTERRUPT)			# Clear the event 
+        if pop:
+            self.ddr_used.pop(0)                        # Pop the first ddr memory amount         
 
     ''' Close shit up '''
     def close(self):
         ddr_mem.close()                                         # Close the memory 
         f.close()                                               # Close the file
         pypruss.pru_disable(0)                                  # Disable PRU 0, this is already done by the firmware
-        #pypruss.pru_disable(1)                                 # Disable PRU 0, this is already done by the firmware
         pypruss.exit()                                          # Exit, don't know what this does. 
         
 
@@ -158,7 +176,7 @@ class Pru:
         return int(inst_pr_step)			        # Make it an int
 
 
-    ''' Braid together the data from the two data sets'''
+    ''' Braid/merge together the data from the two data sets'''
     def _braid_data(self, data1, data2):
         braids = [data1[0] | data2[0]]
         del data1[0]

@@ -67,9 +67,17 @@ class Path:
     def get_max_speed(self):
         return (self.feed_rate/60.0)/1000.0
 
+    ''' Get the ratio for this axis '''
+    def get_axis_ratio(self, axis):
+        hyp     = self.get_length()    	                                # Calculate the ratio               
+        if hyp == 0.0:
+            return 1.0
+        return self.get_axis_length(axis)/hyp
+
     ''' Get the lowest speed along this segment '''
     def get_min_speed(self):
         return 0
+
 
     ''' Return the list of axes '''
     def get_axes(self):

@@ -57,9 +57,9 @@ class Replicape:
         self.steppers["Z"].setCurrentValue(1.0) # 2A
         self.steppers["Z"].setEnabled() 
         self.steppers["Z"].set_steps_pr_mm(149.25)
-        self.steppers["Z"].set_microstepping(0) 
+        self.steppers["Z"].set_microstepping(2) 
 
-        self.steppers["E"].setCurrentValue(1.0) # 2A        
+        self.steppers["E"].setCurrentValue(1.8) # 2A        
         self.steppers["E"].setEnabled()
         self.steppers["E"].set_steps_pr_mm(5.0)
         self.steppers["E"].set_microstepping(2)
