@@ -48,6 +48,7 @@ class Path_planner:
     ''' Join the thread '''
     def exit(self):
         self.running = False
+        self.pru.exit()
         self.t.join()
 
     def set_pos(self, axis, pos):
@@ -81,32 +82,31 @@ class Path_planner:
                     if len(data[0]) > 0:
                         all_data[axis] = data                       # Generate the timing and pin data                         
                         slowest = max(slowest, sum(data[1]))   
-
+                
                 for axis in all_data:                         
                     packet = all_data[axis]                           
                     delays = np.array(packet[1])
                     diff = (slowest-sum(delays))/len(delays)
                     for j, delay in enumerate(delays):
-                        delays[j] = max(delay+diff, 2.0/1000.0)   # min 2ms                     
+                        delays[j] = max(delay+diff, 2.0/1000.0)   # min 0.2ms                     
                     data = (packet[0], delays)                    
-                    while not self.pru.has_capacity_for(len(delays)*2):# Wait until the PRU has capacity for this chunk of data
-                        time.sleep(0.1)
+                    while not self.pru.has_capacity_for(len(delays)*8):# Wait until the PRU has capacity for this chunk of data
+                        time.sleep(1)
+                        print "no capacity: "+str(self.pru.get_capacity())
                     axes_added += self.pru.add_data(data)
                     
 
                 if axes_added > 0:
-                    self.pru.commit_data()                             # Commit data to ddr 
-                    events_waiting += 1
-                    if events_waiting > 20:
-                        self.pru.wait_for_event(True)                       # Wait for the PRU to finish execution 
-                        events_waiting -= 1
+                    self.pru.commit_data()                            # Commit data to ddr
+                    
+                    #self.pru.autoclear_event()
                 '''
                 for axis in all_data: 
                     packet = all_data[axis]                           
                     delays = np.array(packet[1])
                     diff = (slowest-sum(delays))/len(delays)
                     for j, delay in enumerate(delays):
-                        delays[j] = max(delay+diff, 2.0/1000)                     
+                        delays[j] = max(delay+diff, 2.0/10000)                     
                     data = (packet[0], delays)                    
                     self.steppers[axis].add_data(data)
 
@@ -115,14 +115,11 @@ class Path_planner:
                 for axis in all_data:                            
                     self.steppers[axis].start_move()
                 for axis in all_data:                            
-                    self.steppers[axis].end_move()
-               '''
-               
-            elif events_waiting > 1:
-                 self.pru.wait_for_event(True)                       # Wait for the PRU to finish execution
-                 events_waiting -= 1   
+                    self.steppers[axis].end_move()               
+                '''                         
             else:
-                time.sleep(0.1)                                     # If there is no paths to execute, sleep. 
+                time.sleep(1)                                    # If there is no paths to execute, sleep. 
+                #print "Path planner: Que empty"
 
     ''' Make the data for the PRU or steppers '''
     def _make_data(self, path, axis):     

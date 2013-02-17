@@ -61,6 +61,7 @@ class Pru:
         self.pru_data       = []      	    	        # This holds all data for one move (x,y,z,e1,e2)
         self.ddr_used       = []                        # List of data lengths currently in DDR for execution
         self.ddr_reserved   = 0        
+        self.clear_events   = []
 
         pypruss.modprobe(0x40000)    			        # This only has to be called once pr boot
         self.ddr_addr = pypruss.ddr_addr()
@@ -82,6 +83,9 @@ class Pru:
         pypruss.pruintc_init()					        # Init the interrupt controller
         pypruss.pru_write_memory(0, 0, [self.ddr_addr])		# Put the ddr address in the first region 
         pypruss.exec_program(0, "../firmware/firmware_pru_0.bin")	# Load firmware "ddr_write.bin" on PRU 0
+        self.t = Thread(target=self._wait_for_events)         # Make the thread
+        self.running = True
+        self.t.start()		                
         print "PRU initialized"
 
     ''' Add some data to one of the PRUs '''
@@ -89,16 +93,16 @@ class Pru:
         (pins, delays) = data                       	    # Get the data
         if len(pins) == 0:
             return 0
-        #print "Adding pru data: "+str(len(pins))
         delays = map(self._sec_to_inst, delays)     	    # Convert the delays in secs to delays in instructions
         data = np.array([pins, delays])		        	    # Make a 2D matrix combining the ticks and delays
         data = list(data.transpose().flatten())     	    # Braid the data so every other item is a pin and delay
         
+        self.ddr_reserved += len(data)*4		            # This amount is now reserved, waiting to be committed       
+
         if len(self.pru_data) > 0:
             self.pru_data = self._braid_data(data, self.pru_data)
         else:
             self.pru_data = data
-        self.ddr_reserved += len(data)		            # This amount is now reserved, waiting to be committed
         return 1
 
     ''' Check if the PRU has capacity for a chunk of data '''
@@ -106,11 +110,23 @@ class Pru:
         cap = self.ddr_size-sum(self.ddr_used)-self.ddr_reserved
         return (cap > data_len)
     
-    ''' If there is little capacity, return true '''
-    def has_little_capacity(self):
-        cap = self.ddr_size-sum(self.ddr_used)-self.ddr_reserved
-        return cap < self.ddr_size/2
+    def get_capacity(self):
+         return self.ddr_size-sum(self.ddr_used)-self.ddr_reserved
 
+    ''' Catch events on queue '''
+    def _do_work(self):
+        while self.running:            
+            if len(self.ddr_used) > 0:
+                ev = self.clear_events.pop(0)
+                self.wait_for_event(ev)
+                #print "Cleared event "+str(ev)+" cap is "+str(self.ddr_size-sum(self.ddr_used)-self.ddr_reserved)
+                #print "reserved is "+str(self.ddr_reserved)
+            else:
+                time.sleep(0.1)
+    ''' Join the thread '''
+    def exit(self):
+        self.running = False
+        self.t.join()   
 
     ''' Commit the data to the DDR memory '''
     def commit_data(self):
@@ -127,35 +143,39 @@ class Pru:
             first = struct.pack('L', cut/8)+data[4:cut]         # Update the loop count
             first += struct.pack('L', DDR_MAGIC)                # Add the magic number to force a reset of DDR memory counter
             self.ddr_mem[self.ddr_start:self.ddr_start+len(first)] = first  # Write the first part of the data to the DDR memory.
+            self.ddr_used.append(len(first))
+            self.ddr_reserved -= len(first)
 
             second = struct.pack('L', (len(data[cut:-4])/8))+data[cut:]     # Add the number of steps in this iteration
             self.ddr_end = self.DDR_START+len(second)           # Update the end counter
             self.ddr_mem[self.DDR_START:self.ddr_end] = second  # Write the second half of data to the DDR memory.
 
-            self.wait_for_event(False)                          # Must wait for event here to sync 
             print "Wrapped"
         else:
             self.ddr_mem[self.ddr_start:self.ddr_end] = data    # Write the data to the DDR memory.
-            if self.DDR_END-self.ddr_end < 16:                  # There is no room for a complete  step, add the magic number to wrap
-                self.ddr_mem[self.ddr_end-4:self.ddr_end] = struct.pack('L', DDR_MAGIC)
-                self.ddr_mem[self.DDR_START:self.DDR_START+4] = struct.pack('L', 0) # Terminate the next instruction
-                self.ddr_end = self.DDR_START+4                
-                print "wrapped due to insufficient DDR"
-     
-        self.ddr_used.append(len(data)) 		            # update the amount of memory used 
-        self.ddr_reserved 	-= len(data)		            # Remove this amount from the reserved counter 
-        self.ddr_start 		 = self.ddr_end-4               # Update the start of ddr for next time 
-        self.pru_data 		 = []                           # Reset the pru_data list since it has been commited         
+        
+        print "Appending "+str(self.ddr_reserved), 
+        print " waiting "+str(len(self.ddr_used))
+        self.ddr_used.append(self.ddr_reserved) 		        # update the amount of memory used 
+        self.ddr_reserved   = 0
+        self.ddr_start 		= self.ddr_end-4                   # Update the start of ddr for next time 
+        self.pru_data 		= []                               # Reset the pru_data list since it has been commited         
 
 
     ''' Wait for the PRU to finish '''                
-    def wait_for_event(self, pop=True):
-        pypruss.wait_for_event(PRU_EVTOUT_0)			# Wait a while for it to finish.
-        pypruss.clear_event(PRU0_ARM_INTERRUPT)			# Clear the event 
-        pypruss.wait_for_event(PRU_EVTOUT_0)			# Wait a while for it to finish.
-        pypruss.clear_event(PRU0_ARM_INTERRUPT)			# Clear the event 
-        if pop:
-            self.ddr_used.pop(0)                        # Pop the first ddr memory amount         
+    def _wait_for_events(self):
+        while self.running: 
+            if len(self.ddr_used) > 0:
+                print "About to wait for event"
+                pypruss.wait_for_event(PRU_EVTOUT_0)			# Wait a while for it to finish.
+                pypruss.clear_event(PRU0_ARM_INTERRUPT)			# Clear the event 
+                #print "double checking"
+                #pypruss.wait_for_event(PRU_EVTOUT_0)			# Wait a while for it to finish.
+                #pypruss.clear_event(PRU0_ARM_INTERRUPT)			# Clear the event 
+                ddr = self.ddr_used.pop(0)                      # Pop the first ddr memory amount         
+                print "pop "+str(ddr)+" remaining: "+str(len(self.ddr_used))
+            else:
+                time.sleep(1)
 
     ''' Close shit up '''
     def close(self):

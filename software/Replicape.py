@@ -12,6 +12,7 @@ You can use and change this, but keep this heading :)
 
 import bbio as io
 from math import sqrt
+import time
 
 from Mosfet import Mosfet
 from Smd import SMD
@@ -46,24 +47,21 @@ class Replicape:
         self.steppers["X"].setEnabled() 
         self.steppers["X"].set_steps_pr_mm(6.105)         
         self.steppers["X"].set_microstepping(2) 
-        self.steppers["X"].set_pru(0)
 
         self.steppers["Y"].setCurrentValue(2.0) # 2A
         self.steppers["Y"].setEnabled() 
         self.steppers["Y"].set_steps_pr_mm(5.95)
         self.steppers["Y"].set_microstepping(2) 
-        self.steppers["Y"].set_pru(1)
 
         self.steppers["Z"].setCurrentValue(1.0) # 2A
         self.steppers["Z"].setEnabled() 
-        self.steppers["Z"].set_steps_pr_mm(149.25)
+        self.steppers["Z"].set_steps_pr_mm(155)
         self.steppers["Z"].set_microstepping(2) 
 
         self.steppers["E"].setCurrentValue(1.8) # 2A        
-        self.steppers["E"].setEnabled()
+        #self.steppers["E"].setEnabled()
         self.steppers["E"].set_steps_pr_mm(5.0)
         self.steppers["E"].set_microstepping(2)
-        self.steppers["E"].set_pru(0)
 
         # init the 3 thermistors
         self.therm_ext1 = Thermistor(io.AIN4, "Ext_1", chart_name="QU-BD")
@@ -134,19 +132,23 @@ class Replicape:
                 axis = g.tokenLetter(i)                             # Get the axis, X, Y, Z or E
                 smds[axis] = float(g.tokenValue(i))                 # Get tha value, new position or vector             
             path = Path(smds, feed_rate, self.movement)             # Make a path segment from the axes
-            while self.path_planner.nr_of_paths() > 4:              # If the queue is full, wait. 
-                io.delay(100)                                       # This is the waiting part
+            while self.path_planner.nr_of_paths() > 10:              # If the queue is full, wait. 
+                time.sleep(1)                                       # This is the waiting part                
             self.path_planner.add_path(path)                        # Ok, add the path to the planner queue
         elif g.code() == "G21":                                     # Set units to mm
             self.factor = 1.0
         elif g.code() == "G28":                                     # Home the steppers
             if g.numTokens() == 0:                                  # If no token is given, home all
-                g.setTokens(["X", "Y", "Z"])
+                g.setTokens(["X0", "Y0", "Z0"])                
+            smds = {}                                               # All steppers 
             for i in range(g.numTokens()):                          # Run through all tokens
                 axis = g.tokenLetter(i)                             # Get the axis, X, Y, Z or E
-                val = -self.path_planner.get_pos(axis)*1000.0
-                self.steppers[axis].move(val, self.movement)        # Get tha value, new position or vector             
-            self.path_planner.reset_pos()
+                smds[axis] = float(g.tokenValue(i))                # Get tha value, new position or vector             
+            print smds
+            path = Path(smds, self.feed_rate, "ABSOLUTE")             # Make a path segment from the axes
+            while self.path_planner.nr_of_paths() > 10:              # If the queue is full, wait. 
+                io.delay(100)                                       # This is the waiting part
+            self.path_planner.add_path(path)                        # Ok, add the path to the planner queue
         elif g.code() == "G90":                                     # Absolute positioning
             self.movement = "ABSOLUTE"
         elif g.code() == "G91":                                     # Relative positioning 
@@ -159,12 +161,18 @@ class Replicape:
                 val = float(g.tokenValue(i))
                 self.path_planner.set_pos(axis, val)
         elif g.code() == "M17":                                     # Enable all steppers
-            self.enableAllSteppers()
+            for name, stepper in self.steppers.iteritems():
+                stepper.setEnabled()
         elif g.code() == "M30":                                     # Set microstepping (Propietary to Replicape)
             for i in range(g.numTokens()):
                 self.steppers[g.tokenLetter(i)].set_microstepping(int(g.tokenValue(i)))            
         elif g.code() == "M84":                                     # Disable all steppers
-            self.disableAllSteppers()
+            for name, stepper in self.steppers.iteritems():
+            	stepper.setDisabled()
+        elif g.code() == "M101":									# Deprecated 
+            pass 													
+        elif g.code() == "M103":									# Deprecated
+            pass 													
         elif g.code() == "M104":                                    # Set extruder temperature
             self.ext1.setTargetTemperature(float(g.tokenValue(0)))
         elif g.code() == "M105":                                    # Get Temperature
@@ -174,6 +182,8 @@ class Replicape:
         elif g.code() == "M106":                                    # Fan on
             self.fan_1.setPWMFrequency(100)
             self.fan_1.setValue(float(g.tokenValue(0)))	
+        elif g.code() == "M108":									# Deprecated
+            pass 													
         elif g.code() == "M110":                                    # Reset the line number counter 
             Gcode.line_number = 0       
         elif g.code() == "M130":                                    # Set PID P-value, Format (M130 P0 S8.0)
@@ -198,45 +208,8 @@ class Replicape:
         self.ext1.disable()
         self.hbp.disable()
         self.usb.close() 
-        self.path_planner.exit()
-
-    ''' Move the stepper motors '''
-    def moveTo(self, stepper, pos):
-        print "Moving "+stepper+" to "+str(pos)
-        self.steppers[stepper].moveTo(pos)
-
-    ''' Move the stepper motors '''
-    def move(self, stepper, amount, feed_rate):
-        print "Moving "+stepper+" "+str(amount)+"mm @ F:"+str(feed_rate)
-        self.steppers[stepper].setFeedRate(feed_rate)
-        self.steppers[stepper].move(amount)
-
-    ''' Set the current position of each of the steppers is '''
-    def setCurrentPosition(self, stepper, pos):
-        self.steppers[stepper].setCurrentPosition(pos)
-
-    ''' Disable all steppers '''
-    def disableAllSteppers(self):
-        for name, stepper in self.steppers.iteritems():
-            stepper.setDisabled()
-
-    ''' Enable all steppers '''
-    def enableAllSteppers(self):		
-        for name, stepper in self.steppers.iteritems():
-            stepper.setEnabled()
-		
-    ''' Given an X and Y vector and a feed_rate, 
-    calculate the feed_rates of the two vectors.''' 
-    def decompose_vector(self, x, y, e, feed_rate_hyp):
-        hyp = sqrt(x**2+y**2)
-        feed_rate_ratio = feed_rate_hyp/hyp        
-        feed_rate_y = feed_rate_ratio*abs(y)
-        feed_rate_x = feed_rate_ratio*abs(x)
-        feed_rate_e = feed_rate_ratio*abs(e)
-        
-        return (feed_rate_x, feed_rate_y, feed_rate_e)
-          
-
+        self.path_planner.exit()   
+   
 r = Replicape()
 r.loop()
 
