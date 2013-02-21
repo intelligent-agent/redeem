@@ -25,7 +25,12 @@ START:
 	MOV  r16, GPIO3_MASK						// Make the mask
     MOV  r17, GPIO3 | GPIO_DATAOUT				// Load address
     MOV  r18, 0xFFFFFFFF ^ (GPIO3_MASK)			// Invert mask
-
+	
+	MOV  r0, 4									// Load the address of the events_counter 
+	LBBO r6, r0, 0, 4							// Put it in R6
+	MOV  r5, 0									// Make r5 the nr of events counter
+	SBBO r5, r6, 0, 4							// store the number of interrupts that have occured in the second reg of DRAM
+	
 RESET_R4:
 	MOV  r0, 0
 	LBBO r4, r0, 0, 4							// Load the ddr_addr from the first adress in the PRU0 DRAM
@@ -33,22 +38,23 @@ RESET_R4:
 
 BLINK:
 	ADD  r4, r4, 4								// Increment r4
+
     LBBO r2, r4, 0, 4							// Load pin data into r2
-	AND  r2, r2, r10							// Mask the pins to PRU0, GPIO1
+	AND  r2, r2, r10							// Mask the pins to GPIO1
 	LBBO r3, r11, 0, 4							// Load the data currently in addr r3
 	AND	 r3, r3, r12							// Mask the data so only the necessary pins can change
 	OR   r3, r3, r2 							// Add the GPIO1-mask to hinder toggling PRU1's pins
     SBBO r3, r11, 0, 4							// Ok, set the pins
 
     LBBO r2, r4, 0, 4							// Load pin data into r2
-	AND  r2, r2, r13							// Mask the pins to PRU0, GPIO1
+	AND  r2, r2, r13							// Mask the pins to GPIO2
 	LBBO r3, r14, 0, 4							// Load the data currently in addr r3
 	AND	 r3, r3, r15							// Mask the data so only the necessary pins can change
-	OR   r3, r3, r2 							// Add the GPIO1-mask to hinder toggling PRU1's pins
+	OR   r3, r3, r2 							// Add the GPIO2-mask to hinder toggling PRU1's pins
     SBBO r3, r14, 0, 4							// Ok, set the pins
 
     LBBO r2, r4, 0, 4							// Load pin data into r2
-	AND  r2, r2, r16							// Mask the pins to PRU0, GPIO1
+	AND  r2, r2, r16							// Mask the pins to GPIO3
 	LBBO r3, r17, 0, 4							// Load the data currently in addr r3
 	AND	 r3, r3, r18							// Mask the data so only the necessary pins can change
 	OR   r3, r3, r2 							// Add the GPIO1-mask to hinder toggling PRU1's pins
@@ -64,6 +70,8 @@ DELAY:
     QBNE BLINK, r1, 0							// Still more pins to go, jump back
 	ADD  r4, r4, 4			
 
+	ADD r5, r5, 1								// r5++
+	SBBO r5, r6, 0, 4							// store the number of interrupts that have occured in the second reg of DRAM
     MOV R31.b0, PRU0_ARM_INTERRUPT+16   		// Send notification to Host that the instructions are done
 
 	MOV  r3, DDR_MAGIC							// Load the fancy word into r3

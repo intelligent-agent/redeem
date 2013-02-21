@@ -14,17 +14,19 @@ You can use and change this, but keep this heading :)
 '''
 
 import time
+import logging
 import numpy as np  
 from threading import Thread
 from Pru import Pru
+import Queue
 
 class Path_planner:
     ''' Init the planner '''
-    def __init__(self, steppers):
+    def __init__(self, steppers, current_pos):
         self.steppers    = steppers
         self.pru         = Pru()                                # Make the PRU
-        self.paths       = list()                               # Make a list of paths
-        self.current_pos = {"X":0.0, "Y":0.0, "Z":0.0, "E":0.0} # Current position in (x, y, z, e)
+        self.paths       = Queue.Queue(100)                      # Make a queue of paths
+        self.current_pos = current_pos                          # Current position in (x, y, z, e)
         self.running     = True                                 # Yes, we are running
         self.t           = Thread(target=self._do_work)         # Make the thread
         self.t.start()		                
@@ -35,91 +37,78 @@ class Path_planner:
 
     ''' Add a path segment to the path planner '''        
     def add_path(self, new):        
-        self.paths.append(new)
-        if len(self.paths) > 1:
-            prev = self.paths[0]
-            new.set_prev(prev)
-            prev.set_next(new)
+        self.paths.put(new)
         
     ''' Return the number of paths currently on queue '''
     def nr_of_paths(self):
-        return len(self.paths)
+        return self.paths.qsize()
 
-    ''' Join the thread '''
-    def exit(self):
-        self.running = False
-        self.pru.exit()
-        self.t.join()
-
-    def set_pos(self, axis, pos):
-        self.current_pos[axis] = pos
-    
-    def get_pos(self, axis):
-        return self.current_pos[axis]
-
-    def reset_pos(self):
-        self.current_pos = {"X":0.0, "Y":0.0, "Z":0.0, "E":0.0}
-        print "Path planner: pos reset"
-    
-    ''' Add a certain length to a vector '''
-    def add_to_pos(axis, vec):
-        self.current_pos[axis] += vec
-
+    ''' Set position for an axis '''
+    def set_pos(self, axis, val):
+        self.current_pos[axis] = val
+ 
     ''' This loop pops a path, sends it to the PRU 
     and waits for an event '''
     def _do_work(self):
         events_waiting = 0
-        while self.running:
-            if len(self.paths) > 0:
-                path = self.paths.pop(0)                            # Get the last path added
-                path.set_global_pos(self.current_pos.copy())               # Set the global position of the printer
+        while self.running:       
+            try: 
+                path = self.paths.get(timeout = 1)                            # Get the last path added
+                path.set_global_pos(self.current_pos.copy())       # Set the global position of the printer
                 axes_added = 0
                 all_data = {}
                 slowest =  0
-                for axis in path.get_axes():                        # Run through all the axes in the path    
-                    stepper = self.steppers[axis]                   # Get a handle of  the stepper                    
+                for axis in path.get_axes():                       # Run through all the axes in the path    
+                    stepper = self.steppers[axis]                  # Get a handle of  the stepper                    
                     data = self._make_data(path, axis)
                     if len(data[0]) > 0:
-                        all_data[axis] = data                       # Generate the timing and pin data                         
+                        all_data[axis] = data                      # Generate the timing and pin data                         
                         slowest = max(slowest, sum(data[1]))   
-                
+                                
+
                 for axis in all_data:                         
                     packet = all_data[axis]                           
                     delays = np.array(packet[1])
+                    #print "Axis "+axis+" uses "+str(sum(delays))
                     diff = (slowest-sum(delays))/len(delays)
                     for j, delay in enumerate(delays):
-                        delays[j] = max(delay+diff, 2.0/1000.0)   # min 0.2ms                     
-                    data = (packet[0], delays)                    
-                    while not self.pru.has_capacity_for(len(delays)*8):# Wait until the PRU has capacity for this chunk of data
-                        time.sleep(1)
-                        print "no capacity: "+str(self.pru.get_capacity())
-                    axes_added += self.pru.add_data(data)
+                        delays[j] = max(delay+diff, 1.0/10000.0)    # min 0.2ms                     
+                    data = (packet[0], delays)  
+                    #print "Axis "+axis+" uses "+str(sum(delays))
+                
+                if "Z" in all_data:     # HACK! The Z-axis cannot be combined with the other data
+                    packet = all_data["Z"]      
+                    while not self.pru.has_capacity_for(len(packet[0])*8):# Wait until the PRU has capacity for this chunk of data
+                        print "PRU does not have capacity for "+str(len(packet[0])*8),
+                        print "only has "+str(self.pru.get_capacity())
+                        time.sleep(1)                   
+                    if self.pru.add_data(packet) > 0:                        
+                        self.pru.commit_data() 
+                    del all_data["Z"]
                     
-
+                for axis in all_data:   # Commit the other axes    
+                    packet = all_data[axis]
+                    while not self.pru.has_capacity_for(len(packet[0])*8):# Wait until the PRU has capacity for this chunk of data
+                        print "PRU does not have capacity for "+str(len(packet[0])*8),
+                        print "only has "+str(self.pru.get_capacity())
+                        time.sleep(1)                   
+                    axes_added += self.pru.add_data(packet)
+                    
                 if axes_added > 0:
                     self.pru.commit_data()                            # Commit data to ddr
-                    
-                    #self.pru.autoclear_event()
-                '''
-                for axis in all_data: 
-                    packet = all_data[axis]                           
-                    delays = np.array(packet[1])
-                    diff = (slowest-sum(delays))/len(delays)
-                    for j, delay in enumerate(delays):
-                        delays[j] = max(delay+diff, 2.0/10000)                     
-                    data = (packet[0], delays)                    
-                    self.steppers[axis].add_data(data)
+                                     
+                self.paths.task_done()
+               
+            except Queue.Empty:
+                pass
+    ''' Join the thread '''
+    def exit(self):
+        self.running = False
+        self.pru.join()
+        logging.debug("pru joined")
+        self.t.join()
+        logging.debug("path planner joined")
 
-                for axis in all_data:                            
-                    self.steppers[axis].prepare_move()
-                for axis in all_data:                            
-                    self.steppers[axis].start_move()
-                for axis in all_data:                            
-                    self.steppers[axis].end_move()               
-                '''                         
-            else:
-                time.sleep(1)                                    # If there is no paths to execute, sleep. 
-                #print "Path planner: Que empty"
 
     ''' Make the data for the PRU or steppers '''
     def _make_data(self, path, axis):     
@@ -147,8 +136,14 @@ class Path_planner:
         distances       = list(np.arange(0, sm, ds))		            # Table of distances                       
         timestamps      = [(-u+np.sqrt(2.0*a*ss+u*u))/a for ss in distances]# Make a table of times when a tick occurs   
         delays          = np.diff(timestamps)/2.0			                # We are more interested in the delays pr second.         
+        #logging.info(axis+" Ramp single uses "+str(sum(delays)))
         delays = list(np.array([delays, delays]).transpose().flatten()) # Double the array so we have timings for up and down  
-  
+        #logging.info(axis+" Ramp uses "+str(sum(delays)))
+
+        #logging.info("ratio: "+str(ratio))
+        #logging.info("ds: "+str(ds))
+        #logging.info("Vm: "+str(Vm))
+
         i_steps     = num_steps-len(delays)		                        # Find out how many delays are missing
         i_delays    = [(ds/Vm)/2.0]*i_steps*2		                    # Make the intermediate steps
         delays      += i_delays+delays[::-1]                            # Add the missing delays. These are max_speed
@@ -159,8 +154,28 @@ class Path_planner:
         path.set_travelled_distance(axis, td)                           # Set the travelled distance back in the path 
         self.current_pos[axis] += td                                    # Update the global position vector
 
+        #logging.info(axis+" uses "+str(sum(delays)))
         return (pins, delays)                                           # return the pin states and the data
 
 
+
+
+'''
+for axis in all_data: 
+    packet = all_data[axis]                           
+    delays = np.array(packet[1])
+    diff = (slowest-sum(delays))/len(delays)
+    for j, delay in enumerate(delays):
+        delays[j] = max(delay+diff, 2.0/10000)                     
+    data = (packet[0], delays)                    
+    self.steppers[axis].add_data(data)
+
+for axis in all_data:                            
+    self.steppers[axis].prepare_move()
+for axis in all_data:                            
+    self.steppers[axis].start_move()
+for axis in all_data:                            
+    self.steppers[axis].end_move()               
+'''                         
 
 

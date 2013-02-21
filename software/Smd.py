@@ -76,15 +76,15 @@ class SMD:
     def setEnabled(self):
         if not self.enabled:
             self.state &= ~(1<<6)
-            self.update()
             self.enabled = True
-	
+            self.update()
+            	
     ''' Sets the SMD disabled '''
     def setDisabled(self):
         if self.enabled:
             self.state |= (1<<6)
-            self.update()
             self.enabled = False
+            self.update()           
 
     '''Logic high to enable device, logic low to enter
     low-power sleep mode. Internal pulldown.'''

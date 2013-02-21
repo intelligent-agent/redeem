@@ -13,6 +13,7 @@ You can use and change this, but keep this heading :)
 #from Gcode import Gcode
 from threading import Thread
 import select
+import logging
 
 class USB:
     def __init__(self, queue):
@@ -29,15 +30,13 @@ class USB:
             ret = select.select( [self.tty],[],[], 1.0 )
     	    if ret[0] == [self.tty]:
                 message = self.tty.readline().strip("\n")          
-                if self.debug > 1:
-                    print "Message: "+message+" ("+message.encode("hex")+")"	
-                self.queue.append(message)
+                logging.debug("Message: "+message+" ("+message.encode("hex")+")")
+                self.queue.put(message)
             
 
     # Send a message		
     def send_message(self, message):
-        if self.debug > 1:           
-            print "USB: writing '"+message+"'"
+        logging.debug("USB: writing '"+message+"'")
         if message[-1] != "\n":
             message += "\n"
         self.tty.write(message)
@@ -45,5 +44,5 @@ class USB:
     # Stop receiving mesassages
     def close(self):
         self.running = False
-        self.t.join(1.5)
+        self.t.join()
 
