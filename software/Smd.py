@@ -45,7 +45,6 @@ class SMD:
         bytes = []
         for smd in SMD.all_smds:	   
             bytes.append(smd.getState())
-        print "Updating registers with: "+str(bytes[::-1])
         spi2_1.writebytes(bytes[::-1])
 
     ''' Init'''
@@ -77,17 +76,15 @@ class SMD:
     def setEnabled(self):
         if not self.enabled:
             self.state &= ~(1<<6)
-            self.update()
             self.enabled = True
-	
+            self.update()
+            	
     ''' Sets the SMD disabled '''
     def setDisabled(self):
-        print "setDisabled called"
         if self.enabled:
             self.state |= (1<<6)
-            self.update()
             self.enabled = False
-            print "smd disabled, state = "+bin(self.state)
+            self.update()           
 
     '''Logic high to enable device, logic low to enter
     low-power sleep mode. Internal pulldown.'''
@@ -177,7 +174,7 @@ class SMD:
         (pins, delays) = data
         self.pins = pins
         self.delays = delays
-        print "steps: "+str(len(self.pins))+" delays "+str(len(self.delays))
+        #print "steps: "+str(len(self.pins))+" delays "+str(len(self.delays))
     
     ''' Prepare a move. But do not start the thread yet. '''
     def prepare_move(self):

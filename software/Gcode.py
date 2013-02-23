@@ -81,7 +81,6 @@ class Gcode:
     def removeTokenByLetter(self, letter):
          for i, token in enumerate(self.tokens):
             if token[0] == letter:
-                print token+" "+str(i)  
                 self.tokens.pop(i)
 
     def numTokens(self):
@@ -100,7 +99,7 @@ class Gcode:
 
     ''' Get the result of the execution '''
     def getAnswer(self):
-        print self.message + " = " +self.answer
+        #print self.message + " = " +self.answer
         return self.answer
     
     ''' Set a new answer other than 'ok'  '''

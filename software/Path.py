@@ -32,14 +32,19 @@ class Path:
         
     ''' Get the length of this path segment '''
     def get_length(self):      
-        if not "X" in self.axes or not "Y" in self.axes:
-            return 0.0
-        x = self.axes["X"]/1000.0
-        y = self.axes["Y"]/1000.0
+        if "X" in self.axes:
+            x = self.axes["X"]/1000.0
+            if self.movement == "ABSOLUTE":
+                x -= self.global_pos["X"]
+        else:
+            x = 0
+        if "Y" in self.axes:
+            y = self.axes["Y"]/1000.0
+            if self.movement == "ABSOLUTE":        
+                y -= self.global_pos["Y"]
+        else:
+            y = 0
 
-        if self.movement == "ABSOLUTE":
-            x -= self.global_pos["X"]
-            y -= self.global_pos["Y"]
         self.length = np.sqrt(x**2+y**2)                             # calculate the hypotenuse to the X-Y vectors, 
 
         if "Z" in self.axes:
@@ -67,9 +72,17 @@ class Path:
     def get_max_speed(self):
         return (self.feed_rate/60.0)/1000.0
 
+    ''' Get the ratio for this axis '''
+    def get_axis_ratio(self, axis):
+        hyp     = self.get_length()    	                                # Calculate the ratio               
+        if hyp == 0.0:
+            return 1.0
+        return abs(self.get_axis_length(axis))/hyp
+
     ''' Get the lowest speed along this segment '''
     def get_min_speed(self):
         return 0
+
 
     ''' Return the list of axes '''
     def get_axes(self):
