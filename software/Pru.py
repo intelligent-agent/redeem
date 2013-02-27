@@ -118,7 +118,7 @@ class Pru:
     def has_capacity_for(self, data_len):
         with self.ddr_lock:
             cap = self.ddr_size-self.ddr_mem_used
-        return (cap > data_len) 
+        return (cap/2.0 > data_len) 
 
     ''' Check if the PRU has capacity for a chunk of data '''
     def get_capacity(self):
@@ -138,7 +138,6 @@ class Pru:
 
         self.ddr_end = self.ddr_start+len(data)       
         if self.ddr_end >= self.DDR_END-16:                     # If the data is too long, wrap it around to the start
-            print "self.ddr_end >= self.DDR_END-16"
             multiple = (self.DDR_END-self.ddr_start)%8          # Find a multiple of 8
             cut = self.DDR_END-self.ddr_start-multiple-4-8      # The cut must be done after a delay, so a multiple of 8 bytes +/-4
         
@@ -164,19 +163,15 @@ class Pru:
                 self.ddr_end = self.DDR_START+4
                 self.ddr_mem[self.DDR_START:self.DDR_START+4] = struct.pack('L', 0) # Terminate the first word
                 self.debug = 2
-                print "\tSecond batch skipped, 0 length"
-                print "\tremaining data "+str(data[cut:])
-            
-            print "Wrapped. Capacity is now "+str(self.get_capacity())
+                print "\tSecond batch skipped, 0 length"            
         else:
-            if self.debug > 0:
-                 print "Laying out from "+hex(self.ddr_start)+" to "+hex(self.ddr_end)
-                 print "self.ddr_end = "+hex(self.ddr_end)
-                 print "self.DDR_END = "+hex(self.DDR_END)
-            self.ddr_mem[self.ddr_start:self.ddr_end] = data    # Write the data to the DDR memory.
+            self.ddr_mem[self.ddr_start:self.ddr_end] = data    # Write the data to the DDR memory. 
             with self.ddr_lock:
-                self.ddr_mem_used += len(data)
+                self.ddr_mem_used += len(data)               
             self.ddr_used.put(len(data)) 		            # update the amount of memory used 
+            if self.debug > 0:
+                 print "Pushed "+str(len(data))+" from "+hex(self.ddr_start)+" to "+hex(self.ddr_end)
+            
 
         self.ddr_start 		= self.ddr_end-4                    # Update the start of ddr for next time 
         self.pru_data 		= []                                # Reset the pru_data list since it has been commited         
@@ -236,6 +231,9 @@ class Pru:
         inst_pr_step = (int(s/self.s_pr_inst_2)-self.inst_pr_loop)/self.inst_pr_delay
         if inst_pr_step < 1:
             inst_pr_step = 1
+        if inst_pr_step == 0xbabe7175:
+            print "\tInst pr step is BABETITS!!!"
+            inst_pr_step = 0xbabe7175-1
         return inst_pr_step
 
     ''' Braid/merge together the data from the two data sets'''

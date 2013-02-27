@@ -82,8 +82,6 @@ class Path_planner:
                 if "Z" in all_data:     # HACK! The Z-axis cannot be combined with the other data. Somehow it goes backwards...
                     packet = all_data["Z"]      
                     while not self.pru.has_capacity_for(len(packet[0])*8):# Wait until the PRU has capacity for this chunk of data
-                        #print "PRU does not have capacity for "+str(len(packet[0])*8),
-                        #print "only has "+str(self.pru.get_capacity())
                         time.sleep(1)                   
                     if self.pru.add_data(packet) > 0:                        
                         self.pru.commit_data() 
