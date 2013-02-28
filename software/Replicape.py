@@ -41,18 +41,19 @@ class Replicape:
         self.steppers = {}
 
         # Init the 5 Stepper motors
-        self.steppers["X"]  = SMD(io.GPIO1_12, io.GPIO1_13, io.GPIO1_7,  7, "X")  # Fault_x should be PWM2A?
+        self.steppers["X"]  = SMD(io.GPIO1_12, io.GPIO1_13, io.GPIO2_4,  5, "X")  # Fault_x should be PWM2A?
         self.steppers["Y"]  = SMD(io.GPIO1_31, io.GPIO1_30, io.GPIO1_15, 1, "Y")  
-        self.steppers["Z"]  = SMD(io.GPIO1_1,  io.GPIO2_2,  io.GPIO0_27, 2, "Z")  
-        self.steppers["E"]  = SMD(io.GPIO3_21, io.GPIO3_19, io.GPIO2_3,  4, "Ext1")
+        self.steppers["Z"]  = SMD(io.GPIO1_1,  io.GPIO1_2,  io.GPIO0_27, 2, "Z")  
+        self.steppers["E2"]  = SMD(io.GPIO3_21, io.GPIO1_7, io.GPIO2_1,  3, "Ext1")
+        self.steppers["E"]  = SMD(io.GPIO1_14, io.GPIO1_6, io.GPIO2_3,  4, "Ext2")
 
         # Enable the steppers and set the current, steps pr mm and microstepping  
-        self.steppers["X"].setCurrentValue(2.0) # 2A
+        self.steppers["X"].setCurrentValue(1.0) # 2A
         self.steppers["X"].setEnabled() 
         self.steppers["X"].set_steps_pr_mm(6.105)         
         self.steppers["X"].set_microstepping(2) 
 
-        self.steppers["Y"].setCurrentValue(2.0) # 2A
+        self.steppers["Y"].setCurrentValue(1.0) # 2A
         self.steppers["Y"].setEnabled() 
         self.steppers["Y"].set_steps_pr_mm(5.95)
         self.steppers["Y"].set_microstepping(2) 
@@ -62,7 +63,7 @@ class Replicape:
         self.steppers["Z"].set_steps_pr_mm(155)
         self.steppers["Z"].set_microstepping(2) 
 
-        self.steppers["E"].setCurrentValue(1.8) # 2A        
+        self.steppers["E"].setCurrentValue(1.0) # 2A        
         self.steppers["E"].setEnabled()
         self.steppers["E"].set_steps_pr_mm(5.0)
         self.steppers["E"].set_microstepping(2)

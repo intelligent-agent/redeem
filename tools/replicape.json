@@ -2,12 +2,12 @@
  "Replicape.eeprom": {
     "type": "cape",
     "header": "aa5533ee",
-    "formatRev": "0",
+    "formatRev": "1",
     "boardName": "Replicape 3D printer cape",
-    "version": "0",
+    "version": "1",
     "manufacturer": "Elias Bakken",
     "partNumber": "BB-REPLICAPE-01",
-    "numPins": 18,
+    "numPins": 29,
     "serialNumber": "00000000001",
     "currentVDD_3V3EXP": 40,
     "currentVDD_5V": 0,
@@ -22,38 +22,29 @@
         "mode": 7,
         "function": "gpio1_28"
       },     
- 	  "P9_14": {
-        "used": "used",
-        "direction": "out",
-        "pullup": "pulldown",
-        "rx": "disabled",
-        "mode": 6,
-        "function": "ehrpwm1A_mux1"
-      },	
-      "P9_15": {
+	  "P9_13": {
         "used": "used",
         "direction": "in",
         "pullup": "pullup",
         "rx": "disabled",
         "mode": 7,
-        "function": "gpio1_16"
-      },
-      "P9_16": {
-        "used": "used",
-        "direction": "out",
-        "pullup": "pulldown",
-        "rx": "disabled",
-        "mode": 6,
-        "function": "ehrpwm1B_mux1"
-      },	
-
-      "P9_23": {
+        "function": "gpio0_31"
+	  },     
+      "P9_17": {
         "used": "used",
         "direction": "in",
         "pullup": "pullup",
         "rx": "disabled",
-        "mode": 6,
-        "function": "ehrpwm1B_mux1"
+        "mode": 7,
+        "function": "GPIO0_5"
+      },	
+       "P9_22": {
+        "used": "used",
+        "direction": "out",
+        "pullup": "pullup",
+        "rx": "disabled",
+        "mode": 3,
+        "function": "ehrpwm0A"
       },
       "P9_25": {
         "used": "used",
@@ -62,14 +53,6 @@
         "rx": "disabled",
         "mode": 7,
         "function": "gpio3_21"
-      },
-      "P9_27": {
-        "used": "used",
-        "direction": "out",
-        "pullup": "pullup",
-        "rx": "disabled",
-        "mode": 7,
-        "function": "gpio3_19"
       },
       "P9_28": {
         "used": "used",
@@ -124,14 +107,13 @@
         "direction": "in",
         "slew": "fast",
         "rx": "disabled",
-        "pullup": "pullup",
+        "pullup": "disabled",
         "mode": 7,
         "function": "gpio1_6"
 	  },
       "P8_4": {
         "used": "used",
-        "direction": "in",
-        "slew": "fast",
+        "direction": "out",
         "rx": "disabled",
         "pullup": "disabled",
         "mode": 7,
@@ -146,14 +128,23 @@
         "mode": 7,
         "function": "gpio1_2"
 	  },
-      "P8_6": {
+      "P8_8": {
         "used": "used",
         "direction": "in",
         "slew": "fast",
         "rx": "disabled",
-        "pullup": "disabled",
+        "pullup": "pullup",
         "mode": 7,
-        "function": "gpio1_3"
+        "function": "gpio2_3"
+	  },
+      "P8_10": {
+        "used": "used",
+        "direction": "in",
+        "slew": "fast",
+        "rx": "disabled",
+        "pullup": "pullup",
+        "mode": 7,
+        "function": "gpio2_4"
 	  },
       "P8_11": {
         "used": "used",
@@ -196,14 +187,13 @@
         "direction": "in",
         "slew": "fast",
         "rx": "disabled",
-        "pullup": "disabled",
+        "pullup": "pullup",
         "mode": 7,
         "function": "gpio1_15"
 	  },
       "P8_16": {
         "used": "used",
-        "direction": "in",
-        "slew": "fast",
+        "direction": "out",
         "rx": "disabled",
         "pullup": "disabled",
         "mode": 7,
@@ -214,7 +204,7 @@
         "direction": "in",
         "slew": "fast",
         "rx": "disabled",
-        "pullup": "disabled",
+        "pullup": "pullup",
         "mode": 7,
         "function": "gpio0_27"
 	  },
@@ -223,7 +213,7 @@
         "direction": "in",
         "slew": "fast",
         "rx": "disabled",
-        "pullup": "disabled",
+        "pullup": "pullup",
         "mode": 7,
         "function": "gpio2_1"
 	  },

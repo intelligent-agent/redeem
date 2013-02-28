@@ -1,5 +1,5 @@
 
-COMPILER=../../PyPRUSS/PASM/pasm -b 
+COMPILER=../libs/PyPRUSS/PASM/pasm -b 
 FILENAME=firmware_pru_0
 
 .PHONY: clean all

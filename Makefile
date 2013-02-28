@@ -1,14 +1,14 @@
 
 
 RPATH=/home/root/Replicape
-REMOTE=root@10.24.2.129
+REMOTE=root@10.24.2.124
 
 
 .PHONY : software firmware
 
 eeprom:
 	scp tools/replicape.json tools/eeprom_upload.py Makefile $(REMOTE):$(RPATH)/eeprom
-	ssh $(REMOTE) 'cd Replicape/eeprom; make eeprom_upload'
+	ssh $(REMOTE) 'cd Replicape/eeprom; make eeprom_cat'
 
 eeprom_upload: 
 	node ./eeprom.js -w replicape.json
@@ -16,7 +16,7 @@ eeprom_upload:
 
 eeprom_cat:
 	node ./eeprom.js -w replicape.json
-	cat Replicape.eeprom > /sys/bus/i2c/drivers/at24/3-0050/eeprom
+	cat Replicape.eeprom > /sys/bus/i2c/drivers/at24/3-0055/eeprom
 
 software:
 	scp software/*.py $(REMOTE):$(RPATH)/software
@@ -32,3 +32,6 @@ pypruss:
 	scp -r PRU/PyPRUSS $(REMOTE):$(RPATH)/libs/
 	ssh $(REMOTE) 'cd $(RPATH)/libs/PyPRUSS; make && make install'
 
+
+tests:
+	scp -r software/tests $(REMOTE):$(RPATH)/software/

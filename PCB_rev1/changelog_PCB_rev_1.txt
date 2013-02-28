@@ -27,3 +27,12 @@ Changelog
  - Switched channels for ADC on Ext1 and Ext2?
  - Switched +5V and SYS_5V.
 
+
+Changelog Rev 1 -> Rev 2
+========================
+ - Missing R38, R39, 4.7K 0402
+ - Make all 0.1uF caps same size
+ - Missing 3 5.6K resistors
+ - Missing 3 end-stop connetors
+ - Wrong comparator, swich to LM339-14SOIC
+

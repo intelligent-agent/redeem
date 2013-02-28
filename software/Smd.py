@@ -122,13 +122,14 @@ class SMD:
     def setCurrentValue(self, iChop):        
         vRef = 3.3                              # Voltage reference on the DAC
         rSense = 0.1                            # Resistance for the 
-        vOut = iChop*5.0*rSense                 # Calculated voltage out from the DAC (See page 9 in the datasheet for the DAC)
+        vOut = iChop*5.0*rSense                 # Calculated voltage out from the DAC 
 
         self.dacval = int((vOut*256.0)/vRef)
-        byte1 = ((self.dacval & 0xF0)>>4) + (self.dac_channel<<4)
+        byte1 = ((self.dacval & 0xF0)>>4) | (self.dac_channel<<4)
         byte2 = (self.dacval & 0x0F)<<4
         spi2_0.writebytes([byte1, byte2])       # Update all channels
         spi2_0.writebytes([0xA0, 0xFF])         # TODO: Change to only this channel (1<<dac_channel) ?
+
 
     ''' Returns the current state '''
     def getState(self):

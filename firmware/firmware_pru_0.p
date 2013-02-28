@@ -5,11 +5,9 @@
 #define GPIO_DATAOUT 		0x13c				// This is the register for setting data
 #define DDR_MAGIC			0xbabe7175			// Magic number used to reset the DDR counter 
 #define GPIO1 				0x4804C000			// The adress of the GPIO1 bank
-#define GPIO2 				0x481AC000	 		// The adress of the GPIO2 bank
 #define GPIO3 				0x481AE000 			// The adress of the GPIO3 bank 
-#define GPIO1_MASK			(1<<13)|(1<<12)|(1<<30)|(1<<31)|(1<<1)	// Only these two pins are togglable
-#define GPIO2_MASK			(1<<2)
-#define GPIO3_MASK			(1<<19)|(1<<21)		// Only these two pins are togglable
+#define GPIO1_MASK			(1<<1)|(1<<2)|(1<<6)|(1<<7)|(1<<12)|(1<<13)|(1<<14)|(1<<30)|(1<<31) // Toggelable
+#define GPIO3_MASK			(1<<21)		// Only these two pins are togglable
 
 START:
     LBCO r0, C4, 4, 4							// Load Bytes Constant Offset (?)
@@ -19,9 +17,6 @@ START:
 	MOV  r10, GPIO1_MASK						// Make the mask
     MOV  r11, GPIO1 | GPIO_DATAOUT				// Load address
     MOV  r12, 0xFFFFFFFF ^ (GPIO1_MASK)			// Invert the mask
-	MOV  r13, GPIO2_MASK						// Make the mask
-    MOV  r14, GPIO2 | GPIO_DATAOUT				// Load address 
-    MOV  r15, 0xFFFFFFFF ^ (GPIO2_MASK)			// Invert mask
 	MOV  r16, GPIO3_MASK						// Make the mask
     MOV  r17, GPIO3 | GPIO_DATAOUT				// Load address
     MOV  r18, 0xFFFFFFFF ^ (GPIO3_MASK)			// Invert mask
@@ -45,13 +40,6 @@ BLINK:
 	AND	 r3, r3, r12							// Mask the data so only the necessary pins can change
 	OR   r3, r3, r2 							// Add the GPIO1-mask to hinder toggling PRU1's pins
     SBBO r3, r11, 0, 4							// Ok, set the pins
-
-    LBBO r2, r4, 0, 4							// Load pin data into r2
-	AND  r2, r2, r13							// Mask the pins to GPIO2
-	LBBO r3, r14, 0, 4							// Load the data currently in addr r3
-	AND	 r3, r3, r15							// Mask the data so only the necessary pins can change
-	OR   r3, r3, r2 							// Add the GPIO2-mask to hinder toggling PRU1's pins
-    SBBO r3, r14, 0, 4							// Ok, set the pins
 
     LBBO r2, r4, 0, 4							// Load pin data into r2
 	AND  r2, r2, r16							// Mask the pins to GPIO3

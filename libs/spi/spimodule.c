@@ -341,7 +341,7 @@ SPI_xfer2(SPI *self, PyObject *args)
 
 static int __SPI_set_mode( int fd, __u8 mode) {
 	__u8 test;
-	printf("setmode called with mode = %x\n", mode);
+	//printf("setmode called with mode = %x\n", mode);
 	if (ioctl(fd, SPI_IOC_WR_MODE, &mode) == -1) {
 		PyErr_SetFromErrno(PyExc_IOError);
 		return -1;
@@ -452,7 +452,7 @@ SPI_set_mode(SPI *self, PyObject *val, void *closure)
 	__SPI_set_mode(self->fd, tmp);
 
 	self->mode = tmp;
-	printf("mode now: %x\n", self->mode);
+	//printf("mode now: %x\n", self->mode);
 	return 0;
 }
 
@@ -480,7 +480,7 @@ SPI_set_cshigh(SPI *self, PyObject *val, void *closure)
 	__SPI_set_mode(self->fd, tmp);
 
 	self->mode = tmp;
-	printf("mode now: %x\n", self->mode);
+	//printf("mode now: %x\n", self->mode);
 	return 0;
 }
 
@@ -508,7 +508,7 @@ SPI_set_lsbfirst(SPI *self, PyObject *val, void *closure)
 	__SPI_set_mode(self->fd, tmp);
 
 	self->mode = tmp;
-	printf("mode now: %x\n", self->mode);
+	//printf("mode now: %x\n", self->mode);
 	return 0;
 }
 
@@ -536,7 +536,7 @@ SPI_set_3wire(SPI *self, PyObject *val, void *closure)
 	__SPI_set_mode(self->fd, tmp);
 
 	self->mode = tmp;
-	printf("mode now: %x\n", self->mode);
+	//printf("mode now: %x\n", self->mode);
 	return 0;
 }
 
@@ -564,7 +564,7 @@ SPI_set_loop(SPI *self, PyObject *val, void *closure)
 	__SPI_set_mode(self->fd, tmp);
 
 	self->mode = tmp;
-	printf("mode now: %x\n", self->mode);
+	//printf("mode now: %x\n", self->mode);
 	return 0;
 }
 
