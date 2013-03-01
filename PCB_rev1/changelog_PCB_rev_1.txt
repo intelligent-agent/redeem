@@ -30,9 +30,17 @@ Changelog
 
 Changelog Rev 1 -> Rev 2
 ========================
+BOM changes
+-----------
  - Missing R38, R39, 4.7K 0402
  - Make all 0.1uF caps same size
  - Missing 3 5.6K resistors
  - Missing 3 end-stop connetors
  - Wrong comparator, swich to LM339-14SOIC
+
+Layout changes 
+--------------
+ - Stepper Ext1 has step-pin on GPIO bank 3. 
+ - Far McCon is repporting on difficulties in laying out components.
+ - 
 

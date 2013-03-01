@@ -73,8 +73,9 @@ class Replicape:
         self.therm_hbp  = Thermistor(io.AIN6, "HBP", chart_name="B57560G104F")
 
         # init the 3 heaters
-        self.mosfet_ext1 = Mosfet(io.PWM1A) # PWM2B on rev1
+        self.mosfet_ext1 = Mosfet(io.PWM2B) # PWM2B on rev1
         self.mosfet_hbp  = Mosfet(io.PWM1B) # PWM1B on rev1 
+        self.mosfet_ext2 = Mosfet(io.PWM0A) 
         # Make extruder 1
         self.ext1 = Extruder(self.steppers["E"], self.therm_ext1, self.mosfet_ext1)
         self.ext1.setPvalue(0.5)

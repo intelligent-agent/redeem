@@ -169,7 +169,7 @@
         "direction": "out",
         "slew": "fast",
         "rx": "disabled",
-        "pullup": "disabled",
+        "pullup": "pullup",
         "mode": 4,
         "function": "ehrpwm2B"
 	  },
@@ -222,7 +222,7 @@
         "direction": "out",
         "slew": "fast",
         "rx": "disabled",
-        "pullup": "disabled",
+        "pullup": "pullup",
         "mode": 4,
         "function": "ehrpwm2A"
 	  },
