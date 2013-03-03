@@ -46,6 +46,7 @@ class SMD:
         for smd in SMD.all_smds:	   
             bytes.append(smd.getState())
         spi2_1.writebytes(bytes[::-1])
+        print "wrote "+str(bytes[::-1])
 
     ''' Init'''
     def __init__(self, stepPin, dirPin, faultPin, dac_channel, name):

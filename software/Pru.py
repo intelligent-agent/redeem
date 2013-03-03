@@ -126,6 +126,10 @@ class Pru:
             cap = self.ddr_size-self.ddr_mem_used
         return cap
 
+    def wait_until_done(self):
+        ''' Wait until the queue is empty '''
+        self.ddr_used.join()        
+
     ''' Returns True if there are segments on queue '''
     def is_processing(self):
         return (self.ddr_used.qsize() > 0)

@@ -4,10 +4,10 @@ RPATH=/home/root/Replicape
 REMOTE=root@10.24.2.124
 
 
-.PHONY : software firmware
+.PHONY : software firmware eeprom
 
 eeprom:
-	scp tools/replicape.json tools/eeprom_upload.py Makefile $(REMOTE):$(RPATH)/eeprom
+	scp tools/replicape.json tools/eeprom_upload.py eeprom/eeprom.js Makefile $(REMOTE):$(RPATH)/eeprom
 	ssh $(REMOTE) 'cd Replicape/eeprom; make eeprom_cat'
 
 eeprom_upload: 

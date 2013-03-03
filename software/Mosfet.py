@@ -13,21 +13,24 @@ import bbio as io
 
 class Mosfet:
 
-	def __init__(self, pin):
-		self.pin = pin
-		io.pwmEnable(pin) # Init the Pin to PWM mode
-		io.pwmFrequency(pin, 20000) # Set a frequency, not important for now
-		self.power = 0.0		
-		
-	'''Set duty cycle between 0 and 1'''
-	def setPower(self, value):
-		self.power = value
-		io.analogWrite(self.pin, int(value*256.0))
+    def __init__(self, pin):
+        self.pin = pin
+        io.pwmEnable(pin) # Init the Pin to PWM mode
+        io.pwmFrequency(pin, 20000) # Set a frequency, not important for now
+        self.setPower(0.0)
+	
+    '''Set duty cycle between 0 and 1'''
+    def setPower(self, value):
+        self.power = value
+        io.analogWrite(self.pin, int((1.0-value)*256.0))
 
-	'''Set the PWM frequency'''
-	def setFrequency(self, freq):
-		io.pwmFrequency(self.pin, freq)
+    '''Set the PWM frequency'''
+    def setFrequency(self, freq):
+        io.pwmFrequency(self.pin, freq)
 
-	''' return the current power level '''
-	def get_power(self):
-		return self.power
+    ''' return the current power level '''
+    def get_power(self):
+        return self.power
+
+    def close(self):
+        io.pwmDisable(self.pin) # Init the Pin to PWM mode

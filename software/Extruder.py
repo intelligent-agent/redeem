@@ -49,6 +49,7 @@ class Heater(object):
             io.delay(200)
         # The PID loop has finished		
         self.mosfet.setPower(0.0)
+        self.mosfet.close()
 
     ''' Start the PID controller '''
     def enable(self):

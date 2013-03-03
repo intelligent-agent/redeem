@@ -74,8 +74,8 @@ class Replicape:
 
         # init the 3 heaters
         self.mosfet_ext1 = Mosfet(io.PWM2B) # PWM2B on rev1
-        self.mosfet_hbp  = Mosfet(io.PWM1B) # PWM1B on rev1 
-        self.mosfet_ext2 = Mosfet(io.PWM0A) 
+        self.mosfet_hbp  = Mosfet(io.PWM0C) # PWM0C on rev1 
+        self.mosfet_ext2 = Mosfet(io.PWM2A) # 
         # Make extruder 1
         self.ext1 = Extruder(self.steppers["E"], self.therm_ext1, self.mosfet_ext1)
         self.ext1.setPvalue(0.5)
@@ -89,6 +89,7 @@ class Replicape:
         self.fan_1 = Fan(1)
         self.fan_2 = Fan(2)
         self.fan_3 = Fan(3)
+        self.fans = {0: self.fan_1, 1:self.fan_2, 2:self.fan_3 }
 
         # Make a queue of commands
         self.commands = Queue.Queue()
@@ -167,11 +168,12 @@ class Replicape:
                 self.path_planner.set_pos(axis, val)
         elif g.code() == "M17":                                     # Enable all steppers
             for name, stepper in self.steppers.iteritems():
-                stepper.setEnabled()
+                stepper.setEnabled()            
         elif g.code() == "M30":                                     # Set microstepping (Propietary to Replicape)
             for i in range(g.numTokens()):
                 self.steppers[g.tokenLetter(i)].set_microstepping(int(g.tokenValue(i)))            
         elif g.code() == "M84":                                     # Disable all steppers
+            self.path_planner.wait_until_done()
             for name, stepper in self.steppers.iteritems():
             	stepper.setDisabled()
         elif g.code() == "M101":									# Deprecated 
@@ -185,8 +187,13 @@ class Replicape:
             answer += " B:"+str(int(self.hbp.getTemperature()))
             g.setAnswer(answer)
         elif g.code() == "M106":                                    # Fan on
-            self.fan_1.setPWMFrequency(100)
-            self.fan_1.setValue(float(g.tokenValue(0)))	
+            if g.hasLetter("P"):
+                fan = self.fans[int(g.getValueByLetter("P"))]
+                fan.setPWMFrequency(100)
+                fan.setValue(float(g.getValueByLetter("S")))	                
+            else:
+                self.fan_1.setPWMFrequency(100)
+                self.fan_1.setValue(float(g.tokenValue(0)))	
         elif g.code() == "M108":									# Deprecated
             pass 													
         elif g.code() == "M110":                                    # Reset the line number counter 
