@@ -16,23 +16,24 @@ class Gcode:
 
     line_number = 0
     ''' Init; parse the token '''
-    def __init__(self, message, printer):
-        self.message = message
+    def __init__(self, packet, printer):
+        self.message = packet["message"]
+        self.prot = packet["prot"]
         self.p = printer		
 
-        self.tokens = message.split(" ")
+        self.tokens = self.message.split(" ")
         if self.tokens[0][0] == "N":                                # Ok, checksum
-            line_num = message.split(" ")[0][1::]
-            cmd = message.split("*")[0]                             # Command
-            csc = message.split("*")[1]                             # Command to compare with
+            line_num = self.message.split(" ")[0][1::]
+            cmd = self.message.split("*")[0]                             # Command
+            csc = self.message.split("*")[1]                             # Command to compare with
             if int(csc) != self.getCS(cmd):
                 print "CRC error!"            
-            message =  message.split("*")[0][(1+len(line_num)+1)::] # Remove crc stuff
+            self.message =  self.message.split("*")[0][(1+len(line_num)+1)::] # Remove crc stuff
             self.line_number = int(line_num)                        # Set the line number
             Gcode.line_number += 1                                  # Increase the global counter 
                     
         # Parse 
-        self.tokens = message.split(" ")    
+        self.tokens = self.message.split(" ")    
         self.gcode = self.tokens.pop(0) # gcode number
         for i, token in enumerate(self.tokens):
             if len(token) == 0:

@@ -21,6 +21,7 @@ from Smd import SMD
 from Thermistor import Thermistor
 from Fan import Fan
 from USB import USB
+from Ethernet import Ethernet
 from Gcode import Gcode
 import sys
 from Extruder import Extruder, HBP
@@ -48,12 +49,12 @@ class Replicape:
         self.steppers["E"]  = SMD(io.GPIO1_14, io.GPIO1_6, io.GPIO2_3,  4, "Ext2")
 
         # Enable the steppers and set the current, steps pr mm and microstepping  
-        self.steppers["X"].setCurrentValue(1.0) # 2A
+        self.steppers["X"].setCurrentValue(1.5) # 2A
         self.steppers["X"].setEnabled() 
         self.steppers["X"].set_steps_pr_mm(6.105)         
         self.steppers["X"].set_microstepping(2) 
 
-        self.steppers["Y"].setCurrentValue(1.0) # 2A
+        self.steppers["Y"].setCurrentValue(1.5) # 2A
         self.steppers["Y"].setEnabled() 
         self.steppers["Y"].set_steps_pr_mm(5.95)
         self.steppers["Y"].set_microstepping(2) 
@@ -92,10 +93,11 @@ class Replicape:
         self.fans = {0: self.fan_1, 1:self.fan_2, 2:self.fan_3 }
 
         # Make a queue of commands
-        self.commands = Queue.Queue()
+        self.commands = Queue.Queue(30)
 
         # Set up USB, this receives messages and pushes them on the queue
         self.usb = USB(self.commands)		
+        self.ethernet = Ethernet(self.commands)
 
         # Get all options 
         self.options = Options()
@@ -104,7 +106,7 @@ class Replicape:
         self.movement = "RELATIVE"
         self.feed_rate = 3000.0
         self.current_pos = {"X":0.0, "Y":0.0, "Z":0.0, "E":0.0}
-        self.acceleration = 300.0/1000.0
+        self.acceleration = 100.0/1000.0
 
         self.path_planner = Path_planner(self.steppers, self.current_pos)         
         self.path_planner.set_acceleration(self.acceleration) 
@@ -116,7 +118,10 @@ class Replicape:
             while True:                
                 gcode = Gcode(self.commands.get(), self)
                 self._execute(gcode)
-                self.usb.send_message(gcode.getAnswer())
+                if gcode.prot == "USB":
+                    self.usb.send_message(gcode.getAnswer())
+                else:
+                    self.ethernet.send_message(gcode.getAnswer())
                 self.commands.task_done()
         except KeyboardInterrupt:
             print "Caught signal, exiting" 
@@ -173,7 +178,9 @@ class Replicape:
             for i in range(g.numTokens()):
                 self.steppers[g.tokenLetter(i)].set_microstepping(int(g.tokenValue(i)))            
         elif g.code() == "M84":                                     # Disable all steppers
+            print "Waiting for path planner"
             self.path_planner.wait_until_done()
+            print "Path planner done"
             for name, stepper in self.steppers.iteritems():
             	stepper.setDisabled()
         elif g.code() == "M101":									# Deprecated 

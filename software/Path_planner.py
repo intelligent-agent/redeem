@@ -18,6 +18,7 @@ import logging
 import numpy as np  
 from threading import Thread
 from Pru import Pru
+from NonPru import NonPru
 import Queue
 from collections import defaultdict
 
@@ -33,7 +34,7 @@ class Path_planner:
         self.t           = Thread(target=self._do_work)         # Make the thread
         self.t.start()		                
 
-    ''' Set the acceleration used '''
+    ''' Set the acceleration used ''' # Fix me, move this to path
     def set_acceleration(self, acceleration):
         self.acceleration = acceleration
 
@@ -61,12 +62,10 @@ class Path_planner:
     ''' This loop pops a path, sends it to the PRU 
     and waits for an event '''
     def _do_work(self):
-        events_waiting = 0
         while self.running:       
             try: 
                 path = self.paths.get(timeout = 1)                            # Get the last path added
                 path.set_global_pos(self.current_pos.copy())       # Set the global position of the printer
-                axes_added = 0
                 all_data = {}
                 slowest =  0
                 for axis in path.get_axes():                       # Run through all the axes in the path    
@@ -76,23 +75,15 @@ class Path_planner:
                         all_data[axis] = data                      # Generate the timing and pin data                         
                         slowest = max(slowest, sum(data[1]))                                   
                 
-                for axis in all_data:                         
+                for axis in all_data:                              # Make all axes use the same amount of time
                     packet = all_data[axis]                           
                     delays = np.array(packet[1])
                     diff = (slowest-sum(delays))/len(delays)
                     for j, delay in enumerate(delays):
-                        delays[j] = max(delay+diff, 1.0/10000.0)    # min 0.2ms                     
+                        delays[j] = max(delay+diff, 1.0/10000.0)    # min 0.1ms                     
                     data = (packet[0], delays)  
-                
-                if "Z" in all_data:     # HACK! The Z-axis cannot be combined with the other data. Somehow it goes backwards...
-                    packet = all_data["Z"]      
-                    while not self.pru.has_capacity_for(len(packet[0])*8):# Wait until the PRU has capacity for this chunk of data
-                        time.sleep(1)                   
-                    if self.pru.add_data(packet) > 0:                        
-                        self.pru.commit_data() 
-                    del all_data["Z"]
-                    
-                for axis in all_data:   # Commit the other axes    
+              
+                for axis in all_data:                               # Merge the data from all axes   
                     packet = all_data[axis]
                     z = zip(np.cumsum(packet[1]), packet[0])
                     for item in z:
@@ -107,20 +98,12 @@ class Path_planner:
                     self.pru.add_data(self.pru_data)
                     self.pru.commit_data()                            # Commit data to ddr
 
+
                 self.pru_data = defaultdict(int)                    
                 self.paths.task_done()
                
             except Queue.Empty:
                 pass
-
-    def merge_data(self):
-        self.pru_data        
-
-    def _add_or_append(self, old, ts, pin):
-        if ts == old[-1][0]:
-            return (x, old[-1][1]+y) 
-        return (x, y)
-
 
     ''' Join the thread '''
     def exit(self):
@@ -151,17 +134,22 @@ class Path_planner:
         a        = self.acceleration*ratio    		                    # Accelleration in m/s/s
         ds       = 1.0/steps_pr_meter                                   # Delta S, distance in meters travelled pr step.         
         if self.pru.is_processing():                                    # If there is currently a segment being processed, 
+            #print "Is processing, angle to prev is "+str(path.angle_to_prev())
             u_start  = ratio*path.get_start_speed()                 	    # The end speed, depends on the angle to the next
         else:
+            #print "Nothing processing"
             u_start = 0
         if self.paths.qsize() > 0:                                      # If there are paths in queue, we do not have to slow down
+            #print "Has followers, angle to follower: "+str(path.angle_to_next()) 
             u_end    = ratio*path.get_end_speed()                 	    # The start speed. Depends on the angle to the prev.
         else:
+            #print "Nothing on queue"
             u_end = 0
 
         #print "Max speed for "+axis+" is "+str(Vm)
         #print "Start speed for "+axis+" is "+str(u_start)
         #print "End speed for "+axis+" is "+str(u_end)
+        #print ""
         tm_start = (Vm-u_start)/a					                    # Calculate the time for when max speed is met. 
         tm_end   = (Vm-u_end)/a					                        # Calculate the time for when max speed is met. 
         sm_start = min(u_start*tm_start + 0.5*a*tm_start**2, s/2.0)     # Calculate the distance traveled when max speed is met
@@ -182,48 +170,35 @@ class Path_planner:
         td          = num_steps/steps_pr_meter                          # Calculate the actual travelled distance        
         if vec < 0:                                                     # If the vector is negative, negate it.      
             td     *= -1.0
-
-        path.set_travelled_distance(axis, td)                           # Set the travelled distance back in the path 
         self.current_pos[axis] += td                                    # Update the global position vector
-
-        #with open(axis+"_delays", "w+") as f:
-        #    f.write(", ".join(map(str, delays)))
 
         return (pins, delays)                                           # return the pin states and the data
 
 
-if __name__ == '__main__':
-    import bbio as io
-    from Smd import SMD
-    from Path import Path
-
-    steppers = {}
-
-    current_pos = {"X": 0.0, "Y": 0.0}
-    # Init the 5 Stepper motors
-    steppers["X"]  = SMD(io.GPIO1_12, io.GPIO1_13, io.GPIO1_7,  7, "X")  # Fault_x should be PWM2A?
-    steppers["Y"]  = SMD(io.GPIO1_31, io.GPIO1_30, io.GPIO1_15, 1, "Y")  
-    path_planner = Path_planner(steppers, current_pos)         
-    path_planner.set_acceleration(0.3) 
-
-    path = Path({"X": 1000.0, "Y": 1000.0}, 3000.0, "RELATIVE")  
-    import profile
-    path_planner.add_path(path)
-    profile.run('path_planner.test()')
-    path_planner.add_path(path)
-    profile.run('path_planner.test2()')
 
 
-    #profile.run('loop_1()')
-    #profile.run('loop_2()')
+'''
+for axis in all_data:
+    stepper = self.steppers[axis]
+    packet = all_data[axis]
+    stepper.add_data(packet)
+    stepper.prepare_move()
 
-    print path_planner.pru._sec_to_inst(0.002)
-    print path_planner.pru._sec_to_inst_2(0.002)
+for axis in all_data:
+    stepper = self.steppers[axis]
+    stepper.start_move()
 
+for axis in all_data:
+    stepper = self.steppers[axis]
+    stepper.end_move()
+'''
 
-    #profile.run('path_planner._make_data(path, "X")')
-    path_planner.exit()
-
-
-    
-
+'''
+if "Z" in all_data:     # HACK! The Z-axis cannot be combined with the other data. Somehow it goes backwards...
+    packet = all_data["Z"]      
+    while not self.pru.has_capacity_for(len(packet[0])*8):# Wait until the PRU has capacity for this chunk of data
+        time.sleep(1)                   
+    if self.pru.add_data(packet) > 0:                        
+        self.pru.commit_data() 
+    del all_data["Z"]
+'''    
