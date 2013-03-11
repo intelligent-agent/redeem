@@ -1,0 +1,69 @@
+#!/usr/bin/env python
+'''
+Ethernet communication file for Replicape. 
+
+Author: Elias Bakken
+email: elias.bakken@gmail.com
+Website: http://www.hipstercircuits.com
+License: BSD
+
+You can use and change this, but keep this heading :)
+'''
+
+#from Gcode import Gcode
+from threading import Thread
+import socket
+import logging
+
+size = 1024 
+
+class Ethernet:
+    def __init__(self, queue):
+        self.queue = queue
+        self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        host = ''
+        port = 50000
+        backlog = 5       
+        for i in range(10):
+            try: 
+                self.s.bind((host,port))
+                break
+            except socket.error as e:
+                port += 1    
+
+        print "Ethernet bound to port "+str(port)
+        self.s.listen(backlog)
+        self.running = True
+        self.debug = 0
+        self.t = Thread(target=self.get_message)
+        self.t.start()		
+
+    # Loop that gets messages and pushes them on the queue
+    def get_message(self):
+        while self.running:
+            self.client, self.address = self.s.accept()
+            try: 
+                while True:
+                    data = ''
+                    while not "\n" in data:
+                        data += self.client.recv(1)
+                    message = data.strip("\n")
+                    self.queue.put({"message": message, "prot": "Eth"})
+            except IOError as e:
+                print "Connection closed"
+            finally:
+                self.client.close()             
+
+
+    # Send a message		
+    def send_message(self, message):
+        logging.debug("'"+message+"'")
+        if message[-1] != "\n":
+            message += "\n"
+        self.client.send(message)
+
+    # Stop receiving mesassages
+    def close(self):
+        self.running = False
+        self.t.join()
+

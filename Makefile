@@ -35,3 +35,12 @@ pypruss:
 
 tests:
 	scp -r software/tests $(REMOTE):$(RPATH)/software/
+
+install_image: 
+	cp images/uImage-3.2.34-20130303 /boot/
+	rm /boot/uImage
+	ln -s /boot/uImage-3.2.34-20130303 /boot/uImage
+
+install_modules: 
+	unzip images/3.2.34.zip
+	cp -r images/3.2.34/ /lib/modules/ 
