@@ -18,7 +18,6 @@ import logging
 import numpy as np  
 from threading import Thread
 from Pru import Pru
-from NonPru import NonPru
 import Queue
 from collections import defaultdict
 
