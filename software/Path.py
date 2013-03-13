@@ -14,13 +14,15 @@ from numpy import linalg as la
 
 class Path: 	
     ''' The axes of evil, the feed rate in mm/min and ABS or REL '''
-    def __init__(self, axes, feed_rate, movement):
+    def __init__(self, axes, feed_rate, movement, is_print_segment=True):
         self.axes = axes
         self.feed_rate = feed_rate
         self.movement = movement
         self.global_pos = {"X":0, "Y":0, "Z":0, "E":0} 
         self.actual_travel = axes.copy()
-           
+        self.is_print_segment = is_print_segment         # If this is True, 
+        self.axis_config = "H-belt"                      # If you need to do some sort of mapping, add the branch here. (ex scara arm)
+          
     ''' Set the next path element '''
     def set_next(self, next):
         self.next = next
@@ -28,9 +30,10 @@ class Path:
     ''' Set the previous path element '''
     def set_prev(self, prev):
         self.prev = prev
-
-    ''' Get the length of this path segment '''
-    def get_length(self):      
+    
+    def set_global_pos(self, global_pos, update_next = True):
+        ''' Set the global position for the printer '''
+        self.global_pos = global_pos		
         if "X" in self.axes:
             x = self.axes["X"]/1000.0
             if self.movement == "ABSOLUTE":
@@ -43,25 +46,50 @@ class Path:
                 y -= self.global_pos["Y"]
         else:
             y = 0
-
-        self.length = np.sqrt(x**2+y**2)                             # calculate the hypotenuse to the X-Y vectors, 
-
         if "Z" in self.axes:
             z = self.axes["Z"]/1000.0
             if self.movement == "ABSOLUTE":           
                 z -= self.global_pos["Z"]
-            self.length  = np.sqrt(self.length**2+z**2)                  # Also include the z-travel          
+        else:
+            z = 0
+        if "E" in self.axes:
+            e = self.axes["E"]/1000.0
+            if self.movement == "ABSOLUTE":           
+                e -= self.global_pos["E"]
+        else:
+            e = 0
 
+        # implement any transformation. Hipsterbot has an H-type belt, so: 
+        # This was taken from the article "Dynamic modelling of a Two-axis, Parallel H-frame-Type XY Positioning System".
+        if self.axis_config == "H-belt":
+            A = np.matrix('-0.5 0.5; -0.5 -0.5')
+            b = np.array([x, y])
+            X = np.dot(np.linalg.inv(A), b)
+            x = X[0, 0]
+            y = X[0, 1]
+
+        self.vector = {"X":x, "Y":y, "Z":z, "E":e}
+    
+        # Update the "probable" (as in not true) global pos of the next segment. 
+        # This is in order to calculate the angle to it. Thus it need not be exact. 
+        if hasattr(self, 'next'):
+            a = self.global_pos
+            b = self.vector
+            # Do not continue the update beyond the bnext segment
+            self.next.set_global_pos(dict( (n, a.get(n, 0)+b.get(n, 0)) for n in set(a)|set(b) ), False)
+    
+    ''' Get the length of this path segment '''
+    def get_length(self):     
+        x = self.vector["X"]
+        y = self.vector["Y"]
+        z = self.vector["Z"]
+        self.length = np.sqrt(x**2+y**2+z**2)                             # calculate the hypotenuse to the X-Y vectors, 
         return self.length
 
-    ''' Get the length of the axis '''
+    
     def get_axis_length(self, axis):
-        if not axis in self.axes:
-            return 0.0
-        if self.movement == "ABSOLUTE":            
-            return self.axes[axis]/1000.0 - self.global_pos[axis]     
-        else:
-            return self.axes[axis]/1000.0                         # If movement is relative, the vector is already ok. 
+        ''' Get the length of the axis '''
+        return self.vector[axis]
 
     ''' Get the top speed of this segment '''
     def get_max_speed(self):
@@ -84,7 +112,7 @@ class Path:
 
     ''' Return the list of axes '''
     def get_axes(self):
-        return self.axes
+        return { k : v for k,v in self.vector.iteritems() if v != 0 }
 
     ''' set the distance that was actually travelled.. '''
     def set_travelled_distance(self, axis, td):
@@ -93,10 +121,6 @@ class Path:
     ''' Return the actual travelled distance for this path '''
     def get_travelled_distance(self):
         return self.actual_travel
-
-    ''' Set the global position for the printer '''
-    def set_global_pos(self, global_pos):
-        self.global_pos = global_pos
 
     ''' Return the angle to the next path segment '''
     def angle_to_next(self):

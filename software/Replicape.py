@@ -42,19 +42,21 @@ class Replicape:
         self.steppers = {}
 
         # Init the 5 Stepper motors
-        self.steppers["X"]  = SMD(io.GPIO1_12, io.GPIO1_13, io.GPIO2_4,  5, "X")  # Fault_x should be PWM2A?
+        self.steppers["X"]  = SMD(io.GPIO1_12, io.GPIO1_13, io.GPIO2_4,  0, "X")  # Fault_x should be PWM2A?
         self.steppers["Y"]  = SMD(io.GPIO1_31, io.GPIO1_30, io.GPIO1_15, 1, "Y")  
         self.steppers["Z"]  = SMD(io.GPIO1_1,  io.GPIO1_2,  io.GPIO0_27, 2, "Z")  
-        self.steppers["E2"]  = SMD(io.GPIO3_21, io.GPIO1_7, io.GPIO2_1,  3, "Ext1")
-        self.steppers["E"]  = SMD(io.GPIO1_14, io.GPIO1_6, io.GPIO2_3,  4, "Ext2")
+        self.steppers["E"] = SMD(io.GPIO3_21, io.GPIO1_7, io.GPIO2_1,  3, "Ext1")
+        self.steppers["F"]  = SMD(io.GPIO1_14, io.GPIO1_6, io.GPIO2_3,  4, "Ext2")
+
+        
 
         # Enable the steppers and set the current, steps pr mm and microstepping  
-        self.steppers["X"].setCurrentValue(1.5) # 2A
+        self.steppers["X"].setCurrentValue(1.0) # 2A
         self.steppers["X"].setEnabled() 
         self.steppers["X"].set_steps_pr_mm(6.105)         
         self.steppers["X"].set_microstepping(2) 
 
-        self.steppers["Y"].setCurrentValue(1.5) # 2A
+        self.steppers["Y"].setCurrentValue(1.0) # 2A
         self.steppers["Y"].setEnabled() 
         self.steppers["Y"].set_steps_pr_mm(5.95)
         self.steppers["Y"].set_microstepping(2) 
@@ -177,12 +179,19 @@ class Replicape:
         elif g.code() == "M30":                                     # Set microstepping (Propietary to Replicape)
             for i in range(g.numTokens()):
                 self.steppers[g.tokenLetter(i)].set_microstepping(int(g.tokenValue(i)))            
+        elif g.code() == "M31":                                     # Set stepper current limit (Propietery to Replicape)
+            for i in range(g.numTokens()):                         
+                self.steppers[g.tokenLetter(i)].setCurrentValue(float(g.tokenValue(i)))            
         elif g.code() == "M84":                                     # Disable all steppers
             print "Waiting for path planner"
             self.path_planner.wait_until_done()
             print "Path planner done"
             for name, stepper in self.steppers.iteritems():
             	stepper.setDisabled()
+        elif g.code() == "M92": 
+            for i in range(g.numTokens()):                          # Run through all tokens
+                axis = g.tokenLetter(i)                             # Get the axis, X, Y, Z or E
+                self.steppers[axis].set_steps_pr_mm(float(g.tokenValue(i)))        
         elif g.code() == "M101":									# Deprecated 
             pass 													
         elif g.code() == "M103":									# Deprecated

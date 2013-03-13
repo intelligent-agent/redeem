@@ -80,7 +80,7 @@ class Path_planner:
                     diff = (slowest-sum(delays))/len(delays)
                     for j, delay in enumerate(delays):
                         delays[j] = max(delay+diff, 1.0/10000.0)    # min 0.1ms                     
-                    data = (packet[0], delays)  
+                    data = (packet[0], delays)                  
               
                 for axis in all_data:                               # Merge the data from all axes   
                     packet = all_data[axis]
@@ -91,12 +91,11 @@ class Path_planner:
                 if len(self.pru_data) > 0:
                     z = zip(*sorted(self.pru_data.items()))
                     self.pru_data = (list(z[1]), list(np.diff([0]+list(z[0]))))
-
                     while not self.pru.has_capacity_for(len(self.pru_data[0])*8):
-                        time.sleep(0.1)                   
+                        time.sleep(1)              
+         
                     self.pru.add_data(self.pru_data)
                     self.pru.commit_data()                            # Commit data to ddr
-
 
                 self.pru_data = defaultdict(int)                    
                 self.paths.task_done()
@@ -174,30 +173,3 @@ class Path_planner:
         return (pins, delays)                                           # return the pin states and the data
 
 
-
-
-'''
-for axis in all_data:
-    stepper = self.steppers[axis]
-    packet = all_data[axis]
-    stepper.add_data(packet)
-    stepper.prepare_move()
-
-for axis in all_data:
-    stepper = self.steppers[axis]
-    stepper.start_move()
-
-for axis in all_data:
-    stepper = self.steppers[axis]
-    stepper.end_move()
-'''
-
-'''
-if "Z" in all_data:     # HACK! The Z-axis cannot be combined with the other data. Somehow it goes backwards...
-    packet = all_data["Z"]      
-    while not self.pru.has_capacity_for(len(packet[0])*8):# Wait until the PRU has capacity for this chunk of data
-        time.sleep(1)                   
-    if self.pru.add_data(packet) > 0:                        
-        self.pru.commit_data() 
-    del all_data["Z"]
-'''    

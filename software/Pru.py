@@ -94,7 +94,7 @@ class Pru:
         pypruss.exec_program(0, "../firmware/firmware_pru_0.bin")	# Load firmware "ddr_write.bin" on PRU 0
         self.t = Thread(target=self._wait_for_events)         # Make the thread
         self.running = True
-        self.t.start()		                
+        self.t.start()		        
 
         logging.debug("PRU initialized")
 
@@ -193,16 +193,17 @@ class Pru:
                 self._wait_for_event()
                 pypruss.clear_event(PRU0_ARM_INTERRUPT)			# Clear the event        
                 nr_events = struct.unpack("L", self.ddr_mem[self.DDR_END-4:self.DDR_END])[0]   
-                #if nr_interrupts < nr_events-1:
-                #    print "\tnr_events >> nr_interrutps"
-                while nr_interrupts < nr_events:
-                    ddr = self.ddr_used.get()                       # Pop the first ddr memory amount           
-                    with self.ddr_lock:
-                        self.ddr_mem_used -= ddr                    
-                    if self.debug > 0:
-                        print "Popped "+str(ddr)+"\tnow "+hex(self.get_capacity())
-                    self.ddr_used.task_done()
-                    nr_interrupts += 1                         
+            else:
+                nr_events = struct.unpack("L", self.ddr_mem[self.DDR_END-4:self.DDR_END])[0]
+            while nr_interrupts < nr_events:
+                ddr = self.ddr_used.get()                       # Pop the first ddr memory amount           
+                with self.ddr_lock:
+                    self.ddr_mem_used -= ddr                    
+                if self.debug > 0:
+                    print "Popped "+str(ddr)+"\tnow "+hex(self.get_capacity())
+                self.ddr_used.task_done()
+                nr_interrupts += 1  
+                                   
 
     ''' Wait for an event. The return is the number of events that have occured since last check '''
     def _wait_for_event(self):
