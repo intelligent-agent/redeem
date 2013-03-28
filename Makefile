@@ -21,6 +21,9 @@ eeprom_cat:
 software:
 	scp software/*.py $(REMOTE):$(RPATH)/software
 
+gui: 
+	scp -r software/gui/ $(REMOTE):$(RPATH)/software
+
 minicom:
 	minicom -o -b 115200 -D /dev/ttyUSB1
 

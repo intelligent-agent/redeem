@@ -32,6 +32,13 @@ from Path_planner import Path_planner
     
 logging.basicConfig(level=logging.INFO)
 
+#import signal
+#import sys
+#def signal_handler(signal, frame):
+#        print 'You pressed Ctrl+C!'
+#        sys.exit(0)
+#signal.signal(signal.SIGINT, signal_handler)
+
 class Replicape:
     ''' Init '''
     def __init__(self):
@@ -42,13 +49,11 @@ class Replicape:
         self.steppers = {}
 
         # Init the 5 Stepper motors
-        self.steppers["X"]  = SMD(io.GPIO1_12, io.GPIO1_13, io.GPIO2_4,  0, "X")  # Fault_x should be PWM2A?
-        self.steppers["Y"]  = SMD(io.GPIO1_31, io.GPIO1_30, io.GPIO1_15, 1, "Y")  
-        self.steppers["Z"]  = SMD(io.GPIO1_1,  io.GPIO1_2,  io.GPIO0_27, 2, "Z")  
+        self.steppers["X"] = SMD(io.GPIO1_12, io.GPIO1_13, io.GPIO2_4,  0, "X")  # Fault_x should be PWM2A?
+        self.steppers["Y"] = SMD(io.GPIO1_31, io.GPIO1_30, io.GPIO1_15, 1, "Y")  
+        self.steppers["Z"] = SMD(io.GPIO1_1,  io.GPIO1_2,  io.GPIO0_27, 2, "Z")  
         self.steppers["E"] = SMD(io.GPIO3_21, io.GPIO1_7, io.GPIO2_1,  3, "Ext1")
-        self.steppers["F"]  = SMD(io.GPIO1_14, io.GPIO1_6, io.GPIO2_3,  4, "Ext2")
-
-        
+        self.steppers["F"] = SMD(io.GPIO1_14, io.GPIO1_6, io.GPIO2_3,  4, "Ext2")
 
         # Enable the steppers and set the current, steps pr mm and microstepping  
         self.steppers["X"].setCurrentValue(1.0) # 2A
@@ -66,13 +71,13 @@ class Replicape:
         self.steppers["Z"].set_steps_pr_mm(155)
         self.steppers["Z"].set_microstepping(2) 
 
-        self.steppers["E"].setCurrentValue(1.0) # 2A        
+        self.steppers["E"].setCurrentValue(1.5) # 2A        
         self.steppers["E"].setEnabled()
         self.steppers["E"].set_steps_pr_mm(5.0)
         self.steppers["E"].set_microstepping(2)
 
         # init the 3 thermistors
-        self.therm_ext1 = Thermistor(io.AIN4, "Ext_1", chart_name="QU-BD")
+        self.therm_ext1 = Thermistor(io.AIN4, "Ext_1", chart_name="B57560G104F") # QU-BD
         self.therm_hbp  = Thermistor(io.AIN6, "HBP", chart_name="B57560G104F")
 
         # init the 3 heaters
@@ -129,11 +134,11 @@ class Replicape:
             print "Caught signal, exiting" 
             return
         finally:
-            self.ext1.disable()
-            self.hbp.disable()
+            self.ext1.disable()            
+            self.hbp.disable()            
             self.usb.close() 
             self.path_planner.exit()   
-        logging.debug("Done")
+            print "Done"
 		
     ''' Execute a G-code '''
     def _execute(self, g):
@@ -228,6 +233,10 @@ class Replicape:
             #    self.p.ext1.setPvalue(float(self.tokens[1][1::]))
         elif g.code() == "M140":                                    # Set bed temperature
             self.hbp.setTargetTemperature(float(g.tokenValue(0)))
+        elif g.code() == "M141":
+            fan = self.fans[int(g.getValueByLetter("P"))]
+            fan.setPWMFrequency(int(g.getValueByLetter("F")))
+            fan.setValue(float(g.getValueByLetter("S")))	           
         else:
             print "Unknown command: "+g.message	
    
