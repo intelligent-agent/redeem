@@ -8,13 +8,15 @@ import time
 from temp_chart import *
 from threading import Lock
 
+DEVICE_TREE = True
+
 ''' Represents a thermistor '''
 class Thermistor: 
 
     mutex = Lock()
 
     ''' Init '''
-    def __init__(self, pin, name, chart_name="B57560G104F"):
+    def __init__(self, pin, name, chart_name):
         self.pin = pin
         self.name = name
         # Get the chart and transpose it
@@ -23,21 +25,23 @@ class Thermistor:
 	
     ''' Return the temperature in degrees celcius '''
     def getTemperature(self):	
-        #print "Getting Temp"
-        Thermistor.mutex.acquire()                        # Get the mutex
-        #print "Mutex acquired"
-        try:
-            time.sleep(1)
-            #print "Delay done"
-            adc_val = io.analogRead(self.pin)        # Read the value 		
-            time.sleep(1)
-            print "Got adc value: "+str(adc_val)
-        except:
-            print "Unexpected error:", sys.exc_info()[0]          
-        finally:
-            #print "Releasing mutex"
-            Thermistor.mutex.release()                    # Release the mutex
-        voltage = io.inVolts(adc_val)                     # Convert to voltage
+        if DEVICE_TREE:
+            with open("/sys/devices/ocp.2/thermistors.15/"+self.pin, "r") as f:
+                try:
+                    voltage = 0.001*float(f.read().rstrip())
+                except IOError:
+                    print "Unable to get ADC value"
+                    return 0            
+        else:
+            Thermistor.mutex.acquire()                        # Get the mutex
+            try:
+                time.sleep(0.1)
+                adc_val = io.analogRead(self.pin)        # Read the value 		
+                voltage = io.inVolts(adc_val)                     # Convert to voltage
+            except:
+                print "Unexpected error:", sys.exc_info()[0]          
+            finally:
+                Thermistor.mutex.release()                    # Release the mutex
         res_val = self.voltage_to_resistance(voltage)     # Convert to resistance  
         temperature = self.resistance_to_degrees(res_val) # Convert to degrees
         if self.debug > 1:  

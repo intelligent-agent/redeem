@@ -4,3 +4,6 @@
 stl/
 *~
 *.pyc
+libs/PyBBIO
+images/ubuntu/linux-dev
+images/ubuntu/local-files

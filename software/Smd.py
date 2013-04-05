@@ -22,18 +22,30 @@ D6 = nENABLE = 0
 D7 = 		 = 0
 '''
 from spi import SPI
-from bbio import *
 from threading import Thread
 import time
 
+DEVICE_TREE = True
+
 # init the SPI for the DAC
-spi2_0 = SPI(2, 0)
+if DEVICE_TREE:
+    spi2_0 = SPI(1, 0)	
+else:
+    spi2_0 = SPI(2, 0)
 spi2_0.bpw = 8
 spi2_0.mode = 1
 # Init the SPI for the serial to parallel
-spi2_1 = SPI(2, 1)
+if DEVICE_TREE:
+    spi2_1 = SPI(1, 1)	
+else:
+    spi2_1 = SPI(2, 1)
 spi2_1.bpw = 8
 spi2_1.mode = 0
+
+DEVICE_TREE = True
+
+if not DEVICE_TREE:
+    from bbio import *
 
 class SMD:
 
@@ -68,9 +80,10 @@ class SMD:
         self.pru_num         = -1           # PRU number, if any 
         SMD.all_smds.append(self) 	        # Add to list of smds
 
-        pinMode(stepPin,   0, 0) 	        # Output, no pull up
-        pinMode(dirPin,    0, 0) 	        # Output, no pull up
-        pinMode(faultPin,  1, 0) 	        # Input, no pull up
+        if not DEVICE_TREE:
+            pinMode(stepPin,   0, 0) 	        # Output, no pull up
+            pinMode(dirPin,    0, 0) 	        # Output, no pull up
+            pinMode(faultPin,  1, 0) 	        # Input, no pull up
  						
     ''' Sets the SMD enabled '''
     def setEnabled(self):

@@ -42,7 +42,6 @@ PRU_EVTOUT_7           = 7
 
 
 import os
-os.system("export LD_LIBRARY_PATH=/usr/local/lib")
 import logging
 import pypruss      					                            # The Programmable Realtime Unit Library
 import numpy as np						                            # Needed for braiding the pins with the delays
@@ -68,7 +67,7 @@ class Pru:
         self.ddr_mem_used   = 0  
         self.clear_events   = []       
         self.ddr_lock       = Lock() 
-        self.debug = 0
+        self.debug = 2
     
         self.i = 0
         pypruss.modprobe(0x40000)    			        # This only has to be called once pr boot

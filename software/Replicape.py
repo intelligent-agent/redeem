@@ -39,9 +39,12 @@ logging.basicConfig(level=logging.INFO)
 #        sys.exit(0)
 #signal.signal(signal.SIGINT, signal_handler)
 
+DEVICE_TREE = True
+
 class Replicape:
     ''' Init '''
     def __init__(self):
+        print "Replicape initializing"
         # Init the IO library 
         io.bbio_init()
 
@@ -49,11 +52,11 @@ class Replicape:
         self.steppers = {}
 
         # Init the 5 Stepper motors
-        self.steppers["X"] = SMD(io.GPIO1_12, io.GPIO1_13, io.GPIO2_4,  0, "X")  # Fault_x should be PWM2A?
+        self.steppers["X"] = SMD(io.GPIO1_12, io.GPIO1_13, io.GPIO2_4,  0, "X") 
         self.steppers["Y"] = SMD(io.GPIO1_31, io.GPIO1_30, io.GPIO1_15, 1, "Y")  
         self.steppers["Z"] = SMD(io.GPIO1_1,  io.GPIO1_2,  io.GPIO0_27, 2, "Z")  
         self.steppers["E"] = SMD(io.GPIO3_21, io.GPIO1_7, io.GPIO2_1,  3, "Ext1")
-        self.steppers["F"] = SMD(io.GPIO1_14, io.GPIO1_6, io.GPIO2_3,  4, "Ext2")
+        self.steppers["G"] = SMD(io.GPIO1_14, io.GPIO1_6, io.GPIO2_3,  4, "Ext2")
 
         # Enable the steppers and set the current, steps pr mm and microstepping  
         self.steppers["X"].setCurrentValue(1.0) # 2A
@@ -77,13 +80,22 @@ class Replicape:
         self.steppers["E"].set_microstepping(2)
 
         # init the 3 thermistors
-        self.therm_ext1 = Thermistor(io.AIN4, "Ext_1", chart_name="B57560G104F") # QU-BD
-        self.therm_hbp  = Thermistor(io.AIN6, "HBP", chart_name="B57560G104F")
+        if DEVICE_TREE:
+            self.therm_ext1 = Thermistor("AIN4", "MOSFET_Ext_1", "B57560G104F") # QU-BD
+            self.therm_hbp  = Thermistor("AIN6", "MOSFET_HBP", "B57560G104F")
+        else:
+            self.therm_hbp  = Thermistor(io.AIN6, "HBP", chart_name="B57560G104F")
 
         # init the 3 heaters
-        self.mosfet_ext1 = Mosfet(io.PWM2B) # PWM2B on rev1
-        self.mosfet_hbp  = Mosfet(io.PWM0C) # PWM0C on rev1 
-        self.mosfet_ext2 = Mosfet(io.PWM2A) # 
+        if DEVICE_TREE:
+            self.mosfet_ext1 = Mosfet("/sys/bus/platform/devices/mosfet_ext1.12")
+            self.mosfet_hbp  = Mosfet("/sys/bus/platform/devices/mosfet_hbp.14")
+            self.mosfet_ext2 = Mosfet("/sys/bus/platform/devices/mosfet_ext2.13")
+        else:
+            self.mosfet_ext1 = Mosfet(io.PWM2B) # PWM2B on rev1
+            self.mosfet_hbp  = Mosfet(io.PWM0C) # PWM0C on rev1 
+            self.mosfet_ext2 = Mosfet(io.PWM2A) # 
+
         # Make extruder 1
         self.ext1 = Extruder(self.steppers["E"], self.therm_ext1, self.mosfet_ext1)
         self.ext1.setPvalue(0.5)
@@ -187,10 +199,8 @@ class Replicape:
         elif g.code() == "M31":                                     # Set stepper current limit (Propietery to Replicape)
             for i in range(g.numTokens()):                         
                 self.steppers[g.tokenLetter(i)].setCurrentValue(float(g.tokenValue(i)))            
-        elif g.code() == "M84":                                     # Disable all steppers
-            print "Waiting for path planner"
+        elif g.code() == "M84":                                     # Disable all steppers           
             self.path_planner.wait_until_done()
-            print "Path planner done"
             for name, stepper in self.steppers.iteritems():
             	stepper.setDisabled()
         elif g.code() == "M92": 
