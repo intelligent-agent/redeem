@@ -2,8 +2,8 @@
 
 #RPATH=/home/root/replicape
 #REMOTE=root@10.24.2.124
-RPATH=/root/replicape
-REMOTE=root@10.24.2.85
+RPATH=/home/ubuntu/replicape
+REMOTE=root@10.24.2.64
 
 .PHONY : software firmware eeprom
 
@@ -23,7 +23,7 @@ software:
 	scp software/*.py $(REMOTE):$(RPATH)/software
 
 gui: 
-	scp -r software/gui/ $(REMOTE):$(RPATH)/software
+	scp -r software/GUI/ $(REMOTE):$(RPATH)/software
 
 minicom:
 	minicom -o -b 115200 -D /dev/ttyUSB1

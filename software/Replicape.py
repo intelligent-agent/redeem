@@ -21,6 +21,7 @@ from Smd import SMD
 from Thermistor import Thermistor
 from Fan import Fan
 from USB import USB
+from Pipe import Pipe
 from Ethernet import Ethernet
 from Gcode import Gcode
 import sys
@@ -32,46 +33,48 @@ from Path_planner import Path_planner
     
 logging.basicConfig(level=logging.INFO)
 
-#import signal
-#import sys
-#def signal_handler(signal, frame):
-#        print 'You pressed Ctrl+C!'
-#        sys.exit(0)
-#signal.signal(signal.SIGINT, signal_handler)
-
 DEVICE_TREE = True
+LCD = False
+
+
 
 class Replicape:
     ''' Init '''
     def __init__(self):
         print "Replicape initializing"
+        if LCD: 
+            print "LCD screen present"
+        if DEVICE_TREE:
+            print "Kernel has support for device tree"
+
         # Init the IO library 
-        io.bbio_init()
+        if not DEVICE_TREE:
+	        io.bbio_init()
 
         # Make a list of steppers
         self.steppers = {}
 
         # Init the 5 Stepper motors
-        self.steppers["X"] = SMD(io.GPIO1_12, io.GPIO1_13, io.GPIO2_4,  0, "X") 
+        self.steppers["X"] = SMD(io.GPIO1_12, io.GPIO1_13, io.GPIO2_4,  5, "X") 
         self.steppers["Y"] = SMD(io.GPIO1_31, io.GPIO1_30, io.GPIO1_15, 1, "Y")  
         self.steppers["Z"] = SMD(io.GPIO1_1,  io.GPIO1_2,  io.GPIO0_27, 2, "Z")  
-        self.steppers["E"] = SMD(io.GPIO3_21, io.GPIO1_7, io.GPIO2_1,  3, "Ext1")
-        self.steppers["G"] = SMD(io.GPIO1_14, io.GPIO1_6, io.GPIO2_3,  4, "Ext2")
+        self.steppers["H"] = SMD(io.GPIO3_21, io.GPIO1_7, io.GPIO2_1,  3, "Ext1")
+        self.steppers["E"] = SMD(io.GPIO1_14, io.GPIO1_6, io.GPIO2_3,  4, "Ext2")
 
         # Enable the steppers and set the current, steps pr mm and microstepping  
         self.steppers["X"].setCurrentValue(1.0) # 2A
         self.steppers["X"].setEnabled() 
-        self.steppers["X"].set_steps_pr_mm(6.105)         
+        self.steppers["X"].set_steps_pr_mm(4.3)         
         self.steppers["X"].set_microstepping(2) 
 
         self.steppers["Y"].setCurrentValue(1.0) # 2A
         self.steppers["Y"].setEnabled() 
-        self.steppers["Y"].set_steps_pr_mm(5.95)
+        self.steppers["Y"].set_steps_pr_mm(4.3)
         self.steppers["Y"].set_microstepping(2) 
 
-        self.steppers["Z"].setCurrentValue(1.0) # 2A
+        self.steppers["Z"].setCurrentValue(1.5) # 2A
         self.steppers["Z"].setEnabled() 
-        self.steppers["Z"].set_steps_pr_mm(155)
+        self.steppers["Z"].set_steps_pr_mm(50)
         self.steppers["Z"].set_microstepping(2) 
 
         self.steppers["E"].setCurrentValue(1.5) # 2A        
@@ -81,16 +84,25 @@ class Replicape:
 
         # init the 3 thermistors
         if DEVICE_TREE:
-            self.therm_ext1 = Thermistor("AIN4", "MOSFET_Ext_1", "B57560G104F") # QU-BD
-            self.therm_hbp  = Thermistor("AIN6", "MOSFET_HBP", "B57560G104F")
+            if LCD: 
+                self.therm_ext1 = Thermistor("/sys/devices/ocp.2/thermistors.15/AIN4", "MOSFET_Ext_1", "B57560G104F") # QU-BD
+                self.therm_hbp  = Thermistor("/sys/devices/ocp.2/thermistors.15/AIN6", "MOSFET_HBP", "B57560G104F")
+            else:
+                self.therm_ext1 = Thermistor("/sys/devices/ocp.2/thermistors.11/AIN4", "MOSFET_Ext_1", "B57560G104F") # QU-BD
+                self.therm_hbp  = Thermistor("/sys/devices/ocp.2/thermistors.11/AIN6", "MOSFET_HBP", "B57560G104F")
         else:
             self.therm_hbp  = Thermistor(io.AIN6, "HBP", chart_name="B57560G104F")
 
         # init the 3 heaters
         if DEVICE_TREE:
-            self.mosfet_ext1 = Mosfet("/sys/bus/platform/devices/mosfet_ext1.12")
-            self.mosfet_hbp  = Mosfet("/sys/bus/platform/devices/mosfet_hbp.14")
-            self.mosfet_ext2 = Mosfet("/sys/bus/platform/devices/mosfet_ext2.13")
+            if LCD: 
+                self.mosfet_ext1 = Mosfet("/sys/devices/ocp.2/mosfet_ext1.12")
+                self.mosfet_ext2 = Mosfet("/sys/devices/ocp.2/mosfet_ext2.13")
+                self.mosfet_hbp  = Mosfet("/sys/devices/ocp.2/mosfet_hbp.14")
+            else:
+                self.mosfet_ext1 = Mosfet("/sys/devices/ocp.2/mosfet_ext1.8")
+                self.mosfet_ext2 = Mosfet("/sys/devices/ocp.2/mosfet_ext2.9")
+                self.mosfet_hbp  = Mosfet("/sys/devices/ocp.2/mosfet_hbp.10")
         else:
             self.mosfet_ext1 = Mosfet(io.PWM2B) # PWM2B on rev1
             self.mosfet_hbp  = Mosfet(io.PWM0C) # PWM0C on rev1 
@@ -116,7 +128,9 @@ class Replicape:
 
         # Set up USB, this receives messages and pushes them on the queue
         self.usb = USB(self.commands)		
+        self.pipe = Pipe(self.commands)
         self.ethernet = Ethernet(self.commands)
+        
 
         # Get all options 
         self.options = Options()
@@ -139,16 +153,21 @@ class Replicape:
                 self._execute(gcode)
                 if gcode.prot == "USB":
                     self.usb.send_message(gcode.getAnswer())
+                elif gcode.prot == "PIPE":
+                    self.pipe.send_message(gcode.getAnswer())
                 else:
                     self.ethernet.send_message(gcode.getAnswer())
                 self.commands.task_done()
         except KeyboardInterrupt:
             print "Caught signal, exiting" 
             return
+        except Exception as e:
+            print e
         finally:
             self.ext1.disable()            
-            self.hbp.disable()            
+            #self.hbp.disable()            
             self.usb.close() 
+            self.pipe.close()
             self.path_planner.exit()   
             print "Done"
 		
@@ -176,7 +195,9 @@ class Replicape:
                 axis = g.tokenLetter(i)                             # Get the axis, X, Y, Z or E
                 smds[axis] = float(g.tokenValue(i))                 # Get tha value, new position or vector             
             path = Path(smds, self.feed_rate, "ABSOLUTE")           # Make a path segment from the axes
+            print "moving to "+str(smds)
             self.path_planner.add_path(path)                        # Add the path. This blocks until the path planner has capacity
+            
         elif g.code() == "G29": 
             print self.current_pos
         elif g.code() == "G90":                                     # Absolute positioning
@@ -215,7 +236,8 @@ class Replicape:
             self.ext1.setTargetTemperature(float(g.tokenValue(0)))
         elif g.code() == "M105":                                    # Get Temperature
             answer = "ok T:"+str(self.ext1.getTemperature())
-            answer += " B:"+str(int(self.hbp.getTemperature()))
+            if hasattr(self, "hbp"):
+                answer += " B:"+str(int(self.hbp.getTemperature()))
             g.setAnswer(answer)
         elif g.code() == "M106":                                    # Fan on
             if g.hasLetter("P"):
@@ -247,6 +269,8 @@ class Replicape:
             fan = self.fans[int(g.getValueByLetter("P"))]
             fan.setPWMFrequency(int(g.getValueByLetter("F")))
             fan.setValue(float(g.getValueByLetter("S")))	           
+        elif g.code() == "M142":
+            print "Current pos is "+str(self.current_pos)
         else:
             print "Unknown command: "+g.message	
    

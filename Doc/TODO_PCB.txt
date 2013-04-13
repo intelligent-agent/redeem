@@ -19,3 +19,15 @@ Todo list going from rev. 0 to rev. 1
  - Add lables to the SMD outputs (A1, A2, B1, B2)
  + Switch channels for ADC on Ext1 and Ext2?
  + Switched +5V and SYS_5V.
+
+
+Todo list going from Rev 1 to Rev A2:
+ - Uninvert the PWM channels for the Mosfets
+ - Add pin for GND for the thermistors
+ - Add connector for temperature sensing via Dallas 1-wire. 
+ + Widen the tracks for the MOSFETs
+ - Add OSHW logo 
+ - Add some kind of speaker support :)
+ - Add support for LEDs 
+ - LED to show when the plate is warm. 
+

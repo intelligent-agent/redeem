@@ -26,7 +26,7 @@ class Thermistor:
     ''' Return the temperature in degrees celcius '''
     def getTemperature(self):	
         if DEVICE_TREE:
-            with open("/sys/devices/ocp.2/thermistors.15/"+self.pin, "r") as f:
+            with open(self.pin, "r") as f:
                 try:
                     voltage = 0.001*float(f.read().rstrip())
                 except IOError:

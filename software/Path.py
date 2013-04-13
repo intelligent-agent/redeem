@@ -75,7 +75,7 @@ class Path:
         if hasattr(self, 'next'):
             a = self.global_pos
             b = self.vector
-            # Do not continue the update beyond the bnext segment
+            # Do not continue the update beyond the next segment
             self.next.set_global_pos(dict( (n, a.get(n, 0)+b.get(n, 0)) for n in set(a)|set(b) ), False)
     
     ''' Get the length of this path segment '''
@@ -154,6 +154,23 @@ class Path:
                 return np.pi
         return angle
         
+    def stepper_to_axis(self, pos, axis):
+        ''' Give a steppers position, return the position along the axis '''
+        if self.axis_config == "H-belt":
+            A = np.matrix('-0.5 0.5; -0.5 -0.5')
+            if axis == "X":
+                X = np.array([pos, 0])
+                b = np.dot(A, X)
+                return tuple(np.array(b)[0])
+
+            if axis == "Y":
+                X = np.array([0, pos])
+                b = np.dot(A, X)
+                return tuple(np.array(b)[0])
+
+        # For all other axes, return the same value
+        return pos
+            
         
 if __name__ == '__main__':
     a = Path({"X": 10, "Y": 0}, 3000, "RELATIVE")

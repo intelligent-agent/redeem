@@ -1,21 +1,38 @@
+#!/usr/bin/env python
+'''
+A GUI for Hipsterbot
+
+Author: Oyvind Nydal Dahl
+email: oyvdahl@online.no
+Website: http://www.build-electronic-circuits.com
+License: BSD
+
+You can use and change this, but keep this heading :)
+'''
+
 import random
 import wx
- 
+import os, stat
+
+
+#Named pipes for communicating with main 3d-printer controller
+wfPath = "/var/tmp/rcape_in"
+rfPath = "/var/tmp/rcape_out"
+
+
+
 ########################################################################
 class TabPanel(wx.Panel):
     #----------------------------------------------------------------------
     def __init__(self, parent):
         """"""
         wx.Panel.__init__(self, parent=parent)
- 
-        #colors = ["red", "blue", "gray", "yellow", "green"]
-        #self.SetBackgroundColour(random.choice(colors))
+        dirname = "/home/ubuntu/replicape/software/GUI"
         
-        
-        imageLeft = wx.Image("arrow-left.jpg", wx.BITMAP_TYPE_ANY).ConvertToBitmap()
-        imageRight = wx.Image("arrow-right.jpg", wx.BITMAP_TYPE_ANY).ConvertToBitmap()
-        imageUp = wx.Image("arrow-up.jpg", wx.BITMAP_TYPE_ANY).ConvertToBitmap()
-        imageDown = wx.Image("arrow-down.jpg", wx.BITMAP_TYPE_ANY).ConvertToBitmap()
+        imageLeft   = wx.Image(dirname+"/arrow-left.jpg",  wx.BITMAP_TYPE_ANY).ConvertToBitmap()
+        imageRight  = wx.Image(dirname+"/arrow-right.jpg", wx.BITMAP_TYPE_ANY).ConvertToBitmap()
+        imageUp     = wx.Image(dirname+"/arrow-up.jpg", 	  wx.BITMAP_TYPE_ANY).ConvertToBitmap()
+        imageDown   = wx.Image(dirname+"/arrow-down.jpg",  wx.BITMAP_TYPE_ANY).ConvertToBitmap()
         
         btnLeft = wx.BitmapButton(self, id=-1, bitmap=imageLeft, pos=(10, 20), size = (imageLeft.GetWidth()+5, imageLeft.GetHeight()+5))
         btnRight = wx.BitmapButton(self, id=-1, bitmap=imageRight, pos=(10, 20), size = (imageRight.GetWidth()+5, imageRight.GetHeight()+5))
@@ -63,34 +80,52 @@ class TabPanel(wx.Panel):
 
     #Button click events
     def btnLeftClick(self,event):
-        print "G91"
-        print "G1 X-100 F4000"
-        print "G90"
+        write_to_pipe("G91")
+        print "RX: " + read_from_pipe()
+        write_to_pipe("G1 X-100 F4000")
+        print "RX: " + read_from_pipe()
+        write_to_pipe("G90")
+        print "RX: " + read_from_pipe()
 
     def btnRightClick(self,event):
-        print "G91"
-        print "G1 X100 F4000"
-        print "G90"
+        write_to_pipe("G91")
+        print "RX: " + read_from_pipe()
+        write_to_pipe("G1 X100 F4000")
+        print "RX: " + read_from_pipe()
+        write_to_pipe("G90")
+        print "RX: " + read_from_pipe()
 
     def btnForwClick(self,event):
-        print "G91"
-        print "G1 Y100 F4000"
-        print "G90"
+        write_to_pipe("G91")
+        print "RX: " + read_from_pipe()
+        write_to_pipe("G1 Y100 F4000")
+        print "RX: " + read_from_pipe()
+        write_to_pipe("G90")
+        print "RX: " + read_from_pipe()
 
     def btnBackClick(self,event):
-        print "G91"
-        print "G1 Y-100 F4000"
-        print "G90"
+        write_to_pipe("G91")
+        print "RX: " + read_from_pipe()
+        write_to_pipe("G1 Y-100 F4000")
+        print "RX: " + read_from_pipe()
+        write_to_pipe("G90")
+        print "RX: " + read_from_pipe()
     
     def btnUpClick(self,event):
-        print "G91"
-        print "G1 Z10 F4000"
-        print "G90"
+        write_to_pipe("G91")
+        print "RX: " + read_from_pipe()
+        write_to_pipe("G1 Z10 F4000")
+        print "RX: " + read_from_pipe()
+        write_to_pipe("G90")
+        print "RX: " + read_from_pipe()
 
     def btnDownClick(self,event):
-        print "G91"
-        print "G1 Z-10 F4000"
-        print "G90"      
+        write_to_pipe("G91")
+        print "RX: " + read_from_pipe()
+        write_to_pipe("G1 Z-10 F4000")
+        print "RX: " + read_from_pipe()
+        write_to_pipe("G90")
+        print "RX: " + read_from_pipe()
 
  
 ########################################################################
@@ -119,8 +154,48 @@ class DemoFrame(wx.Frame):
  
         self.Show()
  
-#----------------------------------------------------------------------
+    #----------------------------------------------------------------------
+
+
+
+###########################################################################
+def check_com():
+    #Check if named pipes exist, exit if not
+    try:
+        if not stat.S_ISFIFO(os.stat(wfPath).st_mode):
+            print "Communication error with " + wfPath
+            exit(1)
+
+        if not stat.S_ISFIFO(os.stat(rfPath).st_mode):
+            print "Communication error with " + rfPath
+            exit(1)
+
+    except OSError:
+        print "Communication error"
+        exit(1)
+
+###########################################################################
+def write_to_pipe(msg):
+    wp = open(wfPath, 'w')
+    wp.write(msg + "\n")		
+    wp.close()
+    print "TX: " + msg
+
+
+###########################################################################
+def read_from_pipe():
+    rp = open(rfPath, 'r')
+    message = ""
+    messages = rp.readlines()
+    for msg in messages:
+        message = message + msg
+    rp.close()
+    
+    return message
+
+###########################################################################    
 if __name__ == "__main__":
+    check_com()
     app = wx.App(False)
     frame = DemoFrame()
     frame.ShowFullScreen(True, style=wx.FULLSCREEN_ALL)

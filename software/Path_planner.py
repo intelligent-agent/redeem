@@ -168,7 +168,15 @@ class Path_planner:
         td          = num_steps/steps_pr_meter                          # Calculate the actual travelled distance        
         if vec < 0:                                                     # If the vector is negative, negate it.      
             td     *= -1.0
-        self.current_pos[axis] += td                                    # Update the global position vector
+
+        # If the axes are X or Y, we need to transform back in case of 
+        # H-belt or some other transform. 
+        if axis == "X" or axis == "Y":
+            (td_x, td_y) = path.stepper_to_axis(td, axis)
+            self.current_pos["X"] += td_x 
+            self.current_pos["Y"] += td_y 
+        else:                        
+            self.current_pos[axis] += td                                    # Update the global position vector
 
         return (pins, delays)                                           # return the pin states and the data
 

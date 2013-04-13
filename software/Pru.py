@@ -67,7 +67,7 @@ class Pru:
         self.ddr_mem_used   = 0  
         self.clear_events   = []       
         self.ddr_lock       = Lock() 
-        self.debug = 2
+        self.debug = 0
     
         self.i = 0
         pypruss.modprobe(0x40000)    			        # This only has to be called once pr boot
@@ -86,11 +86,12 @@ class Pru:
             self.ddr_mem = mmap.mmap(f.fileno(), ddr_filelen, offset=ddr_offset) # mmap the right area            
             self.ddr_mem[self.ddr_start:self.ddr_start+4] = struct.pack('L', 0)  # Add a zero to the first reg to make it wait
        
+        dirname = os.path.dirname(os.path.realpath(__file__))
         pypruss.init()						            # Init the PRU
         pypruss.open(0)						            # Open PRU event 0 which is PRU0_ARM_INTERRUPT
         pypruss.pruintc_init()					        # Init the interrupt controller
         pypruss.pru_write_memory(0, 0, [self.ddr_addr, self.ddr_nr_events])		# Put the ddr address in the first region 
-        pypruss.exec_program(0, "../firmware/firmware_pru_0.bin")	# Load firmware "ddr_write.bin" on PRU 0
+        pypruss.exec_program(0, dirname+"/../firmware/firmware_pru_0.bin")	# Load firmware "ddr_write.bin" on PRU 0
         self.t = Thread(target=self._wait_for_events)         # Make the thread
         self.running = True
         self.t.start()		        
