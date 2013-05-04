@@ -15,6 +15,7 @@ from math import sqrt
 import time
 import Queue 
 import logging
+import traceback
 
 from Mosfet import Mosfet
 from Smd import SMD
@@ -35,8 +36,6 @@ logging.basicConfig(level=logging.INFO)
 
 DEVICE_TREE = True
 LCD = False
-
-
 
 class Replicape:
     ''' Init '''
@@ -159,11 +158,12 @@ class Replicape:
                     self.ethernet.send_message(gcode.getAnswer())
                 self.commands.task_done()
         except KeyboardInterrupt:
-            print "Caught signal, exiting" 
+            print "Caught keyboard interrupt signal, exiting" 
             return
         except Exception as e:
-            print e
-        finally:
+            print "Something whent wrong.."            
+            print traceback.format_exc()
+        finally:			
             self.ext1.disable()            
             #self.hbp.disable()            
             self.usb.close() 

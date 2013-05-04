@@ -14,6 +14,7 @@ You can use and change this, but keep this heading :)
 from threading import Thread
 import socket
 import logging
+import select
 
 size = 1024 
 
@@ -41,18 +42,24 @@ class Ethernet:
     # Loop that gets messages and pushes them on the queue
     def get_message(self):
         while self.running:
+            print "Ethernet listening"
             self.client, self.address = self.s.accept()
-            try: 
-                while True:
-                    data = ''
-                    while not "\n" in data:
-                        data += self.client.recv(1)
-                    message = data.strip("\n")
-                    self.queue.put({"message": message, "prot": "Eth"})
-            except IOError as e:
-                print "Connection closed"
-            finally:
-                self.client.close()             
+            print "Ethernet connection accepted"
+            while True:
+                line = ''
+#                ready = select.select([self.client], [], [], 0.25)
+#                if ready[0]:
+                while not "\n" in line:
+                    chunk = self.client.recv(1)
+                    if chunk == '':
+                        print "Ethernet: Connection reset by Per."
+                        self.client.close()             
+                        break
+                    line = line + chunk
+                if not "\n" in line: # Make sure the whole line was read. 
+                    break
+                message = line.strip("\n")
+                self.queue.put({"message": message, "prot": "Eth"})
 
 
     # Send a message		
