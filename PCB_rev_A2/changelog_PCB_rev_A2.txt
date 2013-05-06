@@ -1,0 +1,15 @@
+Changelog Rev 1 -> Rev A2
+========================
+BOM changes
+-----------
+ - Missing R38, R39, 4.7K 0402
+ - Make all 0.1uF caps same size
+ - Missing 3 5.6K resistors
+ - Missing 3 end-stop connetors
+ - Wrong comparator, swich to LM339-14SOIC
+
+Layout changes 
+--------------
+ - Make sure on pins are using P8_11..P8_17 and P8_19..P8_21 since they are eMMC on BeagleBone Black
+ - Increase the width of the power tracks to ~7mm
+ - Add support for external display
