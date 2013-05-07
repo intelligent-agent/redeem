@@ -14,7 +14,7 @@
    id="svg2"
    version="1.1"
    inkscape:version="0.48.3.1 r9886"
-   sodipodi:docname="Replicape_pinout_rev1.svg"
+   sodipodi:docname="Replicape_pinout_rev_A2.svg"
    inkscape:export-filename="/home/ahiam/Dropbox/beaglebone/beaglebone_pinout.png"
    inkscape:export-xdpi="200"
    inkscape:export-ydpi="200">
@@ -54,7 +54,7 @@
         <dc:format>image/svg+xml</dc:format>
         <dc:type
            rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
-        <dc:title></dc:title>
+        <dc:title />
       </cc:Work>
     </rdf:RDF>
   </metadata>
@@ -1334,18 +1334,6 @@
          style="font-size:11px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:end;text-anchor:end;fill:#008080;fill-opacity:1;font-family:Ubuntu Mono;-inkscape-font-specification:Ubuntu Mono">DIR_X</tspan></text>
     <text
        xml:space="preserve"
-       style="font-size:11px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#008800;fill-opacity:1;stroke:none;font-family:Ubuntu Mono;-inkscape-font-specification:Ubuntu Mono"
-       x="348"
-       y="511.36218"
-       id="text5582-2-0-9-1"
-       sodipodi:linespacing="125%"><tspan
-         sodipodi:role="line"
-         id="tspan5584-7-3-8-8"
-         x="348"
-         y="511.36218"
-         style="font-size:11px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:end;text-anchor:end;fill:#008800;fill-opacity:1;font-family:Ubuntu Mono;-inkscape-font-specification:Ubuntu Mono">HEATER_EXT_1</tspan></text>
-    <text
-       xml:space="preserve"
        style="font-size:11px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000088;fill-opacity:1;stroke:none;font-family:Ubuntu Mono;-inkscape-font-specification:Ubuntu Mono"
        x="322"
        y="559.36218"
@@ -1356,18 +1344,6 @@
          x="322"
          y="559.36218"
          style="font-size:11px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:end;text-anchor:end;fill:#000088;fill-opacity:1;font-family:Ubuntu Mono;-inkscape-font-specification:Ubuntu Mono">FAULT_Z</tspan></text>
-    <text
-       xml:space="preserve"
-       style="font-size:11px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#008800;fill-opacity:1;stroke:none;font-family:Ubuntu Mono;-inkscape-font-specification:Ubuntu Mono"
-       x="218"
-       y="547.36218"
-       id="text5582-2-0-9-1-6"
-       sodipodi:linespacing="125%"><tspan
-         sodipodi:role="line"
-         id="tspan5584-7-3-8-8-2"
-         x="218"
-         y="547.36218"
-         style="font-size:11px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:end;text-anchor:end;fill:#008800;fill-opacity:1;font-family:Ubuntu Mono;-inkscape-font-specification:Ubuntu Mono">HEATER_EXT_2</tspan></text>
     <text
        xml:space="preserve"
        style="font-size:11px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000088;fill-opacity:1;stroke:none;font-family:Ubuntu Mono;-inkscape-font-specification:Ubuntu Mono"
@@ -1629,13 +1605,13 @@
        xml:space="preserve"
        style="font-size:11px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:start;line-height:125%;letter-spacing:0px;word-spacing:0px;text-anchor:start;fill:#000088;fill-opacity:1;stroke:none;font-family:Ubuntu Mono;-inkscape-font-specification:Ubuntu Mono"
        x="152"
-       y="584.36218"
+       y="488.36218"
        id="text5582-2-0-9-2-3-0-16-0"
        sodipodi:linespacing="125%"><tspan
          sodipodi:role="line"
          id="tspan5584-7-3-8-1-3-3-3-3"
          x="152"
-         y="584.36218"
+         y="488.36218"
          style="font-size:11px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:start;text-anchor:start;fill:#000088;fill-opacity:1;font-family:Ubuntu Mono;-inkscape-font-specification:Ubuntu Mono">END_STOP_Z_1</tspan></text>
     <text
        xml:space="preserve"
@@ -1749,13 +1725,13 @@
        xml:space="preserve"
        style="font-size:11px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000087;fill-opacity:1;stroke:none;font-family:Ubuntu Mono;-inkscape-font-specification:Ubuntu Mono"
        x="217"
-       y="510.86218"
+       y="498.86218"
        id="text5582-2-0-9-2-3-8"
        sodipodi:linespacing="125%"><tspan
          sodipodi:role="line"
          id="tspan5584-7-3-8-1-3-1"
          x="217"
-         y="510.86218"
+         y="498.86218"
          style="font-size:11px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:end;text-anchor:end;fill:#000080;fill-opacity:1;font-family:Ubuntu Mono;-inkscape-font-specification:Ubuntu Mono">END_STOP_X_2</tspan></text>
     <text
        xml:space="preserve"
@@ -1784,18 +1760,18 @@
     <text
        xml:space="preserve"
        style="font-size:11px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000088;fill-opacity:1;stroke:none;font-family:Ubuntu Mono;-inkscape-font-specification:Ubuntu Mono"
-       x="217"
-       y="560.36218"
+       x="340"
+       y="486.36218"
        id="text5582-2-0-9-2-3-0-2"
        sodipodi:linespacing="125%"><tspan
          sodipodi:role="line"
          id="tspan5584-7-3-8-1-3-3-8"
-         x="217"
-         y="560.36218"
+         x="340"
+         y="486.36218"
          style="font-size:11px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:end;text-anchor:end;fill:#008080;fill-opacity:1;font-family:Ubuntu Mono;-inkscape-font-specification:Ubuntu Mono">STEP_EXT_1</tspan><tspan
          sodipodi:role="line"
-         x="217"
-         y="574.11218"
+         x="340"
+         y="500.11218"
          style="font-size:11px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:end;text-anchor:end;fill:#008080;fill-opacity:1;font-family:Ubuntu Mono;-inkscape-font-specification:Ubuntu Mono"
          id="tspan3599" /></text>
     <text
@@ -1909,14 +1885,14 @@
     <text
        xml:space="preserve"
        style="font-size:11px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:start;line-height:125%;letter-spacing:0px;word-spacing:0px;text-anchor:start;fill:#000088;fill-opacity:1;stroke:none;font-family:Ubuntu Mono;-inkscape-font-specification:Ubuntu Mono"
-       x="283"
-       y="486.86218"
+       x="284"
+       y="522.36218"
        id="text5582-2-0-9-8-6-7"
        sodipodi:linespacing="125%"><tspan
          sodipodi:role="line"
          id="tspan5584-7-3-8-4-6-6"
-         x="283"
-         y="486.86218"
+         x="284"
+         y="522.36218"
          style="font-size:11px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:start;text-anchor:start;fill:#000088;fill-opacity:1;font-family:Ubuntu Mono;-inkscape-font-specification:Ubuntu Mono">END_STOP_Z_2</tspan></text>
     <text
        xml:space="preserve"
@@ -1954,18 +1930,6 @@
          x="539"
          y="315.36218"
          style="font-size:11px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:start;text-anchor:start;font-family:Ubuntu Mono;-inkscape-font-specification:Ubuntu Mono" /></text>
-    <text
-       xml:space="preserve"
-       style="font-size:11px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:start;line-height:125%;letter-spacing:0px;word-spacing:0px;text-anchor:start;fill:#008800;fill-opacity:1;stroke:none;font-family:Ubuntu Mono;-inkscape-font-specification:Ubuntu Mono"
-       x="283"
-       y="546.86218"
-       id="text5582-2-0-9-2-3-9-8-9"
-       sodipodi:linespacing="125%"><tspan
-         sodipodi:role="line"
-         id="tspan5584-7-3-8-1-3-8-7-5"
-         x="283"
-         y="546.86218"
-         style="font-size:11px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:start;text-anchor:start;fill:#008800;fill-opacity:1;font-family:Ubuntu Mono;-inkscape-font-specification:Ubuntu Mono">HEATER_HBP</tspan></text>
     <text
        xml:space="preserve"
        style="font-size:11px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:start;line-height:125%;letter-spacing:0px;word-spacing:0px;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;font-family:Ubuntu Mono;-inkscape-font-specification:Ubuntu Mono"
@@ -2828,8 +2792,8 @@
          y="534.36218"
          style="font-size:11px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:end;text-anchor:end;fill:#800080;fill-opacity:1;font-family:Ubuntu Mono;-inkscape-font-specification:Ubuntu Mono">I2C2_SDA</tspan></text>
     <path
-       style="fill:none;stroke:#000000;stroke-width:0.86717951px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
-       d="m 333,288.36216 0,94.00002 85,0 0,-94.00002 z"
+       style="fill:none;stroke:#000000;stroke-width:0.86717957px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       d="m 330,288.36216 0,94.00002 85,0 0,-94.00002 z"
        id="path4447"
        inkscape:connector-curvature="0" />
     <text
@@ -2908,25 +2872,13 @@
        xml:space="preserve"
        style="font-size:10px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans"
        x="342"
-       y="357.36218"
-       id="text4473"
-       sodipodi:linespacing="125%"><tspan
-         sodipodi:role="line"
-         id="tspan4475"
-         x="342"
-         y="357.36218"
-         style="fill:#008000">PWM</tspan></text>
-    <text
-       xml:space="preserve"
-       style="font-size:10px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans"
-       x="342"
-       y="367.86218"
+       y="357.86218"
        id="text4477"
        sodipodi:linespacing="125%"><tspan
          sodipodi:role="line"
          id="tspan4479"
          x="342"
-         y="367.86218"
+         y="357.86218"
          style="fill:#800080">Comm-pins</tspan></text>
     <text
        xml:space="preserve"
@@ -3077,12 +3029,72 @@
        xml:space="preserve"
        style="font-size:10px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#800000;fill-opacity:1;stroke:none;font-family:Ubuntu Mono;-inkscape-font-specification:Ubuntu Mono"
        x="344.5"
-       y="378.36218"
+       y="372.36218"
        id="text3469-8"
        sodipodi:linespacing="125%"><tspan
          sodipodi:role="line"
          id="tspan3471-1"
          x="344.5"
-         y="378.36218">eMMC</tspan></text>
+         y="372.36218">eMMC</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:10px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Ubuntu Mono;-inkscape-font-specification:Ubuntu Mono"
+       x="282.13559"
+       y="510.01129"
+       id="text3474"
+       sodipodi:linespacing="125%"><tspan
+         sodipodi:role="line"
+         id="tspan3476"
+         x="282.13559"
+         y="510.01129"
+         style="fill:#ff6600">GPIO1_19</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:10px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Ubuntu Mono;-inkscape-font-specification:Ubuntu Mono"
+       x="174.65536"
+       y="512.13263"
+       id="text3478"
+       sodipodi:linespacing="125%"><tspan
+         sodipodi:role="line"
+         id="tspan3480"
+         x="174.65536"
+         y="512.13263"
+         style="fill:#ff6600">GPIO1_16</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:10px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Ubuntu Mono;-inkscape-font-specification:Ubuntu Mono"
+       x="182"
+       y="548.36218"
+       id="text3482"
+       sodipodi:linespacing="125%"><tspan
+         sodipodi:role="line"
+         id="tspan3484"
+         x="182"
+         y="548.36218"
+         style="fill:#ff6600">GPIO0_3</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:10px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Ubuntu Mono;-inkscape-font-specification:Ubuntu Mono"
+       x="178.89801"
+       y="559.38745"
+       id="text3486"
+       sodipodi:linespacing="125%"><tspan
+         sodipodi:role="line"
+         id="tspan3488"
+         x="178.89801"
+         y="559.38745"
+         style="fill:#ff6600">GPIO1_17</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:10px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Ubuntu Mono;-inkscape-font-specification:Ubuntu Mono"
+       x="177.42136"
+       y="583.55042"
+       id="text3490"
+       sodipodi:linespacing="125%"><tspan
+         sodipodi:role="line"
+         id="tspan3492"
+         x="177.42136"
+         y="583.55042"
+         style="fill:#ff6600">GPIO3_19</tspan></text>
   </g>
 </svg>
