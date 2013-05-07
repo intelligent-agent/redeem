@@ -6,10 +6,11 @@ BOM changes
  - Make all 0.1uF caps same size
  - Missing 3 5.6K resistors
  - Missing 3 end-stop connetors
- - Wrong comparator, swich to LM339-14SOIC
+ - Wrong comparator, switch to LM339-14SOIC
 
 Layout changes 
 --------------
- - Make sure on pins are using P8_11..P8_17 and P8_19..P8_21 since they are eMMC on BeagleBone Black
+ + Make sure on pins are using P8_11..P8_17 and P8_19..P8_21 since they are eMMC on BeagleBone Black
  - Increase the width of the power tracks to ~7mm
- - Add support for external display
+ - Add support for external display by adding connectors for power, backlight and resistive touch.
+ - 
