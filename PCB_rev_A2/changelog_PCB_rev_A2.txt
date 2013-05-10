@@ -9,7 +9,7 @@ Layout changes
  + Move the stepper connectors outside of the receptacles. 
  - Add a 5V step down converter to power the board from one 12..24V source. 
  - Add a step down/LDO to 12V converter so the mosfet drivers can handle 24V and 12V fans can be used. 
- - Add fuses to the board. 
+ - Add PTC resettable fuses to the board. 
  - Switch to less oversized MOSFETs. (Ideally I would like the same MOSFETs on hotends and bed..) 
  - Switch to cheaper and non-inverting MOSFET drivers
  - Switch from comparator to BC817 BJTs for the driver levelshifters. 
