@@ -88,7 +88,7 @@ class Replicape:
                 self.therm_hbp  = Thermistor("/sys/devices/ocp.2/thermistors.15/AIN6", "MOSFET_HBP", "B57560G104F")
             else:
                 self.therm_ext1 = Thermistor("/sys/devices/ocp.2/thermistors.11/AIN4", "MOSFET_Ext_1", "B57560G104F") # QU-BD
-                self.therm_hbp  = Thermistor("/sys/devices/ocp.2/thermistors.11/AIN6", "MOSFET_HBP", "B57560G104F")
+                self.therm_hbp  = Thermistor("/sys/devices/ocp.2/thermistors.11/AIN5", "MOSFET_HBP", "B57560G104F")
         else:
             self.therm_hbp  = Thermistor(io.AIN6, "HBP", chart_name="B57560G104F")
 
