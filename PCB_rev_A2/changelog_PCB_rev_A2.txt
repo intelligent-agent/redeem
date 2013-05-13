@@ -18,3 +18,12 @@ Layout changes
  + Find cheaper 0.1R resistors for current sensing and also (0.1R * 2.5A) 1/4 W
  - Place a LOW ESR film capacitor of 1uF close to the mosfet drivers. 
  - 
+
+
+===============
+Calculation for inductor current ripple:
+Vin = 24V
+Vout = 5V
+Iout = 1A
+L = 4.7uH
+ 
