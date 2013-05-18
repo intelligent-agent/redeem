@@ -1,145 +1,48 @@
-Partlist exported from /home/iagent/workspace/Replicape/PCB_rev1/Replicape.sch at 2/27/13 3:15 PM
+Partlist exported from /home/iagent/workspace/Replicape/PCB_rev_A2/Replicape.sch at 5/18/13 4:18 PM
 
-Part            Value         Device                 Package            Description                                         
-C1              10nF          C-EUC0603              C0603              CAPACITOR, European symbol                          
-C2              0.1uF         C-EUC0603              C0603              CAPACITOR, European symbol                          
-C3              10nF          C-EUC0603              C0603              CAPACITOR, European symbol                          
-C4              0.1uF         C-EUC0603              C0603              CAPACITOR, European symbol                          
-C5              10nF          C-EUC0603              C0603              CAPACITOR, European symbol                          
-C6              0.1uF         C-EUC0603              C0603              CAPACITOR, European symbol                          
-C7              10nF          C-EUC0603              C0603              CAPACITOR, European symbol                          
-C8              0.1uF         C-EUC0603              C0603              CAPACITOR, European symbol                          
-C9              10nF          C-EUC0603              C0603              CAPACITOR, European symbol                          
-C10             0.1uF         C-EUC0603              C0603              CAPACITOR, European symbol                          
-C11             0.1uF         C-EUC0402              C0402              CAPACITOR, European symbol                          
-C12             100uF         CPOL-EU140CLH-0810     140CLH-0810        POLARIZED CAPACITOR, European symbol                
-C13             0.1uF         C-EUC0402              C0402              CAPACITOR, European symbol                          
-C14             10uF          C-EUC0805              C0805              CAPACITOR, European symbol                          
-C15             10uF          C-EUC0805              C0805              CAPACITOR, European symbol                          
-C16             10uF          C-EUC0805              C0805              CAPACITOR, European symbol                          
-C17             0.1uF         C-EUC0402              C0402              CAPACITOR, European symbol                          
-C18             4.7uF         C-EUC0603              C0603              CAPACITOR, European symbol                          
-C19             0.1uF         C-EUC0603              C0603              CAPACITOR, European symbol                          
-C20             0.1uF         C-EUC0402              C0402              CAPACITOR, European symbol                          
-C21             4.7uF         C-EUC0603              C0603              CAPACITOR, European symbol                          
-C22             0.1uF         C-EUC0402              C0402              CAPACITOR, European symbol                          
-C23             4.7uF         C-EUC0603              C0603              CAPACITOR, European symbol                          
-C24             0.1uF         C-EUC0402              C0402              CAPACITOR, European symbol                          
-C25             4.7uF         C-EUC0603              C0603              CAPACITOR, European symbol                          
-C26             0.1uF         C-EUC0402              C0402              CAPACITOR, European symbol                          
-C27             0.1uF         C-EUC0603              C0603              CAPACITOR, European symbol                          
-C28             4.7uF         C-EUC0603              C0603              CAPACITOR, European symbol                          
-C29             0.1uF         C-EUC0603              C0603              CAPACITOR, European symbol                          
-C30             4.7uF         C-EUC0603              C0603              CAPACITOR, European symbol                          
-C31             0.1uF         C-EUC0603              C0603              CAPACITOR, European symbol                          
-C32             4.7uF         C-EUC0603              C0603              CAPACITOR, European symbol                          
-C33             0.1uF         C-EUC0603              C0603              CAPACITOR, European symbol                          
-C34             4.7uF         C-EUC0603              C0603              CAPACITOR, European symbol                          
-C35             0.1uF         C-EUC0603              C0603              CAPACITOR, European symbol                          
-C36             0.1uF         C-EUC0603              C0603              CAPACITOR, European symbol                          
-C37             0.1uF         C-EUC0603              C0603              CAPACITOR, European symbol                          
-C38             0.1uF         C-EUC0603              C0603              CAPACITOR, European symbol                          
-C39             0.1uF         C-EUC0603              C0603              CAPACITOR, European symbol                          
-C40             0.1uF         C-EUC0603              C0603              CAPACITOR, European symbol                          
-C41             0.1uF         C-EUC0603              C0603              CAPACITOR, European symbol                          
-C42             0.1uF         C-EUC0603              C0603              CAPACITOR, European symbol                          
-C43             0.1uF         C-EUC0603              C0603              CAPACITOR, European symbol                          
-C44             0.1uF         C-EUC0603              C0603              CAPACITOR, European symbol                          
-IC1             LM339D        LM339D                 SO14               Low Power Low Offset Voltage Quad Comparators       
-J1                            JP1E                   JP1                JUMPER                                              
-J2                            JP1E                   JP1                JUMPER                                              
-J3                            JP1E                   JP1                JUMPER                                              
-LED1            green         LEDCHIP-LED0603        CHIP-LED0603       LED                                                 
-LED2            green         LEDCHIP-LED0603        CHIP-LED0603       LED                                                 
-LED3            green         LEDCHIP-LED0603        CHIP-LED0603       LED                                                 
-LED4            green         LEDCHIP-LED0603        CHIP-LED0603       LED                                                 
-LED5            green         LEDCHIP-LED0603        CHIP-LED0603       LED                                                 
-LED6            green         LEDCHIP-LED0603        CHIP-LED0603       LED                                                 
-LED7            green         LEDCHIP-LED0603        CHIP-LED0603       LED                                                 
-P9-EXPANSION_A  BEAGLE_EXT9   BEAGLE_EXT9RECEPTACLES 2X23-R                                                                 
-P9-EXPANSION_A1 BEAGLE_EXT9   BEAGLE_EXT9RECEPTACLES 2X23-R                                                                 
-Q1                            PMOSFET_NTO220BV       TO220BV            Power MOSFET N-Channel                              
-Q2                            PMOSFET_NTO220BV       TO220BV            Power MOSFET N-Channel                              
-Q3                            PMOSFET_NTO220BV       TO220BV            Power MOSFET N-Channel                              
-Q4              NIF5002       N-HEXFET-2D_SOT232-    SOT223             HEXFET® Power MOSFET 2 Drain connects               
-Q5              NIF5002       N-HEXFET-2D_SOT232-    SOT223             HEXFET® Power MOSFET 2 Drain connects               
-Q6              NIF5002       N-HEXFET-2D_SOT232-    SOT223             HEXFET® Power MOSFET 2 Drain connects               
-R1              0.1R          R-EU_R0805             R0805              RESISTOR, European symbol                           
-R2              0.1R          R-EU_R0805             R0805              RESISTOR, European symbol                           
-R3              0.1R          R-EU_R0805             R0805              RESISTOR, European symbol                           
-R4              0.1R          R-EU_R0805             R0805              RESISTOR, European symbol                           
-R5              0.1R          R-EU_R0805             R0805              RESISTOR, European symbol                           
-R6              0.1R          R-EU_R0805             R0805              RESISTOR, European symbol                           
-R7              0.1R          R-EU_R0805             R0805              RESISTOR, European symbol                           
-R8              0.1R          R-EU_R0805             R0805              RESISTOR, European symbol                           
-R9              0.1R          R-EU_R0805             R0805              RESISTOR, European symbol                           
-R10             0.1R          R-EU_R0805             R0805              RESISTOR, European symbol                           
-R11             1K            R-EU_R0402             R0402              RESISTOR, European symbol                           
-R12             1K            R-EU_R0402             R0402              RESISTOR, European symbol                           
-R13             4K7           R-EU_R0402             R0402              RESISTOR, European symbol                           
-R14             1K            R-EU_R0402             R0402              RESISTOR, European symbol                           
-R15             1K            R-EU_R0402             R0402              RESISTOR, European symbol                           
-R16             1K            R-EU_R0402             R0402              RESISTOR, European symbol                           
-R17             4K7           R-EU_R0402             R0402              RESISTOR, European symbol                           
-R18             4K7           R-EU_R0402             R0402              RESISTOR, European symbol                           
-R19             1K            R-EU_R0402             R0402              RESISTOR, European symbol                           
-R20             1K            R-EU_R0402             R0402              RESISTOR, European symbol                           
-R21             1K            R-EU_R0402             R0402              RESISTOR, European symbol                           
-R22             5.6K          R-EU_R0402             R0402              RESISTOR, European symbol                           
-R23             5.6K          R-EU_R0402             R0402              RESISTOR, European symbol                           
-R24             5.6K          R-EU_R0402             R0402              RESISTOR, European symbol                           
-R25             1K            R-EU_R0402             R0402              RESISTOR, European symbol                           
-R26             1K            R-EU_R0402             R0402              RESISTOR, European symbol                           
-R27             1K            R-EU_R0402             R0402              RESISTOR, European symbol                           
-R28             1K            R-EU_R0402             R0402              RESISTOR, European symbol                           
-R29             1K            R-EU_R0402             R0402              RESISTOR, European symbol                           
-R30             1K            R-EU_R0402             R0402              RESISTOR, European symbol                           
-R31             4K7           R-EU_R0402             R0402              RESISTOR, European symbol                           
-R32             1K-DNP        R-EU_R0402             R0402              RESISTOR, European symbol                           
-R33             1K            R-EU_R0402             R0402              RESISTOR, European symbol                           
-R34             1K            R-EU_R0402             R0402              RESISTOR, European symbol                           
-R35             1K            R-EU_R0402             R0402              RESISTOR, European symbol                           
-R36             1K            R-EU_R0402             R0402              RESISTOR, European symbol                           
-R38             4K7           R-EU_R0402             R0402              RESISTOR, European symbol                           
-R39             4K7           R-EU_R0402             R0402              RESISTOR, European symbol                           
-R40             4K7           R-EU_R0402             R0402              RESISTOR, European symbol                           
-R41             4K7           R-EU_R0402             R0402              RESISTOR, European symbol                           
-S2              219-02        219-02                 CTS-219-02         Surface Mount DIP Switch Series 219 SMT             
-SV1                           MA03-1                 MA03-1             PIN HEADER                                          
-SV2                           MA03-1                 MA03-1             PIN HEADER                                          
-SV3                           MA03-1                 MA03-1             PIN HEADER                                          
-U1              SN74AHC595PW  SN74AHC595PW           SOP65P640X120-16N  8 bit shift registers with 3-state  output registers
-U2              SN74AHC595PW  SN74AHC595PW           SOP65P640X120-16N  8 bit shift registers with 3-state  output registers
-U3              SN74AHC595PW  SN74AHC595PW           SOP65P640X120-16N  8 bit shift registers with 3-state  output registers
-U4              SN74AHC595PW  SN74AHC595PW           SOP65P640X120-16N  8 bit shift registers with 3-state  output registers
-U5              SN74AHC595PW  SN74AHC595PW           SOP65P640X120-16N  8 bit shift registers with 3-state  output registers
-U7              TPS2829DBVT   TPS2829DBVT            SOT95P280X145-5N   Single Channel high speed Mosfet Driver             
-U8              TPS2829DBVT   TPS2829DBVT            SOT95P280X145-5N   Single Channel high speed Mosfet Driver             
-U9              TPS2829DBVT   TPS2829DBVT            SOT95P280X145-5N   Single Channel high speed Mosfet Driver             
-U10             M24C16-WMN6P  M24C16-WMN6P           SOIC127P600X175-8N serial I²C bus EEPROM                               
-U11             PCA9685PW     PCA9685PW              SOP65P640X110-28N  16-channel, 12-bit PWM Fm+ I2C-bus LED controller   
-U12             DAC088S085    DAC088S085             TSSOP-16                                                               
-U13             DRV8825PWP    DRV8825PWP             TSSOP-28                                                               
-U14             DRV8825PWP    DRV8825PWP             TSSOP-28                                                               
-U15             DRV8825PWP    DRV8825PWP             TSSOP-28                                                               
-U16             DRV8825PWP    DRV8825PWP             TSSOP-28                                                               
-U17             DRV8825PWP    DRV8825PWP             TSSOP-28                                                               
-X1              22-05-7038-03 22-05-7038-03          7395-03            CONNECTOR                                           
-X2              MSTBA4        MSTBA4                 MSTBA4             PHOENIX                                             
-X3              MSTBA6        MSTBA6                 MSTBA6             PHOENIX                                             
-X4              22-05-7028-02 22-05-7028-02          7395-02            CONNECTOR                                           
-X5              22-05-7028-02 22-05-7028-02          7395-02            CONNECTOR                                           
-X6              22-05-7028-02 22-05-7028-02          7395-02            CONNECTOR                                           
-X7              22-05-7028-02 22-05-7028-02          7395-02            CONNECTOR                                           
-X8              22-05-7028-02 22-05-7028-02          7395-02            CONNECTOR                                           
-X9              22-05-7028-02 22-05-7028-02          7395-02            CONNECTOR                                           
-X10             22-05-7038-03 22-05-7038-03          7395-03            CONNECTOR                                           
-X11             22-05-7038-03 22-05-7038-03          7395-03            CONNECTOR                                           
-X12             22-05-7038-03 22-05-7038-03          7395-03            CONNECTOR                                           
-X13             22-05-7038-03 22-05-7038-03          7395-03            CONNECTOR                                           
-X14                           MA04-1                 MA04-1             PIN HEADER                                          
-X15                           MA04-1                 MA04-1             PIN HEADER                                          
-X16                           MA04-1                 MA04-1             PIN HEADER                                          
-X17                           MA04-1                 MA04-1             PIN HEADER                                          
-X18                           MA04-1                 MA04-1             PIN HEADER                                          
-X19             22-05-7038-03 22-05-7038-03          7395-03            CONNECTOR                                           
+Qty Value                  Device                 Parts                                                                    
+10  0.1R                   R-EU_R0805             R1, R2, R3, R4, R5, R6, R7, R8, R9, R10                                  
+11  0.1uF                  C-EUC0402              C2, C4, C6, C8, C10, C11, C13, C17, C20, C22, C24                        
+15  0.1uF                  C-EUC0603              C19, C27, C29, C31, C33, C35, C36, C37, C38, C39, C40, C41, C42, C43, C44
+6   0.47uF                 C-EUC0402              C14, C15, C16, C26, C45, C46                                             
+11  1K                     R-EU_R0402             R12, R25, R26, R27, R28, R29, R30, R33, R34, R35, R36                    
+1   1nF                    C-EUC0402              C56                                                                      
+1   1uF                    C-EUC0603              C23                                                                      
+11  4.7K                   R-EU_R0402             R11, R14, R15, R16, R19, R20, R21, R22, R23, R24, R45                    
+3   4.7nF                  C-EUC0402              C57, C58, C59                                                            
+7   4.7uF                  C-EUC0603              C18, C21, C25, C28, C30, C32, C34                                        
+1   4.7uH                  L-EUVLC                L1                                                                       
+3   4K7, 1%                R-EU_R0402             R13, R17, R18                                                            
+3   6.8K                   R-EU_R0402             R38, R39, R40                                                            
+2   10K                    R-EU_R0402             R41, R43                                                                 
+7   10nF                   C-EUC0402              C1, C3, C5, C7, C9, C54, C55                                             
+3   10uF                   C-EUC1206              C47, C48, C52                                                            
+3   22-05-7028-02          22-05-7028-02          X4, X5, X6                                                               
+9   22-05-7038-03          22-05-7038-03          X1, X7, X8, X9, X10, X11, X12, X13, X19                                  
+5   22-05-7048-04          22-05-7048-04          J1, J2, J3, J4, J5                                                       
+1   22nF                   C-EUC0402              C51                                                                      
+3   22uF                   C-EUC0805              C49, C50, C53                                                            
+1   40K                    R-EU_R0402             R44                                                                      
+3   100R                   R-EU_R0402             R31, R32, R37                                                            
+1   100uF                  CPOL-EU140CLH-0810     C12                                                                      
+1   120K                   R-EU_R0402             R42                                                                      
+1   219-02                 219-02                 S2                                                                       
+1   3557                   3557                   U$13                                                                     
+3   AON6758                AON6758                U$3, U$4, U$6                                                            
+2   BEAGLE_EXT9            BEAGLE_EXT9            P9-EXPANSION_A, P9-EXPANSION_A1                                          
+1   CAT24C256              CAT24C256              U$12                                                                     
+1   DAC088S085             DAC088S085             U12                                                                      
+5   DRV8825PWP             DRV8825PWP             U13, U14, U15, U16, U17                                                  
+4   MBRA340T3              MBRA340T3              D1, D2, D3, D4                                                           
+3   MCP1402                MCP1402                U$2, U$5, U$7                                                            
+1   MCP16321               MCP16321               U$8                                                                      
+2   MSTBA2                 MSTBA2                 X3, X21                                                                  
+2   MSTBA4                 MSTBA4                 X2, X20                                                                  
+3   NIF5002                N-HEXFET-2D_SOT232-    Q4, Q5, Q6                                                               
+1   OSHW_LOGO_FILLX0200-NT OSHW_LOGO_FILLX0200-NT LOGO1                                                                    
+1   PCA9685PW              PCA9685PW              U11                                                                      
+1   RT8040T330             RT8040T330             U$10                                                                     
+1   RT8268                 RT8268                 U$9                                                                      
+5   SN74AHC595PW           SN74AHC595PW           U1, U2, U3, U4, U5                                                       
+7   blue                   LEDCHIP-LED0603        LED1, LED2, LED3, LED4, LED5, LED6, LED7                                 
+1   red                    LEDCHIP-LED0603        LED8                                                                     
