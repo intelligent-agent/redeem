@@ -11,17 +11,17 @@
 Replicape is a 3D printer cape for BeagleBone.  
 Features include:  
 -   5 stepper motors (2.5A DRV8825) (X, Y, Z, Ext1, Ext2)  
--   3 high power MOSFETs (PWM controlled) for 2 extruders and 1 HPB.  (12..24V)
--   3 medium power MOSFETs (PWM controlled) for up to 3 fans/LED strips.  (12V)
--   3 analog input ports for thermistors. noise-filtered inputs and option for shielding. 
+-   3 high power MOSFETs (PWM controlled) for 2 extruders and 1 HPB.  (12..24V)  
+-   3 medium power MOSFETs (PWM controlled) for up to 3 fans/LED strips.  (12V)  
+-   3 analog input ports for thermistors. noise-filtered inputs and option for shielding  
 -   6 inputs for end stops (X, Y, Z).  
 -   Programmable current limits on steppers motor drivers (SMD). No need to manually adjust a pot meter.  
 -   Microstepping individually programmable for each SMD from 1 to 32.  
 -   All steppers are controlled by the Programmable Realtime Unit (PRU) for hard real time operation.  
 -   Option for stackable LCD cape (LCD3). HDMI compatible LCD on the way. 
--   Single 12 to 24V PSU, fans are still 12V.
--   Comptabile with BeagleBone and BeagleBone Black
--   Open source hard ware and software
--   Software written in Python for maintainability and hackability
+-   Single 12 to 24V PSU, fans are still 12V  
+-   Comptabile with BeagleBone and BeagleBone Black  
+-   Open source hard ware and software  
+-   Software written in Python for maintainability and hackability  
   
 Blog: http://hipstercircuits.com
