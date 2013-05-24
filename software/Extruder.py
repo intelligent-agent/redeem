@@ -9,9 +9,8 @@ License: BSD
 You can use and change this, but keep this heading :)
 '''
 
-
-import bbio as io
 from threading import Thread
+import time
 
 ''' 
 A heater element that must keep temperature, 
@@ -46,7 +45,7 @@ class Heater(object):
         self.enabled = False
         # Wait for PID to stop
         while self.disabled == False:
-            io.delay(200)
+            time.sleep(0.2)
         # The PID loop has finished		
         self.mosfet.setPower(0.0)
         self.mosfet.close()
@@ -60,13 +59,13 @@ class Heater(object):
 
     ''' Set values for Proportional, Integral, Derivative'''
     def setPvalue(self, P):
-           self.P = P # Proportional 
+        self.P = P # Proportional 
 
     def setIvalue(self, I):
-           self.I = I # Integral
+        self.I = I # Integral
 
     def setDvalue(self, D):
-           self.D = D # Derivative
+        self.D = D # Derivative
 
     ''' PID Thread that keeps the temperature stable '''
     def keep_temperature(self):
@@ -82,7 +81,7 @@ class Heater(object):
                 print self.name+": Target: %f, Current: %f"%(self.target_temp, self.current_temp),
                 print ", error: %f, power: %f"%(error, power),
                 print ", derivative: %f, integral: %f"%(self.D*derivative, self.I*integral)
-            io.delay(1000)            					 # Wait one second        
+            time.sleep(1)            					 # Wait one second        
         self.disabled = True							 # Signal the disable that we are done
 
 

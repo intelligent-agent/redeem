@@ -1,14 +1,11 @@
 
 # Import PyBBIO library:
-import bbio as io
 import numpy as np
 import time 
 
 # Import the temp chart. 
 from temp_chart import *
 from threading import Lock
-
-DEVICE_TREE = True
 
 ''' Represents a thermistor '''
 class Thermistor: 
@@ -25,23 +22,12 @@ class Thermistor:
 	
     ''' Return the temperature in degrees celcius '''
     def getTemperature(self):	
-        if DEVICE_TREE:
-            with open(self.pin, "r") as f:
-                try:
-                    voltage = 0.001*float(f.read().rstrip())
-                except IOError:
-                    print "Unable to get ADC value"
-                    return 0            
-        else:
-            Thermistor.mutex.acquire()                        # Get the mutex
+        with open(self.pin, "r") as f:
             try:
-                time.sleep(0.1)
-                adc_val = io.analogRead(self.pin)        # Read the value 		
-                voltage = io.inVolts(adc_val)                     # Convert to voltage
-            except:
-                print "Unexpected error:", sys.exc_info()[0]          
-            finally:
-                Thermistor.mutex.release()                    # Release the mutex
+                voltage = 0.001*float(f.read().rstrip())
+            except IOError:
+                print "Unable to get ADC value"
+                return 0            
         res_val = self.voltage_to_resistance(voltage)     # Convert to resistance  
         temperature = self.resistance_to_degrees(res_val) # Convert to degrees
         if self.debug > 1:  

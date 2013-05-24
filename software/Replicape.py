@@ -10,7 +10,6 @@ License: BSD
 You can use and change this, but keep this heading :)
 '''
 
-import bbio as io
 from math import sqrt
 import time
 import Queue 
@@ -22,12 +21,11 @@ from Smd import SMD
 from Thermistor import Thermistor
 from Fan import Fan
 from USB import USB
-from Pipe import Pipe
+#from Pipe import Pipe
 from Ethernet import Ethernet
 from Gcode import Gcode
 import sys
 from Extruder import Extruder, HBP
-from Options import Options
 from Pru import Pru
 from Path import Path
 from Path_planner import Path_planner
@@ -43,22 +41,16 @@ class Replicape:
         print "Replicape initializing"
         if LCD: 
             print "LCD screen present"
-        if DEVICE_TREE:
-            print "Kernel has support for device tree"
-
-        # Init the IO library 
-        if not DEVICE_TREE:
-	        io.bbio_init()
 
         # Make a list of steppers
         self.steppers = {}
 
-        # Init the 5 Stepper motors
-        self.steppers["X"] = SMD(io.GPIO1_12, io.GPIO1_13, io.GPIO2_4,  5, "X") 
-        self.steppers["Y"] = SMD(io.GPIO1_31, io.GPIO1_30, io.GPIO1_15, 1, "Y")  
-        self.steppers["Z"] = SMD(io.GPIO1_1,  io.GPIO1_2,  io.GPIO0_27, 2, "Z")  
-        self.steppers["H"] = SMD(io.GPIO3_21, io.GPIO1_7, io.GPIO2_1,  3, "Ext1")
-        self.steppers["E"] = SMD(io.GPIO1_14, io.GPIO1_6, io.GPIO2_3,  4, "Ext2")
+        # Init the 5 Stepper motors (step, dir, fault, DAC channel, name)
+        self.steppers["X"] = SMD("GPIO1_12", "GPIO1_13", "GPIO2_4",  5, "X") 
+        self.steppers["Y"] = SMD("GPIO1_31", "GPIO1_30", "GPIO1_15", 1, "Y")  
+        self.steppers["Z"] = SMD("GPIO1_1",  "GPIO1_2",  "GPIO0_27", 2, "Z")  
+        self.steppers["H"] = SMD("GPIO3_21", "GPIO1_7", "GPIO2_1",  3, "Ext1")
+        self.steppers["E"] = SMD("GPIO1_14", "GPIO1_6", "GPIO2_3",  4, "Ext2")
 
         # Enable the steppers and set the current, steps pr mm and microstepping  
         self.steppers["X"].setCurrentValue(1.0) # 2A
@@ -82,30 +74,22 @@ class Replicape:
         self.steppers["E"].set_microstepping(2)
 
         # init the 3 thermistors
-        if DEVICE_TREE:
-            if LCD: 
-                self.therm_ext1 = Thermistor("/sys/devices/ocp.2/thermistors.15/AIN4", "MOSFET_Ext_1", "B57560G104F") # QU-BD
-                self.therm_hbp  = Thermistor("/sys/devices/ocp.2/thermistors.15/AIN6", "MOSFET_HBP", "B57560G104F")
-            else:
-                self.therm_ext1 = Thermistor("/sys/devices/ocp.2/thermistors.11/AIN4", "MOSFET_Ext_1", "B57560G104F") # QU-BD
-                self.therm_hbp  = Thermistor("/sys/devices/ocp.2/thermistors.11/AIN5", "MOSFET_HBP", "B57560G104F")
+        if LCD: 
+            self.therm_ext1 = Thermistor("/sys/devices/ocp.2/thermistors.15/AIN4", "MOSFET_Ext_1", "B57560G104F")
+            self.therm_hbp  = Thermistor("/sys/devices/ocp.2/thermistors.15/AIN6", "MOSFET_HBP", "B57560G104F")
         else:
-            self.therm_hbp  = Thermistor(io.AIN6, "HBP", chart_name="B57560G104F")
+            self.therm_ext1 = Thermistor("/sys/devices/ocp.2/thermistors.12/AIN4", "MOSFET_Ext_1", "B57560G104F")
+            self.therm_hbp  = Thermistor("/sys/devices/ocp.2/thermistors.12/AIN5", "MOSFET_HBP", "B57560G104F")
 
         # init the 3 heaters
-        if DEVICE_TREE:
-            if LCD: 
-                self.mosfet_ext1 = Mosfet("/sys/devices/ocp.2/mosfet_ext1.12")
-                self.mosfet_ext2 = Mosfet("/sys/devices/ocp.2/mosfet_ext2.13")
-                self.mosfet_hbp  = Mosfet("/sys/devices/ocp.2/mosfet_hbp.14")
-            else:
-                self.mosfet_ext1 = Mosfet("/sys/devices/ocp.2/mosfet_ext1.8")
-                self.mosfet_ext2 = Mosfet("/sys/devices/ocp.2/mosfet_ext2.9")
-                self.mosfet_hbp  = Mosfet("/sys/devices/ocp.2/mosfet_hbp.10")
+        if LCD: 
+            self.mosfet_ext1 = Mosfet("/sys/devices/ocp.2/mosfet_ext1.12")
+            self.mosfet_ext2 = Mosfet("/sys/devices/ocp.2/mosfet_ext2.13")
+            self.mosfet_hbp  = Mosfet("/sys/devices/ocp.2/mosfet_hbp.14")
         else:
-            self.mosfet_ext1 = Mosfet(io.PWM2B) # PWM2B on rev1
-            self.mosfet_hbp  = Mosfet(io.PWM0C) # PWM0C on rev1 
-            self.mosfet_ext2 = Mosfet(io.PWM2A) # 
+            self.mosfet_ext1 = Mosfet("/sys/devices/ocp.2/mosfet_ext1.9")
+            self.mosfet_ext2 = Mosfet("/sys/devices/ocp.2/mosfet_ext2.10")
+            self.mosfet_hbp  = Mosfet("/sys/devices/ocp.2/mosfet_hbp.11")
 
         # Make extruder 1
         self.ext1 = Extruder(self.steppers["E"], self.therm_ext1, self.mosfet_ext1)
@@ -127,13 +111,9 @@ class Replicape:
 
         # Set up USB, this receives messages and pushes them on the queue
         self.usb = USB(self.commands)		
-        self.pipe = Pipe(self.commands)
+        #self.pipe = Pipe(self.commands)
         self.ethernet = Ethernet(self.commands)
         
-
-        # Get all options 
-        self.options = Options()
-
         # Init the path planner
         self.movement = "RELATIVE"
         self.feed_rate = 3000.0

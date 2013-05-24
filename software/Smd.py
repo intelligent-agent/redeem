@@ -25,27 +25,14 @@ from spi import SPI
 from threading import Thread
 import time
 
-DEVICE_TREE = True
-
 # init the SPI for the DAC
-if DEVICE_TREE:
-    spi2_0 = SPI(1, 0)	
-else:
-    spi2_0 = SPI(2, 0)
+spi2_0 = SPI(1, 0)	
 spi2_0.bpw = 8
 spi2_0.mode = 1
 # Init the SPI for the serial to parallel
-if DEVICE_TREE:
-    spi2_1 = SPI(1, 1)	
-else:
-    spi2_1 = SPI(2, 1)
+spi2_1 = SPI(1, 1)	
 spi2_1.bpw = 8
 spi2_1.mode = 0
-
-DEVICE_TREE = True
-
-if not DEVICE_TREE:
-    from bbio import *
 
 class SMD:
 
@@ -79,11 +66,6 @@ class SMD:
         self.microsteps      = 1.0          # Well, this is the microstep number
         self.pru_num         = -1           # PRU number, if any 
         SMD.all_smds.append(self) 	        # Add to list of smds
-
-        if not DEVICE_TREE:
-            pinMode(stepPin,   0, 0) 	        # Output, no pull up
-            pinMode(dirPin,    0, 0) 	        # Output, no pull up
-            pinMode(faultPin,  1, 0) 	        # Input, no pull up
  						
     ''' Sets the SMD enabled '''
     def setEnabled(self):
@@ -156,77 +138,6 @@ class SMD:
     Higher level commands 
     '''
 
-    ''' Move to an absolute position '''
-    def moveTo(self, pos):
-        self.move(pos-self.currentPosition)
-
-    ''' Move a certain distance, relative movement '''
-    def move(self, mm, movement):
-        if movement == "ABSOLUTE":
-            self.set_position = mm
-        else:
-            self.set_position += mm
-        if self.set_position > self.currentPosition:
-            self.direction = 1
-        else:
-            self.direction = 0
-        digitalWrite(self.dirPin, self.direction)            
-
-        while(abs(self.currentPosition - self.set_position) > self.mmPrStep):
-            toggle(self.stepPin)
-            time.sleep(self.seconds_pr_step/2.0)
-            toggle(self.stepPin)
-            time.sleep(self.seconds_pr_step/2.0)
-            if self.direction == 1:
-                self.currentPosition += self.mmPrStep
-            else:
-                self.currentPosition -= self.mmPrStep
-
-
-    ''' Set timing and pin data '''
-    def add_data(self, data):
-        (pins, delays) = data
-        self.pins = pins
-        self.delays = delays
-        #print "steps: "+str(len(self.pins))+" delays "+str(len(self.delays))
-    
-    ''' Prepare a move. But do not start the thread yet. '''
-    def prepare_move(self):
-        if not hasattr(self, "pins") or len(self.pins) == 0:
-            return
-        dir_mask  = self.get_dir_pin()
-        digitalWrite(self.dirPin, dir_mask & self.pins[0])
-        self.t = Thread(target=self._do_work)
-        self.t.start()
-
-    ''' Execute the planned move. '''
-    def start_move(self):
-        if not hasattr(self, "pins") or len(self.pins) == 0:
-            return
-        self.moving = True        
-
-    ''' Do the work '''
-    def _do_work(self):
-        while not self.moving: 
-            time.sleep(0.001)
-        step_mask = self.get_step_pin()
-        for i, pin in enumerate(self.pins):
-            digitalWrite(self.stepPin, pin & step_mask)
-            time.sleep(self.delays[i])
-        self.moving = False
-
-    ''' Returns true if the stepper is still moving '''
-    def is_moving(self):
-        return self.moving
-
-    ''' Join the thread '''
-    def end_move(self):
-        if not hasattr(self, "pins") or len(self.pins) == 0:
-            return
-        self.t.join()
-        del self.pins
-        del self.delays
-
     ''' Set the feed rate in mm/min '''
     def setFeedRate(self, feed_rate):		
         minutes_pr_mm = 1.0/float(feed_rate)
@@ -246,18 +157,6 @@ class SMD:
     ''' Well, you can only guess what this function does. '''
     def set_max_feed_rate(self, max_feed_rate):
         self.max_feed_rate = max_feed_rate
-
-    ''' If this can be controlled by a PRU, set the PRU number  (0 or 1) '''
-    def set_pru(self, pru_num):
-        self.pru_num = pru_num
-
-    ''' Return true is this has a PRU nmuber assiciated with it '''
-    def has_pru(self):
-        return (self.pru_num > -1)
-
-    ''' Return the pru number '''
-    def get_pru(self):
-        return self.pru_num
 
     ''' Get the number of steps pr meter '''
     def get_steps_pr_meter(self):        

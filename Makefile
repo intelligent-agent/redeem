@@ -2,7 +2,7 @@
 
 #RPATH=/home/root/replicape
 #REMOTE=root@10.24.2.124
-RPATH=/home/ubuntu/replicape
+RPATH=/home/root/Replicape
 REMOTE=root@10.24.2.77
 
 .PHONY : software firmware eeprom
