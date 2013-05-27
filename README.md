@@ -24,4 +24,25 @@ Features include:
 -   Open source hard ware and software  
 -   Software written in Python for maintainability and hackability  
   
-Blog: http://hipstercircuits.com
+{{ Blog: http://hipstercircuits.com|urlize }}
+
+TODO for PCB_Rev_A3:  
+- All components on one side  
+- Add fiducials  
+- Add square pads on pin 1 for TH connectors.  
+Maybe:  
+- Add connector for temperature sensing via Dallas 1-wire (for cold end)   
+- Add some kind of speaker support :)  
+- Add support for LEDs  
+- LED to show when the hot-bed is warm.  
+
+
+TODO for software:  
+- Optimize the merging of timings from the different steppers.  
+- Make a fancy GUI with 3D model  
+- Implement realtime slicing on BeagleBone so an STL file can be sent directly (very cool).  
+
+Known issues:  
+There seems to be a bug with the software that causes the 
+filament to retract after a few layers. Find out if this is consistent. 
+
