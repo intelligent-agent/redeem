@@ -24,7 +24,7 @@ Features include:
 -   Open source hard ware and software  
 -   Software written in Python for maintainability and hackability  
   
-{{ Blog: http://hipstercircuits.com|urlize }}
+Blog: http://hipstercircuits.com
 
 TODO for PCB_Rev_A3:  
 - All components on one side  
