@@ -1,0 +1,6 @@
+Changelog Rev A2 -> Rev A3
+========================
+- All components on top side. 
+- Fiducials for automatic component placing
+- Square pads on pin 1. 
+
