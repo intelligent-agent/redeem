@@ -10,3 +10,4 @@ Changelog Rev A2 -> Rev A3
  + R42-44 cluster, move further apart. 
  + Forgot a 22uF cap on the BOM
  + Added testpoints for 5V and 12V
+ + Added a Dallas 1W temperature sensor port (18B20)

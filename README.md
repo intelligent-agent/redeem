@@ -19,14 +19,12 @@ Features include:
 -   Programmable current limits on steppers motor drivers (SMD). No need to manually adjust a pot meter.  
 -   Microstepping individually programmable for each SMD from 1 to 32.  
 -   All steppers are controlled by the Programmable Realtime Unit (PRU) for hard real time operation.  
--   Option for stackable LCD cape (LCD3). HDMI compatible LCD on the way. 
--   Single 12 to 24V PSU, fans are still 12V  
--   Comptabile with BeagleBone and BeagleBone Black  
--   Open source hard ware and software  
--   Software written in Python for maintainability and hackability  
+-   Option for stackable LCD cape (LCD3). HDMI compatible LCD on the way.  
+-   Single 12 to 24V PSU, fans are still 12V.  
+-   Comptabile with BeagleBone and BeagleBone Black.  
+-   Open source hard ware and software.  
+-   Software written in Python for maintainability and hackability.  
   
-Blog: http://hipstercircuits.com
-
 TODO for software:  
 - Optimize the merging of timings from the different steppers.  
 - Make a fancy GUI with 3D model  
@@ -36,3 +34,5 @@ Known issues:
 There seems to be a bug with the software that causes the 
 filament to retract after a few layers. Find out if this is consistent. 
 
+Blog: http://hipstercircuits.com  
+Wiki: wiki.replicape.com
