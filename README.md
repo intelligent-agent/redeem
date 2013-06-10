@@ -15,6 +15,7 @@ Features include:
 -   3 medium power MOSFETs (PWM controlled) for up to 3 fans/LED strips.  (12V)  
 -   3 analog input ports for thermistors. noise-filtered inputs and option for shielding  
 -   6 inputs for end stops (X, Y, Z).  
+-   1 optional Dallas 1W temperature sensor for monitoring the cold end.  
 -   Programmable current limits on steppers motor drivers (SMD). No need to manually adjust a pot meter.  
 -   Microstepping individually programmable for each SMD from 1 to 32.  
 -   All steppers are controlled by the Programmable Realtime Unit (PRU) for hard real time operation.  
@@ -25,17 +26,6 @@ Features include:
 -   Software written in Python for maintainability and hackability  
   
 Blog: http://hipstercircuits.com
-
-TODO for PCB_Rev_A3:  
-- All components on one side  
-- Add fiducials  
-- Add square pads on pin 1 for TH connectors.  
-Maybe:  
-- Add connector for temperature sensing via Dallas 1-wire (for cold end)   
-- Add some kind of speaker support :)  
-- Add support for LEDs  
-- LED to show when the hot-bed is warm.  
-
 
 TODO for software:  
 - Optimize the merging of timings from the different steppers.  
