@@ -15,6 +15,7 @@ import time
 import Queue 
 import logging
 import traceback
+import os
 
 from Mosfet import Mosfet
 from Smd import SMD
@@ -46,11 +47,11 @@ class Replicape:
         self.steppers = {}
 
         # Init the 5 Stepper motors (step, dir, fault, DAC channel, name)
-        self.steppers["X"] = SMD("GPIO1_12", "GPIO1_13", "GPIO2_4",  5, "X") 
-        self.steppers["Y"] = SMD("GPIO1_31", "GPIO1_30", "GPIO1_15", 1, "Y")  
-        self.steppers["Z"] = SMD("GPIO1_1",  "GPIO1_2",  "GPIO0_27", 2, "Z")  
-        self.steppers["H"] = SMD("GPIO3_21", "GPIO1_7", "GPIO2_1",  3, "Ext1")
-        self.steppers["E"] = SMD("GPIO1_14", "GPIO1_6", "GPIO2_3",  4, "Ext2")
+        self.steppers["X"] = SMD("GPIO0_27", "GPIO1_29", "GPIO2_4",  0, "X") 
+        self.steppers["Y"] = SMD("GPIO1_12", "GPIO0_22", "GPIO2_5", 1, "Y")  
+        self.steppers["Z"] = SMD("GPIO0_23", "GPIO0_26", "GPIO0_15", 2, "Z")  
+        self.steppers["E"] = SMD("GPIO1_28", "GPIO1_15", "GPIO2_1",  3, "Ext1")
+        self.steppers["H"] = SMD("GPIO1_13", "GPIO1_14", "GPIO2_2",  4, "Ext2")
 
         # Enable the steppers and set the current, steps pr mm and microstepping  
         self.steppers["X"].setCurrentValue(1.0) # 2A
@@ -74,22 +75,21 @@ class Replicape:
         self.steppers["E"].set_microstepping(2)
 
         # init the 3 thermistors
-        if LCD: 
-            self.therm_ext1 = Thermistor("/sys/devices/ocp.2/thermistors.15/AIN4", "MOSFET_Ext_1", "B57560G104F")
-            self.therm_hbp  = Thermistor("/sys/devices/ocp.2/thermistors.15/AIN6", "MOSFET_HBP", "B57560G104F")
-        else:
-            self.therm_ext1 = Thermistor("/sys/devices/ocp.2/thermistors.12/AIN4", "MOSFET_Ext_1", "B57560G104F")
-            self.therm_hbp  = Thermistor("/sys/devices/ocp.2/thermistors.12/AIN5", "MOSFET_HBP", "B57560G104F")
+        path = ""
+        for dev in os.listdir("/sys/devices/ocp.2/"):
+            if dev.startswith("thermistors"):
+                path = "/sys/devices/ocp.2/"+dev+"/"
+                break
+
+        logging.debug("Thermistors are located at "+path)
+
+        self.therm_ext1 = Thermistor(path+"AIN4", "MOSFET_Ext_1", "B57560G104F")
+        self.therm_hbp  = Thermistor(path+"AIN6", "MOSFET_HBP", "B57560G104F")
 
         # init the 3 heaters
-        if LCD: 
-            self.mosfet_ext1 = Mosfet("/sys/devices/ocp.2/mosfet_ext1.12")
-            self.mosfet_ext2 = Mosfet("/sys/devices/ocp.2/mosfet_ext2.13")
-            self.mosfet_hbp  = Mosfet("/sys/devices/ocp.2/mosfet_hbp.14")
-        else:
-            self.mosfet_ext1 = Mosfet("/sys/devices/ocp.2/mosfet_ext1.9")
-            self.mosfet_ext2 = Mosfet("/sys/devices/ocp.2/mosfet_ext2.10")
-            self.mosfet_hbp  = Mosfet("/sys/devices/ocp.2/mosfet_hbp.11")
+        self.mosfet_ext1 = Mosfet(3)
+        self.mosfet_ext2 = Mosfet(4)
+        self.mosfet_hbp  = Mosfet(5)
 
         # Make extruder 1
         self.ext1 = Extruder(self.steppers["E"], self.therm_ext1, self.mosfet_ext1)
@@ -103,8 +103,11 @@ class Replicape:
         # Init the three fans
         self.fan_1 = Fan(1)
         self.fan_2 = Fan(2)
-        self.fan_3 = Fan(3)
+        self.fan_3 = Fan(0)
         self.fans = {0: self.fan_1, 1:self.fan_2, 2:self.fan_3 }
+
+        self.fan_1.setPWMFrequency(100)
+
 
         # Make a queue of commands
         self.commands = Queue.Queue(30)
@@ -222,7 +225,6 @@ class Replicape:
         elif g.code() == "M106":                                    # Fan on
             if g.hasLetter("P"):
                 fan = self.fans[int(g.getValueByLetter("P"))]
-                fan.setPWMFrequency(100)
                 fan.setValue(float(g.getValueByLetter("S")))	                
             else:
                 self.fan_1.setPWMFrequency(100)

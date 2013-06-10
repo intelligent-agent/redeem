@@ -67,18 +67,19 @@ class Pru:
         self.ddr_mem_used   = 0  
         self.clear_events   = []       
         self.ddr_lock       = Lock() 
-        self.debug = 0
+        self.debug = 2
     
         self.i = 0
-        pypruss.modprobe(0x40000)    			        # This only has to be called once pr boot
-        self.ddr_addr = pypruss.ddr_addr()
-        self.ddr_size = pypruss.ddr_size() 
+        #pypruss.modprobe(0x40000)    			        # This only has to be called once pr boot
+
+        self.ddr_addr = int(open("/sys/class/uio/uio0/maps/map1/addr","rb").read().rstrip(), 0)
+        self.ddr_size = int(open("/sys/class/uio/uio0/maps/map1/size","rb").read().rstrip(), 0)
         print "The DDR memory reserved for the PRU is "+hex(self.ddr_size)+" and has addr "+hex(self.ddr_addr)
 
-        ddr_offset     		= self.ddr_addr-0x10000000  # The Python mmap function cannot accept unsigned longs. 
-        ddr_filelen    		= self.ddr_size+0x10000000
-        self.DDR_START      = 0x10000000
-        self.DDR_END        = 0x10000000+self.ddr_size
+        ddr_offset     		= self.ddr_addr-0x20000000  # The Python mmap function cannot accept unsigned longs. 
+        ddr_filelen    		= self.ddr_size+0x20000000
+        self.DDR_START      = 0x20000000
+        self.DDR_END        = 0x20000000+self.ddr_size
         self.ddr_start      = self.DDR_START
         self.ddr_nr_events  = self.ddr_addr+self.ddr_size-4
 
@@ -91,7 +92,7 @@ class Pru:
         pypruss.open(0)						            # Open PRU event 0 which is PRU0_ARM_INTERRUPT
         pypruss.pruintc_init()					        # Init the interrupt controller
         pypruss.pru_write_memory(0, 0, [self.ddr_addr, self.ddr_nr_events])		# Put the ddr address in the first region 
-        pypruss.exec_program(0, dirname+"/../firmware/firmware_pru_0.bin")	# Load firmware "ddr_write.bin" on PRU 0
+        pypruss.exec_program(0, dirname+"/../firmware/firmware_A2.bin")	# Load firmware "ddr_write.bin" on PRU 0
         self.t = Thread(target=self._wait_for_events)         # Make the thread
         self.running = True
         self.t.start()		        
@@ -105,6 +106,7 @@ class Pru:
         data = np.array([pins, delays])		        	    # Make a 2D matrix combining the ticks and delays
         data = list(data.transpose().flatten())     	    # Braid the data so every other item is a pin and delay
         self.pru_data = data   
+        print "add_data"+hex(pins[0])+" "+hex(pins[1])
 
     ''' Check if the PRU has capacity for a chunk of data '''
     def has_capacity_for(self, data_len):
@@ -217,7 +219,7 @@ class Pru:
         logging.debug("joining")
         self.running = False
         self.t.join()        
-        self.ddr_mem.close()                                         # Close the memory        
+        self.ddr_mem.close()                                    # Close the memory        
         pypruss.pru_disable(0)                                  # Disable PRU 0, this is already done by the firmware
         pypruss.exit()                                          # Exit, don't know what this does. 
         
@@ -225,7 +227,6 @@ class Pru:
     def _sec_to_inst(self, s):					    # Shit, I'm missing MGP for this??
         inst_pr_step = (int(s/self.s_pr_inst)-self.inst_pr_loop)/self.inst_pr_delay
         if inst_pr_step < 100:
-            #print " <100" 
             inst_pr_step = 100
         return inst_pr_step
 

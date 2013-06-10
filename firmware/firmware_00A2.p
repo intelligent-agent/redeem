@@ -2,13 +2,12 @@
 .entrypoint START
 
 #define PRU0_ARM_INTERRUPT 	19
-#define GPIO_DATAOUT 		0x13c				// This is the register for setting data
+#define GPIO_DATAOUT 		0x13c				// This is the register for setting data 
 #define DDR_MAGIC			0xbabe7175			// Magic number used to reset the DDR counter 
-#define GPIO0 				0x44E07000 			// The adress of the GPIO1 bank
+#define GPIO0 				0x44E07000 			// The adress of the GPIO0 bank
 #define GPIO1 				0x4804C000			// The adress of the GPIO1 bank
-#define GPIO3 				0x481AE000 			// The adress of the GPIO3 bank 
-#define GPIO1_MASK			(1<<1)|(1<<2)|(1<<6)|(1<<7)|(1<<12)|(1<<13)|(1<<14)|(1<<30)|(1<<31) // Toggelable
-#define GPIO3_MASK			(1<<21)		// Only these two pins are togglable
+#define GPIO1_MASK			(1<<12)|(1<<13)|(1<<14)|(1<<15)|(1<<28)|(1<<29) // Only these are togglable
+#define GPIO0_MASK			(1<<22)|(1<<23)|(1<<26)|(1<<27)					// Only these are togglable
 
 START:
     LBCO r0, C4, 4, 4							// Load Bytes Constant Offset (?)
@@ -18,9 +17,9 @@ START:
 	MOV  r10, GPIO1_MASK						// Make the mask
     MOV  r11, GPIO1 | GPIO_DATAOUT				// Load address
     MOV  r12, 0xFFFFFFFF ^ (GPIO1_MASK)			// Invert the mask
-	MOV  r16, GPIO3_MASK						// Make the mask
-    MOV  r17, GPIO3 | GPIO_DATAOUT				// Load address
-    MOV  r18, 0xFFFFFFFF ^ (GPIO3_MASK)			// Invert mask
+	MOV  r16, GPIO0_MASK						// Make the mask
+    MOV  r17, GPIO0 | GPIO_DATAOUT				// Load address
+    MOV  r18, 0xFFFFFFFF ^ (GPIO0_MASK)			// Invert mask
 	
 	MOV  r0, 4									// Load the address of the events_counter 
 	LBBO r6, r0, 0, 4							// Put it in R6
