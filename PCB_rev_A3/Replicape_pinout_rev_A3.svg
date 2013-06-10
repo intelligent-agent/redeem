@@ -28,8 +28,8 @@
      inkscape:pageopacity="1"
      inkscape:pageshadow="2"
      inkscape:zoom="1.4142136"
-     inkscape:cx="364.35468"
-     inkscape:cy="558.03515"
+     inkscape:cx="161.40899"
+     inkscape:cy="505.61355"
      inkscape:document-units="px"
      inkscape:current-layer="layer1"
      showgrid="true"
@@ -3096,5 +3096,17 @@
          x="177.42136"
          y="583.55042"
          style="fill:#ff6600">GPIO3_19</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:10px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Ubuntu Mono;-inkscape-font-specification:Ubuntu Mono"
+       x="283.5498"
+       y="548.07373"
+       id="text3476"
+       sodipodi:linespacing="125%"><tspan
+         sodipodi:role="line"
+         id="tspan3478"
+         x="283.5498"
+         y="548.07373"
+         style="fill:#000080">DALLAS_TEMP</tspan></text>
   </g>
 </svg>
