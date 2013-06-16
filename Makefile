@@ -1,11 +1,9 @@
 
 
-#RPATH=/home/root/replicape
-#REMOTE=root@10.24.2.124
 RPATH=/home/root/Replicape
-REMOTE=root@10.24.2.77
-DPATH=Dist/dist_`date +"%y_%d_%m"`/Replicape
-DNAME=Replicape_rev_A2-`date +"%y_%d_%m"`.tgz
+REMOTE=root@192.168.7.2
+DPATH=Dist/dist_`date +"%y_%m_%d"`/Replicape
+DNAME=Replicape_rev_A2-`date +"%y_%m_%d"`.tgz
 
 .PHONY : software firmware eeprom
 
@@ -58,13 +56,17 @@ dist:
 	mkdir -p $(DPATH)/device_tree
 	mkdir -p $(DPATH)/eeprom
 	mkdir -p $(DPATH)/libs/pypruss
+	mkdir -p $(DPATH)/kernel
+	cp Dist/Makefile $(DPATH)/
 	cp software/*.py $(DPATH)/software/
-	cp firmware/firmware_pru_0.bin $(DPATH)/firmware/
+	cp firmware/firmware_00A2.p firmware/Makefile firmware/pasm $(DPATH)/firmware/
 	cp Device_tree/DTB/* $(DPATH)/device_tree/
-	cp eeprom/eeprom.js eeprom/bone.js eeprom/replicape_00A2.json $(DPATH)/eeprom/
+	cp eeprom/eeprom.js eeprom/bone.js eeprom/replicape_00A2.json eeprom/Makefile $(DPATH)/eeprom/
 	cp -r libs/spi $(DPATH)/libs/
 	cp -r libs/pypruss/dist/* $(DPATH)/libs/pypruss
 	cp -r libs/i2c $(DPATH)/libs/
+	cp libs/Makefile $(DPATH)/libs/
+	cp -r images/3.8.13/* $(DPATH)/kernel/
 	cd $(DPATH)/../ && tar -cvzpf ../$(DNAME) . && cd ..
 	scp Dist/$(DNAME) replicape@scp.domeneshop.no:www/distros/
 	

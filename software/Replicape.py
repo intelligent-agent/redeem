@@ -48,7 +48,7 @@ class Replicape:
 
         # Init the 5 Stepper motors (step, dir, fault, DAC channel, name)
         self.steppers["X"] = SMD("GPIO0_27", "GPIO1_29", "GPIO2_4",  0, "X") 
-        self.steppers["Y"] = SMD("GPIO1_12", "GPIO0_22", "GPIO2_5", 1, "Y")  
+        self.steppers["Y"] = SMD("GPIO1_12", "GPIO0_22", "GPIO2_5",  1, "Y")  
         self.steppers["Z"] = SMD("GPIO0_23", "GPIO0_26", "GPIO0_15", 2, "Z")  
         self.steppers["E"] = SMD("GPIO1_28", "GPIO1_15", "GPIO2_1",  3, "Ext1")
         self.steppers["H"] = SMD("GPIO1_13", "GPIO1_14", "GPIO2_2",  4, "Ext2")
