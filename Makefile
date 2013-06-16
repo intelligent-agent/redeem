@@ -1,7 +1,7 @@
 
 
 RPATH=/home/root/Replicape
-REMOTE=root@192.168.7.2
+REMOTE=root@10.24.2.90
 DPATH=Dist/dist_`date +"%y_%m_%d"`/Replicape
 DNAME=Replicape_rev_A2-`date +"%y_%m_%d"`.tgz
 
@@ -48,6 +48,9 @@ install_image:
 install_modules: 
 	unzip images/3.2.34.zip
 	cp -r images/3.2.34/ /lib/modules/ 
+
+paddock: 
+	scp Printrun/paddock.py $(REMOTE):$(RPATH)/software/
 
 dist: 
 	mkdir -p $(DPATH)

@@ -11,10 +11,11 @@ You can use and change this, but keep this heading :)
 
 from threading import Thread
 import time
+import logging
 
 ''' 
 A heater element that must keep temperature, 
-either an extruder, a HBP or could even be a heated chamer
+either an extruder, a HBP or could even be a heated chamber
 '''
 class Heater(object):
     ''' Init '''
@@ -26,7 +27,7 @@ class Heater(object):
         self.target_temp = 0.0             # Target temperature (Ts). Start off. 
         self.last_error = 0.0              # Previous error term, used in calculating the derivative
         self.error_integral = 0.0          # Accumulated integral since the temperature came within the boudry
-        self.error_integral_limit = 10.0 # Integral temperature boundry
+        self.error_integral_limit = 40.0 # Integral temperature boundry
         self.debug = 0                   # Debug level
         self.P = 1.0                     # Proportional 
         self.I = 0.0                     # Integral 
@@ -76,11 +77,11 @@ class Heater(object):
             integral = self._getErrorIntegral(error)     # Calculate the error integral        
             power = self.P*(error + self.D*derivative + self.I*integral) # The formula for the PID				
             power = max(min(power, 1.0), 0.0)            # Normalize to 0,1
-            self.mosfet.setPower(power)            		 # Update the mosfet
-            if self.debug > 0:            				 # Debug if necessary 
-                print self.name+": Target: %f, Current: %f"%(self.target_temp, self.current_temp),
-                print ", error: %f, power: %f"%(error, power),
-                print ", derivative: %f, integral: %f"%(self.D*derivative, self.I*integral)
+            self.mosfet.setPower(power)            		 # Update the mosfet            
+            log = self.name+": Tgt: %f, Cur: %f"%(self.target_temp, self.current_temp)
+            log += ", Err: %f, Pow: %f"%(error, power)              
+            #if self.name == "Ext1":
+            #    logging.debug(log+", Der: %f, Int: %f"%(self.D*derivative, self.I*integral))
             time.sleep(1)            					 # Wait one second        
         self.disabled = True							 # Signal the disable that we are done
 
@@ -100,10 +101,6 @@ class Heater(object):
             self.error_integral = 0.0
         return self.error_integral
 
-    ''' Set the debuglevel ''' 
-    def debugLevel(self, val):
-        self.debug = val
-
 ''' Subclass for Heater, this is an extruder '''
 class Extruder(Heater):
     def __init__(self, smd, thermistor, mosfet):
@@ -115,7 +112,7 @@ class Extruder(Heater):
 ''' Subclass for heater, this is a Heated build platform '''
 class HBP(Heater):
     def __init__(self, thermistor, mosfet):
-        Heater.__init__(self, thermistor, mosfet, "HBP")
+        Heater.__init__(self, thermistor, mosfet, "HBP ")
         self.enable()
 
 

@@ -132,22 +132,21 @@ class Path_planner:
         a        = self.acceleration*ratio    		                    # Accelleration in m/s/s
         ds       = 1.0/steps_pr_meter                                   # Delta S, distance in meters travelled pr step.         
         if self.pru.is_processing():                                    # If there is currently a segment being processed, 
-            #print "Is processing, angle to prev is "+str(path.angle_to_prev())
+            logging.debug("Is processing, angle to prev is "+str(path.angle_to_prev()))
             u_start  = ratio*path.get_start_speed()                 	    # The end speed, depends on the angle to the next
         else:
-            #print "Nothing processing"
+            logging.debug("Nothing processing")
             u_start = 0
         if self.paths.qsize() > 0:                                      # If there are paths in queue, we do not have to slow down
-            #print "Has followers, angle to follower: "+str(path.angle_to_next()) 
+            logging.debug("Has followers, angle to follower: "+str(path.angle_to_next()))
             u_end    = ratio*path.get_end_speed()                 	    # The start speed. Depends on the angle to the prev.
         else:
-            #print "Nothing on queue"
+            logging.debug("Nothing on queue")
             u_end = 0
 
-        #print "Max speed for "+axis+" is "+str(Vm)
-        #print "Start speed for "+axis+" is "+str(u_start)
-        #print "End speed for "+axis+" is "+str(u_end)
-        #print ""
+        logging.debug("Max speed for "+axis+" is "+str(Vm))
+        logging.debug("Start speed for "+axis+" is "+str(u_start))
+        logging.debug("End speed for "+axis+" is "+str(u_end))
         tm_start = (Vm-u_start)/a					                    # Calculate the time for when max speed is met. 
         tm_end   = (Vm-u_end)/a					                        # Calculate the time for when max speed is met. 
         sm_start = min(u_start*tm_start + 0.5*a*tm_start**2, s/2.0)     # Calculate the distance traveled when max speed is met

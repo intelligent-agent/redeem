@@ -68,13 +68,11 @@ class Pru:
         self.clear_events   = []       
         self.ddr_lock       = Lock() 
         self.debug = 2
-    
         self.i = 0
-        #pypruss.modprobe(0x40000)    			        # This only has to be called once pr boot
 
         self.ddr_addr = int(open("/sys/class/uio/uio0/maps/map1/addr","rb").read().rstrip(), 0)
         self.ddr_size = int(open("/sys/class/uio/uio0/maps/map1/size","rb").read().rstrip(), 0)
-        print "The DDR memory reserved for the PRU is "+hex(self.ddr_size)+" and has addr "+hex(self.ddr_addr)
+        logging.info("The DDR memory reserved for the PRU is "+hex(self.ddr_size)+" and has addr "+hex(self.ddr_addr))
 
         ddr_offset     		= self.ddr_addr-0x20000000  # The Python mmap function cannot accept unsigned longs. 
         ddr_filelen    		= self.ddr_size+0x20000000
@@ -106,7 +104,6 @@ class Pru:
         data = np.array([pins, delays])		        	    # Make a 2D matrix combining the ticks and delays
         data = list(data.transpose().flatten())     	    # Braid the data so every other item is a pin and delay
         self.pru_data = data   
-        print "add_data"+hex(pins[0])+" "+hex(pins[1])
 
     ''' Check if the PRU has capacity for a chunk of data '''
     def has_capacity_for(self, data_len):
@@ -114,8 +111,9 @@ class Pru:
             cap = self.ddr_size-self.ddr_mem_used
         return (cap/2.0 > data_len) 
 
-    ''' Check if the PRU has capacity for a chunk of data '''
+    
     def get_capacity(self):
+        ''' Check if the PRU has capacity for a chunk of data '''
         with self.ddr_lock:
             cap = self.ddr_size-self.ddr_mem_used
         return cap
@@ -141,11 +139,11 @@ class Pru:
             
             if cut == 4: 
                 cut = 12                
-            print "Data len is "+str(len(data))+", Cutting the data at "+str(cut)        
+            logging.debug("Data len is "+str(len(data))+", Cutting the data at "+str(cut))
 
             first = struct.pack('L', len(data[4:cut])/8)+data[4:cut]    # Update the loop count
             first += struct.pack('L', DDR_MAGIC)                        # Add the magic number to force a reset of DDR memory counter
-            print "Laying out from "+hex(self.ddr_start)+" to "+hex(self.ddr_start+len(first))
+            logging.debug("Laying out from "+hex(self.ddr_start)+" to "+hex(self.ddr_start+len(first)))
             self.ddr_mem[self.ddr_start:self.ddr_start+len(first)] = first  # Write the first part of the data to the DDR memory.
 
             with self.ddr_lock:
@@ -155,7 +153,7 @@ class Pru:
             if len(data[cut:-4]) > 0:                                 # If len(data) == 4, only the terminating zero is present..
                 second = struct.pack('L', (len(data[cut:-4])/8))+data[cut:]     # Add the number of steps in this iteration
                 self.ddr_end = self.DDR_START+len(second)           # Update the end counter
-                print "Second batch starts from "+hex(self.DDR_START)+" to "+hex(self.ddr_end)
+                logging.debug("Second batch starts from "+hex(self.DDR_START)+" to "+hex(self.ddr_end))
                 self.ddr_mem[self.DDR_START:self.ddr_end] = second  # Write the second half of data to the DDR memory.
                 with self.ddr_lock:
                     self.ddr_mem_used += len(second)
@@ -167,15 +165,14 @@ class Pru:
                 with self.ddr_lock:
                     self.ddr_mem_used += 4
                 self.ddr_used.put(4)
-                #self.debug = 2
-                print "\tSecond batch skipped, 0 length"            
+                logging.debug("Second batch skipped, 0 length")
         else:
             self.ddr_mem[self.ddr_start:self.ddr_end] = data    # Write the data to the DDR memory. 
             with self.ddr_lock:
                 self.ddr_mem_used += len(data)               
             self.ddr_used.put(len(data)) 		            # update the amount of memory used 
             if self.debug > 0:
-                 print "Pushed "+str(len(data))+" from "+hex(self.ddr_start)+" to "+hex(self.ddr_end)
+                 logging.debug("Pushed "+str(len(data))+" from "+hex(self.ddr_start)+" to "+hex(self.ddr_end))
             
 
         self.ddr_start 		= self.ddr_end-4                    # Update the start of ddr for next time 
@@ -202,7 +199,7 @@ class Pru:
                 with self.ddr_lock:
                     self.ddr_mem_used -= ddr                    
                 if self.debug > 0:
-                    print "Popped "+str(ddr)+"\tnow "+hex(self.get_capacity())
+                    logging.debug("Popped "+str(ddr)+"\tnow "+hex(self.get_capacity()))
                 self.ddr_used.task_done()
                 nr_interrupts += 1  
                                    

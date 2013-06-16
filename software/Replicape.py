@@ -31,60 +31,64 @@ from Pru import Pru
 from Path import Path
 from Path_planner import Path_planner
     
-logging.basicConfig(level=logging.INFO)
-
-DEVICE_TREE = True
-LCD = False
+logging.basicConfig(level=logging.DEBUG, 
+                    format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
+                    datefmt='%m-%d %H:%M',
+                    filename='/var/log/replicape.log',
+                    filemode='w')
 
 class Replicape:
     ''' Init '''
     def __init__(self):
-        print "Replicape initializing"
-        if LCD: 
-            print "LCD screen present"
+        logging.info("Replicape initializing")
 
         # Make a list of steppers
         self.steppers = {}
 
+        logging.info("Init steppers")
         # Init the 5 Stepper motors (step, dir, fault, DAC channel, name)
         self.steppers["X"] = SMD("GPIO0_27", "GPIO1_29", "GPIO2_4",  0, "X") 
         self.steppers["Y"] = SMD("GPIO1_12", "GPIO0_22", "GPIO2_5",  1, "Y")  
         self.steppers["Z"] = SMD("GPIO0_23", "GPIO0_26", "GPIO0_15", 2, "Z")  
-        self.steppers["E"] = SMD("GPIO1_28", "GPIO1_15", "GPIO2_1",  3, "Ext1")
-        self.steppers["H"] = SMD("GPIO1_13", "GPIO1_14", "GPIO2_2",  4, "Ext2")
+        self.steppers["H"] = SMD("GPIO1_28", "GPIO1_15", "GPIO2_1",  3, "Ext1")
+        self.steppers["E"] = SMD("GPIO1_13", "GPIO1_14", "GPIO2_2",  4, "Ext2")
 
         # Enable the steppers and set the current, steps pr mm and microstepping  
-        self.steppers["X"].setCurrentValue(1.0) # 2A
+        logging.info("Enabling steppers")
+        self.steppers["X"].setCurrentValue(1.0) 
         self.steppers["X"].setEnabled() 
         self.steppers["X"].set_steps_pr_mm(4.3)         
         self.steppers["X"].set_microstepping(2) 
 
-        self.steppers["Y"].setCurrentValue(1.0) # 2A
+        self.steppers["Y"].setCurrentValue(1.0) 
         self.steppers["Y"].setEnabled() 
         self.steppers["Y"].set_steps_pr_mm(4.3)
         self.steppers["Y"].set_microstepping(2) 
 
-        self.steppers["Z"].setCurrentValue(1.5) # 2A
+        self.steppers["Z"].setCurrentValue(1.5) 
         self.steppers["Z"].setEnabled() 
         self.steppers["Z"].set_steps_pr_mm(50)
         self.steppers["Z"].set_microstepping(2) 
 
-        self.steppers["E"].setCurrentValue(1.5) # 2A        
+        self.steppers["E"].setCurrentValue(1.5) 
         self.steppers["E"].setEnabled()
         self.steppers["E"].set_steps_pr_mm(5.0)
         self.steppers["E"].set_microstepping(2)
 
-        # init the 3 thermistors
+        # Find the path of the thermostors
         path = ""
         for dev in os.listdir("/sys/devices/ocp.2/"):
             if dev.startswith("thermistors"):
                 path = "/sys/devices/ocp.2/"+dev+"/"
                 break
 
-        logging.debug("Thermistors are located at "+path)
+        logging.debug("Found thermistors at "+path)
 
-        self.therm_ext1 = Thermistor(path+"AIN4", "MOSFET_Ext_1", "B57560G104F")
-        self.therm_hbp  = Thermistor(path+"AIN6", "MOSFET_HBP", "B57560G104F")
+        # init the 3 thermistors
+        logging.info("Init Thermistors")
+        self.therm_ext1 = Thermistor(path+"AIN4", "MOSFET Ext 1", "B57560G104F")
+        self.therm_hbp  = Thermistor(path+"AIN6", "MOSFET HBP",   "B57560G104F")
+        self.therm_ext2 = Thermistor(path+"AIN5", "MOSFET Ext 2", "B57560G104F")
 
         # init the 3 heaters
         self.mosfet_ext1 = Mosfet(3)
@@ -93,9 +97,9 @@ class Replicape:
 
         # Make extruder 1
         self.ext1 = Extruder(self.steppers["E"], self.therm_ext1, self.mosfet_ext1)
-        self.ext1.setPvalue(0.5)
-        self.ext1.setDvalue(0.1)     
-        self.ext1.setIvalue(0.001)
+        self.ext1.setPvalue(0.02)
+        self.ext1.setDvalue(0.9)     
+        self.ext1.setIvalue(0.01)
 
         # Make Heated Build platform 
         self.hbp = HBP( self.therm_hbp, self.mosfet_hbp)       
@@ -125,7 +129,7 @@ class Replicape:
 
         self.path_planner = Path_planner(self.steppers, self.current_pos)         
         self.path_planner.set_acceleration(self.acceleration) 
-        logging.debug("Debug prints to console")
+        logging.info("Replicape ready")
 	
     ''' When a new gcode comes in, excute it '''
     def loop(self):
@@ -141,18 +145,17 @@ class Replicape:
                     self.ethernet.send_message(gcode.getAnswer())
                 self.commands.task_done()
         except KeyboardInterrupt:
-            print "Caught keyboard interrupt signal, exiting" 
+            logging.info("Caught keyboard interrupt signal, exiting")
             return
         except Exception as e:
-            print "Something whent wrong.."            
-            print traceback.format_exc()
+            logging.error("Something whent wrong..")
+            logging.error(traceback.format_exc())
         finally:			
             self.ext1.disable()            
-            #self.hbp.disable()            
+            self.hbp.disable()            
             self.usb.close() 
             self.pipe.close()
             self.path_planner.exit()   
-            print "Done"
 		
     ''' Execute a G-code '''
     def _execute(self, g):
@@ -178,11 +181,8 @@ class Replicape:
                 axis = g.tokenLetter(i)                             # Get the axis, X, Y, Z or E
                 smds[axis] = float(g.tokenValue(i))                 # Get tha value, new position or vector             
             path = Path(smds, self.feed_rate, "ABSOLUTE")           # Make a path segment from the axes
-            print "moving to "+str(smds)
+            logging.debug("moving to "+str(smds))
             self.path_planner.add_path(path)                        # Add the path. This blocks until the path planner has capacity
-            
-        elif g.code() == "G29": 
-            print self.current_pos
         elif g.code() == "G90":                                     # Absolute positioning
             self.movement = "ABSOLUTE"
         elif g.code() == "G91":                                     # Relative positioning 
@@ -233,6 +233,8 @@ class Replicape:
             pass 													
         elif g.code() == "M110":                                    # Reset the line number counter 
             Gcode.line_number = 0       
+        elif g.code() == "M114": 
+             g.setAnswer("ok C: "+' '.join('%s:%s' % i for i in self.current_pos.iteritems()))
         elif g.code() == "M130":                                    # Set PID P-value, Format (M130 P0 S8.0)
             pass
             #if int(self.tokens[0][1]) == 0:
@@ -251,10 +253,8 @@ class Replicape:
             fan = self.fans[int(g.getValueByLetter("P"))]
             fan.setPWMFrequency(int(g.getValueByLetter("F")))
             fan.setValue(float(g.getValueByLetter("S")))	           
-        elif g.code() == "M142":
-            print "Current pos is "+str(self.current_pos)
         else:
-            print "Unknown command: "+g.message	
+            logging.warning("Unknown command: "+g.message)
    
 r = Replicape()
 r.loop()

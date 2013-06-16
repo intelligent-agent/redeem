@@ -15,7 +15,7 @@ Features include:
 -   3 medium power MOSFETs (PWM controlled) for up to 3 fans/LED strips.  (12V)  
 -   3 analog input ports for thermistors. noise-filtered inputs and option for shielding  
 -   6 inputs for end stops (X, Y, Z).  
--   1 optional Dallas 1W temperature sensor for monitoring the cold end.  
+-   1 bus for Dallas 1W temperature sensor for monitoring the cold end. Many sensors can be added to ne bus.  
 -   Programmable current limits on steppers motor drivers (SMD). No need to manually adjust a pot meter.  
 -   Microstepping individually programmable for each SMD from 1 to 32.  
 -   All steppers are controlled by the Programmable Realtime Unit (PRU) for hard real time operation.  

@@ -10,7 +10,6 @@ License: BSD
 You can use and change this, but keep this heading :)
 '''
 
-#from Gcode import Gcode
 from threading import Thread
 import socket
 import logging
@@ -32,7 +31,7 @@ class Ethernet:
             except socket.error as e:
                 port += 1    
 
-        print "Ethernet bound to port "+str(port)
+        logging.info("Ethernet bound to port "+str(port))
         self.s.listen(backlog)
         self.running = True
         self.debug = 0
@@ -42,17 +41,15 @@ class Ethernet:
     # Loop that gets messages and pushes them on the queue
     def get_message(self):
         while self.running:
-            print "Ethernet listening"
+            logging.info("Ethernet listening")
             self.client, self.address = self.s.accept()
-            print "Ethernet connection accepted"
+            logging.info("Ethernet connection accepted")
             while True:
                 line = ''
-#                ready = select.select([self.client], [], [], 0.25)
-#                if ready[0]:
                 while not "\n" in line:
                     chunk = self.client.recv(1)
                     if chunk == '':
-                        print "Ethernet: Connection reset by Per."
+                        logging.warning("Ethernet: Connection reset by Per.")
                         self.client.close()             
                         break
                     line = line + chunk

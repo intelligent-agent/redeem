@@ -24,6 +24,7 @@ D7 = 		 = 0
 from spi import SPI
 from threading import Thread
 import time
+import logging
 
 # init the SPI for the DAC
 spi2_0 = SPI(1, 0)	
@@ -44,6 +45,8 @@ class SMD:
         bytes = []
         for smd in SMD.all_smds:	   
             bytes.append(smd.getState())
+        txt = ", ".join([hex(b) for b in bytes[::-1]])
+        logging.debug("Writing SPI: "+txt)
         spi2_1.writebytes(bytes[::-1])
 
     ''' Init'''
@@ -108,10 +111,9 @@ class SMD:
         self.state |= (value << 1)
         self.update()
         self.mmPrStep = 1.0/(self.steps_pr_mm*self.microsteps)
-        if self.debug > 2:
-            print "State is: "+bin(self.state)
-            print "Microsteps: "+str(self.microsteps)
-            print "mmPrStep is: "+str(self.mmPrStep)
+        logging.debug("State is: "+bin(self.state))
+        logging.debug("Microsteps: "+str(self.microsteps))
+        logging.debug("mmPrStep is: "+str(self.mmPrStep))
 
     ''' Current chopping limit (This is the value you can change) '''
     def setCurrentValue(self, iChop):        
@@ -128,7 +130,7 @@ class SMD:
 
     ''' Returns the current state '''
     def getState(self):
-        return self.state & 0xFF				# Return the satate of the serial to parallel
+        return self.state & 0xFF				# Return the state of the serial to parallel
 
     ''' Commits the changes	'''
     def update(self):

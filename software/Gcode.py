@@ -11,6 +11,8 @@ License: BSD
 You can use and change this, but keep this heading :)
 '''
 
+import logging
+
 # A command received from pronterface or whatever
 class Gcode:
 
@@ -41,8 +43,7 @@ class Gcode:
         self.debug = 0
         self.answer = "ok"
 
-        if self.debug > 1:           
-            print "Code: '"+str(self.gcode)+"'"
+        logging.debug("Code: '"+str(self.gcode)+"'")
 
     ''' The machinecode '''
     def code(self):
@@ -100,7 +101,6 @@ class Gcode:
 
     ''' Get the result of the execution '''
     def getAnswer(self):
-        #print self.message + " = " +self.answer
         return self.answer
     
     ''' Set a new answer other than 'ok'  '''
