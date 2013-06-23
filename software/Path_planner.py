@@ -17,7 +17,8 @@ import time
 import logging
 import numpy as np  
 from threading import Thread
-from Pru import Pru
+if __name__ != '__main__':
+    from Pru import Pru
 import Queue
 from collections import defaultdict
 
@@ -25,7 +26,8 @@ class Path_planner:
     ''' Init the planner '''
     def __init__(self, steppers, current_pos):
         self.steppers    = steppers
-        self.pru         = Pru()                                # Make the PRU
+        if __name__ != '__main__':
+            self.pru         = Pru()                                # Make the PRU
         self.paths       = Queue.Queue(30)                      # Make a queue of paths
         self.current_pos = current_pos                          # Current position in (x, y, z, e)
         self.running     = True                                 # Yes, we are running
@@ -118,10 +120,10 @@ class Path_planner:
                     (pin1, dly1) = data1[line+1]
                     (pin2, dly2) = data2.pop(0)
                 elif dly1 == 0:
-                    data1[line] = (pin1+pin2, dly, 2)
+                    data1[line] = (pin1+pin2, dly)
                     (pin1, dly1) = data1[line+1]
                 elif dly2 == 0:    
-                    data1.insert(line, (pin1+pin2, dly, 2))
+                    data1.insert(line, (pin1+pin2, dly))
                     (pin2, dly2) = data2.pop(0)
                 line += 1
             except IndexError, e:
@@ -143,42 +145,6 @@ class Path_planner:
             (pin1, dly1) = data1[line]
             data1[line] = (pin2+pin1, dly1)
     
-
-    def _braid_data(self, data1, data2):
-        ''' Braid/merge together the data from the two data sets'''
-        line = 0
-        (pin1, dly1) = data1[line]
-        (pin2, dly2) = data2.pop(0)
-        while True: 
-            dly = min(dly1, dly2)
-            dly1 -= dly    
-            dly2 -= dly            
-            if dly1 == 0 and dly2 == 0:
-                data1[line] = (pin1+pin2, dly)
-                if line+1 >= len(data1):
-                    break
-                (pin1, dly1) = data1[line+1]
-                if len(data2) == 0:
-                    break
-                (pin2, dly2) = data2.pop(0)
-            elif dly1 == 0:
-                data1[line] = (pin1+pin2, dly)
-                if line+1 >= len(data1):
-                    break
-                (pin1, dly1) = data1[line+1]
-            elif dly2 == 0:    
-                data1.insert(line, (pin1+pin2, dly))
-                if len(data2) == 0:
-                    break
-                (pin2, dly2) = data2.pop(0)
-            line += 1
-     
-        if dly2 > 0:   
-            data1 += [(pin2, dly2)]
-        elif dly1 > 0:
-            data1[line+1] = (pin1, dly1)
-        data1 += data2
-
     ''' Join the thread '''
     def exit(self):
         self.running = False
@@ -264,10 +230,12 @@ class Path_planner:
 
 
 if __name__ == '__main__':
-    pp = Path_planner({}, {"X": 0, "Y": 0, "Z": 0, "E": 0})
+    pp = Path_planner({}, {})
     data1 = [(2, 1), (4, 3), (2, 4), (4, 1)]
     data2 = [(8, 1.5), (16, 4), (8, 4), (16, 1.5)]
+    data3 = [(32, 1.5), (64, 4), (32, 4), (64, 1.5)]
     pp._braid_data(data1, data2)
     print data1
-
+    pp._braid_data(data1, data3)
+    print data1
 
