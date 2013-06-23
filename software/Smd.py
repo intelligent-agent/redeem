@@ -71,49 +71,56 @@ class SMD:
         SMD.all_smds.append(self) 	        # Add to list of smds
  						
     ''' Sets the SMD enabled '''
-    def setEnabled(self):
+    def setEnabled(self, force_update=False):
         if not self.enabled:
             self.state &= ~(1<<6)
             self.enabled = True
+        if force_update: 
             self.update()
             	
     ''' Sets the SMD disabled '''
-    def setDisabled(self):
+    def setDisabled(self, force_update=False):
         if self.enabled:
             self.state |= (1<<6)
             self.enabled = False
-            self.update()           
+        if force_update: 
+            self.update()
 
     '''Logic high to enable device, logic low to enter
     low-power sleep mode. Internal pulldown.'''
-    def enableSleepmode(self):
+    def enableSleepmode(self, force_update=False):
         self.state &= ~(1<<5)		
-        self.update()
+        if force_update: 
+            self.update()
+
 
     ''' Disables sleepmode (awake) '''
-    def disableSleepmode(self):
+    def disableSleepmode(self, force_update=False):
         self.state |= (1<<5)		
-        self.update()
+        if force_update: 
+            self.update()
 
     '''nReset - Active-low reset input initializes the indexer
     logic and disables the H-bridge outputs.
     Internal pulldown.'''
-    def reset(self):
+    def reset(self, force_update=False):
         self.state |= (1<<4)
         self.update()
         self.state &= ~(1<<4)
-        self.update()
+        if force_update: 
+            self.update()
 
     ''' Microstepping (default = 0) 0 to 5 '''
-    def set_microstepping(self, value):
+    def set_microstepping(self, value, force_update=False):
         self.microsteps = (1<<value) 
         self.state &= ~(7<<1)
         self.state |= (value << 1)
-        self.update()
         self.mmPrStep = 1.0/(self.steps_pr_mm*self.microsteps)
         logging.debug("State is: "+bin(self.state))
         logging.debug("Microsteps: "+str(self.microsteps))
         logging.debug("mmPrStep is: "+str(self.mmPrStep))
+        if force_update: 
+            self.update()
 
     ''' Current chopping limit (This is the value you can change) '''
     def setCurrentValue(self, iChop):        

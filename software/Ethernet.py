@@ -32,6 +32,7 @@ class Ethernet:
                 port += 1    
 
         logging.info("Ethernet bound to port "+str(port))
+        print "Ethernet bound to port "+str(port)
         self.s.listen(backlog)
         self.running = True
         self.debug = 0
@@ -61,7 +62,7 @@ class Ethernet:
 
     # Send a message		
     def send_message(self, message):
-        logging.debug("'"+message+"'")
+        #logging.debug("'"+message+"'")
         if message[-1] != "\n":
             message += "\n"
         self.client.send(message)

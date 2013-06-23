@@ -29,7 +29,7 @@ class Path_planner:
         self.paths       = Queue.Queue(30)                      # Make a queue of paths
         self.current_pos = current_pos                          # Current position in (x, y, z, e)
         self.running     = True                                 # Yes, we are running
-        self.pru_data    = defaultdict(int)
+        self.pru_data    = []
         self.t           = Thread(target=self._do_work)         # Make the thread
         self.t.start()		                
 
@@ -44,7 +44,7 @@ class Path_planner:
             self.prev.set_next(new)
             new.set_prev(self.prev)
         self.prev = new        
-        
+
     ''' Return the number of paths currently on queue '''
     def nr_of_paths(self):
         return self.paths.qsize()
@@ -56,7 +56,9 @@ class Path_planner:
     def wait_until_done(self):
         '''Wait until planner is done'''
         self.paths.join()
+        #logging.debug("paths joined")
         self.pru.wait_until_done()		 
+        #logging.debug("PRU done")
 
     ''' This loop pops a path, sends it to the PRU 
     and waits for an event '''
@@ -73,52 +75,129 @@ class Path_planner:
                     if len(data[0]) > 0:
                         all_data[axis] = data                      # Generate the timing and pin data                         
                         slowest = max(slowest, sum(data[1]))                                   
-                
+                #logging.debug("slowest is "+str(slowest))
+
                 for axis in all_data:                              # Make all axes use the same amount of time
                     packet = all_data[axis]                           
                     delays = np.array(packet[1])
                     diff = (slowest-sum(delays))/len(delays)
-                    for j, delay in enumerate(delays):
-                        delays[j] = max(delay+diff, 1.0/10000.0)    # min 0.1ms                     
-                    data = (packet[0], delays)                  
-              
-                for axis in all_data:                               # Merge the data from all axes   
-                    packet = all_data[axis]
-                    z = zip(np.cumsum(packet[1]), packet[0])
-                    for item in z:
-                        self.pru_data[item[0]] += item[1]
-
-                if len(self.pru_data) > 0:
-                    z = zip(*sorted(self.pru_data.items()))
-                    self.pru_data = (list(z[1]), list(np.diff([0]+list(z[0]))))
-                    while not self.pru.has_capacity_for(len(self.pru_data[0])*8):
+                    if diff > 0.00002:
+                        for j, delay in enumerate(delays):
+                            delays[j] = delay+diff                    
+                    data = zip(*(packet[0], delays))
+                    if len(self.pru_data) == 0:
+                        self.pru_data = data
+                    else:
+                        self._braid_data(self.pru_data, data)
+               
+                if len(self.pru_data) > 0:                   
+                    while not self.pru.has_capacity_for(len(self.pru_data[0])*8):                        
                         time.sleep(1)              
          
-                    self.pru.add_data(self.pru_data)
+                    self.pru.add_data(zip(*self.pru_data))
                     self.pru.commit_data()                            # Commit data to ddr
 
-                self.pru_data = defaultdict(int)                    
+                self.pru_data = []                    
                 self.paths.task_done()
-               
             except Queue.Empty:
                 pass
+
+
+    def _braid_data(self, data1, data2):
+        ''' Braid/merge together the data from the two data sets'''
+        line = 0
+        (pin1, dly1) = data1[line]
+        (pin2, dly2) = data2.pop(0)
+        while True: 
+            dly = min(dly1, dly2)
+            dly1 -= dly    
+            dly2 -= dly            
+            try: 
+                if dly1 == 0 and dly2 == 0:
+                    data1[line] = (pin1+pin2, dly)
+                    (pin1, dly1) = data1[line+1]
+                    (pin2, dly2) = data2.pop(0)
+                elif dly1 == 0:
+                    data1[line] = (pin1+pin2, dly, 2)
+                    (pin1, dly1) = data1[line+1]
+                elif dly2 == 0:    
+                    data1.insert(line, (pin1+pin2, dly, 2))
+                    (pin2, dly2) = data2.pop(0)
+                line += 1
+            except IndexError, e:
+                break
+
+        if dly2 > 0:   
+            data1[line] =  (data1[line][0], data1[line][1]+dly2)        
+        elif dly1 > 0:
+            data1[line] = (data1[line][0], data1[line][1]+dly1)  
+            data1.pop(line+1)
+        
+        while len(data2) > 0:
+            line += 1
+            (pin2, dly2) = data2.pop(0)
+            data1.append((pin2+pin1, dly2))
+            
+        while len(data1) > line+1:
+            line += 1
+            (pin1, dly1) = data1[line]
+            data1[line] = (pin2+pin1, dly1)
+    
+
+    def _braid_data(self, data1, data2):
+        ''' Braid/merge together the data from the two data sets'''
+        line = 0
+        (pin1, dly1) = data1[line]
+        (pin2, dly2) = data2.pop(0)
+        while True: 
+            dly = min(dly1, dly2)
+            dly1 -= dly    
+            dly2 -= dly            
+            if dly1 == 0 and dly2 == 0:
+                data1[line] = (pin1+pin2, dly)
+                if line+1 >= len(data1):
+                    break
+                (pin1, dly1) = data1[line+1]
+                if len(data2) == 0:
+                    break
+                (pin2, dly2) = data2.pop(0)
+            elif dly1 == 0:
+                data1[line] = (pin1+pin2, dly)
+                if line+1 >= len(data1):
+                    break
+                (pin1, dly1) = data1[line+1]
+            elif dly2 == 0:    
+                data1.insert(line, (pin1+pin2, dly))
+                if len(data2) == 0:
+                    break
+                (pin2, dly2) = data2.pop(0)
+            line += 1
+     
+        if dly2 > 0:   
+            data1 += [(pin2, dly2)]
+        elif dly1 > 0:
+            data1[line+1] = (pin1, dly1)
+        data1 += data2
 
     ''' Join the thread '''
     def exit(self):
         self.running = False
         self.pru.join()
-        logging.debug("pru joined")
+        #logging.debug("pru joined")
         self.t.join()
-        logging.debug("path planner joined")
+        #logging.debug("path planner joined")
 
 
     ''' Make the data for the PRU or steppers '''
-    def _make_data(self, path, axis):     
+    def _make_data(self, path, axis):  
+        #logging.debug("Making data")   
         stepper         = self.steppers[axis]
         steps_pr_meter  = stepper.get_steps_pr_meter()
         vec             = path.get_axis_length(axis)                        # Total travel distance
         num_steps       = int(abs(vec) * steps_pr_meter)                    # Number of steps to tick
+        #logging.debug("Numsteps for "+axis+" is "+str(num_steps))
         if num_steps == 0:
+            #logging.debug("Returning, Num_steps = 0")   
             return ([], [])
         step_pin    = stepper.get_step_pin()                            # Get the step pin
         dir_pin     = stepper.get_dir_pin()                             # Get the direction pin
@@ -131,22 +210,22 @@ class Path_planner:
         Vm       = path.get_max_speed()*ratio				            # The travelling speed in m/s
         a        = self.acceleration*ratio    		                    # Accelleration in m/s/s
         ds       = 1.0/steps_pr_meter                                   # Delta S, distance in meters travelled pr step.         
-        if self.pru.is_processing():                                    # If there is currently a segment being processed, 
-            logging.debug("Is processing, angle to prev is "+str(path.angle_to_prev()))
+        if self.pru.is_processing() and path.is_type_print_segment():        # If there is currently a segment being processed, 
+            #logging.debug("Is processing, angle to prev is "+str(path.angle_to_prev()))
             u_start  = ratio*path.get_start_speed()                 	    # The end speed, depends on the angle to the next
         else:
-            logging.debug("Nothing processing")
+            #logging.debug("Nothing processing")
             u_start = 0
-        if self.paths.qsize() > 0:                                      # If there are paths in queue, we do not have to slow down
-            logging.debug("Has followers, angle to follower: "+str(path.angle_to_next()))
+        if self.paths.qsize() > 0 and path.is_type_print_segment():     # If there are paths in queue, we do not have to slow down
+            #logging.debug("Has followers, angle to follower: "+str(path.angle_to_next()))
             u_end    = ratio*path.get_end_speed()                 	    # The start speed. Depends on the angle to the prev.
         else:
-            logging.debug("Nothing on queue")
+            #logging.debug("Nothing on queue")
             u_end = 0
 
-        logging.debug("Max speed for "+axis+" is "+str(Vm))
-        logging.debug("Start speed for "+axis+" is "+str(u_start))
-        logging.debug("End speed for "+axis+" is "+str(u_end))
+        #logging.debug("Max speed for "+axis+" is "+str(Vm))
+        #logging.debug("Start speed for "+axis+" is "+str(u_start))
+        #logging.debug("End speed for "+axis+" is "+str(u_end))
         tm_start = (Vm-u_start)/a					                    # Calculate the time for when max speed is met. 
         tm_end   = (Vm-u_end)/a					                        # Calculate the time for when max speed is met. 
         sm_start = min(u_start*tm_start + 0.5*a*tm_start**2, s/2.0)     # Calculate the distance traveled when max speed is met
@@ -163,7 +242,9 @@ class Path_planner:
 
         i_steps     = 2*num_steps-len(delays_start)-len(delays_end)       # Find out how many delays are missing
         i_delays    = [(ds/Vm)/2.0]*i_steps  		                    # Make the intermediate steps
-        delays      = delays_start+i_delays+delays_end[::-1]                  # Add the missing delays. These are max_speed
+        delays      = delays_start+i_delays+delays_end[::-1]            # Add the missing delays. These are max_speed        
+        for i, d in enumerate(delays): 
+            delays[i] = max(0.0002, delays[i])                        # limit delays to 2 ms
         td          = num_steps/steps_pr_meter                          # Calculate the actual travelled distance        
         if vec < 0:                                                     # If the vector is negative, negate it.      
             td     *= -1.0
@@ -176,7 +257,17 @@ class Path_planner:
             self.current_pos["Y"] += td_y 
         else:                        
             self.current_pos[axis] += td                                    # Update the global position vector
-
+        
+        #logging.debug("Is at: "+' '.join('%s:%s' % i for i in self.current_pos.iteritems()))
+        #logging.debug("pins for "+axis+" is "+str(pins)+" delays: "+str(delays))
         return (pins, delays)                                           # return the pin states and the data
+
+
+if __name__ == '__main__':
+    pp = Path_planner({}, {"X": 0, "Y": 0, "Z": 0, "E": 0})
+    data1 = [(2, 1), (4, 3), (2, 4), (4, 1)]
+    data2 = [(8, 1.5), (16, 4), (8, 4), (16, 1.5)]
+    pp._braid_data(data1, data2)
+    print data1
 
 

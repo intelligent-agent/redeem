@@ -37,10 +37,12 @@ logging.basicConfig(level=logging.DEBUG,
                     filename='/var/log/replicape.log',
                     filemode='w')
 
+version = "0.1.2"
+
 class Replicape:
     ''' Init '''
     def __init__(self):
-        logging.info("Replicape initializing")
+        logging.info("Replicape initializing "+version)
 
         # Make a list of steppers
         self.steppers = {}
@@ -74,6 +76,9 @@ class Replicape:
         self.steppers["E"].setEnabled()
         self.steppers["E"].set_steps_pr_mm(5.0)
         self.steppers["E"].set_microstepping(2)
+		
+		# Commit changes
+        SMD.commit()
 
         # Find the path of the thermostors
         path = ""
@@ -97,12 +102,17 @@ class Replicape:
 
         # Make extruder 1
         self.ext1 = Extruder(self.steppers["E"], self.therm_ext1, self.mosfet_ext1)
-        self.ext1.setPvalue(0.02)
-        self.ext1.setDvalue(0.9)     
+        self.ext1.setPvalue(0.015)
+        self.ext1.setDvalue(1.0)     
         self.ext1.setIvalue(0.01)
 
         # Make Heated Build platform 
         self.hbp = HBP( self.therm_hbp, self.mosfet_hbp)       
+
+        self.ext2 = Extruder(self.steppers["H"], self.therm_ext2, self.mosfet_ext2)
+        self.ext2.setPvalue(0.015)
+        self.ext2.setDvalue(1.0)     
+        self.ext2.setIvalue(0.01)
 
         # Init the three fans
         self.fan_1 = Fan(1)
@@ -130,6 +140,7 @@ class Replicape:
         self.path_planner = Path_planner(self.steppers, self.current_pos)         
         self.path_planner.set_acceleration(self.acceleration) 
         logging.info("Replicape ready")
+        print "Replicape ready" 
 	
     ''' When a new gcode comes in, excute it '''
     def loop(self):
@@ -144,18 +155,8 @@ class Replicape:
                 else:
                     self.ethernet.send_message(gcode.getAnswer())
                 self.commands.task_done()
-        except KeyboardInterrupt:
-            logging.info("Caught keyboard interrupt signal, exiting")
-            return
         except Exception as e:
-            logging.error("Something whent wrong..")
-            logging.error(traceback.format_exc())
-        finally:			
-            self.ext1.disable()            
-            self.hbp.disable()            
-            self.usb.close() 
-            self.pipe.close()
-            self.path_planner.exit()   
+            logging.exception("Ooops: ")
 		
     ''' Execute a G-code '''
     def _execute(self, g):
@@ -169,8 +170,9 @@ class Replicape:
             for i in range(g.numTokens()):                          # Run through all tokens
                 axis = g.tokenLetter(i)                             # Get the axis, X, Y, Z or E
                 smds[axis] = float(g.tokenValue(i))                 # Get tha value, new position or vector             
-            path = Path(smds, feed_rate, self.movement)             # Make a path segment from the axes            
+            path = Path(smds, feed_rate, self.movement, g.is_crc())# Make a path segment from the axes            
             self.path_planner.add_path(path)                        # Add the path. This blocks until the path planner has capacity
+            #logging.debug("Moving to: "+' '.join('%s:%s' % i for i in smds.iteritems()))
         elif g.code() == "G21":                                     # Set units to mm
             self.factor = 1.0
         elif g.code() == "G28":                                     # Home the steppers
@@ -180,7 +182,7 @@ class Replicape:
             for i in range(g.numTokens()):                          # Run through all tokens
                 axis = g.tokenLetter(i)                             # Get the axis, X, Y, Z or E
                 smds[axis] = float(g.tokenValue(i))                 # Get tha value, new position or vector             
-            path = Path(smds, self.feed_rate, "ABSOLUTE")           # Make a path segment from the axes
+            path = Path(smds, self.feed_rate, "ABSOLUTE", False)           # Make a path segment from the axes
             logging.debug("moving to "+str(smds))
             self.path_planner.add_path(path)                        # Add the path. This blocks until the path planner has capacity
         elif g.code() == "G90":                                     # Absolute positioning
@@ -195,8 +197,10 @@ class Replicape:
                 val = float(g.tokenValue(i))
                 self.path_planner.set_pos(axis, val)
         elif g.code() == "M17":                                     # Enable all steppers
+            self.path_planner.wait_until_done()
             for name, stepper in self.steppers.iteritems():
-                stepper.setEnabled()            
+                stepper.setEnabled() 
+            SMD.commit()           
         elif g.code() == "M30":                                     # Set microstepping (Propietary to Replicape)
             for i in range(g.numTokens()):
                 self.steppers[g.tokenLetter(i)].set_microstepping(int(g.tokenValue(i)))            
@@ -207,7 +211,8 @@ class Replicape:
             self.path_planner.wait_until_done()
             for name, stepper in self.steppers.iteritems():
             	stepper.setDisabled()
-        elif g.code() == "M92": 
+            SMD.commit()           
+        elif g.code() == "M92":                                     # M92: Set axis_steps_per_unit
             for i in range(g.numTokens()):                          # Run through all tokens
                 axis = g.tokenLetter(i)                             # Get the axis, X, Y, Z or E
                 self.steppers[axis].set_steps_pr_mm(float(g.tokenValue(i)))        
@@ -221,6 +226,8 @@ class Replicape:
             answer = "ok T:"+str(self.ext1.getTemperature())
             if hasattr(self, "hbp"):
                 answer += " B:"+str(int(self.hbp.getTemperature()))
+            if hasattr(self, "ext2"):
+                answer += " T2:"+str(int(self.ext2.getTemperature()))
             g.setAnswer(answer)
         elif g.code() == "M106":                                    # Fan on
             if g.hasLetter("P"):

@@ -20,7 +20,7 @@ class Path:
         self.movement = movement
         self.global_pos = {"X":0, "Y":0, "Z":0, "E":0} 
         self.actual_travel = axes.copy()
-        self.is_print_segment = is_print_segment         # If this is True, 
+        self.is_print_segment = is_print_segment         # If this is True, use angle stuff
         self.axis_config = "H-belt"                      # If you need to do some sort of mapping, add the branch here. (ex scara arm)
           
     ''' Set the next path element '''
@@ -170,8 +170,11 @@ class Path:
 
         # For all other axes, return the same value
         return pos
-            
-        
+
+    def is_type_print_segment(self): 
+        ''' Returns true if this is a print segment and not a relative move '''
+        return False # self.is_print_segment
+
 if __name__ == '__main__':
     a = Path({"X": 10, "Y": 0}, 3000, "RELATIVE")
     b = Path({"X": -10, "Y": 0}, 3000, "RELATIVE")

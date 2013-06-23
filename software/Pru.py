@@ -95,13 +95,12 @@ class Pru:
         self.running = True
         self.t.start()		        
 
-        logging.debug("PRU initialized")
-
     ''' Add some data to one of the PRUs '''
     def add_data(self, data):
         (pins, delays) = data                       	    # Get the data
-        delays = map(self._sec_to_inst, delays)     	    # Convert the delays in secs to delays in instructions
+        delays = map(self._sec_to_inst, delays)     	    # Convert the delays in secs to delays in instructions        
         data = np.array([pins, delays])		        	    # Make a 2D matrix combining the ticks and delays
+        #logging.debug(data)
         data = list(data.transpose().flatten())     	    # Braid the data so every other item is a pin and delay
         self.pru_data = data   
 
@@ -171,8 +170,7 @@ class Pru:
             with self.ddr_lock:
                 self.ddr_mem_used += len(data)               
             self.ddr_used.put(len(data)) 		            # update the amount of memory used 
-            if self.debug > 0:
-                 logging.debug("Pushed "+str(len(data))+" from "+hex(self.ddr_start)+" to "+hex(self.ddr_end))
+            #logging.debug("Pushed "+str(len(data))+" from "+hex(self.ddr_start)+" to "+hex(self.ddr_end))
             
 
         self.ddr_start 		= self.ddr_end-4                    # Update the start of ddr for next time 
@@ -198,8 +196,7 @@ class Pru:
                 ddr = self.ddr_used.get()                       # Pop the first ddr memory amount           
                 with self.ddr_lock:
                     self.ddr_mem_used -= ddr                    
-                if self.debug > 0:
-                    logging.debug("Popped "+str(ddr)+"\tnow "+hex(self.get_capacity()))
+                #logging.debug("Popped "+str(ddr)+"\tnow "+hex(self.get_capacity()))
                 self.ddr_used.task_done()
                 nr_interrupts += 1  
                                    
@@ -223,10 +220,7 @@ class Pru:
     ''' Convert delay in seconds to number of instructions for the PRU '''
     def _sec_to_inst(self, s):					    # Shit, I'm missing MGP for this??
         inst_pr_step = (int(s/self.s_pr_inst)-self.inst_pr_loop)/self.inst_pr_delay
-        if inst_pr_step < 100:
-            inst_pr_step = 100
+        if inst_pr_step < 400: # Infer a lower limit on the delay (1.9ms), really 379
+            inst_pr_step = 400
         return inst_pr_step
-
-
-
 
