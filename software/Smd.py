@@ -46,7 +46,7 @@ class SMD:
         for smd in SMD.all_smds:	   
             bytes.append(smd.getState())
         txt = ", ".join([hex(b) for b in bytes[::-1]])
-        logging.debug("Writing SPI: "+txt)
+        #logging.debug("Writing SPI: "+txt)
         spi2_1.writebytes(bytes[::-1])
 
     ''' Init'''
@@ -116,9 +116,9 @@ class SMD:
         self.state &= ~(7<<1)
         self.state |= (value << 1)
         self.mmPrStep = 1.0/(self.steps_pr_mm*self.microsteps)
-        logging.debug("State is: "+bin(self.state))
-        logging.debug("Microsteps: "+str(self.microsteps))
-        logging.debug("mmPrStep is: "+str(self.mmPrStep))
+        #logging.debug("State is: "+bin(self.state))
+        #logging.debug("Microsteps: "+str(self.microsteps))
+        #logging.debug("mmPrStep is: "+str(self.mmPrStep))
         if force_update: 
             self.update()
 

@@ -16,6 +16,9 @@ import Queue
 import logging
 import traceback
 import os
+import sys 
+#import daemon
+#import lockfile
 
 from Mosfet import Mosfet
 from Smd import SMD
@@ -37,7 +40,18 @@ logging.basicConfig(level=logging.DEBUG,
                     filename='/var/log/replicape.log',
                     filemode='w')
 
-version = "0.1.2"
+
+
+def log_ex(type, value, traceback):
+    logging.error('God damnit, not again!')
+    logging.error('Type:', type)
+    logging.error('Value:', value)
+    logging.error('Traceback:', traceback)
+
+sys.excepthook = log_ex
+version = "0.2.0"
+
+print "Replicape v. "+version
 
 class Replicape:
     ''' Init '''
@@ -57,12 +71,12 @@ class Replicape:
 
         # Enable the steppers and set the current, steps pr mm and microstepping  
         logging.info("Enabling steppers")
-        self.steppers["X"].setCurrentValue(1.0) 
+        self.steppers["X"].setCurrentValue(1.5) 
         self.steppers["X"].setEnabled() 
         self.steppers["X"].set_steps_pr_mm(4.3)         
         self.steppers["X"].set_microstepping(2) 
 
-        self.steppers["Y"].setCurrentValue(1.0) 
+        self.steppers["Y"].setCurrentValue(1.5) 
         self.steppers["Y"].setEnabled() 
         self.steppers["Y"].set_steps_pr_mm(4.3)
         self.steppers["Y"].set_microstepping(2) 
@@ -77,23 +91,23 @@ class Replicape:
         self.steppers["E"].set_steps_pr_mm(5.0)
         self.steppers["E"].set_microstepping(2)
 		
+        self.steppers["H"].setCurrentValue(1.5) 
+        self.steppers["H"].setEnabled()
+        self.steppers["H"].set_steps_pr_mm(5.0)
+        self.steppers["H"].set_microstepping(2)
+
 		# Commit changes
         SMD.commit()
 
         # Find the path of the thermostors
-        path = ""
-        for dev in os.listdir("/sys/devices/ocp.2/"):
-            if dev.startswith("thermistors"):
-                path = "/sys/devices/ocp.2/"+dev+"/"
-                break
-
+        path = "/sys/bus/iio/devices/iio:device0/in_voltage"
         logging.debug("Found thermistors at "+path)
 
         # init the 3 thermistors
         logging.info("Init Thermistors")
-        self.therm_ext1 = Thermistor(path+"AIN4", "MOSFET Ext 1", "B57560G104F")
-        self.therm_hbp  = Thermistor(path+"AIN6", "MOSFET HBP",   "B57560G104F")
-        self.therm_ext2 = Thermistor(path+"AIN5", "MOSFET Ext 2", "B57560G104F")
+        self.therm_ext1 = Thermistor(path+"4_scale", "MOSFET Ext 1", "B57560G104F")
+        self.therm_hbp  = Thermistor(path+"6_scale", "MOSFET HBP",   "B57560G104F")
+        self.therm_ext2 = Thermistor(path+"5_scale", "MOSFET Ext 2", "B57560G104F")
 
         # init the 3 heaters
         self.mosfet_ext1 = Mosfet(3)
@@ -144,6 +158,7 @@ class Replicape:
 	
     ''' When a new gcode comes in, excute it '''
     def loop(self):
+        print "Replicape starting main"
         try:
             while True:                
                 gcode = Gcode(self.commands.get(), self)
@@ -172,7 +187,7 @@ class Replicape:
                 smds[axis] = float(g.tokenValue(i))                 # Get tha value, new position or vector             
             path = Path(smds, feed_rate, self.movement, g.is_crc())# Make a path segment from the axes            
             self.path_planner.add_path(path)                        # Add the path. This blocks until the path planner has capacity
-            #logging.debug("Moving to: "+' '.join('%s:%s' % i for i in smds.iteritems()))
+            logging.debug("Moving to: "+' '.join('%s:%s' % i for i in smds.iteritems()))
         elif g.code() == "G21":                                     # Set units to mm
             self.factor = 1.0
         elif g.code() == "G28":                                     # Home the steppers
@@ -183,15 +198,17 @@ class Replicape:
                 axis = g.tokenLetter(i)                             # Get the axis, X, Y, Z or E
                 smds[axis] = float(g.tokenValue(i))                 # Get tha value, new position or vector             
             path = Path(smds, self.feed_rate, "ABSOLUTE", False)           # Make a path segment from the axes
-            logging.debug("moving to "+str(smds))
+            #logging.debug("moving to "+str(smds))
             self.path_planner.add_path(path)                        # Add the path. This blocks until the path planner has capacity
         elif g.code() == "G90":                                     # Absolute positioning
             self.movement = "ABSOLUTE"
         elif g.code() == "G91":                                     # Relative positioning 
             self.movement = "RELATIVE"		
         elif g.code() == "G92":                                     # Set the current position of the following steppers
+            self.path_planner.wait_until_done()
             if g.numTokens() == 0:
-                 g.setTokens(["X0", "Y0", "Z0", "E0"])              # If no token is present, do this for all
+                logging.debug("G92: No tokens present")
+                g.setTokens(["X0", "Y0", "Z0", "E0"])              # If no token is present, do this for all
             for i in range(g.numTokens()):
                 axis = g.tokenLetter(i)
                 val = float(g.tokenValue(i))
@@ -263,6 +280,19 @@ class Replicape:
         else:
             logging.warning("Unknown command: "+g.message)
    
+
 r = Replicape()
 r.loop()
 
+'''
+context = daemon.DaemonContext(
+    working_directory='/home/root/Replicape/software',
+    umask=0o002,
+    pidfile=lockfile.FileLock('/var/run/replicape.pid'),
+    )
+
+context.stdout = open('/var/log/replicape.err', 'a')
+context.stderr = open('/var/log/replicape.err', 'a')
+
+with context:
+'''

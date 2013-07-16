@@ -1,24 +1,22 @@
 
 
 RPATH=/home/root/Replicape
-REMOTE=root@10.24.2.90
-#REMOTE=root@192.168.7.2
+#REMOTE=root@10.24.2.90
+REMOTE=root@192.168.7.2
 DPATH=Dist/dist_`date +"%y_%m_%d"`/Replicape
-DNAME=Replicape_rev_A2-`date +"%y_%m_%d"`.tgz
+DNAME=Replicape_rev_A3-`date +"%y_%m_%d"`.tgz
 
-.PHONY : software firmware eeprom
+.PHONY : software firmware eeprom systemd
 
 eeprom:
-	scp eeprom/replicape.json  eeprom/eeprom.js Makefile $(REMOTE):$(RPATH)/eeprom
+	scp eeprom/replicape_00A3.json eeprom/bone.js eeprom/eeprom.js eeprom/Makefile $(REMOTE):$(RPATH)/eeprom
 	ssh $(REMOTE) 'cd Replicape/eeprom; make eeprom_cat'
 
-eeprom_upload: 
-	node ./eeprom.js -w replicape.json
-	python eeprom_upload.py
+dt: 
+	scp Device_tree/DTB/* $(REMOTE):$(RPATH)/device_tree/
 
-eeprom_cat:
-	node ./eeprom.js -w replicape.json
-	cat Replicape.eeprom > /sys/bus/i2c/drivers/at24/3-0055/eeprom
+systemd:
+	scp systemd/* $(REMOTE):$(RPATH)/systemd/
 
 software:
 	scp software/*.py $(REMOTE):$(RPATH)/software
@@ -63,9 +61,9 @@ dist:
 	mkdir -p $(DPATH)/kernel
 	cp Dist/Makefile $(DPATH)/
 	cp software/*.py $(DPATH)/software/
-	cp firmware/firmware_00A2.p firmware/Makefile firmware/pasm $(DPATH)/firmware/
+	cp firmware/firmware_00A3.p firmware/Makefile firmware/pasm $(DPATH)/firmware/
 	cp Device_tree/DTB/* $(DPATH)/device_tree/
-	cp eeprom/eeprom.js eeprom/bone.js eeprom/replicape_00A2.json eeprom/Makefile $(DPATH)/eeprom/
+	cp eeprom/eeprom.js eeprom/bone.js eeprom/replicape_00A3.json eeprom/Makefile $(DPATH)/eeprom/
 	cp -r libs/spi $(DPATH)/libs/
 	cp -r libs/pypruss/dist/* $(DPATH)/libs/pypruss
 	cp -r libs/i2c $(DPATH)/libs/

@@ -1,0 +1,13 @@
+[Unit]
+Description=It's a Replicape, baby!
+
+[Service]
+RemainAfterExit=yes
+Type=simple
+ExecStart=/etc/init.d/replicape.sh start
+ExecStop=/etc/init.d/replicape.sh stop
+Restart=always
+
+[Install]
+WantedBy=basic.target
+

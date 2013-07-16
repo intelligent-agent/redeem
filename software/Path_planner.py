@@ -21,6 +21,7 @@ if __name__ != '__main__':
     from Pru import Pru
 import Queue
 from collections import defaultdict
+#from numba import autojit
 
 class Path_planner:
     ''' Init the planner '''
@@ -41,11 +42,11 @@ class Path_planner:
 
     ''' Add a path segment to the path planner '''        
     def add_path(self, new):        
-        self.paths.put(new)
         if hasattr(self, 'prev'):
             self.prev.set_next(new)
             new.set_prev(self.prev)
         self.prev = new        
+        self.paths.put(new)
 
     ''' Return the number of paths currently on queue '''
     def nr_of_paths(self):
@@ -53,14 +54,15 @@ class Path_planner:
 
     ''' Set position for an axis '''
     def set_pos(self, axis, val):
+        logging.debug("setting %s to %s", axis, str(val))
         self.current_pos[axis] = val
 	
     def wait_until_done(self):
         '''Wait until planner is done'''
         self.paths.join()
-        #logging.debug("paths joined")
+        logging.debug("paths joined")
         self.pru.wait_until_done()		 
-        #logging.debug("PRU done")
+        logging.debug("PRU done")
 
     ''' This loop pops a path, sends it to the PRU 
     and waits for an event '''
@@ -77,7 +79,7 @@ class Path_planner:
                     if len(data[0]) > 0:
                         all_data[axis] = data                      # Generate the timing and pin data                         
                         slowest = max(slowest, sum(data[1]))                                   
-                #logging.debug("slowest is "+str(slowest))
+                logging.debug("slowest is "+str(slowest))
 
                 for axis in all_data:                              # Make all axes use the same amount of time
                     packet = all_data[axis]                           
@@ -87,13 +89,17 @@ class Path_planner:
                         for j, delay in enumerate(delays):
                             delays[j] = delay+diff                    
                     data = zip(*(packet[0], delays))
+                    #logging.debug(data)
                     if len(self.pru_data) == 0:
                         self.pru_data = data
                     else:
+                        #self.pru_data += data
                         self._braid_data(self.pru_data, data)
-               
+
+                logging.debug("PRU data done")              
                 if len(self.pru_data) > 0:                   
-                    while not self.pru.has_capacity_for(len(self.pru_data[0])*8):                        
+                    while not self.pru.has_capacity_for(len(self.pru_data[0])*8):          
+                        logging.debug("Pru full")              
                         time.sleep(1)              
          
                     self.pru.add_data(zip(*self.pru_data))
@@ -102,6 +108,7 @@ class Path_planner:
                 self.pru_data = []                    
                 self.paths.task_done()
             except Queue.Empty:
+                #logging.debug("Queue empty")
                 pass
 
 
@@ -163,7 +170,6 @@ class Path_planner:
         num_steps       = int(abs(vec) * steps_pr_meter)                    # Number of steps to tick
         #logging.debug("Numsteps for "+axis+" is "+str(num_steps))
         if num_steps == 0:
-            #logging.debug("Returning, Num_steps = 0")   
             return ([], [])
         step_pin    = stepper.get_step_pin()                            # Get the step pin
         dir_pin     = stepper.get_dir_pin()                             # Get the direction pin
@@ -176,17 +182,14 @@ class Path_planner:
         Vm       = path.get_max_speed()*ratio				            # The travelling speed in m/s
         a        = self.acceleration*ratio    		                    # Accelleration in m/s/s
         ds       = 1.0/steps_pr_meter                                   # Delta S, distance in meters travelled pr step.         
-        if self.pru.is_processing() and path.is_type_print_segment():        # If there is currently a segment being processed, 
-            #logging.debug("Is processing, angle to prev is "+str(path.angle_to_prev()))
+        if path.is_type_print_segment():                                # If there is currently a segment being processed, 
+            #logging.debug("Angle to prev is "+str(path.angle_to_prev()))
             u_start  = ratio*path.get_start_speed()                 	    # The end speed, depends on the angle to the next
         else:
-            #logging.debug("Nothing processing")
             u_start = 0
-        if self.paths.qsize() > 0 and path.is_type_print_segment():     # If there are paths in queue, we do not have to slow down
-            #logging.debug("Has followers, angle to follower: "+str(path.angle_to_next()))
+        if path.is_type_print_segment():     # If there are paths in queue, we might not have to slow down
             u_end    = ratio*path.get_end_speed()                 	    # The start speed. Depends on the angle to the prev.
         else:
-            #logging.debug("Nothing on queue")
             u_end = 0
 
         #logging.debug("Max speed for "+axis+" is "+str(Vm))
@@ -201,16 +204,17 @@ class Path_planner:
         distances_end    = list(np.arange(0, sm_end, ds))		        # Table of distances                       
         timestamps_start = [(-u_start+np.sqrt(2.0*a*ss+u_start**2))/a for ss in distances_start]# When ticks occur
         timestamps_end   = [(-u_end  +np.sqrt(2.0*a*ss+u_end**2))/a for ss in distances_end]# When ticks occur
-        delays_start     = np.diff(timestamps_start)/2.0			         # We are more interested in the delays pr second. 
-        delays_end       = np.diff(timestamps_end)/2.0			         # We are more interested in the delays pr second.         
+        delays_start     = np.diff(timestamps_start)/2.0			    # We are more interested in the delays pr second. 
+        delays_end       = np.diff(timestamps_end)/2.0			        # We are more interested in the delays pr second.         
         delays_start     = list(np.array([delays_start, delays_start]).transpose().flatten())         
         delays_end       = list(np.array([delays_end, delays_end]).transpose().flatten()) 
 
-        i_steps     = 2*num_steps-len(delays_start)-len(delays_end)       # Find out how many delays are missing
+        i_steps     = 2*num_steps-len(delays_start)-len(delays_end)     # Find out how many delays are missing
         i_delays    = [(ds/Vm)/2.0]*i_steps  		                    # Make the intermediate steps
         delays      = delays_start+i_delays+delays_end[::-1]            # Add the missing delays. These are max_speed        
+        min_delay = 0.001
         for i, d in enumerate(delays): 
-            delays[i] = max(0.0002, delays[i])                        # limit delays to 2 ms
+            delays[i] = max(min_delay, delays[i])                       # limit delays to 2 ms
         td          = num_steps/steps_pr_meter                          # Calculate the actual travelled distance        
         if vec < 0:                                                     # If the vector is negative, negate it.      
             td     *= -1.0

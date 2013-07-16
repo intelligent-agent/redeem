@@ -29,9 +29,10 @@ class USB:
         while self.running:
             ret = select.select( [self.tty],[],[], 1.0 )
     	    if ret[0] == [self.tty]:
-                message = self.tty.readline().strip("\n")          
-                logging.debug("Message: "+message+" ("+message.encode("hex")+")")
-                self.queue.put({"message": message, "prot": "USB"})
+                message = self.tty.readline().strip("\n")  
+                if len(message) > 0:        
+                    logging.debug("Message: "+message+" ("+message.encode("hex")+")")
+                    self.queue.put({"message": message, "prot": "USB"})
             
 
     # Send a message		

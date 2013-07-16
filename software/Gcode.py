@@ -35,6 +35,7 @@ class Gcode:
             self.message =  self.message.split("*")[0][(1+len(line_num)+1)::] # Remove crc stuff
             self.line_number = int(line_num)                        # Set the line number
             Gcode.line_number += 1                                  # Increase the global counter 
+            self.has_crc = True
         
         # Parse 
         self.tokens = self.message.split(" ")    
@@ -101,7 +102,7 @@ class Gcode:
 
     def is_crc(self):
         ''' Return True if this segment was a numbered line '''
-        self.has_crc
+        return self.has_crc
 
     ''' Get the result of the execution '''
     def getAnswer(self):

@@ -22,7 +22,8 @@ class Path:
         self.actual_travel = axes.copy()
         self.is_print_segment = is_print_segment         # If this is True, use angle stuff
         self.axis_config = "H-belt"                      # If you need to do some sort of mapping, add the branch here. (ex scara arm)
-          
+        self.next_ok = False
+  
     ''' Set the next path element '''
     def set_next(self, next):
         self.next = next
@@ -77,7 +78,8 @@ class Path:
             b = self.vector
             # Do not continue the update beyond the next segment
             self.next.set_global_pos(dict( (n, a.get(n, 0)+b.get(n, 0)) for n in set(a)|set(b) ), False)
-    
+            self.next_ok = True
+
     ''' Get the length of this path segment '''
     def get_length(self):     
         x = self.vector["X"]
@@ -124,7 +126,7 @@ class Path:
 
     ''' Return the angle to the next path segment '''
     def angle_to_next(self):
-        if not hasattr(self, 'next'):
+        if self.next_ok == False:
             return 0
         u = la.norm([self.get_axis_length("X"), self.get_axis_length("Y")])
         v = la.norm([self.next.get_axis_length("X"), self.next.get_axis_length("Y")])
@@ -156,24 +158,29 @@ class Path:
         
     def stepper_to_axis(self, pos, axis):
         ''' Give a steppers position, return the position along the axis '''
-        if self.axis_config == "H-belt":
-            A = np.matrix('-0.5 0.5; -0.5 -0.5')
-            if axis == "X":
+        if axis == "X":
+            if self.axis_config == "H-belt":
+                A = np.matrix('-0.5 0.5; -0.5 -0.5')
                 X = np.array([pos, 0])
                 b = np.dot(A, X)
                 return tuple(np.array(b)[0])
-
-            if axis == "Y":
+            else:
+                return (pos, 0.0)
+        if axis == "Y":
+            if self.axis_config == "H-belt":
+                A = np.matrix('-0.5 0.5; -0.5 -0.5')
                 X = np.array([0, pos])
                 b = np.dot(A, X)
                 return tuple(np.array(b)[0])
-
+            else:
+                return (0.0, pos)
+		
         # For all other axes, return the same value
         return pos
 
     def is_type_print_segment(self): 
         ''' Returns true if this is a print segment and not a relative move '''
-        return False # self.is_print_segment
+        return self.is_print_segment
 
 if __name__ == '__main__':
     a = Path({"X": 10, "Y": 0}, 3000, "RELATIVE")

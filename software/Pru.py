@@ -90,7 +90,7 @@ class Pru:
         pypruss.open(0)						            # Open PRU event 0 which is PRU0_ARM_INTERRUPT
         pypruss.pruintc_init()					        # Init the interrupt controller
         pypruss.pru_write_memory(0, 0, [self.ddr_addr, self.ddr_nr_events])		# Put the ddr address in the first region 
-        pypruss.exec_program(0, dirname+"/../firmware/firmware_00A2.bin")	# Load firmware "ddr_write.bin" on PRU 0
+        pypruss.exec_program(0, dirname+"/../firmware/firmware_00A3.bin")	# Load firmware "ddr_write.bin" on PRU 0
         self.t = Thread(target=self._wait_for_events)         # Make the thread
         self.running = True
         self.t.start()		        
@@ -170,7 +170,7 @@ class Pru:
             with self.ddr_lock:
                 self.ddr_mem_used += len(data)               
             self.ddr_used.put(len(data)) 		            # update the amount of memory used 
-            #logging.debug("Pushed "+str(len(data))+" from "+hex(self.ddr_start)+" to "+hex(self.ddr_end))
+            logging.debug("Pushed "+str(len(data))+" from "+hex(self.ddr_start)+" to "+hex(self.ddr_end))
             
 
         self.ddr_start 		= self.ddr_end-4                    # Update the start of ddr for next time 
@@ -196,7 +196,7 @@ class Pru:
                 ddr = self.ddr_used.get()                       # Pop the first ddr memory amount           
                 with self.ddr_lock:
                     self.ddr_mem_used -= ddr                    
-                #logging.debug("Popped "+str(ddr)+"\tnow "+hex(self.get_capacity()))
+                logging.debug("Popped "+str(ddr)+"\tnow "+hex(self.get_capacity()))
                 self.ddr_used.task_done()
                 nr_interrupts += 1  
                                    
@@ -220,7 +220,7 @@ class Pru:
     ''' Convert delay in seconds to number of instructions for the PRU '''
     def _sec_to_inst(self, s):					    # Shit, I'm missing MGP for this??
         inst_pr_step = (int(s/self.s_pr_inst)-self.inst_pr_loop)/self.inst_pr_delay
-        if inst_pr_step < 400: # Infer a lower limit on the delay (1.9ms), really 379
-            inst_pr_step = 400
+        if inst_pr_step <  1: # Infer a lower limit on the delay (1.9ms), really 379
+            inst_pr_step = 1
         return inst_pr_step
 
