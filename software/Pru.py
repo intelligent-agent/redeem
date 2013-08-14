@@ -106,10 +106,8 @@ class Pru:
 
     ''' Check if the PRU has capacity for a chunk of data '''
     def has_capacity_for(self, data_len):
-        with self.ddr_lock:
-            cap = self.ddr_size-self.ddr_mem_used
-        return (cap/2.0 > data_len) 
-
+        cap = self.get_capacity()
+        return (cap > data_len)
     
     def get_capacity(self):
         ''' Check if the PRU has capacity for a chunk of data '''

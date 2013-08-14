@@ -25,7 +25,7 @@ from Smd import SMD
 from Thermistor import Thermistor
 from Fan import Fan
 from USB import USB
-#from Pipe import Pipe
+from Pipe import Pipe
 from Ethernet import Ethernet
 from Gcode import Gcode
 import sys
@@ -40,16 +40,14 @@ logging.basicConfig(level=logging.DEBUG,
                     filename='/var/log/replicape.log',
                     filemode='w')
 
-
-
 def log_ex(type, value, traceback):
     logging.error('God damnit, not again!')
-    logging.error('Type:', type)
-    logging.error('Value:', value)
-    logging.error('Traceback:', traceback)
+    logging.error('Type:'+str(type))
+    logging.error('Value:'+str(value))
+    logging.error('Traceback:'+str(traceback))
 
 sys.excepthook = log_ex
-version = "0.2.0"
+version = "0.4.2"
 
 print "Replicape v. "+version
 
@@ -61,29 +59,29 @@ class Replicape:
         # Make a list of steppers
         self.steppers = {}
 
-        logging.info("Init steppers")
         # Init the 5 Stepper motors (step, dir, fault, DAC channel, name)
         self.steppers["X"] = SMD("GPIO0_27", "GPIO1_29", "GPIO2_4",  0, "X") 
         self.steppers["Y"] = SMD("GPIO1_12", "GPIO0_22", "GPIO2_5",  1, "Y")  
         self.steppers["Z"] = SMD("GPIO0_23", "GPIO0_26", "GPIO0_15", 2, "Z")  
         self.steppers["H"] = SMD("GPIO1_28", "GPIO1_15", "GPIO2_1",  3, "Ext1")
-        self.steppers["E"] = SMD("GPIO1_13", "GPIO1_14", "GPIO2_2",  4, "Ext2")
+        self.steppers["E"] = SMD("GPIO1_13", "GPIO1_14", "GPIO2_3",  4, "Ext2")
 
         # Enable the steppers and set the current, steps pr mm and microstepping  
-        logging.info("Enabling steppers")
         self.steppers["X"].setCurrentValue(1.5) 
         self.steppers["X"].setEnabled() 
-        self.steppers["X"].set_steps_pr_mm(4.3)         
+        self.steppers["X"].set_steps_pr_mm(6.0)         
         self.steppers["X"].set_microstepping(2) 
+        self.steppers["X"].set_decay(0) 
 
         self.steppers["Y"].setCurrentValue(1.5) 
         self.steppers["Y"].setEnabled() 
-        self.steppers["Y"].set_steps_pr_mm(4.3)
+        self.steppers["Y"].set_steps_pr_mm(6.0)
         self.steppers["Y"].set_microstepping(2) 
+        self.steppers["Y"].set_decay(0) 
 
         self.steppers["Z"].setCurrentValue(1.5) 
         self.steppers["Z"].setEnabled() 
-        self.steppers["Z"].set_steps_pr_mm(50)
+        self.steppers["Z"].set_steps_pr_mm(80)
         self.steppers["Z"].set_microstepping(2) 
 
         self.steppers["E"].setCurrentValue(1.5) 
@@ -142,7 +140,8 @@ class Replicape:
 
         # Set up USB, this receives messages and pushes them on the queue
         self.usb = USB(self.commands)		
-        #self.pipe = Pipe(self.commands)
+        self.pipe = Pipe(self.commands)
+        logging.info("Pipes OK")
         self.ethernet = Ethernet(self.commands)
         
         # Init the path planner
@@ -177,15 +176,13 @@ class Replicape:
     def _execute(self, g):
         if g.code() == "G1":                                        # Move (G1 X0.1 Y40.2 F3000)                        
             if g.hasLetter("F"):                                    # Get the feed rate                 
-                feed_rate = float(g.getValueByLetter("F"))
+                self.feed_rate = float(g.getValueByLetter("F"))
                 g.removeTokenByLetter("F")
-            else:                                                   # If no feed rate is set in the command, use the default. 
-                feed_rate = self.feed_rate                         
             smds = {}                                               # All steppers 
             for i in range(g.numTokens()):                          # Run through all tokens
                 axis = g.tokenLetter(i)                             # Get the axis, X, Y, Z or E
                 smds[axis] = float(g.tokenValue(i))                 # Get tha value, new position or vector             
-            path = Path(smds, feed_rate, self.movement, g.is_crc())# Make a path segment from the axes            
+            path = Path(smds, self.feed_rate, self.movement, g.is_crc())# Make a path segment from the axes            
             self.path_planner.add_path(path)                        # Add the path. This blocks until the path planner has capacity
             logging.debug("Moving to: "+' '.join('%s:%s' % i for i in smds.iteritems()))
         elif g.code() == "G21":                                     # Set units to mm
@@ -218,6 +215,10 @@ class Replicape:
             for name, stepper in self.steppers.iteritems():
                 stepper.setEnabled() 
             SMD.commit()           
+        elif g.code() == "M19":                                     # Reset all steppers
+            self.path_planner.wait_until_done()
+            for name, stepper in self.steppers.iteritems():
+                stepper.reset() 
         elif g.code() == "M30":                                     # Set microstepping (Propietary to Replicape)
             for i in range(g.numTokens()):
                 self.steppers[g.tokenLetter(i)].set_microstepping(int(g.tokenValue(i)))            
@@ -280,19 +281,6 @@ class Replicape:
         else:
             logging.warning("Unknown command: "+g.message)
    
-
 r = Replicape()
 r.loop()
 
-'''
-context = daemon.DaemonContext(
-    working_directory='/home/root/Replicape/software',
-    umask=0o002,
-    pidfile=lockfile.FileLock('/var/run/replicape.pid'),
-    )
-
-context.stdout = open('/var/log/replicape.err', 'a')
-context.stderr = open('/var/log/replicape.err', 'a')
-
-with context:
-'''

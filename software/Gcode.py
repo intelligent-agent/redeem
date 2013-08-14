@@ -24,7 +24,12 @@ class Gcode:
         self.prot = packet["prot"]
         self.p = printer		
         self.has_crc = False
-
+        self.debug = 0
+        self.answer = "ok"
+        if len(self.message) == 0:
+            logging.debug("Empty message")
+            self.gcode = "No-Gcode"
+            return 
         self.tokens = self.message.split(" ")
         if self.tokens[0][0] == "N":                                # Ok, checksum
             line_num = self.message.split(" ")[0][1::]
@@ -43,8 +48,7 @@ class Gcode:
         for i, token in enumerate(self.tokens):
             if len(token) == 0:
                 self.tokens.pop(i)            
-        self.debug = 0
-        self.answer = "ok"
+        
 
     ''' The machinecode '''
     def code(self):

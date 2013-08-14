@@ -1,8 +1,8 @@
 
 
-RPATH=/home/root/Replicape
-#REMOTE=root@10.24.2.90
-REMOTE=root@192.168.7.2
+RPATH=/home/ubuntu/Replicape
+REMOTE=root@10.24.2.83
+#REMOTE=root@192.168.7.2
 DPATH=Dist/dist_`date +"%y_%m_%d"`/Replicape
 DNAME=Replicape_rev_A3-`date +"%y_%m_%d"`.tgz
 
@@ -69,6 +69,8 @@ dist:
 	cp -r libs/i2c $(DPATH)/libs/
 	cp libs/Makefile $(DPATH)/libs/
 	cp -r images/3.8.13/* $(DPATH)/kernel/
+	cp -r systemd $(DPATH)/
+	cp -r upstart $(DPATH)/
 	cd $(DPATH)/../ && tar -cvzpf ../$(DNAME) . && cd ..
 	scp Dist/$(DNAME) replicape@scp.domeneshop.no:www/distros/
 	

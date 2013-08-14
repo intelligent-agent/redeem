@@ -42,10 +42,10 @@ BLINK:
     SBBO r3, r11, 0, 4							// Ok, set the pins
 
     LBBO r2, r4, 0, 4							// Load pin data into r2
-	AND  r2, r2, r16							// Mask the pins to GPIO3
+	AND  r2, r2, r16							// Mask the pins to GPIO0
 	LBBO r3, r17, 0, 4							// Load the data currently in addr r3
 	AND	 r3, r3, r18							// Mask the data so only the necessary pins can change
-	OR   r3, r3, r2 							// Add the GPIO1-mask to hinder toggling PRU1's pins
+	OR   r3, r3, r2 							// Add the GPIO0-mask to hinder toggling PRU1's pins
     SBBO r3, r17, 0, 4							// Ok, set the pins
 
 	ADD  r4, r4, 4

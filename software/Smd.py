@@ -104,11 +104,11 @@ class SMD:
     logic and disables the H-bridge outputs.
     Internal pulldown.'''
     def reset(self, force_update=False):
+        self.state &= ~(1<<4)
+        self.update()
+        time.sleep(0.001)
         self.state |= (1<<4)
         self.update()
-        self.state &= ~(1<<4)
-        if force_update: 
-            self.update()
 
     ''' Microstepping (default = 0) 0 to 5 '''
     def set_microstepping(self, value, force_update=False):
@@ -119,6 +119,13 @@ class SMD:
         #logging.debug("State is: "+bin(self.state))
         #logging.debug("Microsteps: "+str(self.microsteps))
         #logging.debug("mmPrStep is: "+str(self.mmPrStep))
+        if force_update: 
+            self.update()
+
+    def set_decay(self, value, force_update=False):
+        ''' Decay mode, look in the data sheet '''
+        self.state &= ~(1<<0)        # bit 0 
+        self.state |= (value & 0x01) 
         if force_update: 
             self.update()
 

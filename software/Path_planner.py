@@ -79,7 +79,7 @@ class Path_planner:
                     if len(data[0]) > 0:
                         all_data[axis] = data                      # Generate the timing and pin data                         
                         slowest = max(slowest, sum(data[1]))                                   
-                logging.debug("slowest is "+str(slowest))
+                #logging.debug("slowest is "+str(slowest))
 
                 for axis in all_data:                              # Make all axes use the same amount of time
                     packet = all_data[axis]                           
@@ -89,14 +89,14 @@ class Path_planner:
                         for j, delay in enumerate(delays):
                             delays[j] = delay+diff                    
                     data = zip(*(packet[0], delays))
-                    #logging.debug(data)
+                    #logging.debug(axis+": "+str(data))
                     if len(self.pru_data) == 0:
                         self.pru_data = data
                     else:
                         #self.pru_data += data
                         self._braid_data(self.pru_data, data)
 
-                logging.debug("PRU data done")              
+                #logging.debug("PRU data done")              
                 if len(self.pru_data) > 0:                   
                     while not self.pru.has_capacity_for(len(self.pru_data[0])*8):          
                         logging.debug("Pru full")              
@@ -168,7 +168,7 @@ class Path_planner:
         steps_pr_meter  = stepper.get_steps_pr_meter()
         vec             = path.get_axis_length(axis)                        # Total travel distance
         num_steps       = int(abs(vec) * steps_pr_meter)                    # Number of steps to tick
-        #logging.debug("Numsteps for "+axis+" is "+str(num_steps))
+        logging.debug("Numsteps for "+axis+" is "+str(num_steps))
         if num_steps == 0:
             return ([], [])
         step_pin    = stepper.get_step_pin()                            # Get the step pin
@@ -183,7 +183,6 @@ class Path_planner:
         a        = self.acceleration*ratio    		                    # Accelleration in m/s/s
         ds       = 1.0/steps_pr_meter                                   # Delta S, distance in meters travelled pr step.         
         if path.is_type_print_segment():                                # If there is currently a segment being processed, 
-            #logging.debug("Angle to prev is "+str(path.angle_to_prev()))
             u_start  = ratio*path.get_start_speed()                 	    # The end speed, depends on the angle to the next
         else:
             u_start = 0
@@ -212,12 +211,16 @@ class Path_planner:
         i_steps     = 2*num_steps-len(delays_start)-len(delays_end)     # Find out how many delays are missing
         i_delays    = [(ds/Vm)/2.0]*i_steps  		                    # Make the intermediate steps
         delays      = delays_start+i_delays+delays_end[::-1]            # Add the missing delays. These are max_speed        
-        min_delay = 0.001
+        min_delay = 4.0*10**-6		
         for i, d in enumerate(delays): 
             delays[i] = max(min_delay, delays[i])                       # limit delays to 2 ms
         td          = num_steps/steps_pr_meter                          # Calculate the actual travelled distance        
         if vec < 0:                                                     # If the vector is negative, negate it.      
             td     *= -1.0
+
+		# Make sure the dir pin is shifted 650 ns before the step pins
+        pins = [dir_pin]+pins
+        delays = [650*10**-9]+delays
 
         # If the axes are X or Y, we need to transform back in case of 
         # H-belt or some other transform. 
