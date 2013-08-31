@@ -17,8 +17,7 @@ import logging
 import traceback
 import os
 import sys 
-#import daemon
-#import lockfile
+import ConfigParser
 
 from Mosfet import Mosfet
 from Smd import SMD
@@ -33,6 +32,7 @@ from Extruder import Extruder, HBP
 from Pru import Pru
 from Path import Path
 from Path_planner import Path_planner
+from W1 import W1
     
 logging.basicConfig(level=logging.DEBUG, 
                     format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
@@ -55,6 +55,8 @@ class Replicape:
     ''' Init '''
     def __init__(self):
         logging.info("Replicape initializing "+version)
+        self.config = ConfigParser.ConfigParser()
+        self.config.readfp(open('config/default.cfg'))
 
         # Make a list of steppers
         self.steppers = {}
@@ -67,32 +69,12 @@ class Replicape:
         self.steppers["E"] = SMD("GPIO1_13", "GPIO1_14", "GPIO2_3",  4, "Ext2")
 
         # Enable the steppers and set the current, steps pr mm and microstepping  
-        self.steppers["X"].setCurrentValue(1.5) 
-        self.steppers["X"].setEnabled() 
-        self.steppers["X"].set_steps_pr_mm(6.0)         
-        self.steppers["X"].set_microstepping(2) 
-        self.steppers["X"].set_decay(0) 
-
-        self.steppers["Y"].setCurrentValue(1.5) 
-        self.steppers["Y"].setEnabled() 
-        self.steppers["Y"].set_steps_pr_mm(6.0)
-        self.steppers["Y"].set_microstepping(2) 
-        self.steppers["Y"].set_decay(0) 
-
-        self.steppers["Z"].setCurrentValue(1.5) 
-        self.steppers["Z"].setEnabled() 
-        self.steppers["Z"].set_steps_pr_mm(80)
-        self.steppers["Z"].set_microstepping(2) 
-
-        self.steppers["E"].setCurrentValue(1.5) 
-        self.steppers["E"].setEnabled()
-        self.steppers["E"].set_steps_pr_mm(5.0)
-        self.steppers["E"].set_microstepping(2)
-		
-        self.steppers["H"].setCurrentValue(1.5) 
-        self.steppers["H"].setEnabled()
-        self.steppers["H"].set_steps_pr_mm(5.0)
-        self.steppers["H"].set_microstepping(2)
+        for name, stepper in self.steppers.iteritems():
+            stepper.setCurrentValue(self.config.getfloat('Steppers', 'current_'+name)) 
+            stepper.setEnabled(self.config.getboolean('Steppers', 'enabled_'+name)) 
+            stepper.set_steps_pr_mm(self.config.getfloat('Steppers', 'steps_pr_mm_'+name))         
+            stepper.set_microstepping(self.config.getint('Steppers', 'microstepping_'+name)) 
+            stepper.set_decay(0) 
 
 		# Commit changes
         SMD.commit()
@@ -106,6 +88,10 @@ class Replicape:
         self.therm_ext1 = Thermistor(path+"4_scale", "MOSFET Ext 1", "B57560G104F")
         self.therm_hbp  = Thermistor(path+"6_scale", "MOSFET HBP",   "B57560G104F")
         self.therm_ext2 = Thermistor(path+"5_scale", "MOSFET Ext 2", "B57560G104F")
+
+        if os.path.exists("/sys/bus/w1/devices/28-000002e34b73/w1_slave"):
+            self.cold_end_1 = W1("/sys/bus/w1/devices/28-000002e34b73/w1_slave", "Cold End 1")
+		
 
         # init the 3 heaters
         self.mosfet_ext1 = Mosfet(3)
@@ -246,6 +232,8 @@ class Replicape:
                 answer += " B:"+str(int(self.hbp.getTemperature()))
             if hasattr(self, "ext2"):
                 answer += " T2:"+str(int(self.ext2.getTemperature()))
+            if hasattr(self, "cold_end_1"):
+                answer += " T3:"+str(int(self.cold_end_1.getTemperature()))         
             g.setAnswer(answer)
         elif g.code() == "M106":                                    # Fan on
             if g.hasLetter("P"):

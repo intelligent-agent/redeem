@@ -71,10 +71,10 @@ class SMD:
         SMD.all_smds.append(self) 	        # Add to list of smds
  						
     ''' Sets the SMD enabled '''
-    def setEnabled(self, force_update=False):
+    def setEnabled(self, value=1, force_update=False):
         if not self.enabled:
-            self.state &= ~(1<<6)
-            self.enabled = True
+            self.state &= ~(value<<6)
+            self.enabled = value
         if force_update: 
             self.update()
             	

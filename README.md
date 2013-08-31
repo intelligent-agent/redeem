@@ -15,7 +15,7 @@ Features include:
 -   3 medium power MOSFETs (PWM controlled) for up to 3 fans/LED strips.  (12V)  
 -   3 analog input ports for thermistors. noise-filtered inputs and option for shielding  
 -   6 inputs for end stops (X, Y, Z).  
--   1 bus for Dallas 1W temperature sensor for monitoring the cold end. Many sensors can be added to ne bus.  
+-   1 bus for Dallas 1W temperature sensor for monitoring the cold end. Up to 10 sensors can be added to the bus.  
 -   Programmable current limits on steppers motor drivers (SMD). No need to manually adjust a pot meter.  
 -   Microstepping individually programmable for each SMD from 1 to 32.  
 -   All steppers are controlled by the Programmable Realtime Unit (PRU) for hard real time operation.  
@@ -29,10 +29,11 @@ TODO for software:
 - Optimize the merging of timings from the different steppers.  
 - Make a fancy GUI with 3D model  
 - Implement realtime slicing on BeagleBone so an STL file can be sent directly (very cool).  
+- Printer settings loaded from file
 
 Known issues:  
-There seems to be a bug with the software that causes the 
-filament to retract after a few layers. Find out if this is consistent. 
+The print stops right at the last command. Somethimes this also happens initially, but 
+has not ben seen during prints. 
 
 Blog: http://hipstercircuits.com  
 Wiki: wiki.replicape.com

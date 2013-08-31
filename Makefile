@@ -1,8 +1,8 @@
 
 
 RPATH=/home/ubuntu/Replicape
-REMOTE=root@10.24.2.83
-#REMOTE=root@192.168.7.2
+#REMOTE=root@10.24.2.83
+REMOTE=root@192.168.7.2
 DPATH=Dist/dist_`date +"%y_%m_%d"`/Replicape
 DNAME=Replicape_rev_A3-`date +"%y_%m_%d"`.tgz
 
@@ -20,6 +20,9 @@ systemd:
 
 software:
 	scp software/*.py $(REMOTE):$(RPATH)/software
+
+config:
+	scp -r software/config $(REMOTE):$(RPATH)/software
 
 gui: 
 	scp -r software/GUI/ $(REMOTE):$(RPATH)/software
@@ -61,6 +64,7 @@ dist:
 	mkdir -p $(DPATH)/kernel
 	cp Dist/Makefile $(DPATH)/
 	cp software/*.py $(DPATH)/software/
+	cp -r software/config $(DPATH)/software/
 	cp firmware/firmware_00A3.p firmware/Makefile firmware/pasm $(DPATH)/firmware/
 	cp Device_tree/DTB/* $(DPATH)/device_tree/
 	cp eeprom/eeprom.js eeprom/bone.js eeprom/replicape_00A3.json eeprom/Makefile $(DPATH)/eeprom/
