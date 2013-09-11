@@ -168,7 +168,7 @@ class Pru:
             with self.ddr_lock:
                 self.ddr_mem_used += len(data)               
             self.ddr_used.put(len(data)) 		            # update the amount of memory used 
-            logging.debug("Pushed "+str(len(data))+" from "+hex(self.ddr_start)+" to "+hex(self.ddr_end))
+            #logging.debug("Pushed "+str(len(data))+" from "+hex(self.ddr_start)+" to "+hex(self.ddr_end))
             
 
         self.ddr_start 		= self.ddr_end-4                    # Update the start of ddr for next time 

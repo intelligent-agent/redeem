@@ -170,7 +170,7 @@ class Replicape:
                 smds[axis] = float(g.tokenValue(i))                 # Get tha value, new position or vector             
             path = Path(smds, self.feed_rate, self.movement, g.is_crc())# Make a path segment from the axes            
             self.path_planner.add_path(path)                        # Add the path. This blocks until the path planner has capacity
-            logging.debug("Moving to: "+' '.join('%s:%s' % i for i in smds.iteritems()))
+            #logging.debug("Moving to: "+' '.join('%s:%s' % i for i in smds.iteritems()))
         elif g.code() == "G21":                                     # Set units to mm
             self.factor = 1.0
         elif g.code() == "G28":                                     # Home the steppers

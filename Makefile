@@ -1,8 +1,8 @@
 
 
 RPATH=/home/ubuntu/Replicape
-#REMOTE=root@10.24.2.83
-REMOTE=root@192.168.7.2
+REMOTE=root@10.24.2.115
+#REMOTE=root@192.168.7.2
 DPATH=Dist/dist_`date +"%y_%m_%d"`/Replicape
 DNAME=Replicape_rev_A3-`date +"%y_%m_%d"`.tgz
 

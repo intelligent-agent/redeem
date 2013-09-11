@@ -168,7 +168,7 @@ class Path_planner:
         steps_pr_meter  = stepper.get_steps_pr_meter()
         vec             = path.get_axis_length(axis)                        # Total travel distance
         num_steps       = int(abs(vec) * steps_pr_meter)                    # Number of steps to tick
-        logging.debug("Numsteps for "+axis+" is "+str(num_steps))
+        #logging.debug("Numsteps for "+axis+" is "+str(num_steps))
         if num_steps == 0:
             return ([], [])
         step_pin    = stepper.get_step_pin()                            # Get the step pin
