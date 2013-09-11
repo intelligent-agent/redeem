@@ -21,7 +21,8 @@ if __name__ != '__main__':
     from Pru import Pru
 import Queue
 from collections import defaultdict
-#from numba import autojit
+from scipy import weave
+
 
 class Path_planner:
     ''' Init the planner '''
@@ -94,7 +95,7 @@ class Path_planner:
                         self.pru_data = data
                     else:
                         #self.pru_data += data
-                        self._braid_data(self.pru_data, data)
+                        self.pru_data = self._braid_data(self.pru_data, data)
 
                 #logging.debug("PRU data done")              
                 if len(self.pru_data) > 0:                   
@@ -114,43 +115,227 @@ class Path_planner:
 
     def _braid_data(self, data1, data2):
         ''' Braid/merge together the data from the two data sets'''
-        line = 0
-        (pin1, dly1) = data1[line]
-        (pin2, dly2) = data2.pop(0)
-        while True: 
-            dly = min(dly1, dly2)
-            dly1 -= dly    
-            dly2 -= dly            
-            try: 
-                if dly1 == 0 and dly2 == 0:
-                    data1[line] = (pin1+pin2, dly)
-                    (pin1, dly1) = data1[line+1]
-                    (pin2, dly2) = data2.pop(0)
-                elif dly1 == 0:
-                    data1[line] = (pin1+pin2, dly)
-                    (pin1, dly1) = data1[line+1]
-                elif dly2 == 0:    
-                    data1.insert(line, (pin1+pin2, dly))
-                    (pin2, dly2) = data2.pop(0)
-                line += 1
-            except IndexError, e:
-                break
-
-        if dly2 > 0:   
-            data1[line] =  (data1[line][0], data1[line][1]+dly2)        
-        elif dly1 > 0:
-            data1[line] = (data1[line][0], data1[line][1]+dly1)  
-            data1.pop(line+1)
         
-        while len(data2) > 0:
-            line += 1
-            (pin2, dly2) = data2.pop(0)
-            data1.append((pin2+pin1, dly2))
+        # do a little type checking in Python
+        assert(type(data1) == type([]))
+        assert(type(data2) == type([]))
+        
+        #The c++ code
+        code = r"""
+        
+        int line = 0;           //Current position in the resulting arrays
+        int idx1 = 0;           //Current position in data1
+        int idx2 = 0;           //Current position in data2
+        
+        //Variables for extracting tuple-values
+        py::tuple tmp_tuple1, tmp_tuple2;
+        int pin1, pin2;
+        float dly1, dly2;
+        
+        //Set max size for array. (Is this the correct maximum size?)
+        int max_size = data1.size() + data2.size();
+        
+        // Allocate memory for two arrays of maximum possible size to contain result
+        int * pins = (int*) malloc(sizeof(int) * max_size);
+        float * delay = (float*) malloc(sizeof(float) * max_size);
             
-        while len(data1) > line+1:
-            line += 1
-            (pin1, dly1) = data1[line]
-            data1[line] = (pin2+pin1, dly1)
+            
+        //Get first tuples from data1 and data2
+        tmp_tuple1 = py_to_tuple(PyList_GetItem(data1,idx1), "tmp_tuple1");
+        pin1 = tmp_tuple1[0];
+        dly1 = tmp_tuple1[1];
+        tmp_tuple2 = py_to_tuple(PyList_GetItem(data2,idx2), "tmp_tuple2");
+        pin2 = tmp_tuple2[0];
+        dly2 = tmp_tuple2[1];
+            
+            
+        while (1) {
+            if (dly1 == dly2) {
+                //Create resulting pin number
+                pins[line] = pin1 + pin2;
+                //Create resulting delay
+                delay[line] = dly1;
+            
+                //DEBUG:
+                //printf("Added (%d, %.1f) - dly1=dly2\n", pins[line], delay[line]);
+                //printf("dly1=%.1f\n",dly1);
+                //printf("dly2=%.1f\n",dly2);
+                
+                //Update line
+                line++; 
+                
+                //Update indexes
+                idx1++;
+                idx2++;
+                
+                //Check that there are still items left in both arrays
+                if (idx1 >= data1.size() || idx2 >= data2.size())
+                    break;
+                
+                //Get next tuples from data1 and data2
+                tmp_tuple1 = py_to_tuple(PyList_GetItem(data1,idx1), "tmp_tuple1");
+                pin1 = tmp_tuple1[0];
+                dly1 = tmp_tuple1[1];
+                tmp_tuple2 = py_to_tuple(PyList_GetItem(data2,idx2), "tmp_tuple2");
+                pin2 = tmp_tuple2[0];
+                dly2 = tmp_tuple2[1];
+        
+            }
+            
+            else if (dly1 > dly2) {
+                //Create resulting pin number
+                pins[line] = pin1 + pin2;
+                //Create resulting delay
+                delay[line] = dly2;
+                
+                //DEBUG:
+                //printf("Added (%d, %.1f) - dly1>dly2\n", pins[line], delay[line]);
+                //printf("dly1=%.1f\n",dly1);
+                //printf("dly2=%.1f\n",dly2);
+                //printf("idx1=%d\n",idx1);
+                //printf("idx2=%d\n",idx2);
+                
+                //Update line
+                line++; 
+                
+                //Subtract dly2 from dly1 to get the delay from the last tuple we added
+                dly1 -= dly2;
+                
+                //Increase idx2
+                idx2++;
+                
+                //Check that there are still items left in data2 array
+                if (idx2 >= data2.size())
+                    break;
+                
+                //Get next tuple from data2
+                tmp_tuple2 = py_to_tuple(PyList_GetItem(data2,idx2), "tmp_tuple2");
+                pin2 = tmp_tuple2[0];
+                dly2 = tmp_tuple2[1];
+            }
+            
+            else if (dly1 < dly2) {
+                //Create resulting pin number
+                pins[line] = pin1 + pin2;
+                //Create resulting delay
+                delay[line] = dly1;
+                
+                //DEBUG:
+                //printf("Added (%d, %.1f) - dly1<dly2\n", pins[line], delay[line]);
+                //printf("dly1=%.1f\n",dly1);
+                //printf("dly2=%.1f\n",dly2);
+                //printf("idx1=%d\n",idx1);
+                //printf("idx2=%d\n",idx2);
+                
+                //Update line
+                line++; 
+                
+                //Subtract dly1 from dly2 to get the delay from the last tuple we added
+                dly2 -= dly1;
+                
+                //Increase idx1
+                idx1++;
+                
+                //Check that there are still items left in data1 array
+                if (idx1 >= data1.size())
+                    break;
+                    
+                //Get next tuple from data1
+                tmp_tuple1 = py_to_tuple(PyList_GetItem(data1,idx1), "tmp_tuple1");
+                pin1 = tmp_tuple1[0];
+                dly1 = tmp_tuple1[1];
+            }
+        }    
+        
+        //If we are here, then we have gone through at least one of the arrays.
+        //Need to check if there are items left in the other array
+        
+        if (idx1 < data1.size()) 
+        {
+            pins[line] = pin1;
+            delay[line] = dly1;
+            line++;
+            idx1++;
+
+            //Iterate through any items left in data1
+            for (idx1; idx1 < data1.size(); idx1++) 
+            {
+                //Get tuple from data1
+                tmp_tuple1 = py_to_tuple(PyList_GetItem(data1,idx1), "tmp_tuple1");
+                pin1 = tmp_tuple1[0];
+                dly1 = tmp_tuple1[1]; 
+                
+                //Add new tuple to result
+                pins[line] = pin1;
+                delay[line] = dly1;
+                
+                //Increase indexes
+                line++;
+            }
+        }
+        
+        if (idx2 < data2.size()) 
+        {
+            pins[line] = pin2;
+            delay[line] = dly2;
+            line++;
+            idx2++;     
+                
+                
+            //Iterate through any items left in data2
+            for (idx2; idx2 < data2.size(); idx2++) 
+            {
+                //Get tuple from data2
+                tmp_tuple2 = py_to_tuple(PyList_GetItem(data2,idx2), "tmp_tuple2");
+                pin2 = tmp_tuple2[0];
+                dly2 = tmp_tuple2[1]; 
+                
+                //Add new tuple to result
+                pins[line] = pin2;
+                delay[line] = dly2;
+                
+                //Increase indexes
+                line++;
+            }
+        }
+        
+        
+        //Print result for debugging:
+        //printf("\nResulting array:\n");
+        //for (int i=0; i<line; i++)
+        //    printf("(%d, %.1f), ", pins[i], delay[i]);
+        
+        //printf("\n\n");    
+        
+        
+        //Create a returnable object from the two arrays "pins" and "delay"
+        PyObject *pytup;
+        PyObject *pylist = PyList_New(line);
+        PyObject *item;
+        for (int i=0; i<line; i++)
+        {
+            pytup = PyTuple_New(2);
+            item = PyInt_FromLong(pins[i]);
+            PyTuple_SetItem(pytup, 0, item);
+            item = PyFloat_FromDouble(delay[i]);
+            PyTuple_SetItem(pytup, 1, item);
+            
+            PyList_SetItem(pylist, i, pytup);
+        }
+        
+        //Free allocated memory
+        free(pins);
+        free(delay);
+        
+        //Return array
+        return_val = pylist;
+        """
+        
+        return weave.inline(code,['data1', 'data2'])
+
+
+
+
     
     ''' Join the thread '''
     def exit(self):
@@ -241,8 +426,8 @@ if __name__ == '__main__':
     data1 = [(2, 1), (4, 3), (2, 4), (4, 1)]
     data2 = [(8, 1.5), (16, 4), (8, 4), (16, 1.5)]
     data3 = [(32, 1.5), (64, 4), (32, 4), (64, 1.5)]
-    pp._braid_data(data1, data2)
+    data1 = pp._braid_data(data1, data2)
     print data1
-    pp._braid_data(data1, data3)
+    data1 = pp._braid_data(data1, data3)
     print data1
 
