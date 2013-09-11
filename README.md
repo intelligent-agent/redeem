@@ -22,18 +22,21 @@ Features include:
 -   Option for stackable LCD cape (LCD3). HDMI compatible LCD on the way.  
 -   Single 12 to 24V PSU, fans are still 12V.  
 -   Comptabile with BeagleBone and BeagleBone Black.  
--   Open source hard ware and software.  
+-   Open source hardware and software.  
 -   Software written in Python for maintainability and hackability.  
   
 TODO for software:  
 - Optimize the merging of timings from the different steppers.  
 - Make a fancy GUI with 3D model  
 - Implement realtime slicing on BeagleBone so an STL file can be sent directly (very cool).  
-- Printer settings loaded from file
+
+Software features:  
+- Printer settings loaded from file  
+- Controllable via ethernet, USB, pipe or GUI. 
 
 Known issues:  
-The print stops right at the last command. Somethimes this also happens initially, but 
-has not ben seen during prints. 
+- Long stretches of stepper movement that occupies more than the available 40K of memory are not cheked and 
+kills the whole shebang. Must be fixed. To reproduce, try moving the Z-axis 20cm. 
 
 Blog: http://hipstercircuits.com  
 Wiki: wiki.replicape.com
