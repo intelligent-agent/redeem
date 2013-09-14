@@ -246,3 +246,10 @@ if __name__ == '__main__':
     pp._braid_data(data1, data3)
     print data1
 
+
+    import cProfile
+    data1 = [(2, 1), (4, 3), (2, 4), (4, 1)]*10000
+    data2 = [(8, 1.5), (16, 4), (8, 4), (16, 1.5)]*10000
+    data3 = [(32, 1.5), (64, 4), (32, 4), (64, 1.5)]*10000
+    
+    cProfile.run('pp._braid_data(data1, data2), pp._braid_data(data1, data3)')
