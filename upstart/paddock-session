@@ -1,0 +1,3 @@
+#!/bin/sh
+
+python /home/ubuntu/Replicape/Printrun/paddock.py

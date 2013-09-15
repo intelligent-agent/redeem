@@ -75,6 +75,7 @@ dist:
 	cp -r images/3.8.13/* $(DPATH)/kernel/
 	cp -r systemd $(DPATH)/
 	cp -r upstart $(DPATH)/
+	cp -r tty0tty $(DPATH)/
 	cd $(DPATH)/../ && tar -cvzpf ../$(DNAME) . && cd ..
 	scp Dist/$(DNAME) replicape@scp.domeneshop.no:www/distros/
 	

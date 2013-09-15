@@ -1,6 +1,11 @@
 # Makefile for flashing the eeprom of the Replicape
 
-DIST=ubuntu 
+
+DIST=ubuntu
+if [ -a /etc/angstrom-version ] ; \
+then \
+     DIST=angstrom ; \
+fi;
 
 all: $(DIST)
 

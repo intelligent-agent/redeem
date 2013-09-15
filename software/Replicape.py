@@ -85,9 +85,9 @@ class Replicape:
 
         # init the 3 thermistors
         logging.info("Init Thermistors")
-        self.therm_ext1 = Thermistor(path+"4_scale", "MOSFET Ext 1", "B57560G104F")
-        self.therm_hbp  = Thermistor(path+"6_scale", "MOSFET HBP",   "B57560G104F")
-        self.therm_ext2 = Thermistor(path+"5_scale", "MOSFET Ext 2", "B57560G104F")
+        self.therm_ext1 = Thermistor(path+"4_raw", "MOSFET Ext 1", "B57560G104F")
+        self.therm_hbp  = Thermistor(path+"6_raw", "MOSFET HBP",   "B57560G104F")
+        self.therm_ext2 = Thermistor(path+"5_raw", "MOSFET Ext 2", "B57560G104F")
 
         if os.path.exists("/sys/bus/w1/devices/28-000002e34b73/w1_slave"):
             self.cold_end_1 = W1("/sys/bus/w1/devices/28-000002e34b73/w1_slave", "Cold End 1")

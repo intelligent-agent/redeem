@@ -3,7 +3,7 @@
 case $1 in 
 	start)
 		export LD_LIBRARY_PATH=/usr/local/lib
-		cd /home/root/Replicape/software/ && python Replicape.py
+		cd /opt/Replicape/software/ && python Replicape.py
 		echo "Replicape started ok"
 		exit 0
 		;;

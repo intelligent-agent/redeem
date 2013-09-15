@@ -24,7 +24,8 @@ class Thermistor:
     def getTemperature(self):	
         with open(self.pin, "r") as f:
             try:
-                voltage = 0.001*float(f.read().rstrip())
+                #voltage = 0.001*float(f.read().rstrip())
+                voltage = (float(f.read().rstrip())/4096)*1.8
             except IOError:
                 print "Unable to get ADC value"
                 return 0            
