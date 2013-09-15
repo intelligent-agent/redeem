@@ -22,7 +22,7 @@ if __name__ != '__main__':
 import Queue
 from collections import defaultdict
 #from scipy import weave
-import pyximport; pyximport.install()
+#import pyximport; pyximport.install()
 import braid
 
 class Path_planner:
@@ -112,7 +112,14 @@ class Path_planner:
             except Queue.Empty:
                 #logging.debug("Queue empty")
                 pass
-
+    
+    
+    def _braid_data(self, data1, data2):
+        """ Braid/merge together the data from the two data sets"""
+        return braid.braid_data_c(data1, data2)
+    
+    
+    '''
     def _braid_data(self, data1, data2):
         """ Braid/merge together the data from the two data sets"""
         return braid._braid_data(data1, data2)
@@ -157,7 +164,7 @@ class Path_planner:
                 data1[line] = (pin2+pin1, dly1)
 
         return data1
-       
+    '''   
 
     '''
     def _braid_data(self, data1, data2):
