@@ -19,6 +19,8 @@ import os
 import sys 
 import ConfigParser
 
+import profile
+
 from Mosfet import Mosfet
 from Smd import SMD
 from Thermistor import Thermistor
@@ -138,6 +140,7 @@ class Replicape:
 
         self.path_planner = Path_planner(self.steppers, self.current_pos)         
         self.path_planner.set_acceleration(self.acceleration) 
+        self.stat = False
         logging.info("Replicape ready")
         print "Replicape ready" 
 	
@@ -146,8 +149,14 @@ class Replicape:
         print "Replicape starting main"
         try:
             while True:                
+                global gcode
                 gcode = Gcode(self.commands.get(), self)
-                self._execute(gcode)
+                if self.stat:
+                    global _o
+                    _o = self
+                    profile.run("_o._execute(gcode)")
+                else:
+                    self._execute(gcode)
                 if gcode.prot == "USB":
                     self.usb.send_message(gcode.getAnswer())
                 elif gcode.prot == "PIPE":
@@ -266,6 +275,10 @@ class Replicape:
             fan = self.fans[int(g.getValueByLetter("P"))]
             fan.setPWMFrequency(int(g.getValueByLetter("F")))
             fan.setValue(float(g.getValueByLetter("S")))	           
+        elif g.code() == "M142":
+            self.stat = True 
+        elif g.code() == "M143":
+            self.stat = False 
         else:
             logging.warning("Unknown command: "+g.message)
    

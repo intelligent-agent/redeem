@@ -1,7 +1,7 @@
 
 
-RPATH=/home/ubuntu/Replicape
-REMOTE=root@10.24.2.115
+RPATH=/opt/Replicape
+REMOTE=root@10.24.2.105
 #REMOTE=root@192.168.7.2
 DPATH=Dist/dist_`date +"%y_%m_%d"`/Replicape
 DNAME=Replicape_rev_A3-`date +"%y_%m_%d"`.tgz
@@ -19,7 +19,7 @@ systemd:
 	scp systemd/* $(REMOTE):$(RPATH)/systemd/
 
 software:
-	scp software/*.py $(REMOTE):$(RPATH)/software
+	scp software/*.py software/*.c $(REMOTE):$(RPATH)/software
 
 config:
 	scp -r software/config $(REMOTE):$(RPATH)/software

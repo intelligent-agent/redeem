@@ -16,15 +16,15 @@ import ConfigParser
 class Path: 	
     ''' The axes of evil, the feed rate in mm/min and ABS or REL '''
     def __init__(self, axes, feed_rate, movement, is_print_segment=True):
-        self.config = ConfigParser.ConfigParser()
-        self.config.readfp(open('config/default.cfg'))
+        #self.config = ConfigParser.ConfigParser()
+        #self.config.readfp(open('config/default.cfg'))
         self.axes = axes
         self.feed_rate = feed_rate
         self.movement = movement
         self.global_pos = {"X":0, "Y":0, "Z":0, "E":0} 
         self.actual_travel = axes.copy()
         self.is_print_segment = is_print_segment         # If this is True, use angle stuff
-        self.axis_config = self.config.get('Geometry', 'axis_config') #  If you need to do some sort of mapping, add the branch here. (ex scara arm)
+        self.axis_config = "H-belt" #self.config.get('Geometry', 'axis_config') #  If you need to do some sort of mapping, add the branch here. (ex scara arm)
         self.next_ok = False
   
     ''' Set the next path element '''
