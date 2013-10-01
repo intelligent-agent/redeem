@@ -63,13 +63,12 @@ dist:
 	mkdir -p $(DPATH)/libs/pypruss
 	mkdir -p $(DPATH)/kernel
 	cp Dist/Makefile $(DPATH)/
-	cp software/*.py $(DPATH)/software/
+	cp software/*.py software/*.c $(DPATH)/software/
 	cp -r software/config $(DPATH)/software/
 	cp firmware/firmware_00A3.p firmware/Makefile firmware/pasm $(DPATH)/firmware/
 	cp Device_tree/DTB/* $(DPATH)/device_tree/
 	cp eeprom/eeprom.js eeprom/bone.js eeprom/replicape_00A3.json eeprom/Makefile $(DPATH)/eeprom/
 	cp -r libs/spi $(DPATH)/libs/
-	cp -r libs/pypruss/dist/* $(DPATH)/libs/pypruss
 	cp -r libs/i2c $(DPATH)/libs/
 	cp libs/Makefile $(DPATH)/libs/
 	cp -r images/3.8.13/* $(DPATH)/kernel/

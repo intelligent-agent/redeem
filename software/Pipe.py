@@ -29,7 +29,7 @@ class Pipe:
         self.queue = queue
         self.running = True
         self.debug = 0
-        self.fifo  = open(filename, 'r+')        
+        self.fifo = os.open(filename, os.O_RDWR)
         self.t = Thread(target=self.get_message)
         self.t.start()		
 
@@ -38,7 +38,7 @@ class Pipe:
         while self.running:
             ret = select.select( [self.fifo],[],[], 1.0 )
     	    if ret[0] == [self.fifo]:
-                message = self.fifo.readline().strip("\n")  
+                message = os.read(self.fifo, 100).strip("\n")  
                 if len(message) > 0:        
                     logging.debug("Message: "+message+" ("+message.encode("hex")+")")
                     self.queue.put({"message": message, "prot": "PIPE"})            
@@ -48,7 +48,7 @@ class Pipe:
         logging.debug("FIFO: writing '"+message+"'")
         if message[-1] != "\n":
             message += "\n"
-        self.fifo.write(message)
+            os.write(self.fifo, message)
         logging.debug("FIFO: written")
 
     # Stop receiving mesassages

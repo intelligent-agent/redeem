@@ -171,6 +171,7 @@ class Replicape:
     def _execute(self, g):
         if g.code() == "G1":                                        # Move (G1 X0.1 Y40.2 F3000)                        
             if g.hasLetter("F"):                                    # Get the feed rate                 
+                logging.info("'"+str(g.getValueByLetter("F"))+"'")
                 self.feed_rate = float(g.getValueByLetter("F"))
                 g.removeTokenByLetter("F")
             smds = {}                                               # All steppers 
