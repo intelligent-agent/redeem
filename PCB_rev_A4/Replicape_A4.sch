@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE eagle SYSTEM "eagle.dtd">
-<eagle version="6.1">
+<eagle version="6.5.0">
 <drawing>
 <settings>
 <setting alwaysvectorfont="no"/>
@@ -23205,6 +23205,8 @@ Wickmann</description>
 <part name="C60" library="rcl" deviceset="C-EU" device="C0402" value="0.47uF"/>
 <part name="GND81" library="supply1" deviceset="GND" device=""/>
 <part name="F1" library="fuse" deviceset="FUSE" device="3557"/>
+<part name="C61" library="rcl" deviceset="CPOL-EU" device="140CLH-0810" value="100uF"/>
+<part name="GND82" library="supply1" deviceset="GND" device=""/>
 </parts>
 <sheets>
 <sheet>
@@ -23573,6 +23575,8 @@ Wickmann</description>
 <instance part="R54" gate="G$1" x="604.52" y="215.9" rot="R90"/>
 <instance part="C60" gate="G$1" x="599.44" y="162.56" rot="MR0"/>
 <instance part="GND81" gate="1" x="599.44" y="154.94" rot="MR0"/>
+<instance part="C61" gate="G$1" x="142.24" y="76.2"/>
+<instance part="GND82" gate="1" x="142.24" y="63.5"/>
 </instances>
 <busses>
 </busses>
@@ -24167,6 +24171,11 @@ Wickmann</description>
 <segment>
 <pinref part="C60" gate="G$1" pin="2"/>
 <pinref part="GND81" gate="1" pin="GND"/>
+</segment>
+<segment>
+<pinref part="C61" gate="G$1" pin="-"/>
+<wire x1="142.24" y1="71.12" x2="142.24" y2="66.04" width="0.1524" layer="91"/>
+<pinref part="GND82" gate="1" pin="GND"/>
 </segment>
 </net>
 <net name="N$114" class="0">
@@ -24869,6 +24878,9 @@ Wickmann</description>
 <pinref part="L1" gate="G$1" pin="2"/>
 <pinref part="U6" gate="G$1" pin="VFB"/>
 <pinref part="5V" gate="G$1" pin="TP"/>
+<pinref part="C61" gate="G$1" pin="+"/>
+<wire x1="142.24" y1="86.36" x2="142.24" y2="78.74" width="0.6096" layer="91"/>
+<junction x="142.24" y="86.36"/>
 </segment>
 <segment>
 <wire x1="563.88" y1="83.82" x2="535.94" y2="83.82" width="0.1524" layer="91"/>

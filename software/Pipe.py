@@ -38,18 +38,19 @@ class Pipe:
         while self.running:
             ret = select.select( [self.fifo],[],[], 1.0 )
     	    if ret[0] == [self.fifo]:
-                message = os.read(self.fifo, 100).strip("\n")  
+                #message = os.read(self.fifo, 100).strip("\n")  
+                message = readline_custom(self.fifo)
                 if len(message) > 0:        
-                    logging.debug("Message: "+message+" ("+message.encode("hex")+")")
+                    #logging.debug("Message: "+message+" ("+message.encode("hex")+")")
                     self.queue.put({"message": message, "prot": "PIPE"})            
 
     # Send a message		
     def send_message(self, message):
-        logging.debug("FIFO: writing '"+message+"'")
+        #logging.debug("FIFO: writing '"+message+"'")
         if message[-1] != "\n":
             message += "\n"
             os.write(self.fifo, message)
-        logging.debug("FIFO: written")
+        #logging.debug("FIFO: written")
 
     # Stop receiving mesassages
     def close(self):
@@ -81,4 +82,19 @@ def tail( f, window=20 ):
         bytes -= BUFSIZ
         block -= 1
     return '\n'.join(''.join(data).splitlines()[-window:])
+
+
+def readline_custom(fifo):
+    message = ""
+
+    while True:
+        cur_char = os.read(fifo, 1)
+
+        #Check for newline char    
+        if (cur_char == '\n' or cur_char == ""):
+            return message;
+   
+        #Add character to message
+        message = message + cur_char
+
 
