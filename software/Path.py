@@ -1,5 +1,6 @@
 """ 
 Path.py - A single movement from one point to another 
+All coordinates  in this file is in meters. 
 
 Author: Elias Bakken
 email: elias.bakken@gmail.com
@@ -19,7 +20,7 @@ class Path:
     Ainv = np.linalg.inv(A)
 
     def __init__(self, axes, feed_rate, movement, is_print_segment=True):
-        """ The axes of evil, the feed rate in mm/min and ABS or REL """
+        """ The axes of evil, the feed rate in m/s and ABS or REL """
         #self.config = ConfigParser.ConfigParser()
         #self.config.readfp(open('config/default.cfg'))
         self.axes = axes
@@ -44,42 +45,43 @@ class Path:
         """ Set the global position for the printer """
         if update_next:
             print "Global pos is "+str(global_pos)
-        self.global_pos = global_pos
+        self.global_pos = global_pos 
         if "X" in self.axes:
-            x = self.axes["X"]/1000.0
+            x = self.axes["X"]
             if self.movement == "ABSOLUTE":
                 x -= self.global_pos["X"]
         else:
             x = 0
         if "Y" in self.axes:
-            y = self.axes["Y"]/1000.0
+            y = self.axes["Y"]
             if self.movement == "ABSOLUTE":        
                 y -= self.global_pos["Y"]
         else:
             y = 0
         if "Z" in self.axes:
-            z = self.axes["Z"]/1000.0
+            z = self.axes["Z"]
             if self.movement == "ABSOLUTE":           
                 z -= self.global_pos["Z"]
         else:
             z = 0
         if "E" in self.axes:
-            e = self.axes["E"]/1000.0
-            if self.movement == "ABSOLUTE":           
+            e = self.axes["E"]
+            if self.movement == "ABSOLUTE":  
                 e -= self.global_pos["E"]
         else:
             e = 0
         
-        self.vector = {"X":x, "Y":y, "Z":z, "E":e}
+        self.vector = {"X":x, "Y":y, "Z":z, "E":e} 
+        self.cartesian_vector = {"X":x, "Y":y, "Z":z, "E":e} 
 
         # Update the "probable" (as in not true) global pos of the next segment. 
         # This is in order to calculate the angle to it. Thus it need not be exact. 
         if hasattr(self, 'next') and update_next:
             a = self.global_pos
-            b = self.vector
-            print "Setting the next global pos to "+str(dict( (n, a.get(n, 0)*1000.0+b.get(n, 0)*1000.0) for n in set(a)|set(b) ))
+            b = self.cartesian_vector
+            print "Setting the next global pos to "+str(dict( (n, a.get(n, 0)+b.get(n, 0)) for n in set(a)|set(b) ))
             # Do not continue the update beyond the next segment
-            self.next.set_global_pos(dict( (n, a.get(n, 0)*1000.0+b.get(n, 0)*1000.0) for n in set(a)|set(b) ), False)
+            self.next.set_global_pos(dict( (n, a.get(n, 0)+b.get(n, 0)) for n in set(a)|set(b) ), False)
             self.next_ok = True
 
         # implement any transformation. Hipsterbot has an H-type belt, so: 
@@ -87,8 +89,7 @@ class Path:
         if self.axis_config == "H-belt":            
             b = np.array([x, y])
             X = np.dot(Path.Ainv, b)
-            self.vector["X"] = X[0, 0]
-            self.vector["Y"] = X[0, 1]    
+            self.vector = {"X":X[0, 0], "Y":X[0, 1], "Z":z, "E":e}
 
     def get_length(self):     
         """ Get the length of this path segment """
@@ -98,42 +99,32 @@ class Path:
         self.length = np.sqrt(x**2+y**2+z**2)                             # calculate the hypotenuse to the X-Y vectors, 
         return self.length
 
-    
     def get_axis_length(self, axis):
         """ Get the length of the axis """
         return self.vector[axis]
 
-    """ Get the top speed of this segment """
     def get_max_speed(self):
-        return (self.feed_rate/60.0)/1000.0
+        """ Get the top speed of this segment """
+        return self.feed_rate
 
-    """ Get the ratio for this axis """
     def get_axis_ratio(self, axis):
+        """ Get the ratio for this axis """
         hyp     = self.get_length()    	                                # Calculate the ratio               
         if hyp == 0.0:
             return 1.0
         return abs(self.get_axis_length(axis))/hyp
 
-    """ Get the lowest speed along this segment """
-    def get_end_speed(self):
-        return (1-self.angle_to_next()/np.pi)*self.get_max_speed()
-
-    """ Get the lowest speed along this segment """
     def get_start_speed(self):
+        """ Get the lowest speed along this segment """
         return (1-self.angle_to_prev()/np.pi)*self.get_max_speed()
 
-    """ Return the list of axes """
+    def get_end_speed(self):
+        """ Get the lowest speed along this segment """
+        return (1-self.angle_to_next()/np.pi)*self.get_max_speed()
+
     def get_axes(self):
-        logging.debug(self.vector)
+        """ Return the list of axes """
         return { k : v for k,v in self.vector.iteritems() if v != 0 }
-
-    """ set the distance that was actually travelled.. """
-    def set_travelled_distance(self, axis, td):
-        self.actual_travel[axis] = td
-
-    """ Return the actual travelled distance for this path """
-    def get_travelled_distance(self):
-        return self.actual_travel
 
     def unit_vector(self, vector):
         """ Returns the unit vector of the vector.  """
@@ -150,9 +141,9 @@ class Path:
             else:
                 return np.pi
         return angle
-
-    """ Return the angle to the next path segment """
+    
     def angle_to_next(self):
+        """ Return the angle to the next path segment """
         if hasattr(self, 'angle_to_next_cal'):
             return self.angle_to_next_cal
         if self.next_ok == False:
@@ -164,9 +155,9 @@ class Path:
         self.angle_to_next_cal = angle
 
         return angle
-
-    """ Return the angle to the previous path segment """
+    
     def angle_to_prev(self):
+        """ Return the angle to the previous path segment """
         if hasattr(self, 'angle_to_prev_cal'):
             return self.angle_to_prev_cal
         if not hasattr(self, 'prev'):
@@ -205,22 +196,22 @@ class Path:
 
 if __name__ == '__main__':
     # Add path segment A. None before, none after
-    a = Path({"X": 10, "Y": 0}, 3000, "ABSOLUTE")
+    a = Path({"X": 0.1, "Y": 0}, 0.3, "ABSOLUTE")
 
     # Add path segment B. Make prev point to A. Make next of A point to B. 
-    b = Path({"X": 10, "Y": 10}, 3000, "ABSOLUTE")
+    b = Path({"X": 0.1, "Y": 0.1}, 0.3, "ABSOLUTE")
     b.set_prev(a)
     a.set_next(b)
 
     # Add path segment C. Make pre of C point to B and next of B point to C. 
-    c = Path({"X": 10, "Y": 10}, 3000, "ABSOLUTE")
+    c = Path({"X": 0.0, "Y": 0.1}, 0.3, "ABSOLUTE")
     c.set_prev(b)
     b.set_next(c)
 
     # A is fetched and executed. 
     a.set_global_pos({"X": 0, "Y": 0}) 
     # B is fetched. 
-    b.set_global_pos({"X": 10, "Y": 0}) 
+    b.set_global_pos({"X": 0.1, "Y": 0}) 
 
     # Now we want to know the stuff. 
     print "Angle to next is "+str(b.angle_to_next())+" it should be pi/2 "

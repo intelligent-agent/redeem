@@ -129,14 +129,13 @@ class Replicape:
         # Set up USB, this receives messages and pushes them on the queue
         #self.usb = USB(self.commands)		
         self.pipe = Pipe(self.commands)
-        logging.info("Pipes OK")
         self.ethernet = Ethernet(self.commands)
         
         # Init the path planner
         self.movement = "RELATIVE"
         self.feed_rate = 3000.0
         self.current_pos = {"X":0.0, "Y":0.0, "Z":0.0, "E":0.0}
-        self.acceleration = 300.0/1000.0
+        self.acceleration = 0.1
 
         self.path_planner = Path_planner(self.steppers, self.current_pos)         
         self.path_planner.set_acceleration(self.acceleration) 
@@ -172,12 +171,12 @@ class Replicape:
         if g.code() == "G1":                                        # Move (G1 X0.1 Y40.2 F3000)                        
             if g.hasLetter("F"):                                    # Get the feed rate                 
                 logging.info("'"+str(g.getValueByLetter("F"))+"'")
-                self.feed_rate = float(g.getValueByLetter("F"))
+                self.feed_rate = float(g.getValueByLetter("F"))/60000.0 # Convert from mm/min to SI unit m/s
                 g.removeTokenByLetter("F")
             smds = {}                                               # All steppers 
             for i in range(g.numTokens()):                          # Run through all tokens
                 axis = g.tokenLetter(i)                             # Get the axis, X, Y, Z or E
-                smds[axis] = float(g.tokenValue(i))                 # Get tha value, new position or vector             
+                smds[axis] = float(g.tokenValue(i))/1000.0          # Get the value, new position or vector             
             path = Path(smds, self.feed_rate, self.movement, g.is_crc())# Make a path segment from the axes            
             self.path_planner.add_path(path)                        # Add the path. This blocks until the path planner has capacity
             #logging.debug("Moving to: "+' '.join('%s:%s' % i for i in smds.iteritems()))

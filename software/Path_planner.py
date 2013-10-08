@@ -150,19 +150,15 @@ class Path_planner:
     def exit(self):
         self.running = False
         self.pru.join()
-        #logging.debug("pru joined")
         self.t.join()
-        #logging.debug("path planner joined")
 
 
     ''' Make the data for the PRU or steppers '''
     def _make_data(self, path, axis):  
-        #logging.debug("Making data")   
         stepper         = self.steppers[axis]
         steps_pr_meter  = stepper.get_steps_pr_meter()
         vec             = path.get_axis_length(axis)                        # Total travel distance
         num_steps       = int(abs(vec) * steps_pr_meter)                    # Number of steps to tick
-        #logging.debug("Numsteps for "+axis+" is "+str(num_steps))
         if num_steps == 0:
             return ([], [])
         step_pin    = stepper.get_step_pin()                            # Get the step pin
@@ -194,21 +190,14 @@ class Path_planner:
         distances_end    = np.arange(0, sm_end, ds)		        # Table of distances                       
         timestamps_start = (-u_start+np.sqrt(2.0*a*distances_start+u_start**2))/a# When ticks occur
         timestamps_end   = (-u_end  +np.sqrt(2.0*a*distances_end+u_end**2))/a # When ticks occur
-        #timestamps_start = [(-u_start+np.sqrt(2.0*a*ss+u_start**2))/a for ss in distances_start]# When ticks occur
-        #timestamps_end   = [(-u_end  +np.sqrt(2.0*a*ss+u_end**2))/a for ss in distances_end]# When ticks occur
         delays_start     = np.diff(timestamps_start)/2.0			    # We are more interested in the delays pr second. 
         delays_end       = np.diff(timestamps_end)/2.0			        # We are more interested in the delays pr second.         
         delays_start     = np.array([delays_start, delays_start]).transpose().flatten()
         delays_end       = np.array([delays_end, delays_end]).transpose().flatten()
-        #delays_start     = np.concatenate([delays_start, delays_start]).transpose().flatten()
-        #delays_end       = np.concatenate([delays_end, delays_end]).transpose().flatten()
 
         i_steps     = 2*num_steps-len(delays_start)-len(delays_end)     # Find out how many delays are missing
         i_delays    = np.array([(ds/Vm)/2.0]*i_steps)  		                    # Make the intermediate steps
         delays      = np.concatenate([delays_start, i_delays, np.flipud(delays_end)])# Add the missing delays. 
-        #min_delay = 4.0*10**-6		
-        #for i, d in enumerate(delays): 
-        #    delays[i] = max(min_delay, delays[i])                       # limit delays to 2 ms
         td          = num_steps/steps_pr_meter                          # Calculate the actual travelled distance        
         if vec < 0:                                                     # If the vector is negative, negate it.      
             td     *= -1.0
@@ -226,16 +215,15 @@ class Path_planner:
         else:                        
             self.current_pos[axis] += td                                    # Update the global position vector
         
-        #print "lens are "+str(len(pins))+" and "+str(len(list(delays)))
         return (pins, delays)                                           # return the pin states and the data
 
 
 if __name__ == '__main__':
     from Smd import SMD
     from Path import Path
+    import cProfile
     
     steppers = {}
-
     steppers["X"] = SMD("GPIO0_27", "GPIO1_29", "GPIO2_4",  0, "X")
     steppers["X"].set_steps_pr_mm(4.3)          
     steppers["Y"] = SMD("GPIO1_12", "GPIO0_22", "GPIO2_5",  1, "Y")  
@@ -248,57 +236,18 @@ if __name__ == '__main__':
     steppers["E"].set_steps_pr_mm(4.3)          
     
     current_pos = {"X":0.0, "Y":0.0, "Z":0.0, "E":0.0} 
-        
     pp = Path_planner(steppers, current_pos)
-
-    import cProfile    
-    
     pp.set_acceleration(0.3)
- 
 
-    next_pos = {"X":2.0, "Y":3.0, "Z":1.0, "E":4.0} 
+    next_pos = {"X":0.001, "Y":0.003, "Z":0.001, "E":0.004} 
     for x in range(100):
-        path = Path(next_pos.copy(), 3000.0, "RELATIVE", True)
+        path = Path(next_pos.copy(), 0.3, "RELATIVE", True)
         pp.add_path(path)
     cProfile.run('[pp.do_work() for i in range(100)]')
 
-    next_pos = {"X":150.0, "Y":210.0, "Z":100.0, "E":130.0} 
-    path = Path(next_pos, 3000.0, "RELATIVE", True)
+    next_pos = {"X":0.15, "Y":0.21, "Z":0.1, "E":0.13} 
+    path = Path(next_pos, 0.3, "RELATIVE", True)
     pp.add_path(path)
     cProfile.run('pp.do_work()')
-
-
-
-    path.set_global_pos(current_pos.copy()) 
-    data_x = pp._make_data(path, "X")
     
-    #print data_x
-    
-    exit(0)
-
-    data_y = pp._make_data(path, "Y")
-    data_z = pp._make_data(path, "Z")
-    data_e = pp._make_data(path, "E")
-    cProfile.run('pp._make_data(path, "X"), pp._make_data(path, "Y"), pp._make_data(path, "Z"), pp._make_data(path, "E")')
-    
-    data_x = zip(*data_x)
-    data_y = zip(*data_y)
-    data_z = zip(*data_z)
-    data_e = zip(*data_e)
-    
-    cProfile.run('pp._braid_data1(data_x, data_y), pp._braid_data1(data_x, data_z), pp._braid_data1(data_x, data_e)')
-
-    path.set_global_pos(current_pos.copy()) 
-    data_x = pp._make_data(path, "X")
-    data_y = pp._make_data(path, "Y")
-    data_z = pp._make_data(path, "Z")
-    data_e = pp._make_data(path, "E")
-    data_x = zip(*data_x)
-    data_y = zip(*data_y)
-    data_z = zip(*data_z)
-    data_e = zip(*data_e)
-
-    cProfile.run('pp._braid_data(data_x, data_y), pp._braid_data(data_x, data_z), pp._braid_data(data_x, data_e)')
-
-    exit(0)
 
