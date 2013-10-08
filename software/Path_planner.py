@@ -17,26 +17,24 @@ import time
 import logging
 import numpy as np  
 from threading import Thread
-if __name__ != '__main__':
-    from Pru import Pru
+#if __name__ != '__main__':
+from Pru import Pru
 import Queue
 from collections import defaultdict
-#from scipy import weave
-#import pyximport; pyximport.install()
 import braid
 
 class Path_planner:
     ''' Init the planner '''
     def __init__(self, steppers, current_pos):
         self.steppers    = steppers
-        if __name__ != '__main__':
-            self.pru         = Pru()                                # Make the PRU
-        self.paths       = Queue.Queue(30)                      # Make a queue of paths
+        self.pru         = Pru()                                # Make the PRU
+        self.paths       = Queue.Queue(100)                      # Make a queue of paths
         self.current_pos = current_pos                          # Current position in (x, y, z, e)
         self.running     = True                                 # Yes, we are running
         self.pru_data    = []
         self.t           = Thread(target=self._do_work)         # Make the thread
-        self.t.start()		                
+        if __name__ != '__main__':
+            self.t.start()		                
 
     ''' Set the acceleration used ''' # Fix me, move this to path
     def set_acceleration(self, acceleration):
@@ -71,59 +69,41 @@ class Path_planner:
     def _do_work(self):
         while self.running:       
             try: 
-                path = self.paths.get(timeout = 1)                            # Get the last path added
-                path.set_global_pos(self.current_pos.copy())       # Set the global position of the printer
-                all_data = {}
-                slowest =  0
-                for axis in path.get_axes():                       # Run through all the axes in the path    
-                    stepper = self.steppers[axis]                  # Get a handle of  the stepper                    
-                    data = self._make_data(path, axis)
-                    if len(data[0]) > 0:
-                        all_data[axis] = data                      # Generate the timing and pin data                         
-                        slowest = max(slowest, sum(data[1]))                                   
-                #logging.debug("slowest is "+str(slowest))
-
-                for axis in all_data:                              # Make all axes use the same amount of time
-                    packet = all_data[axis]                           
-                    delays = np.array(packet[1])
-                    diff = (slowest-sum(delays))/len(delays)
-                    if diff > 0.00002:
-                        for j, delay in enumerate(delays):
-                            delays[j] = delay+diff                    
-                    data = zip(*(packet[0], delays))
-                    #logging.debug(axis+": "+str(data))
-                    if len(self.pru_data) == 0:
-                        self.pru_data = data
-                    else:
-                        #self.pru_data += data
-                        self.pru_data = self._braid_data(self.pru_data, data)
-
-                #logging.debug("PRU data done")              
-                if len(self.pru_data) > 0:                   
-                    while not self.pru.has_capacity_for(len(self.pru_data[0])*8):          
-                        logging.debug("Pru full")              
-                        time.sleep(1)              
-         
-                    self.pru.add_data(zip(*self.pru_data))
-                    self.pru.commit_data()                            # Commit data to ddr
-
-                self.pru_data = []                    
-                self.paths.task_done()
+               self.do_work()
             except Queue.Empty:
-                #logging.debug("Queue empty")
                 pass
     
-    
+    def do_work(self):
+        path = self.paths.get()                            # Get the last path added
+        path.set_global_pos(self.current_pos.copy())       # Set the global position of the printer
+        all_data = {}
+        slowest =  0
+        for axis in path.get_axes():                       # Run through all the axes in the path    
+            stepper = self.steppers[axis]                  # Get a handle of  the stepper                    
+            data = self._make_data(path, axis)            
+            if len(data[0]) > 0:
+                if len(self.pru_data) == 0:
+                    self.pru_data = zip(*data)
+                else:
+                    self.pru_data = self._braid_data(self.pru_data, zip(*data))
+
+        if len(self.pru_data) > 0:  
+            while not self.pru.has_capacity_for(len(self.pru_data[0])*8):          
+                logging.debug("Pru full")              
+                time.sleep(1)               
+            self.pru.add_data(zip(*self.pru_data))
+            self.pru.commit_data()                            # Commit data to ddr
+
+        self.pru_data = []                    
+        self.paths.task_done()
+
     def _braid_data(self, data1, data2):
         """ Braid/merge together the data from the two data sets"""
         return braid.braid_data_c(data1, data2)
     
-    
-    '''
-    def _braid_data(self, data1, data2):
+    def _braid_data1(self, data1, data2):
         """ Braid/merge together the data from the two data sets"""
-        return braid._braid_data(data1, data2)
-
+        #return braid._braid_data(data1, data2)
 
         line = 0
         (pin1, dly1) = data1[line]
@@ -164,233 +144,8 @@ class Path_planner:
                 data1[line] = (pin2+pin1, dly1)
 
         return data1
-    '''   
-
-    '''
-    def _braid_data(self, data1, data2):
-        """ Braid/merge together the data from the two data sets"""
-        
-        # do a little type checking in Python
-        assert(type(data1) == type([]))
-        assert(type(data2) == type([]))
-        
-        #The c++ code
-        code = r"""
-        
-        int line = 0;           //Current position in the resulting arrays
-        int idx1 = 0;           //Current position in data1
-        int idx2 = 0;           //Current position in data2
-        
-        //Variables for extracting tuple-values
-        py::tuple tmp_tuple1, tmp_tuple2;
-        int pin1, pin2;
-        float dly1, dly2;
-        
-        //Set max size for array. (Is this the correct maximum size?)
-        int max_size = data1.size() + data2.size();
-        
-        // Allocate memory for two arrays of maximum possible size to contain result
-        int * pins = (int*) malloc(sizeof(int) * max_size);
-        float * delay = (float*) malloc(sizeof(float) * max_size);
-            
-            
-        //Get first tuples from data1 and data2
-        tmp_tuple1 = py_to_tuple(PyList_GetItem(data1,idx1), "tmp_tuple1");
-        pin1 = tmp_tuple1[0];
-        dly1 = tmp_tuple1[1];
-        tmp_tuple2 = py_to_tuple(PyList_GetItem(data2,idx2), "tmp_tuple2");
-        pin2 = tmp_tuple2[0];
-        dly2 = tmp_tuple2[1];
-            
-            
-        while (1) {
-            if (dly1 == dly2) {
-                //Create resulting pin number
-                pins[line] = pin1 + pin2;
-                //Create resulting delay
-                delay[line] = dly1;
-            
-                //DEBUG:
-                //printf("Added (%d, %.1f) - dly1=dly2\n", pins[line], delay[line]);
-                //printf("dly1=%.1f\n",dly1);
-                //printf("dly2=%.1f\n",dly2);
-                
-                //Update line
-                line++; 
-                
-                //Update indexes
-                idx1++;
-                idx2++;
-                
-                //Check that there are still items left in both arrays
-                if (idx1 >= data1.size() || idx2 >= data2.size())
-                    break;
-                
-                //Get next tuples from data1 and data2
-                tmp_tuple1 = py_to_tuple(PyList_GetItem(data1,idx1), "tmp_tuple1");
-                pin1 = tmp_tuple1[0];
-                dly1 = tmp_tuple1[1];
-                tmp_tuple2 = py_to_tuple(PyList_GetItem(data2,idx2), "tmp_tuple2");
-                pin2 = tmp_tuple2[0];
-                dly2 = tmp_tuple2[1];
-        
-            }
-            
-            else if (dly1 > dly2) {
-                //Create resulting pin number
-                pins[line] = pin1 + pin2;
-                //Create resulting delay
-                delay[line] = dly2;
-                
-                //DEBUG:
-                //printf("Added (%d, %.1f) - dly1>dly2\n", pins[line], delay[line]);
-                //printf("dly1=%.1f\n",dly1);
-                //printf("dly2=%.1f\n",dly2);
-                //printf("idx1=%d\n",idx1);
-                //printf("idx2=%d\n",idx2);
-                
-                //Update line
-                line++; 
-                
-                //Subtract dly2 from dly1 to get the delay from the last tuple we added
-                dly1 -= dly2;
-                
-                //Increase idx2
-                idx2++;
-                
-                //Check that there are still items left in data2 array
-                if (idx2 >= data2.size())
-                    break;
-                
-                //Get next tuple from data2
-                tmp_tuple2 = py_to_tuple(PyList_GetItem(data2,idx2), "tmp_tuple2");
-                pin2 = tmp_tuple2[0];
-                dly2 = tmp_tuple2[1];
-            }
-            
-            else if (dly1 < dly2) {
-                //Create resulting pin number
-                pins[line] = pin1 + pin2;
-                //Create resulting delay
-                delay[line] = dly1;
-                
-                //DEBUG:
-                //printf("Added (%d, %.1f) - dly1<dly2\n", pins[line], delay[line]);
-                //printf("dly1=%.1f\n",dly1);
-                //printf("dly2=%.1f\n",dly2);
-                //printf("idx1=%d\n",idx1);
-                //printf("idx2=%d\n",idx2);
-                
-                //Update line
-                line++; 
-                
-                //Subtract dly1 from dly2 to get the delay from the last tuple we added
-                dly2 -= dly1;
-                
-                //Increase idx1
-                idx1++;
-                
-                //Check that there are still items left in data1 array
-                if (idx1 >= data1.size())
-                    break;
-                    
-                //Get next tuple from data1
-                tmp_tuple1 = py_to_tuple(PyList_GetItem(data1,idx1), "tmp_tuple1");
-                pin1 = tmp_tuple1[0];
-                dly1 = tmp_tuple1[1];
-            }
-        }    
-        
-        //If we are here, then we have gone through at least one of the arrays.
-        //Need to check if there are items left in the other array
-        
-        if (idx1 < data1.size()) 
-        {
-            pins[line] = pin1;
-            delay[line] = dly1;
-            line++;
-            idx1++;
-
-            //Iterate through any items left in data1
-            for (idx1; idx1 < data1.size(); idx1++) 
-            {
-                //Get tuple from data1
-                tmp_tuple1 = py_to_tuple(PyList_GetItem(data1,idx1), "tmp_tuple1");
-                pin1 = tmp_tuple1[0];
-                dly1 = tmp_tuple1[1]; 
-                
-                //Add new tuple to result
-                pins[line] = pin1;
-                delay[line] = dly1;
-                
-                //Increase indexes
-                line++;
-            }
-        }
-        
-        if (idx2 < data2.size()) 
-        {
-            pins[line] = pin2;
-            delay[line] = dly2;
-            line++;
-            idx2++;     
-                
-                
-            //Iterate through any items left in data2
-            for (idx2; idx2 < data2.size(); idx2++) 
-            {
-                //Get tuple from data2
-                tmp_tuple2 = py_to_tuple(PyList_GetItem(data2,idx2), "tmp_tuple2");
-                pin2 = tmp_tuple2[0];
-                dly2 = tmp_tuple2[1]; 
-                
-                //Add new tuple to result
-                pins[line] = pin2;
-                delay[line] = dly2;
-                
-                //Increase indexes
-                line++;
-            }
-        }
-        
-        
-        //Print result for debugging:
-        //printf("\nResulting array:\n");
-        //for (int i=0; i<line; i++)
-        //    printf("(%d, %.1f), ", pins[i], delay[i]);
-        
-        //printf("\n\n");    
-        
-        
-        //Create a returnable object from the two arrays "pins" and "delay"
-        PyObject *pytup;
-        PyObject *pylist = PyList_New(line);
-        PyObject *item;
-        for (int i=0; i<line; i++)
-        {
-            pytup = PyTuple_New(2);
-            item = PyInt_FromLong(pins[i]);
-            PyTuple_SetItem(pytup, 0, item);
-            item = PyFloat_FromDouble(delay[i]);
-            PyTuple_SetItem(pytup, 1, item);
-            
-            PyList_SetItem(pylist, i, pytup);
-        }
-        
-        //Free allocated memory
-        free(pins);
-        free(delay);
-        
-        //Return array
-        return_val = pylist;
-        """
-        
-        return weave.inline(code,['data1', 'data2'])
-        '''
 
 
-
-    
     ''' Join the thread '''
     def exit(self):
         self.running = False
@@ -430,36 +185,37 @@ class Path_planner:
         else:
             u_end = 0
 
-        #logging.debug("Max speed for "+axis+" is "+str(Vm))
-        #logging.debug("Start speed for "+axis+" is "+str(u_start))
-        #logging.debug("End speed for "+axis+" is "+str(u_end))
         tm_start = (Vm-u_start)/a					                    # Calculate the time for when max speed is met. 
         tm_end   = (Vm-u_end)/a					                        # Calculate the time for when max speed is met. 
         sm_start = min(u_start*tm_start + 0.5*a*tm_start**2, s/2.0)     # Calculate the distance traveled when max speed is met
         sm_end   = min(u_end*tm_end + 0.5*a*tm_end**2, s/2.0)           # Calculate the distance traveled when max speed is met
 
-        distances_start  = list(np.arange(0, sm_start, ds))		        # Table of distances                       
-        distances_end    = list(np.arange(0, sm_end, ds))		        # Table of distances                       
-        timestamps_start = [(-u_start+np.sqrt(2.0*a*ss+u_start**2))/a for ss in distances_start]# When ticks occur
-        timestamps_end   = [(-u_end  +np.sqrt(2.0*a*ss+u_end**2))/a for ss in distances_end]# When ticks occur
+        distances_start  = np.arange(0, sm_start, ds)		        # Table of distances                       
+        distances_end    = np.arange(0, sm_end, ds)		        # Table of distances                       
+        timestamps_start = (-u_start+np.sqrt(2.0*a*distances_start+u_start**2))/a# When ticks occur
+        timestamps_end   = (-u_end  +np.sqrt(2.0*a*distances_end+u_end**2))/a # When ticks occur
+        #timestamps_start = [(-u_start+np.sqrt(2.0*a*ss+u_start**2))/a for ss in distances_start]# When ticks occur
+        #timestamps_end   = [(-u_end  +np.sqrt(2.0*a*ss+u_end**2))/a for ss in distances_end]# When ticks occur
         delays_start     = np.diff(timestamps_start)/2.0			    # We are more interested in the delays pr second. 
         delays_end       = np.diff(timestamps_end)/2.0			        # We are more interested in the delays pr second.         
-        delays_start     = list(np.array([delays_start, delays_start]).transpose().flatten())         
-        delays_end       = list(np.array([delays_end, delays_end]).transpose().flatten()) 
+        delays_start     = np.array([delays_start, delays_start]).transpose().flatten()
+        delays_end       = np.array([delays_end, delays_end]).transpose().flatten()
+        #delays_start     = np.concatenate([delays_start, delays_start]).transpose().flatten()
+        #delays_end       = np.concatenate([delays_end, delays_end]).transpose().flatten()
 
         i_steps     = 2*num_steps-len(delays_start)-len(delays_end)     # Find out how many delays are missing
-        i_delays    = [(ds/Vm)/2.0]*i_steps  		                    # Make the intermediate steps
-        delays      = delays_start+i_delays+delays_end[::-1]            # Add the missing delays. These are max_speed        
-        min_delay = 4.0*10**-6		
-        for i, d in enumerate(delays): 
-            delays[i] = max(min_delay, delays[i])                       # limit delays to 2 ms
+        i_delays    = np.array([(ds/Vm)/2.0]*i_steps)  		                    # Make the intermediate steps
+        delays      = np.concatenate([delays_start, i_delays, np.flipud(delays_end)])# Add the missing delays. 
+        #min_delay = 4.0*10**-6		
+        #for i, d in enumerate(delays): 
+        #    delays[i] = max(min_delay, delays[i])                       # limit delays to 2 ms
         td          = num_steps/steps_pr_meter                          # Calculate the actual travelled distance        
         if vec < 0:                                                     # If the vector is negative, negate it.      
             td     *= -1.0
 
 		# Make sure the dir pin is shifted 650 ns before the step pins
         pins = [dir_pin]+pins
-        delays = [650*10**-9]+delays
+        delays = np.array([650*10**-9])+delays
 
         # If the axes are X or Y, we need to transform back in case of 
         # H-belt or some other transform. 
@@ -470,26 +226,79 @@ class Path_planner:
         else:                        
             self.current_pos[axis] += td                                    # Update the global position vector
         
-        #logging.debug("Is at: "+' '.join('%s:%s' % i for i in self.current_pos.iteritems()))
-        #logging.debug("pins for "+axis+" is "+str(pins)+" delays: "+str(delays))
+        #print "lens are "+str(len(pins))+" and "+str(len(list(delays)))
         return (pins, delays)                                           # return the pin states and the data
 
 
 if __name__ == '__main__':
-    pp = Path_planner({}, {})
-    data1 = [(2, 1), (4, 3), (2, 4), (4, 1)]
-    data2 = [(8, 1.5), (16, 4), (8, 4), (16, 1.5)]
-    data3 = [(32, 1.5), (64, 4), (32, 4), (64, 1.5)]
-    data1 = pp._braid_data(data1, data2)
-    print data1
-    data1 = pp._braid_data(data1, data3)
-    print data1
-
-
-    import cProfile
-    data1 = [(2, 1), (4, 3), (2, 4), (4, 1)]*10000
-    data2 = [(8, 1.5), (16, 4), (8, 4), (16, 1.5)]*10000
-    data3 = [(32, 1.5), (64, 4), (32, 4), (64, 1.5)]*10000
+    from Smd import SMD
+    from Path import Path
     
-    cProfile.run('pp._braid_data(data1, data2), pp._braid_data(data1, data3)')
+    steppers = {}
+
+    steppers["X"] = SMD("GPIO0_27", "GPIO1_29", "GPIO2_4",  0, "X")
+    steppers["X"].set_steps_pr_mm(4.3)          
+    steppers["Y"] = SMD("GPIO1_12", "GPIO0_22", "GPIO2_5",  1, "Y")  
+    steppers["Y"].set_steps_pr_mm(4.3)          
+    steppers["Z"] = SMD("GPIO0_23", "GPIO0_26", "GPIO0_15", 2, "Z")  
+    steppers["Z"].set_steps_pr_mm(4.3)          
+    steppers["H"] = SMD("GPIO1_28", "GPIO1_15", "GPIO2_1",  3, "Ext1")
+    steppers["H"].set_steps_pr_mm(4.3)          
+    steppers["E"] = SMD("GPIO1_13", "GPIO1_14", "GPIO2_3",  4, "Ext2") 
+    steppers["E"].set_steps_pr_mm(4.3)          
+    
+    current_pos = {"X":0.0, "Y":0.0, "Z":0.0, "E":0.0} 
+        
+    pp = Path_planner(steppers, current_pos)
+
+    import cProfile    
+    
+    pp.set_acceleration(0.3)
+ 
+
+    next_pos = {"X":2.0, "Y":3.0, "Z":1.0, "E":4.0} 
+    for x in range(100):
+        path = Path(next_pos.copy(), 3000.0, "RELATIVE", True)
+        pp.add_path(path)
+    cProfile.run('[pp.do_work() for i in range(100)]')
+
+    next_pos = {"X":150.0, "Y":210.0, "Z":100.0, "E":130.0} 
+    path = Path(next_pos, 3000.0, "RELATIVE", True)
+    pp.add_path(path)
+    cProfile.run('pp.do_work()')
+
+
+
+    path.set_global_pos(current_pos.copy()) 
+    data_x = pp._make_data(path, "X")
+    
+    #print data_x
+    
     exit(0)
+
+    data_y = pp._make_data(path, "Y")
+    data_z = pp._make_data(path, "Z")
+    data_e = pp._make_data(path, "E")
+    cProfile.run('pp._make_data(path, "X"), pp._make_data(path, "Y"), pp._make_data(path, "Z"), pp._make_data(path, "E")')
+    
+    data_x = zip(*data_x)
+    data_y = zip(*data_y)
+    data_z = zip(*data_z)
+    data_e = zip(*data_e)
+    
+    cProfile.run('pp._braid_data1(data_x, data_y), pp._braid_data1(data_x, data_z), pp._braid_data1(data_x, data_e)')
+
+    path.set_global_pos(current_pos.copy()) 
+    data_x = pp._make_data(path, "X")
+    data_y = pp._make_data(path, "Y")
+    data_z = pp._make_data(path, "Z")
+    data_e = pp._make_data(path, "E")
+    data_x = zip(*data_x)
+    data_y = zip(*data_y)
+    data_z = zip(*data_z)
+    data_e = zip(*data_e)
+
+    cProfile.run('pp._braid_data(data_x, data_y), pp._braid_data(data_x, data_z), pp._braid_data(data_x, data_e)')
+
+    exit(0)
+

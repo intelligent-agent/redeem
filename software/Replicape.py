@@ -124,10 +124,10 @@ class Replicape:
 
 
         # Make a queue of commands
-        self.commands = Queue.Queue(30)
+        self.commands = Queue.Queue(300)
 
         # Set up USB, this receives messages and pushes them on the queue
-        self.usb = USB(self.commands)		
+        #self.usb = USB(self.commands)		
         self.pipe = Pipe(self.commands)
         logging.info("Pipes OK")
         self.ethernet = Ethernet(self.commands)
@@ -136,7 +136,7 @@ class Replicape:
         self.movement = "RELATIVE"
         self.feed_rate = 3000.0
         self.current_pos = {"X":0.0, "Y":0.0, "Z":0.0, "E":0.0}
-        self.acceleration = 100.0/1000.0
+        self.acceleration = 300.0/1000.0
 
         self.path_planner = Path_planner(self.steppers, self.current_pos)         
         self.path_planner.set_acceleration(self.acceleration) 
