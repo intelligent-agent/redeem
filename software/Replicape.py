@@ -25,6 +25,7 @@ from Mosfet import Mosfet
 from Smd import SMD
 from Thermistor import Thermistor
 from Fan import Fan
+from EndStop import EndStop
 from USB import USB
 from Pipe import Pipe
 from Ethernet import Ethernet
@@ -49,7 +50,7 @@ def log_ex(type, value, traceback):
     logging.error('Traceback:'+str(traceback))
 
 sys.excepthook = log_ex
-version = "0.4.2"
+version = "0.5.0"
 
 print "Replicape v. "+version
 
@@ -78,7 +79,7 @@ class Replicape:
             stepper.set_microstepping(self.config.getint('Steppers', 'microstepping_'+name)) 
             stepper.set_decay(0) 
 
-		# Commit changes
+		# Commit changes for the Steppers
         SMD.commit()
 
         # Find the path of the thermostors
@@ -94,7 +95,6 @@ class Replicape:
         if os.path.exists("/sys/bus/w1/devices/28-000002e34b73/w1_slave"):
             self.cold_end_1 = W1("/sys/bus/w1/devices/28-000002e34b73/w1_slave", "Cold End 1")
 		
-
         # init the 3 heaters
         self.mosfet_ext1 = Mosfet(3)
         self.mosfet_ext2 = Mosfet(4)
@@ -109,6 +109,7 @@ class Replicape:
         # Make Heated Build platform 
         self.hbp = HBP( self.therm_hbp, self.mosfet_hbp)       
 
+        # Make extruder 2.
         self.ext2 = Extruder(self.steppers["H"], self.therm_ext2, self.mosfet_ext2)
         self.ext2.setPvalue(0.015)
         self.ext2.setDvalue(1.0)     
@@ -122,6 +123,10 @@ class Replicape:
 
         self.fan_1.setPWMFrequency(100)
 
+        # Init the end stops
+        self.end_stops = {}
+        self.end_stops["X1"] = EndStop("GPIO2_2", self.steppers, 2, "X1")
+        self.end_stops["X2"] = EndStop("GPIO0_14", self.steppers, 5, "X2")
 
         # Make a queue of commands
         self.commands = Queue.Queue(300)
@@ -135,7 +140,7 @@ class Replicape:
         self.movement = "RELATIVE"
         self.feed_rate = 3000.0
         self.current_pos = {"X":0.0, "Y":0.0, "Z":0.0, "E":0.0}
-        self.acceleration = 0.1
+        self.acceleration = 0.3
 
         self.path_planner = Path_planner(self.steppers, self.current_pos)         
         self.path_planner.set_acceleration(self.acceleration) 
@@ -170,7 +175,6 @@ class Replicape:
     def _execute(self, g):
         if g.code() == "G1":                                        # Move (G1 X0.1 Y40.2 F3000)                        
             if g.hasLetter("F"):                                    # Get the feed rate                 
-                logging.info("'"+str(g.getValueByLetter("F"))+"'")
                 self.feed_rate = float(g.getValueByLetter("F"))/60000.0 # Convert from mm/min to SI unit m/s
                 g.removeTokenByLetter("F")
             smds = {}                                               # All steppers 
@@ -215,11 +219,14 @@ class Replicape:
             for name, stepper in self.steppers.iteritems():
                 stepper.reset() 
         elif g.code() == "M30":                                     # Set microstepping (Propietary to Replicape)
+            logging.debug("Microstepping")
             for i in range(g.numTokens()):
                 self.steppers[g.tokenLetter(i)].set_microstepping(int(g.tokenValue(i)))            
+            SMD.commit() 
         elif g.code() == "M31":                                     # Set stepper current limit (Propietery to Replicape)
             for i in range(g.numTokens()):                         
                 self.steppers[g.tokenLetter(i)].setCurrentValue(float(g.tokenValue(i)))            
+            SMD.commit() 
         elif g.code() == "M84":                                     # Disable all steppers           
             self.path_planner.wait_until_done()
             for name, stepper in self.steppers.iteritems():
@@ -229,6 +236,7 @@ class Replicape:
             for i in range(g.numTokens()):                          # Run through all tokens
                 axis = g.tokenLetter(i)                             # Get the axis, X, Y, Z or E
                 self.steppers[axis].set_steps_pr_mm(float(g.tokenValue(i)))        
+            SMD.commit() 
         elif g.code() == "M101":									# Deprecated 
             pass 													
         elif g.code() == "M103":									# Deprecated

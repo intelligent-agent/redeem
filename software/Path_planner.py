@@ -17,7 +17,6 @@ import time
 import logging
 import numpy as np  
 from threading import Thread
-#if __name__ != '__main__':
 from Pru import Pru
 import Queue
 from collections import defaultdict
@@ -64,9 +63,8 @@ class Path_planner:
         self.pru.wait_until_done()		 
         logging.debug("PRU done")
 
-    ''' This loop pops a path, sends it to the PRU 
-    and waits for an event '''
     def _do_work(self):
+        """ This loop pops a path, sends it to the PRU and waits for an event """
         while self.running:       
             try: 
                self.do_work()
@@ -88,7 +86,7 @@ class Path_planner:
                     self.pru_data = self._braid_data(self.pru_data, zip(*data))
 
         if len(self.pru_data) > 0:  
-            while not self.pru.has_capacity_for(len(self.pru_data[0])*8):          
+            while not self.pru.has_capacity_for(len(self.pru_data)*8):          
                 logging.debug("Pru full")              
                 time.sleep(1)               
             self.pru.add_data(zip(*self.pru_data))
@@ -103,7 +101,6 @@ class Path_planner:
     
     def _braid_data1(self, data1, data2):
         """ Braid/merge together the data from the two data sets"""
-        #return braid._braid_data(data1, data2)
 
         line = 0
         (pin1, dly1) = data1[line]

@@ -43,8 +43,6 @@ class Path:
     
     def set_global_pos(self, global_pos, update_next = True):
         """ Set the global position for the printer """
-        if update_next:
-            print "Global pos is "+str(global_pos)
         self.global_pos = global_pos 
         if "X" in self.axes:
             x = self.axes["X"]
@@ -79,7 +77,6 @@ class Path:
         if hasattr(self, 'next') and update_next:
             a = self.global_pos
             b = self.cartesian_vector
-            print "Setting the next global pos to "+str(dict( (n, a.get(n, 0)+b.get(n, 0)) for n in set(a)|set(b) ))
             # Do not continue the update beyond the next segment
             self.next.set_global_pos(dict( (n, a.get(n, 0)+b.get(n, 0)) for n in set(a)|set(b) ), False)
             self.next_ok = True

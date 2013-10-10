@@ -8,38 +8,13 @@ License: BSD
 
 You can use and change this, but keep this heading :)
 '''
-PRU0_PRU1_INTERRUPT    = 17
-PRU1_PRU0_INTERRUPT    = 18
 PRU0_ARM_INTERRUPT     = 19
 PRU1_ARM_INTERRUPT     = 20
 ARM_PRU0_INTERRUPT     = 21
 ARM_PRU1_INTERRUPT     = 22
 
-PRUSS0_PRU0_DATARAM    = 0
-PRUSS0_PRU1_DATARAM    = 1
-PRUSS0_PRU0_IRAM       = 2
-PRUSS0_PRU1_IRAM       = 3
-
 PRU0                   = 0
 PRU1                   = 1
-PRU_EVTOUT0            = 2
-PRU_EVTOUT1            = 3
-PRU_EVTOUT2            = 4
-PRU_EVTOUT3            = 5
-PRU_EVTOUT4            = 6
-PRU_EVTOUT5            = 7
-PRU_EVTOUT6            = 8
-PRU_EVTOUT7            = 9
-
-PRU_EVTOUT_0           = 0
-PRU_EVTOUT_1           = 1
-PRU_EVTOUT_2           = 2
-PRU_EVTOUT_3           = 3
-PRU_EVTOUT_4           = 4
-PRU_EVTOUT_5           = 5
-PRU_EVTOUT_6           = 6
-PRU_EVTOUT_7           = 7
-
 
 import os
 import logging
@@ -52,6 +27,8 @@ import mmap
 import struct 
 import select
 
+from collections import deque
+
 DDR_MAGIC			= 0xbabe7175
 
 class Pru:
@@ -62,13 +39,10 @@ class Pru:
         self.inst_pr_delay 	= 2                         # Every loop adds two instructions: i-- and i != 0            
         self.sec_to_inst_dev = (self.s_pr_inst*2)
         self.pru_data       = []      	    	        # This holds all data for one move (x,y,z,e1,e2)
-        self.ddr_used       = []           # List of data lengths currently in DDR for execution
+        self.ddr_used       = Queue.Queue()             # List of data lengths currently in DDR for execution
         self.ddr_reserved   = 0      
         self.ddr_mem_used   = 0  
         self.clear_events   = []       
-        self.ddr_lock       = Lock() 
-        self.debug = 2
-        self.i = 0
 
         self.ddr_addr = int(open("/sys/class/uio/uio0/maps/map1/addr","rb").read().rstrip(), 0)
         self.ddr_size = int(open("/sys/class/uio/uio0/maps/map1/size","rb").read().rstrip(), 0)
@@ -87,7 +61,7 @@ class Pru:
        
         dirname = os.path.dirname(os.path.realpath(__file__))
         pypruss.init()						            # Init the PRU
-        pypruss.open(0)						            # Open PRU event 0 which is PRU0_ARM_INTERRUPT
+        pypruss.open(PRU0)						        # Open PRU event 0 which is PRU0_ARM_INTERRUPT
         pypruss.pruintc_init()					        # Init the interrupt controller
         pypruss.pru_write_memory(0, 0, [self.ddr_addr, self.ddr_nr_events])		# Put the ddr address in the first region 
         pypruss.exec_program(0, dirname+"/../firmware/firmware_00A3.bin")	# Load firmware "ddr_write.bin" on PRU 0
@@ -95,20 +69,18 @@ class Pru:
         self.running = True
         self.t.start()		        
 
-    ''' Add some data to one of the PRUs '''
+    
     def add_data(self, data):
+        """ Add some data to one of the PRUs """
         (pins, delays) = data                       	    # Get the data
         delays = np.clip(0.5*((np.array(delays)/self.s_pr_inst)-self.inst_pr_loop), 1, 4294967296L)
-        #delays = map(self._sec_to_inst, delays)     	    # Convert the delays in secs to delays in instructions        
         data = np.array([pins, delays.astype(int)])		        	    # Make a 2D matrix combining the ticks and delays
         data = list(data.transpose().flatten())     	    # Braid the data so every other item is a pin and delay
         self.pru_data = data   
 
-
     def has_capacity_for(self, data_len):
         """ Check if the PRU has capacity for a chunk of data """
-        cap = self.get_capacity()
-        return (cap > data_len)
+        return (self.get_capacity() > data_len)
     
     def get_capacity(self):
         """ Check if the PRU has capacity for a chunk of data """
@@ -116,27 +88,26 @@ class Pru:
 
     def is_empty(self):
         """ If no PRU data is processing, return true """
-        return self.get_capacity() == self.ddr_size
+        self.ddr_used.empty()
 
     def wait_until_done(self):
         """ Wait until the queue is empty """
-        while self.is_empty():
-            time.sleep(0.1)
-
-    ''' Returns True if there are segments on queue '''
+        logging.debug("Joining Pru queue. On queue: "+str(self.ddr_used.qsize()))
+        self.ddr_used.join()
+    
     def is_processing(self):
+        """ Returns True if there are segments on queue """
         return not self.is_empty()
-        #return (self.ddr_used.qsize() > 0)
 
     def pack(self, word):
         return struct.pack('L', word)
 
     ''' Commit the data to the DDR memory '''
     def commit_data(self):
-        data = struct.pack('L', len(self.pru_data)/2)	    	                # Data in string form
+        data = struct.pack('L', len(self.pru_data)/2)	    	# Pack the number of toggles. 
         data += ''.join([struct.pack('L', word) for word in self.pru_data])
-        #data += ''.join(map(functools.partial(struc, y=2), self.pru_data))
         data += struct.pack('L', 0)                             # Add a terminating 0, this keeps the fw waiting for a new command.
+    
 
         self.ddr_end = self.ddr_start+len(data)       
         if self.ddr_end >= self.DDR_END-16:                     # If the data is too long, wrap it around to the start
@@ -153,7 +124,7 @@ class Pru:
             self.ddr_mem[self.ddr_start:self.ddr_start+len(first)] = first  # Write the first part of the data to the DDR memory.
 
             self.ddr_mem_used += len(first)
-            self.ddr_used.append(len(first))
+            self.ddr_used.put(len(first))
 
             if len(data[cut:-4]) > 0:                                 # If len(data) == 4, only the terminating zero is present..
                 second = struct.pack('L', (len(data[cut:-4])/8))+data[cut:]     # Add the number of steps in this iteration
@@ -161,23 +132,26 @@ class Pru:
                 #logging.debug("Second batch starts from "+hex(self.DDR_START)+" to "+hex(self.ddr_end))
                 self.ddr_mem[self.DDR_START:self.ddr_end] = second  # Write the second half of data to the DDR memory.
                 self.ddr_mem_used += len(second)
-                self.ddr_used.append(len(second))
+                self.ddr_used.put(len(second))
 
             else:
                 self.ddr_end = self.DDR_START+4
                 self.ddr_mem[self.DDR_START:self.DDR_START+4] = struct.pack('L', 0) # Terminate the first word
                 self.ddr_mem_used += 4
-                self.ddr_used.append(4)
+                self.ddr_used.put(4)
                 #logging.debug("Second batch skipped, 0 length")
         else:
-            self.ddr_mem[self.ddr_start:self.ddr_end] = data    # Write the data to the DDR memory. 
-            self.ddr_mem_used += len(data)               
-            self.ddr_used.append(len(data)) 		            # update the amount of memory used 
-            logging.debug("Pushed "+str(len(data))+" from "+hex(self.ddr_start)+" to "+hex(self.ddr_end))
+            self.ddr_mem[self.ddr_start:self.ddr_end] = data    # Write the data to the DDR memory.
+            data_len = len(data)-4
+            if self.ddr_used.empty():
+                data_len += 4
+            self.ddr_mem_used += data_len               
+            self.ddr_used.put(data_len) 		            # update the amount of memory used 
+            #logging.debug("Pushed "+str(data_len)+" from "+hex(self.ddr_start)+" to "+hex(self.ddr_end))
+            #logging.debug(" cap: "+hex(self.get_capacity()))
             
-
-        self.ddr_start 		= self.ddr_end-4                    # Update the start of ddr for next time 
-        self.pru_data 		= []                                # Reset the pru_data list since it has been commited         
+        self.ddr_start 		= self.ddr_end-4    # Update the start of ddr for next time 
+        self.pru_data 		= []                # Reset the pru_data list since it has been commited         
 
 
     ''' Catch events coming from the PRU '''                
@@ -195,11 +169,15 @@ class Pru:
                 nr_events = struct.unpack("L", self.ddr_mem[self.DDR_END-4:self.DDR_END])[0]   
             else:
                 nr_events = struct.unpack("L", self.ddr_mem[self.DDR_END-4:self.DDR_END])[0]
+
             while nr_interrupts < nr_events:
-                ddr = self.ddr_used.pop(0)                       # Pop the first ddr memory amount           
+                ddr = self.ddr_used.get()                       # Pop the first ddr memory amount           
                 self.ddr_mem_used -= ddr                    
                 #logging.debug("Popped "+str(ddr)+"\tnow "+hex(self.get_capacity()))
+                if self.get_capacity() < 0:
+                    logging.error("Capacity less than 0!")
                 nr_interrupts += 1  
+                self.ddr_used.task_done()
                                    
 
     ''' Wait for an event. The return is the number of events that have occured since last check '''
@@ -218,10 +196,3 @@ class Pru:
         pypruss.pru_disable(0)                                  # Disable PRU 0, this is already done by the firmware
         pypruss.exit()                                          # Exit, don't know what this does. 
         
-    ''' Convert delay in seconds to number of instructions for the PRU '''
-    def _sec_to_inst(self, s):					    # Shit, I'm missing MGP for this??
-        inst_pr_step = int(0.5*((s/1e-08)-42))
-        if inst_pr_step <  1: # Infer a lower limit on the delay (1.9ms), really 379
-            inst_pr_step = 1
-        return inst_pr_step
-
