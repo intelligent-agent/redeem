@@ -33,7 +33,7 @@ class Path_planner:
         self.pru_data    = []
         self.t           = Thread(target=self._do_work)         # Make the thread
         if __name__ != '__main__':
-            self.t.start()		                
+            self.t.start()		 
 
     ''' Set the acceleration used ''' # Fix me, move this to path
     def set_acceleration(self, acceleration):
@@ -53,15 +53,12 @@ class Path_planner:
 
     ''' Set position for an axis '''
     def set_pos(self, axis, val):
-        logging.debug("setting %s to %s", axis, str(val))
         self.current_pos[axis] = val
 	
     def wait_until_done(self):
         '''Wait until planner is done'''
         self.paths.join()
-        logging.debug("paths joined")
         self.pru.wait_until_done()		 
-        logging.debug("PRU done")
 
     def _do_work(self):
         """ This loop pops a path, sends it to the PRU and waits for an event """

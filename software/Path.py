@@ -15,11 +15,15 @@ from numpy import linalg as la
 import ConfigParser
 import logging
 
+AXIS_CONFIG_XY     = 0
+AXIS_CONFIG_H_BELT = 1
+
+
 class Path: 	
     A = np.matrix('-0.5 0.5; -0.5 -0.5')
     Ainv = np.linalg.inv(A)
 
-    def __init__(self, axes, feed_rate, movement, is_print_segment=True):
+    def __init__(self, axes, feed_rate, movement, is_print_segment=True, axis_config=AXIS_CONFIG_XY):
         """ The axes of evil, the feed rate in m/s and ABS or REL """
         #self.config = ConfigParser.ConfigParser()
         #self.config.readfp(open('config/default.cfg'))
@@ -29,7 +33,7 @@ class Path:
         self.global_pos = {"X":0, "Y":0, "Z":0, "E":0} 
         self.actual_travel = axes.copy()
         self.is_print_segment = is_print_segment         # If this is True, use angle stuff
-        self.axis_config = "H-belt" 
+        self.axis_config = AXIS_CONFIG_H_BELT
         #self.config.get('Geometry', 'axis_config') #  If you need to do some sort of mapping, add the branch here. (ex scara arm)
         self.next_ok = False
   
@@ -68,9 +72,16 @@ class Path:
                 e -= self.global_pos["E"]
         else:
             e = 0
+
+        if "H" in self.axes:
+            h = self.axes["H"]
+            if self.movement == "ABSOLUTE":  
+                h -= self.global_pos["H"]
+        else:
+            h = 0
         
-        self.vector = {"X":x, "Y":y, "Z":z, "E":e} 
-        self.cartesian_vector = {"X":x, "Y":y, "Z":z, "E":e} 
+        self.vector = {"X":x, "Y":y, "Z":z, "E":e, "H": h} 
+        self.cartesian_vector = {"X":x, "Y":y, "Z":z, "E":e, "H": h} 
 
         # Update the "probable" (as in not true) global pos of the next segment. 
         # This is in order to calculate the angle to it. Thus it need not be exact. 
@@ -83,10 +94,10 @@ class Path:
 
         # implement any transformation. Hipsterbot has an H-type belt, so: 
         # This was taken from the article "Dynamic modelling of a Two-axis, Parallel H-frame-Type XY Positioning System".
-        if self.axis_config == "H-belt":            
+        if self.axis_config == AXIS_CONFIG_H_BELT:            
             b = np.array([x, y])
             X = np.dot(Path.Ainv, b)
-            self.vector = {"X":X[0, 0], "Y":X[0, 1], "Z":z, "E":e}
+            self.vector = {"X":X[0, 0], "Y":X[0, 1], "Z":z, "E":e, "H": h}
 
     def get_length(self):     
         """ Get the length of this path segment """
@@ -170,14 +181,14 @@ class Path:
     def stepper_to_axis(self, pos, axis):
         """ Give a steppers position, return the position along the axis """
         if axis == "X":
-            if self.axis_config == "H-belt":
+            if self.axis_config == AXIS_CONFIG_H_BELT:
                 X = np.array([pos, 0])
                 b = np.dot(Path.A, X)
                 return tuple(np.array(b)[0])
             else:
                 return (pos, 0.0)
         if axis == "Y":
-            if self.axis_config == "H-belt":
+            if self.axis_config == AXIS_CONFIG_H_BELT:
                 X = np.array([0, pos])
                 b = np.dot(Path.A, X)
                 return tuple(np.array(b)[0])

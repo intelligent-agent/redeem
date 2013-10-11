@@ -143,8 +143,9 @@ class Replicape:
         # Init the path planner
         self.movement = "RELATIVE"
         self.feed_rate = 3000.0
-        self.current_pos = {"X":0.0, "Y":0.0, "Z":0.0, "E":0.0}
+        self.current_pos = {"X":0.0, "Y":0.0, "Z":0.0, "E":0.0,"H":0.0}
         self.acceleration = 0.3
+        self.axis_config = self.config.get('Geometry', 'axis_config')
 
         self.path_planner = Path_planner(self.steppers, self.current_pos)         
         self.path_planner.set_acceleration(self.acceleration) 
@@ -185,9 +186,9 @@ class Replicape:
             for i in range(g.numTokens()):                          # Run through all tokens
                 axis = g.tokenLetter(i)                             # Get the axis, X, Y, Z or E
                 smds[axis] = float(g.tokenValue(i))/1000.0          # Get the value, new position or vector             
-            path = Path(smds, self.feed_rate, self.movement, g.is_crc())# Make a path segment from the axes            
+            path = Path(smds, self.feed_rate, self.movement, g.is_crc(),  self.axis_config)# Make a path segment from the axes  
             self.path_planner.add_path(path)                        # Add the path. This blocks until the path planner has capacity
-            logging.debug("Moving to: "+' '.join('%s:%s' % i for i in smds.iteritems()))
+            #logging.debug("Moving to: "+' '.join('%s:%s' % i for i in smds.iteritems()))
         elif g.code() == "G21":                                     # Set units to mm
             self.factor = 1.0
         elif g.code() == "G28":                                     # Home the steppers
@@ -223,7 +224,6 @@ class Replicape:
             for name, stepper in self.steppers.iteritems():
                 stepper.reset() 
         elif g.code() == "M30":                                     # Set microstepping (Propietary to Replicape)
-            logging.debug("Microstepping")
             for i in range(g.numTokens()):
                 self.steppers[g.tokenLetter(i)].set_microstepping(int(g.tokenValue(i)))            
             SMD.commit() 

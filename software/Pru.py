@@ -92,7 +92,6 @@ class Pru:
 
     def wait_until_done(self):
         """ Wait until the queue is empty """
-        logging.debug("Joining Pru queue. On queue: "+str(self.ddr_used.qsize()))
         self.ddr_used.join()
     
     def is_processing(self):
