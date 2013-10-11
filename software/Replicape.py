@@ -125,9 +125,13 @@ class Replicape:
 
         # Init the end stops
         self.end_stops = {}
-        self.end_stops["X1"] = EndStop("GPIO2_2", self.steppers, 2, "X1")
-        self.end_stops["X2"] = EndStop("GPIO0_14", self.steppers, 5, "X2")
-
+        self.end_stops["Y1"] = EndStop("GPIO2_2", self.steppers, 1, "Y1")
+        self.end_stops["X1"] = EndStop("GPIO0_14", self.steppers, 2, "X1")
+        self.end_stops["Z1"] = EndStop("GPIO0_30", self.steppers, 3, "Z1")
+        self.end_stops["Y2"] = EndStop("GPIO3_21", self.steppers, 4, "Y2")
+        self.end_stops["X2"] = EndStop("GPIO0_31", self.steppers, 5, "X2")
+        self.end_stops["Z2"] = EndStop("GPIO0_4", self.steppers, 6, "Z2")
+        
         # Make a queue of commands
         self.commands = Queue.Queue(300)
 
@@ -183,7 +187,7 @@ class Replicape:
                 smds[axis] = float(g.tokenValue(i))/1000.0          # Get the value, new position or vector             
             path = Path(smds, self.feed_rate, self.movement, g.is_crc())# Make a path segment from the axes            
             self.path_planner.add_path(path)                        # Add the path. This blocks until the path planner has capacity
-            #logging.debug("Moving to: "+' '.join('%s:%s' % i for i in smds.iteritems()))
+            logging.debug("Moving to: "+' '.join('%s:%s' % i for i in smds.iteritems()))
         elif g.code() == "G21":                                     # Set units to mm
             self.factor = 1.0
         elif g.code() == "G28":                                     # Home the steppers

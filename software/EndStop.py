@@ -26,11 +26,16 @@ class EndStop:
         self.t.start()
 	
     def wait_for_event(self):
+        #logging.debug("Waiting for end-stop events...")
         evt_file = open("/dev/input/event1", "rb")
         while True:
             evt = evt_file.read(16) # Read the event
             evt_file.read(16)       # Discard the debounce event 
             code = ord(evt[10])
+            #logging.debug("End Stop " + self.name)
+            #logging.debug("code=" + str(code))
+            #logging.debug("self.key_code=" + str(self.key_code))
+            
             direction  = "down" if ord(evt[12]) else "up"
             if direction == "down" and code == self.key_code:
                 for name, stepper in self.steppers.iteritems():
