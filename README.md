@@ -26,17 +26,20 @@ Features include:
 -   Software written in Python for maintainability and hackability.  
   
 TODO for software:  
-- Optimize the merging of timings from the different steppers.  
++ Optimize the merging of timings from the different steppers.(Fixed in verison 0.5.0.)  
 - Make a fancy GUI with 3D model  
-- Implement realtime slicing on BeagleBone so an STL file can be sent directly (very cool).  
+- Implement realtime slicing on BeagleBone so an STL file can be sent directly (very cool, Koen is working on this).  
+- Better temperature control. It's a little coarse.  
+- Implement axis max-speed and make it configurable from the settings-file.   
 
 Software features:  
-- Printer settings loaded from file  
-- Controllable via ethernet, USB, pipe or GUI. 
++ Printer settings loaded from file (Fixed in version 0.4.2)  
+- Controllable via ethernet, USB, pipe or GUI. (Bug: USB hugs all CPU)  
 
 Known issues:  
 - Long stretches of stepper movement that occupies more than the available 40K of memory are not cheked and 
-kills the whole shebang. Must be fixed. To reproduce, try moving the Z-axis 20cm. 
+kills the whole shebang. Must be fixed. To reproduce, try moving the Z-axis 20cm.   
+- Temperature shows 0 deg. when not contact with the driver.   
 
 Blog: http://hipstercircuits.com  
-Wiki: wiki.replicape.com
+Wiki: wiki.replicape.com  

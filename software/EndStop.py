@@ -31,11 +31,7 @@ class EndStop:
         while True:
             evt = evt_file.read(16) # Read the event
             evt_file.read(16)       # Discard the debounce event 
-            code = ord(evt[10])
-            #logging.debug("End Stop " + self.name)
-            #logging.debug("code=" + str(code))
-            #logging.debug("self.key_code=" + str(self.key_code))
-            
+            code = ord(evt[10])            
             direction  = "down" if ord(evt[12]) else "up"
             if direction == "down" and code == self.key_code:
                 for name, stepper in self.steppers.iteritems():

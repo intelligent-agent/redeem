@@ -25,8 +25,6 @@ class Path:
 
     def __init__(self, axes, feed_rate, movement, is_print_segment=True, axis_config=AXIS_CONFIG_XY):
         """ The axes of evil, the feed rate in m/s and ABS or REL """
-        #self.config = ConfigParser.ConfigParser()
-        #self.config.readfp(open('config/default.cfg'))
         self.axes = axes
         self.feed_rate = feed_rate
         self.movement = movement
@@ -34,7 +32,6 @@ class Path:
         self.actual_travel = axes.copy()
         self.is_print_segment = is_print_segment         # If this is True, use angle stuff
         self.axis_config = AXIS_CONFIG_H_BELT
-        #self.config.get('Geometry', 'axis_config') #  If you need to do some sort of mapping, add the branch here. (ex scara arm)
         self.next_ok = False
   
     def set_next(self, next):
@@ -44,6 +41,10 @@ class Path:
     def set_prev(self, prev):
         """ Set the previous path element """
         self.prev = prev
+
+    def unlink(self):
+        self.next = None
+        self.prev = None
     
     def set_global_pos(self, global_pos, update_next = True):
         """ Set the global position for the printer """

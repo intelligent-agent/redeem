@@ -39,7 +39,6 @@ PyObject* _braid_data_c(PyObject* data1, PyObject* data2)
     tmp_tuple2 = PyList_GetItem(data2,idx2);
     pin2 = (int)PyInt_AsLong(PyTuple_GetItem(tmp_tuple2,0));
     dly2 = (float)PyFloat_AsDouble(PyTuple_GetItem(tmp_tuple2,1));
-    
         
     while (1) {
         if (dly1 == dly2) {
@@ -71,7 +70,6 @@ PyObject* _braid_data_c(PyObject* data1, PyObject* data2)
             tmp_tuple2 = PyList_GetItem(data2,idx2);
             pin2 = (int)PyInt_AsLong(PyTuple_GetItem(tmp_tuple2,0));
             dly2 = (float)PyFloat_AsDouble(PyTuple_GetItem(tmp_tuple2,1));
-
         }
         
         else if (dly1 > dly2) {
@@ -156,7 +154,7 @@ PyObject* _braid_data_c(PyObject* data1, PyObject* data2)
             tmp_tuple1 = PyList_GetItem(data1,idx1);
             pin1 = (int)PyInt_AsLong(PyTuple_GetItem(tmp_tuple1,0));
             dly1 = (float)PyFloat_AsDouble(PyTuple_GetItem(tmp_tuple1,1));
-            
+
             //Add new tuple to result
             pins[line] = pin1;
             delay[line] = dly1;
@@ -181,7 +179,7 @@ PyObject* _braid_data_c(PyObject* data1, PyObject* data2)
             tmp_tuple2 = PyList_GetItem(data2,idx2);
             pin2 = (int)PyInt_AsLong(PyTuple_GetItem(tmp_tuple2,0));
             dly2 = (float)PyFloat_AsDouble(PyTuple_GetItem(tmp_tuple2,1));
-            
+
             //Add new tuple to result
             pins[line] = pin2;
             delay[line] = dly2;
@@ -201,25 +199,16 @@ PyObject* _braid_data_c(PyObject* data1, PyObject* data2)
 
 
     //Create a returnable object from the two arrays "pins" and "delay"
-    PyObject *pytup;
     PyObject *pylist = PyList_New(line);
-    PyObject *item;
     int i;
-    for (i=0; i<line; i++)
-    {
-        pytup = PyTuple_New(2);
-        item = PyInt_FromLong(pins[i]);
-        PyTuple_SetItem(pytup, 0, item);
-        item = PyFloat_FromDouble(delay[i]);
-        PyTuple_SetItem(pytup, 1, item);
-        
-        PyList_SetItem(pylist, i, pytup);
+    for (i=0; i<line; i++){
+		PyList_SetItem(pylist, i, Py_BuildValue("(id)", pins[i], delay[i]));
     }
 
     //Free allocated memory
     free(pins);
     free(delay);
-
+	
     //Return array
     return pylist;
 }
@@ -235,7 +224,7 @@ static PyObject* braid_data_c(PyObject* self, PyObject* args)
     if (!PyArg_ParseTuple(args, "OO", &data1, &data2))
         return NULL;
     
-    return Py_BuildValue("O", _braid_data_c(data1, data2));
+    return Py_BuildValue("N", _braid_data_c(data1, data2));
 }
 
 

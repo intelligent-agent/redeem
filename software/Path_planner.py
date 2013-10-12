@@ -35,7 +35,7 @@ class Path_planner:
         if __name__ != '__main__':
             self.t.start()		 
 
-    ''' Set the acceleration used ''' # Fix me, move this to path
+    ''' Set the acceleration used '''                           # Fix me, move this to path
     def set_acceleration(self, acceleration):
         self.acceleration = acceleration
 
@@ -72,7 +72,7 @@ class Path_planner:
         path = self.paths.get()                            # Get the last path added
         path.set_global_pos(self.current_pos.copy())       # Set the global position of the printer
         all_data = {}
-        slowest =  0
+        
         for axis in path.get_axes():                       # Run through all the axes in the path    
             stepper = self.steppers[axis]                  # Get a handle of  the stepper                    
             data = self._make_data(path, axis)            
@@ -81,6 +81,7 @@ class Path_planner:
                     self.pru_data = zip(*data)
                 else:
                     self.pru_data = self._braid_data(self.pru_data, zip(*data))
+                    #self._braid_data1(self.pru_data, zip(*data))
 
         if len(self.pru_data) > 0:  
             while not self.pru.has_capacity_for(len(self.pru_data)*8):          
@@ -88,9 +89,11 @@ class Path_planner:
                 time.sleep(1)               
             self.pru.add_data(zip(*self.pru_data))
             self.pru.commit_data()                            # Commit data to ddr
-
-        self.pru_data = []                    
+        
+        self.pru_data = []
         self.paths.task_done()
+        path.unlink()                                         # Remove reference to enable garbage collection
+        path = None
 
     def _braid_data(self, data1, data2):
         """ Braid/merge together the data from the two data sets"""
@@ -98,15 +101,14 @@ class Path_planner:
     
     def _braid_data1(self, data1, data2):
         """ Braid/merge together the data from the two data sets"""
-
         line = 0
         (pin1, dly1) = data1[line]
         (pin2, dly2) = data2.pop(0)
         while True: 
             dly = min(dly1, dly2)
             dly1 -= dly    
-            dly2 -= dly
-            try:
+            dly2 -= dly            
+            try: 
                 if dly1 == 0 and dly2 == 0:
                     data1[line] = (pin1+pin2, dly)
                     (pin1, dly1) = data1[line+1]
@@ -121,24 +123,20 @@ class Path_planner:
             except IndexError, e:
                 break
 
-     
-            if dly2 > 0:   
-                data1[line] =  (data1[line][0], data1[line][1]+dly2)        
-            elif dly1 > 0:
-                data1[line] = (data1[line][0], data1[line][1]+dly1)  
-                data1.pop(line+1)
-             
-            while len(data2) > 0:
-                line += 1
-                (pin2, dly2) = data2.pop(0)
-                data1.append((pin2+pin1, dly2))
-            while len(data1) > line+1:
-                line += 1
-                (pin1, dly1) = data1[line]
-                data1[line] = (pin2+pin1, dly1)
-
-        return data1
-
+        if dly2 > 0:   
+            data1[line] =  (data1[line][0], data1[line][1]+dly2)        
+        elif dly1 > 0:
+            data1[line] = (data1[line][0], data1[line][1]+dly1)  
+            data1.pop(line+1)
+        
+        while len(data2) > 0:
+            line += 1
+            (pin2, dly2) = data2.pop(0)
+            data1.append((pin2+pin1, dly2))
+        while len(data1) > line+1:
+            line += 1
+            (pin1, dly1) = data1[line]
+            data1[line] = (pin2+pin1, dly1)
 
     ''' Join the thread '''
     def exit(self):
@@ -217,6 +215,7 @@ if __name__ == '__main__':
     from Path import Path
     import cProfile
     
+    print "Making steppers"
     steppers = {}
     steppers["X"] = SMD("GPIO0_27", "GPIO1_29", "GPIO2_4",  0, "X")
     steppers["X"].set_steps_pr_mm(4.3)          
@@ -233,15 +232,18 @@ if __name__ == '__main__':
     pp = Path_planner(steppers, current_pos)
     pp.set_acceleration(0.3)
 
+    print "Making paths"
     next_pos = {"X":0.001, "Y":0.003, "Z":0.001, "E":0.004} 
     for x in range(100):
         path = Path(next_pos.copy(), 0.3, "RELATIVE", True)
         pp.add_path(path)
+    print "Doing work"
     cProfile.run('[pp.do_work() for i in range(100)]')
 
     next_pos = {"X":0.15, "Y":0.21, "Z":0.1, "E":0.13} 
     path = Path(next_pos, 0.3, "RELATIVE", True)
     pp.add_path(path)
     cProfile.run('pp.do_work()')
+    print "done"
     
 

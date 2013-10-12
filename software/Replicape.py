@@ -50,7 +50,7 @@ def log_ex(type, value, traceback):
     logging.error('Traceback:'+str(traceback))
 
 sys.excepthook = log_ex
-version = "0.5.0"
+version = "0.5.2"
 
 print "Replicape v. "+version
 
@@ -84,10 +84,8 @@ class Replicape:
 
         # Find the path of the thermostors
         path = "/sys/bus/iio/devices/iio:device0/in_voltage"
-        logging.debug("Found thermistors at "+path)
 
         # init the 3 thermistors
-        logging.info("Init Thermistors")
         self.therm_ext1 = Thermistor(path+"4_raw", "MOSFET Ext 1", "B57560G104F")
         self.therm_hbp  = Thermistor(path+"6_raw", "MOSFET HBP",   "B57560G104F")
         self.therm_ext2 = Thermistor(path+"5_raw", "MOSFET Ext 2", "B57560G104F")
@@ -102,9 +100,9 @@ class Replicape:
 
         # Make extruder 1
         self.ext1 = Extruder(self.steppers["E"], self.therm_ext1, self.mosfet_ext1)
-        self.ext1.setPvalue(0.015)
-        self.ext1.setDvalue(1.0)     
-        self.ext1.setIvalue(0.01)
+        self.ext1.setPvalue(0.010)
+        self.ext1.setDvalue(0.3)     
+        self.ext1.setIvalue(0.04)
 
         # Make Heated Build platform 
         self.hbp = HBP( self.therm_hbp, self.mosfet_hbp)       
@@ -113,7 +111,7 @@ class Replicape:
         self.ext2 = Extruder(self.steppers["H"], self.therm_ext2, self.mosfet_ext2)
         self.ext2.setPvalue(0.015)
         self.ext2.setDvalue(1.0)     
-        self.ext2.setIvalue(0.01)
+        self.ext2.setIvalue(0.03)
 
         # Init the three fans
         self.fan_1 = Fan(1)
@@ -133,7 +131,7 @@ class Replicape:
         self.end_stops["Z2"] = EndStop("GPIO0_4", self.steppers, 6, "Z2")
         
         # Make a queue of commands
-        self.commands = Queue.Queue(300)
+        self.commands = Queue.Queue(100)
 
         # Set up USB, this receives messages and pushes them on the queue
         #self.usb = USB(self.commands)		
@@ -150,6 +148,8 @@ class Replicape:
         self.path_planner = Path_planner(self.steppers, self.current_pos)         
         self.path_planner.set_acceleration(self.acceleration) 
         self.stat = False
+
+        # Signal everything ready
         logging.info("Replicape ready")
         print "Replicape ready" 
 	
