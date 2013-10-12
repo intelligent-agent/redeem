@@ -23205,8 +23205,7 @@ Wickmann</description>
 <part name="C60" library="rcl" deviceset="C-EU" device="C0402" value="0.47uF"/>
 <part name="GND81" library="supply1" deviceset="GND" device=""/>
 <part name="F1" library="fuse" deviceset="FUSE" device="3557"/>
-<part name="C61" library="rcl" deviceset="CPOL-EU" device="140CLH-0810" value="100uF"/>
-<part name="GND82" library="supply1" deviceset="GND" device=""/>
+<part name="R58" library="rcl" deviceset="R-EU_" device="R0402" value="100R"/>
 </parts>
 <sheets>
 <sheet>
@@ -23274,7 +23273,7 @@ Wickmann</description>
 <instance part="C50" gate="G$1" x="124.46" y="83.82"/>
 <instance part="GND29" gate="1" x="119.38" y="76.2"/>
 <instance part="GND30" gate="1" x="71.12" y="53.34"/>
-<instance part="C51" gate="G$1" x="83.82" y="96.52" rot="R90"/>
+<instance part="C51" gate="G$1" x="88.9" y="96.52" rot="R90"/>
 <instance part="R41" gate="G$1" x="134.62" y="76.2" rot="R90"/>
 <instance part="L1" gate="G$1" x="104.14" y="86.36" rot="R90"/>
 <instance part="U10" gate="G$1" x="71.12" y="149.86"/>
@@ -23575,8 +23574,7 @@ Wickmann</description>
 <instance part="R54" gate="G$1" x="604.52" y="215.9" rot="R90"/>
 <instance part="C60" gate="G$1" x="599.44" y="162.56" rot="MR0"/>
 <instance part="GND81" gate="1" x="599.44" y="154.94" rot="MR0"/>
-<instance part="C61" gate="G$1" x="142.24" y="76.2"/>
-<instance part="GND82" gate="1" x="142.24" y="63.5"/>
+<instance part="R58" gate="G$1" x="78.74" y="96.52" rot="R180"/>
 </instances>
 <busses>
 </busses>
@@ -24171,11 +24169,6 @@ Wickmann</description>
 <segment>
 <pinref part="C60" gate="G$1" pin="2"/>
 <pinref part="GND81" gate="1" pin="GND"/>
-</segment>
-<segment>
-<pinref part="C61" gate="G$1" pin="-"/>
-<wire x1="142.24" y1="71.12" x2="142.24" y2="66.04" width="0.1524" layer="91"/>
-<pinref part="GND82" gate="1" pin="GND"/>
 </segment>
 </net>
 <net name="N$114" class="0">
@@ -24878,9 +24871,6 @@ Wickmann</description>
 <pinref part="L1" gate="G$1" pin="2"/>
 <pinref part="U6" gate="G$1" pin="VFB"/>
 <pinref part="5V" gate="G$1" pin="TP"/>
-<pinref part="C61" gate="G$1" pin="+"/>
-<wire x1="142.24" y1="86.36" x2="142.24" y2="78.74" width="0.6096" layer="91"/>
-<junction x="142.24" y="86.36"/>
 </segment>
 <segment>
 <wire x1="563.88" y1="83.82" x2="535.94" y2="83.82" width="0.1524" layer="91"/>
@@ -24900,9 +24890,8 @@ Wickmann</description>
 <net name="N$128" class="0">
 <segment>
 <wire x1="73.66" y1="93.98" x2="73.66" y2="96.52" width="0.1524" layer="91"/>
-<wire x1="73.66" y1="96.52" x2="81.28" y2="96.52" width="0.1524" layer="91"/>
 <pinref part="U6" gate="G$1" pin="BOOST"/>
-<pinref part="C51" gate="G$1" pin="1"/>
+<pinref part="R58" gate="G$1" pin="2"/>
 </segment>
 </net>
 <net name="N$239" class="0">
@@ -24915,11 +24904,11 @@ Wickmann</description>
 </net>
 <net name="SW" class="0">
 <segment>
-<wire x1="91.44" y1="86.36" x2="93.98" y2="86.36" width="0.6096" layer="91"/>
-<wire x1="88.9" y1="96.52" x2="93.98" y2="96.52" width="0.1524" layer="91"/>
-<wire x1="93.98" y1="96.52" x2="93.98" y2="86.36" width="0.1524" layer="91"/>
-<wire x1="93.98" y1="86.36" x2="99.06" y2="86.36" width="0.6096" layer="91"/>
-<junction x="93.98" y="86.36"/>
+<wire x1="91.44" y1="86.36" x2="96.52" y2="86.36" width="0.6096" layer="91"/>
+<wire x1="93.98" y1="96.52" x2="96.52" y2="96.52" width="0.1524" layer="91"/>
+<wire x1="96.52" y1="96.52" x2="96.52" y2="86.36" width="0.1524" layer="91"/>
+<wire x1="96.52" y1="86.36" x2="99.06" y2="86.36" width="0.6096" layer="91"/>
+<junction x="96.52" y="86.36"/>
 <pinref part="U6" gate="G$1" pin="SW"/>
 <pinref part="C51" gate="G$1" pin="2"/>
 <pinref part="L1" gate="G$1" pin="1"/>
@@ -26582,6 +26571,13 @@ Wickmann</description>
 <wire x1="655.32" y1="172.72" x2="693.42" y2="172.72" width="0.1524" layer="91"/>
 <pinref part="R22" gate="G$1" pin="1"/>
 <pinref part="U18" gate="G$1" pin="A2"/>
+</segment>
+</net>
+<net name="N$1" class="0">
+<segment>
+<pinref part="C51" gate="G$1" pin="1"/>
+<pinref part="R58" gate="G$1" pin="1"/>
+<wire x1="86.36" y1="96.52" x2="83.82" y2="96.52" width="0.1524" layer="91"/>
 </segment>
 </net>
 </nets>

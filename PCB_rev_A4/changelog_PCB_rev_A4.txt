@@ -5,4 +5,4 @@ Changelog Rev A3A -> Rev A4
  + Updated to Eagle V6 
  + Added resistors across the load on the MosFets to keep the light off when no load is present. 
  + Changed a lot of the pins for better routing
- + Added an optional eleectolytic cap across 5V for stability. 
+ + Added a 100 ohm resistor in series wikth the C_boost on the 5V step down converter. 
