@@ -22,18 +22,29 @@ AXIS_CONFIG_H_BELT = 1
 class Path: 	
     A = np.matrix('-0.5 0.5; -0.5 -0.5')
     Ainv = np.linalg.inv(A)
+    axis_config=AXIS_CONFIG_XY # Default config is normal cartesian XY
+    max_speed_x = 1.0
+    max_speed_y = 1.0
+    max_speed_z = 1.0
+    max_speed_e = 1.0
+    max_speed_h = 1.0
 
-    def __init__(self, axes, feed_rate, movement, is_print_segment=True, axis_config=AXIS_CONFIG_XY):
+    def __init__(self, axes, feed_rate, movement, is_print_segment=True):
         """ The axes of evil, the feed rate in m/s and ABS or REL """
         self.axes = axes
         self.feed_rate = feed_rate
         self.movement = movement
         self.global_pos = {"X":0, "Y":0, "Z":0, "E":0} 
-        self.actual_travel = axes.copy()
         self.is_print_segment = is_print_segment         # If this is True, use angle stuff
-        self.axis_config = AXIS_CONFIG_H_BELT
         self.next_ok = False
+
+    def is_G92(self):
+        """ Special path, only set the global position on this """
+        return (self.movement == "G92")
   
+    def get_pos(self):
+        return self.axes
+
     def set_next(self, next):
         """ Set the next path element """
         self.next = next
@@ -53,24 +64,29 @@ class Path:
             x = self.axes["X"]
             if self.movement == "ABSOLUTE":
                 x -= self.global_pos["X"]
+
+            self.feed_rate = min(self.feed_rate, Path.max_speed_x)
         else:
             x = 0
         if "Y" in self.axes:
             y = self.axes["Y"]
             if self.movement == "ABSOLUTE":        
                 y -= self.global_pos["Y"]
+            self.feed_rate = min(self.feed_rate, Path.max_speed_y) # Clamp the speed
         else:
             y = 0
         if "Z" in self.axes:
             z = self.axes["Z"]
             if self.movement == "ABSOLUTE":           
-                z -= self.global_pos["Z"]
+                z -= self.global_pos["Z"]            
+            self.feed_rate = min(self.feed_rate, Path.max_speed_z)
         else:
             z = 0
         if "E" in self.axes:
             e = self.axes["E"]
             if self.movement == "ABSOLUTE":  
                 e -= self.global_pos["E"]
+            self.feed_rate = min(self.feed_rate, Path.max_speed_e)
         else:
             e = 0
 
@@ -78,11 +94,14 @@ class Path:
             h = self.axes["H"]
             if self.movement == "ABSOLUTE":  
                 h -= self.global_pos["H"]
+            self.feed_rate = min(self.feed_rate, Path.max_speed_h)
         else:
             h = 0
         
         self.vector = {"X":x, "Y":y, "Z":z, "E":e, "H": h} 
         self.cartesian_vector = {"X":x, "Y":y, "Z":z, "E":e, "H": h} 
+        
+        logging.debug(self.vector)
 
         # Update the "probable" (as in not true) global pos of the next segment. 
         # This is in order to calculate the angle to it. Thus it need not be exact. 
@@ -95,7 +114,7 @@ class Path:
 
         # implement any transformation. Hipsterbot has an H-type belt, so: 
         # This was taken from the article "Dynamic modelling of a Two-axis, Parallel H-frame-Type XY Positioning System".
-        if self.axis_config == AXIS_CONFIG_H_BELT:            
+        if Path.axis_config == AXIS_CONFIG_H_BELT:            
             b = np.array([x, y])
             X = np.dot(Path.Ainv, b)
             self.vector = {"X":X[0, 0], "Y":X[0, 1], "Z":z, "E":e, "H": h}
@@ -162,7 +181,6 @@ class Path:
         v2 = [self.next.get_axis_length("X"), self.next.get_axis_length("Y")]
         angle = self.angle_between(v1, v2)
         self.angle_to_next_cal = angle
-
         return angle
     
     def angle_to_prev(self):
@@ -176,20 +194,19 @@ class Path:
         v2 = [self.prev.get_axis_length("X"), self.prev.get_axis_length("Y")]
         angle = self.angle_between(v1, v2)
         self.angle_to_prev_cal = angle
-
         return angle
         
     def stepper_to_axis(self, pos, axis):
         """ Give a steppers position, return the position along the axis """
         if axis == "X":
-            if self.axis_config == AXIS_CONFIG_H_BELT:
+            if Path.axis_config == AXIS_CONFIG_H_BELT:
                 X = np.array([pos, 0])
                 b = np.dot(Path.A, X)
                 return tuple(np.array(b)[0])
             else:
                 return (pos, 0.0)
         if axis == "Y":
-            if self.axis_config == AXIS_CONFIG_H_BELT:
+            if Path.axis_config == AXIS_CONFIG_H_BELT:
                 X = np.array([0, pos])
                 b = np.dot(Path.A, X)
                 return tuple(np.array(b)[0])

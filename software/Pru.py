@@ -115,11 +115,11 @@ class Pru:
             
             if cut == 4: 
                 cut = 12                
-            #logging.debug("Data len is "+str(len(data))+", Cutting the data at "+str(cut))
+            logging.debug("Data len is "+str(len(data))+", Cutting the data at "+str(cut))
 
             first = struct.pack('L', len(data[4:cut])/8)+data[4:cut]    # Update the loop count
             first += struct.pack('L', DDR_MAGIC)                        # Add the magic number to force a reset of DDR memory counter
-            #logging.debug("Laying out from "+hex(self.ddr_start)+" to "+hex(self.ddr_start+len(first)))
+            logging.debug("Laying out from "+hex(self.ddr_start)+" to "+hex(self.ddr_start+len(first)))
             self.ddr_mem[self.ddr_start:self.ddr_start+len(first)] = first  # Write the first part of the data to the DDR memory.
 
             self.ddr_mem_used += len(first)
@@ -128,17 +128,17 @@ class Pru:
             if len(data[cut:-4]) > 0:                                 # If len(data) == 4, only the terminating zero is present..
                 second = struct.pack('L', (len(data[cut:-4])/8))+data[cut:]     # Add the number of steps in this iteration
                 self.ddr_end = self.DDR_START+len(second)           # Update the end counter
-                #logging.debug("Second batch starts from "+hex(self.DDR_START)+" to "+hex(self.ddr_end))
+                logging.debug("Second batch starts from "+hex(self.DDR_START)+" to "+hex(self.ddr_end))
                 self.ddr_mem[self.DDR_START:self.ddr_end] = second  # Write the second half of data to the DDR memory.
                 self.ddr_mem_used += len(second)
                 self.ddr_used.put(len(second))
 
             else:
                 self.ddr_end = self.DDR_START+4
-                self.ddr_mem[self.DDR_START:self.DDR_START+4] = struct.pack('L', 0) # Terminate the first word
+                self.ddr_mem[self.DDR_START:self.ddr_end] = struct.pack('L', 0) # Terminate the first word
                 self.ddr_mem_used += 4
                 self.ddr_used.put(4)
-                #logging.debug("Second batch skipped, 0 length")
+                logging.debug("Second batch skipped, 0 length")
         else:
             self.ddr_mem[self.ddr_start:self.ddr_end] = data    # Write the data to the DDR memory.
             data_len = len(data)-4
@@ -146,8 +146,7 @@ class Pru:
                 data_len += 4
             self.ddr_mem_used += data_len               
             self.ddr_used.put(data_len) 		            # update the amount of memory used 
-            #logging.debug("Pushed "+str(data_len)+" from "+hex(self.ddr_start)+" to "+hex(self.ddr_end))
-            #logging.debug(" cap: "+hex(self.get_capacity()))
+            logging.debug("Pushed "+str(data_len)+" from "+hex(self.ddr_start)+" to "+hex(self.ddr_end))
             
         self.ddr_start 		= self.ddr_end-4    # Update the start of ddr for next time 
         self.pru_data 		= []                # Reset the pru_data list since it has been commited         
@@ -172,9 +171,11 @@ class Pru:
             while nr_interrupts < nr_events:
                 ddr = self.ddr_used.get()                       # Pop the first ddr memory amount           
                 self.ddr_mem_used -= ddr                    
-                #logging.debug("Popped "+str(ddr)+"\tnow "+hex(self.get_capacity()))
+                logging.debug("Popped "+str(ddr)+"\tnow "+hex(self.get_capacity()))
                 if self.get_capacity() < 0:
                     logging.error("Capacity less than 0!")
+                if self.get_capacity() == 0x40000:
+                    logging.warning("PRU empty!")                    
                 nr_interrupts += 1  
                 self.ddr_used.task_done()
                                    

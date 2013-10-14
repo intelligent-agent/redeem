@@ -40,11 +40,12 @@ class Path_planner:
         self.acceleration = acceleration
 
     ''' Add a path segment to the path planner '''        
-    def add_path(self, new):        
-        if hasattr(self, 'prev'):
-            self.prev.set_next(new)
-            new.set_prev(self.prev)
-        self.prev = new        
+    def add_path(self, new):   
+        if not new.is_G92():     
+            if hasattr(self, 'prev'):
+                self.prev.set_next(new)
+                new.set_prev(self.prev)
+            self.prev = new        
         self.paths.put(new)
 
     ''' Return the number of paths currently on queue '''
@@ -71,6 +72,15 @@ class Path_planner:
     def do_work(self):
         path = self.paths.get()                            # Get the last path added
         path.set_global_pos(self.current_pos.copy())       # Set the global position of the printer
+
+        if path.is_G92():                                   # Only set the position of the axes
+            logging.debug("Setting G92, pos is "+str(path.get_pos()))
+            for axis, pos in path.get_pos().iteritems():                       # Run through all the axes in the path    
+                logging.debug(axis + " is now "+ str(pos))
+                self.set_pos(axis, pos)           
+            
+            return                
+       
         all_data = {}
         
         for axis in path.get_axes():                       # Run through all the axes in the path    
@@ -83,11 +93,15 @@ class Path_planner:
                     self.pru_data = self._braid_data(self.pru_data, zip(*data))
                     #self._braid_data1(self.pru_data, zip(*data))
 
-        if len(self.pru_data) > 0:  
-            while not self.pru.has_capacity_for(len(self.pru_data)*8):          
-                logging.debug("Pru full")              
+        while len(self.pru_data) > 0:  
+            data = self.pru_data[0:0x20000/8]
+            del self.pru_data[0:0x20000/8]
+            if len(self.pru_data) > 0:
+                logging.debug("Long path segment is cut. remaining: "+str(len(self.pru_data)))       
+            while not self.pru.has_capacity_for(len(data)*8):          
+                #logging.debug("Pru full")              
                 time.sleep(1)               
-            self.pru.add_data(zip(*self.pru_data))
+            self.pru.add_data(zip(*data))
             self.pru.commit_data()                            # Commit data to ddr
         
         self.pru_data = []
@@ -178,17 +192,17 @@ class Path_planner:
         sm_start = min(u_start*tm_start + 0.5*a*tm_start**2, s/2.0)     # Calculate the distance traveled when max speed is met
         sm_end   = min(u_end*tm_end + 0.5*a*tm_end**2, s/2.0)           # Calculate the distance traveled when max speed is met
 
-        distances_start  = np.arange(0, sm_start, ds)		        # Table of distances                       
-        distances_end    = np.arange(0, sm_end, ds)		        # Table of distances                       
-        timestamps_start = (-u_start+np.sqrt(2.0*a*distances_start+u_start**2))/a# When ticks occur
-        timestamps_end   = (-u_end  +np.sqrt(2.0*a*distances_end+u_end**2))/a # When ticks occur
+        distances_start  = np.arange(0, sm_start, ds)		            # Table of distances                       
+        distances_end    = np.arange(0, sm_end, ds)		                # Table of distances                       
+        timestamps_start = (-u_start+np.sqrt(2.0*a*distances_start+u_start**2))/a    # When ticks occur
+        timestamps_end   = (-u_end  +np.sqrt(2.0*a*distances_end+u_end**2))/a        # When ticks occur
         delays_start     = np.diff(timestamps_start)/2.0			    # We are more interested in the delays pr second. 
         delays_end       = np.diff(timestamps_end)/2.0			        # We are more interested in the delays pr second.         
         delays_start     = np.array([delays_start, delays_start]).transpose().flatten()
         delays_end       = np.array([delays_end, delays_end]).transpose().flatten()
 
         i_steps     = 2*num_steps-len(delays_start)-len(delays_end)     # Find out how many delays are missing
-        i_delays    = np.array([(ds/Vm)/2.0]*i_steps)  		                    # Make the intermediate steps
+        i_delays    = [(ds/Vm)/2.0]*i_steps  		                    # Make the intermediate steps
         delays      = np.concatenate([delays_start, i_delays, np.flipud(delays_end)])# Add the missing delays. 
         td          = num_steps/steps_pr_meter                          # Calculate the actual travelled distance        
         if vec < 0:                                                     # If the vector is negative, negate it.      
@@ -235,10 +249,10 @@ if __name__ == '__main__':
     print "Making paths"
     next_pos = {"X":0.001, "Y":0.003, "Z":0.001, "E":0.004} 
     for x in range(100):
-        path = Path(next_pos.copy(), 0.3, "RELATIVE", True)
+        path = Path(next_pos.copy(), 0.3, "RELATIVE", False)
         pp.add_path(path)
     print "Doing work"
-    cProfile.run('[pp.do_work() for i in range(100)]')
+    cProfile.run('[pp.do_work() for i in range(100)]', sort='time')
 
     next_pos = {"X":0.15, "Y":0.21, "Z":0.1, "E":0.13} 
     path = Path(next_pos, 0.3, "RELATIVE", True)

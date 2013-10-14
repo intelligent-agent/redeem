@@ -9,7 +9,7 @@
 #define GPIO1_MASK			(1<<12)|(1<<13)|(1<<14)|(1<<15)|(1<<28)|(1<<29) // Only these are togglable
 #define GPIO0_MASK			(1<<22)|(1<<23)|(1<<26)|(1<<27)					// Only these are togglable
 
-START:
+INIT:
     LBCO r0, C4, 4, 4							// Load Bytes Constant Offset (?)
     CLR  r0, r0, 4								// Clear bit 4 in reg 0
     SBCO r0, C4, 4, 4							// Store Bytes Constant Offset
@@ -31,7 +31,7 @@ RESET_R4:
 	LBBO r4, r0, 0, 4							// Load the ddr_addr from the first adress in the PRU0 DRAM
 	QBA WAIT									// Check if the end of DDR is reached
 
-BLINK:
+PINS:
 	ADD  r4, r4, 4								// Increment r4
 
     LBBO r2, r4, 0, 4							// Load pin data into r2
@@ -55,7 +55,7 @@ DELAY:
     QBNE DELAY, r0, 0
 
     SUB r1, r1, 1
-    QBNE BLINK, r1, 0							// Still more pins to go, jump back
+    QBNE PINS, r1, 0							// Still more pins to go, jump back
 	ADD  r4, r4, 4			
 
 	ADD r5, r5, 1								// r5++
@@ -69,6 +69,6 @@ DELAY:
 
 WAIT:
     LBBO r1, r4, 0, 4     						// Load values from external DDR Memory into R1
-    QBNE BLINK, r1, 0
+    QBNE PINS, r1, 0
 	QBA WAIT									// Loop back to wait for new data
 

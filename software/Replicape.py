@@ -50,7 +50,7 @@ def log_ex(type, value, traceback):
     logging.error('Traceback:'+str(traceback))
 
 sys.excepthook = log_ex
-version = "0.5.2"
+version = "0.5.3"
 
 print "Replicape v. "+version
 
@@ -101,7 +101,7 @@ class Replicape:
         # Make extruder 1
         self.ext1 = Extruder(self.steppers["E"], self.therm_ext1, self.mosfet_ext1)
         self.ext1.setPvalue(0.010)
-        self.ext1.setDvalue(0.3)     
+        self.ext1.setDvalue(1.0)     
         self.ext1.setIvalue(0.04)
 
         # Make Heated Build platform 
@@ -143,11 +143,17 @@ class Replicape:
         self.feed_rate = 3000.0
         self.current_pos = {"X":0.0, "Y":0.0, "Z":0.0, "E":0.0,"H":0.0}
         self.acceleration = 0.3
-        self.axis_config = self.config.get('Geometry', 'axis_config')
+        Path.axis_config = int(self.config.get('Geometry', 'axis_config'))
+        Path.max_speed_x = float(self.config.get('Steppers', 'max_speed_x'))
+        Path.max_speed_y = float(self.config.get('Steppers', 'max_speed_y'))
+        Path.max_speed_z = float(self.config.get('Steppers', 'max_speed_z'))
+        Path.max_speed_e = float(self.config.get('Steppers', 'max_speed_e'))
+        Path.max_speed_h = float(self.config.get('Steppers', 'max_speed_h'))
 
         self.path_planner = Path_planner(self.steppers, self.current_pos)         
         self.path_planner.set_acceleration(self.acceleration) 
-        self.stat = False
+
+        
 
         # Signal everything ready
         logging.info("Replicape ready")
@@ -158,14 +164,8 @@ class Replicape:
         print "Replicape starting main"
         try:
             while True:                
-                global gcode
                 gcode = Gcode(self.commands.get(), self)
-                if self.stat:
-                    global _o
-                    _o = self
-                    profile.run("_o._execute(gcode)")
-                else:
-                    self._execute(gcode)
+                self._execute(gcode)
                 if gcode.prot == "USB":
                     self.usb.send_message(gcode.getAnswer())
                 elif gcode.prot == "PIPE":
@@ -186,7 +186,7 @@ class Replicape:
             for i in range(g.numTokens()):                          # Run through all tokens
                 axis = g.tokenLetter(i)                             # Get the axis, X, Y, Z or E
                 smds[axis] = float(g.tokenValue(i))/1000.0          # Get the value, new position or vector             
-            path = Path(smds, self.feed_rate, self.movement, g.is_crc(),  self.axis_config)# Make a path segment from the axes  
+            path = Path(smds, self.feed_rate, self.movement, g.is_crc())# Make a path segment from the axes  
             self.path_planner.add_path(path)                        # Add the path. This blocks until the path planner has capacity
             #logging.debug("Moving to: "+' '.join('%s:%s' % i for i in smds.iteritems()))
         elif g.code() == "G21":                                     # Set units to mm
@@ -198,7 +198,7 @@ class Replicape:
             for i in range(g.numTokens()):                          # Run through all tokens
                 axis = g.tokenLetter(i)                             # Get the axis, X, Y, Z or E
                 smds[axis] = float(g.tokenValue(i))                 # Get tha value, new position or vector             
-            path = Path(smds, self.feed_rate, "ABSOLUTE", False)           # Make a path segment from the axes
+            path = Path(smds, self.feed_rate, "ABSOLUTE", False)    # Make a path segment from the axes
             #logging.debug("moving to "+str(smds))
             self.path_planner.add_path(path)                        # Add the path. This blocks until the path planner has capacity
         elif g.code() == "G90":                                     # Absolute positioning
@@ -206,14 +206,21 @@ class Replicape:
         elif g.code() == "G91":                                     # Relative positioning 
             self.movement = "RELATIVE"		
         elif g.code() == "G92":                                     # Set the current position of the following steppers
-            self.path_planner.wait_until_done()
+            #self.path_planner.wait_until_done()
             if g.numTokens() == 0:
-                logging.debug("G92: No tokens present")
-                g.setTokens(["X0", "Y0", "Z0", "E0"])              # If no token is present, do this for all
-            for i in range(g.numTokens()):
-                axis = g.tokenLetter(i)
-                val = float(g.tokenValue(i))
-                self.path_planner.set_pos(axis, val)
+                logging.debug("Adding all to G92")
+                g.setTokens(["X0", "Y0", "Z0", "E0", "H0"])         # If no token is present, do this for all
+            #for i in range(g.numTokens()):
+            #    axis = g.tokenLetter(i)
+            #    val = float(g.tokenValue(i))
+            #    self.path_planner.set_pos(axis, val)
+            pos = {}                                               # All steppers 
+            for i in range(g.numTokens()):                          # Run through all tokens
+                axis = g.tokenLetter(i)                             # Get the axis, X, Y, Z or E
+                pos[axis] = float(g.tokenValue(i))/1000.0          # Get the value, new position or vector             
+            logging.debug(pos)
+            path = Path(pos, self.feed_rate, "G92")               # Make a path segment from the axes
+            self.path_planner.add_path(path)  
         elif g.code() == "M17":                                     # Enable all steppers
             self.path_planner.wait_until_done()
             for name, stepper in self.steppers.iteritems():
@@ -259,10 +266,9 @@ class Replicape:
         elif g.code() == "M106":                                    # Fan on
             if g.hasLetter("P"):
                 fan = self.fans[int(g.getValueByLetter("P"))]
-                fan.setValue(float(g.getValueByLetter("S")))	                
-            else:
-                self.fan_1.setPWMFrequency(100)
-                self.fan_1.setValue(float(g.tokenValue(0)))	
+                fan.set_value(float(g.getValueByLetter("S"))/255.0)	# According to reprap wiki, the number is 0..255
+            else: # if there is no fan-number present, do it for the first fan
+                self.fan_1.set_value(float(g.tokenValue(0))/255.0)	
         elif g.code() == "M108":									# Deprecated
             pass 													
         elif g.code() == "M110":                                    # Reset the line number counter 
@@ -286,7 +292,7 @@ class Replicape:
         elif g.code() == "M141":
             fan = self.fans[int(g.getValueByLetter("P"))]
             fan.setPWMFrequency(int(g.getValueByLetter("F")))
-            fan.setValue(float(g.getValueByLetter("S")))	           
+            fan.set_value(float(g.getValueByLetter("S")))	           
         elif g.code() == "M142":
             self.stat = True 
         elif g.code() == "M143":

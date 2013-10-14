@@ -45,10 +45,7 @@ class Gcode:
         # Parse 
         self.tokens = self.message.split(" ")    
         self.gcode = self.tokens.pop(0) # gcode number
-        for i, token in enumerate(self.tokens):
-            if len(token) == 0:
-                self.tokens.pop(i)            
-        
+        self.tokens = filter(None, self.tokens)        
 
     ''' The machinecode '''
     def code(self):

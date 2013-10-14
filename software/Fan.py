@@ -27,9 +27,10 @@ time.sleep(0.05)				   # Wait for reset
 
 class Fan:
 	
-	# Set the PWM frequency for all fans connected on this PWM-chip
+
 	@staticmethod
 	def setPWMFrequency(freq):
+		""" Set the PWM frequency for all fans connected on this PWM-chip """
 		prescaleval = 25000000
 		prescaleval /= 4096;
 		prescaleval /= float(freq);
@@ -44,16 +45,17 @@ class Fan:
 		time.sleep(0.05)
 		pwm.write8(PCA9685_MODE1, oldmode | 0xA1)
 
-	# Channel is the channel that the fan is on (0-7)
 	def __init__(self, channel):
+		""" Channel is the channel that the fan is on (0-7) """
 		self.channel = channel
 
-	# Set the mount of "on"-time
-	def setValue(self, value):
+	def set_value(self, value):
+		""" Set the amount of on-time from 0..1 """
 		off = min(1.0, value)
 		off = int(value*4095)
 		bytes = [0x00, 0x00, off & 0xFF, off >> 8]
 		pwm.writeList(0x06+(4*self.channel), bytes)
+		
 
 
 
