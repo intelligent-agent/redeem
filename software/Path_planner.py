@@ -27,7 +27,7 @@ class Path_planner:
     def __init__(self, steppers, current_pos):
         self.steppers    = steppers
         self.pru         = Pru()                                # Make the PRU
-        self.paths       = Queue.Queue(100)                      # Make a queue of paths
+        self.paths       = Queue.Queue(10)                      # Make a queue of paths
         self.current_pos = current_pos                          # Current position in (x, y, z, e)
         self.running     = True                                 # Yes, we are running
         self.pru_data    = []
@@ -64,21 +64,17 @@ class Path_planner:
     def _do_work(self):
         """ This loop pops a path, sends it to the PRU and waits for an event """
         while self.running:       
-            try: 
-               self.do_work()
-            except Queue.Empty:
-                pass
+           self.do_work()
     
     def do_work(self):
+        """ This is just a separate function so the test at the bottom will pass """		
         path = self.paths.get()                            # Get the last path added
         path.set_global_pos(self.current_pos.copy())       # Set the global position of the printer
 
         if path.is_G92():                                   # Only set the position of the axes
-            logging.debug("Setting G92, pos is "+str(path.get_pos()))
             for axis, pos in path.get_pos().iteritems():                       # Run through all the axes in the path    
-                logging.debug(axis + " is now "+ str(pos))
                 self.set_pos(axis, pos)           
-            
+            self.paths.task_done()            
             return                
        
         all_data = {}
@@ -105,6 +101,7 @@ class Path_planner:
             self.pru.commit_data()                            # Commit data to ddr
         
         self.pru_data = []
+        
         self.paths.task_done()
         path.unlink()                                         # Remove reference to enable garbage collection
         path = None

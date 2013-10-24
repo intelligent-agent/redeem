@@ -1,5 +1,5 @@
 .origin 0
-.entrypoint START
+.entrypoint INIT
 
 #define PRU0_ARM_INTERRUPT 	19
 #define GPIO_DATAOUT 		0x13c				// This is the register for setting data 

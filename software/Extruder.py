@@ -81,7 +81,7 @@ class Heater(object):
             log = self.name+": Tgt: %f, Cur: %f"%(self.target_temp, self.current_temp)
             log += ", Err: %f, Pow: %f"%(error, power)              
             #if self.name == "Ext1":
-            #    logging.debug(log+", Der: %f, Int: %f"%(self.D*derivative, self.I*integral))
+                #logging.debug(log+", Der: %f, Int: %f"%(self.D*derivative, self.I*integral))
             time.sleep(1)            					 # Wait one second        
         self.disabled = True							 # Signal the disable that we are done
 
@@ -103,8 +103,8 @@ class Heater(object):
 
 ''' Subclass for Heater, this is an extruder '''
 class Extruder(Heater):
-    def __init__(self, smd, thermistor, mosfet):
-        Heater.__init__(self, thermistor, mosfet, "Ext1")
+    def __init__(self, smd, thermistor, mosfet, name):
+        Heater.__init__(self, thermistor, mosfet, name)
         self.smd = smd
         self.enable()  
 
@@ -112,7 +112,7 @@ class Extruder(Heater):
 ''' Subclass for heater, this is a Heated build platform '''
 class HBP(Heater):
     def __init__(self, thermistor, mosfet):
-        Heater.__init__(self, thermistor, mosfet, "HBP ")
+        Heater.__init__(self, thermistor, mosfet, "HBP")
         self.enable()
 
 

@@ -100,8 +100,6 @@ class Path:
         
         self.vector = {"X":x, "Y":y, "Z":z, "E":e, "H": h} 
         self.cartesian_vector = {"X":x, "Y":y, "Z":z, "E":e, "H": h} 
-        
-        logging.debug(self.vector)
 
         # Update the "probable" (as in not true) global pos of the next segment. 
         # This is in order to calculate the angle to it. Thus it need not be exact. 

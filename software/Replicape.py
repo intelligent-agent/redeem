@@ -99,16 +99,16 @@ class Replicape:
         self.mosfet_hbp  = Mosfet(5)
 
         # Make extruder 1
-        self.ext1 = Extruder(self.steppers["E"], self.therm_ext1, self.mosfet_ext1)
-        self.ext1.setPvalue(0.010)
-        self.ext1.setDvalue(1.0)     
-        self.ext1.setIvalue(0.04)
+        self.ext1 = Extruder(self.steppers["E"], self.therm_ext1, self.mosfet_ext1, "Ext1")
+        self.ext1.setPvalue(0.1)
+        self.ext1.setDvalue(0.1)     
+        self.ext1.setIvalue(0.0)
 
         # Make Heated Build platform 
         self.hbp = HBP( self.therm_hbp, self.mosfet_hbp)       
 
         # Make extruder 2.
-        self.ext2 = Extruder(self.steppers["H"], self.therm_ext2, self.mosfet_ext2)
+        self.ext2 = Extruder(self.steppers["H"], self.therm_ext2, self.mosfet_ext2, "Ext2")
         self.ext2.setPvalue(0.015)
         self.ext2.setDvalue(1.0)     
         self.ext2.setIvalue(0.03)
@@ -131,7 +131,7 @@ class Replicape:
         self.end_stops["Z2"] = EndStop("GPIO0_4", self.steppers, 6, "Z2")
         
         # Make a queue of commands
-        self.commands = Queue.Queue(100)
+        self.commands = Queue.Queue(10)
 
         # Set up USB, this receives messages and pushes them on the queue
         #self.usb = USB(self.commands)		
@@ -142,7 +142,7 @@ class Replicape:
         self.movement = "RELATIVE"
         self.feed_rate = 3000.0
         self.current_pos = {"X":0.0, "Y":0.0, "Z":0.0, "E":0.0,"H":0.0}
-        self.acceleration = 0.3
+        self.acceleration = 0.2
         Path.axis_config = int(self.config.get('Geometry', 'axis_config'))
         Path.max_speed_x = float(self.config.get('Steppers', 'max_speed_x'))
         Path.max_speed_y = float(self.config.get('Steppers', 'max_speed_y'))

@@ -2,7 +2,7 @@
 
 case $1 in 
 	start)
-		/opt/Replicape/tty0tty/tty0tty > /var/log/tty0tty.log &
+		/opt/Replicape/tty0tty/tty0tty > /var/log/tty0tty.log 2>&1 &
 		echo "tty0tty started ok"
 		exit 0
 		;;

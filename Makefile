@@ -1,7 +1,7 @@
 
 
 RPATH=/opt/Replicape
-#REMOTE=root@10.24.2.105
+#REMOTE=root@10.24.2.90
 REMOTE=root@192.168.7.2
 DPATH=Dist/dist_`date +"%y_%m_%d"`/Replicape
 DNAME=Replicape_rev_A3-`date +"%y_%m_%d"`.tgz
@@ -13,7 +13,7 @@ eeprom:
 	ssh $(REMOTE) 'cd Replicape/eeprom; make eeprom_cat'
 
 dt: 
-	scp Device_tree/DTB/* $(REMOTE):$(RPATH)/device_tree/
+	scp Device_tree/BB-BONE-REPLICAP* $(REMOTE):/lib/firmware/
 
 systemd:
 	scp systemd/* $(REMOTE):$(RPATH)/systemd/
@@ -66,7 +66,7 @@ dist:
 	cp software/*.py software/*.c $(DPATH)/software/
 	cp -r software/config $(DPATH)/software/
 	cp firmware/firmware_00A3.p firmware/Makefile firmware/pasm $(DPATH)/firmware/
-	cp Device_tree/DTB/* $(DPATH)/device_tree/
+	cp Device_tree/BB-BONE-REPLICAP* $(DPATH)/device_tree/
 	cp eeprom/eeprom.js eeprom/bone.js eeprom/replicape_00A3.json eeprom/Makefile $(DPATH)/eeprom/
 	cp -r libs/spi $(DPATH)/libs/
 	cp -r libs/i2c $(DPATH)/libs/
