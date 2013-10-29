@@ -253,7 +253,14 @@ class Replicape:
         elif g.code() == "M103":									# Deprecated
             pass 													
         elif g.code() == "M104":                                    # Set extruder temperature
-            self.ext1.setTargetTemperature(float(g.tokenValue(0)))
+            if g.hasLetter("P"):
+                if int(g.getValueByLetter("P")) == 0:
+                    self.ext1.setTargetTemperature(float(g.tokenValue(0)))
+                elif int(g.getValueByLetter("P")) == 1:
+                    logging.debug("setting ext 2 temp")
+                    self.ext2.setTargetTemperature(float(g.tokenValue(0)))
+            else:
+                self.ext1.setTargetTemperature(float(g.tokenValue(0)))
         elif g.code() == "M105":                                    # Get Temperature
             answer = "ok T:"+str(self.ext1.getTemperature())
             if hasattr(self, "hbp"):
