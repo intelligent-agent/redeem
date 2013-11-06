@@ -50,7 +50,7 @@ def log_ex(type, value, traceback):
     logging.error('Traceback:'+str(traceback))
 
 sys.excepthook = log_ex
-version = "0.5.3"
+version = "0.6.0"
 
 print "Replicape v. "+version
 
@@ -142,7 +142,7 @@ class Replicape:
         self.movement = "RELATIVE"
         self.feed_rate = 3000.0
         self.current_pos = {"X":0.0, "Y":0.0, "Z":0.0, "E":0.0,"H":0.0}
-        self.acceleration = 0.2
+        self.acceleration = 0.3
         Path.axis_config = int(self.config.get('Geometry', 'axis_config'))
         Path.max_speed_x = float(self.config.get('Steppers', 'max_speed_x'))
         Path.max_speed_y = float(self.config.get('Steppers', 'max_speed_y'))
@@ -266,9 +266,9 @@ class Replicape:
             if hasattr(self, "hbp"):
                 answer += " B:"+str(int(self.hbp.getTemperature()))
             if hasattr(self, "ext2"):
-                answer += " T2:"+str(int(self.ext2.getTemperature()))
+                answer += " T1:"+str(int(self.ext2.getTemperature()))
             if hasattr(self, "cold_end_1"):
-                answer += " T3:"+str(int(self.cold_end_1.getTemperature()))         
+                answer += " T2:"+str(int(self.cold_end_1.getTemperature()))         
             g.setAnswer(answer)
         elif g.code() == "M106":                                    # Fan on
             if g.hasLetter("P"):

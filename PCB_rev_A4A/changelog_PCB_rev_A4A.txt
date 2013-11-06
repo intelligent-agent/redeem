@@ -1,0 +1,3 @@
+Changelog Rev A4 -> Rev A4A
+========================
++ Moved C12 away from C31
