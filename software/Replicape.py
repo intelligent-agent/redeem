@@ -86,9 +86,9 @@ class Replicape:
         path = "/sys/bus/iio/devices/iio:device0/in_voltage"
 
         # init the 3 thermistors
-        self.therm_ext1 = Thermistor(path+"4_raw", "MOSFET Ext 1", "B57560G104F")
-        self.therm_hbp  = Thermistor(path+"6_raw", "MOSFET HBP",   "B57560G104F")
-        self.therm_ext2 = Thermistor(path+"5_raw", "MOSFET Ext 2", "B57560G104F")
+        self.therm_ext1 = Thermistor(path+"4_raw", "MOSFET Ext 1", "B57561G0103F000") # Epcos 10K
+        self.therm_hbp  = Thermistor(path+"6_raw", "MOSFET HBP",   "B57560G104F")	  # Epcos 100K
+        self.therm_ext2 = Thermistor(path+"5_raw", "MOSFET Ext 2", "B57561G0103F000") # Epcos 10K
 
         if os.path.exists("/sys/bus/w1/devices/28-000002e34b73/w1_slave"):
             self.cold_end_1 = W1("/sys/bus/w1/devices/28-000002e34b73/w1_slave", "Cold End 1")
@@ -101,7 +101,7 @@ class Replicape:
         # Make extruder 1
         self.ext1 = Extruder(self.steppers["E"], self.therm_ext1, self.mosfet_ext1, "Ext1")
         self.ext1.setPvalue(0.1)
-        self.ext1.setDvalue(0.1)     
+        self.ext1.setDvalue(0.3)     
         self.ext1.setIvalue(0.0)
 
         # Make Heated Build platform 
@@ -109,9 +109,11 @@ class Replicape:
 
         # Make extruder 2.
         self.ext2 = Extruder(self.steppers["H"], self.therm_ext2, self.mosfet_ext2, "Ext2")
-        self.ext2.setPvalue(0.015)
-        self.ext2.setDvalue(1.0)     
-        self.ext2.setIvalue(0.03)
+        self.ext1.setPvalue(0.1)
+        self.ext1.setDvalue(0.3)     
+        self.ext1.setIvalue(0.0)
+
+        self.current_tool = "E"
 
         # Init the three fans
         self.fan_1 = Fan(1)
@@ -186,6 +188,9 @@ class Replicape:
             for i in range(g.numTokens()):                          # Run through all tokens
                 axis = g.tokenLetter(i)                             # Get the axis, X, Y, Z or E
                 smds[axis] = float(g.tokenValue(i))/1000.0          # Get the value, new position or vector             
+            if g.hasLetter("E") and self.current_tool != "E":       # We are using a different tool, switch..
+                smds[self.current_tool] = smds["E"]
+                del smds["E"]
             path = Path(smds, self.feed_rate, self.movement, g.is_crc())# Make a path segment from the axes  
             self.path_planner.add_path(path)                        # Add the path. This blocks until the path planner has capacity
             #logging.debug("Moving to: "+' '.join('%s:%s' % i for i in smds.iteritems()))
@@ -255,11 +260,12 @@ class Replicape:
         elif g.code() == "M104":                                    # Set extruder temperature
             if g.hasLetter("P"):
                 if int(g.getValueByLetter("P")) == 0:
-                    self.ext1.setTargetTemperature(float(g.tokenValue(0)))
+                    self.ext1.setTargetTemperature(float(g.getValueByLetter("S")))
                 elif int(g.getValueByLetter("P")) == 1:
-                    logging.debug("setting ext 2 temp")
-                    self.ext2.setTargetTemperature(float(g.tokenValue(0)))
+                    logging.debug("setting ext 2 temp to "+str(g.getValueByLetter("S")))
+                    self.ext2.setTargetTemperature(float(g.getValueByLetter("S")))
             else:
+                logging.debug("setting ext 1 temp to "+str(g.tokenValue(0)))
                 self.ext1.setTargetTemperature(float(g.tokenValue(0)))
         elif g.code() == "M105":                                    # Get Temperature
             answer = "ok T:"+str(self.ext1.getTemperature())
@@ -304,6 +310,10 @@ class Replicape:
             self.stat = True 
         elif g.code() == "M143":
             self.stat = False 
+        elif g.code() == "T0":                                      # Select tool 0
+            self.current_tool = "E"
+        elif g.code() == "T1":                                      # select tool 1
+            self.current_tool = "H"
         else:
             logging.warning("Unknown command: "+g.message)
    

@@ -1,19 +1,19 @@
 
 
 RPATH=/opt/Replicape
-REMOTE=root@10.24.2.90
-#REMOTE=root@192.168.7.2
+#REMOTE=root@10.24.2.90
+REMOTE=root@192.168.7.2
 DPATH=Dist/dist_`date +"%y_%m_%d"`/Replicape
 DNAME=Replicape_rev_A3-`date +"%y_%m_%d"`.tgz
 
 .PHONY : software firmware eeprom systemd
 
 eeprom:
-	scp eeprom/replicape_00A3.json eeprom/bone.js eeprom/eeprom.js eeprom/Makefile $(REMOTE):$(RPATH)/eeprom
-	ssh $(REMOTE) 'cd Replicape/eeprom; make eeprom_cat'
+	scp eeprom/replicape_*.json eeprom/bone.js eeprom/eeprom.js eeprom/Makefile $(REMOTE):$(RPATH)/eeprom
+	ssh $(REMOTE) 'cd /opt/Replicape/eeprom; make angstrom'
 
 dt: 
-	scp Device_tree/BB-BONE-REPLICAP* $(REMOTE):/lib/firmware/
+	scp Device_tree/* $(REMOTE):$(RPATH)/device_tree/
 
 systemd:
 	scp systemd/* $(REMOTE):$(RPATH)/systemd/
