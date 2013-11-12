@@ -1,0 +1,17 @@
+{
+ "Replicape.eeprom": {
+    "type": "cape",
+    "header": "aa5533ee",
+    "formatRev": "1",
+    "boardName": "Replicape 3D printer cape",
+    "version": "00A4",
+    "manufacturer": "Intelligent Agent AS",
+    "partNumber": "BB-BONE-REPLICAP",
+    "numPins": 29,
+    "serialNumber": "00000000001",
+    "currentVDD_3V3EXP": 40,
+    "currentVDD_5V": 1000,
+    "currentSYS_5V": 0,
+    "DCSupplied": 0
+ }
+}
