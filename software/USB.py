@@ -22,6 +22,7 @@ class USB:
         self.running = True
         self.debug = 0
         self.t = Thread(target=self.get_message)
+        self.t.daemon = True
         self.t.start()		
 
     # Loop that gets messages and pushes them on the queue

@@ -31,6 +31,7 @@ class Pipe:
         self.debug = 0
         self.fifo = os.open(filename, os.O_RDWR)
         self.t = Thread(target=self.get_message)
+        self.t.daemon = True
         self.t.start()		
 
     # Loop that gets messages and pushes them on the queue

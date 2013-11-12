@@ -163,8 +163,11 @@ class Replicape:
     def loop(self):
         print "Replicape starting main"
         try:
-            while True:                
-                gcode = Gcode(self.commands.get(), self)
+            while True:
+                try:
+                    gcode = Gcode(self.commands.get(True,1), self)
+                except Empty as e:
+                    continue
                 self._execute(gcode)
                 if gcode.prot == "USB":
                     self.usb.send_message(gcode.getAnswer())
