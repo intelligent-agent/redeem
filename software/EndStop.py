@@ -13,7 +13,7 @@ You can use and change this, but keep this heading :)
 
 from threading import Thread
 import logging
-from Smd import SMD
+from Stepper import Stepper
 
 class EndStop:
     # pin is the pin where the connector is attached. 
@@ -36,7 +36,7 @@ class EndStop:
             if direction == "down" and code == self.key_code:
                 for name, stepper in self.steppers.iteritems():
                     stepper.setDisabled()
-                SMD.commit()           
+                Stepper.commit()           
                 logging.warning("End Stop " + self.name +" hit! Disabling all steppers")
 
 
