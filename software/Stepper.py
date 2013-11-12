@@ -106,13 +106,16 @@ class Stepper:
 
     ''' Microstepping (default = 0) 0 to 5 '''
     def set_microstepping(self, value, force_update=False):
-        self.microsteps = (1<<value) 						
-        self.state &= ~(7<<1)									# Clear D1, D2, D3
-        self.state |= (int(bin(value)[:1:-1], 2) << 1)			# Set the right number, flip the binary
-        self.mmPrStep = 1.0/(self.steps_pr_mm*self.microsteps)
-        #logging.debug("State is: "+bin(self.state))
-        #logging.debug("Microsteps: "+str(self.microsteps))
-        #logging.debug("mmPrStep is: "+str(self.mmPrStep))
+        if not value in [0, 1, 2, 3, 4, 5]: # Full, half, 1/4, 1/8, 1/16, 1/32. 
+            logging.warning("Tried to set illegal microstepping value: {0} for stepper {1}".format(value, self.name))
+            return
+        self.microsteps  = 2**value 	
+        self.state = int("0b"+bin(self.state)[2:].rjust(8, '0')[:4]+bin(value)[2:].rjust(3, '0')[::-1]+"0", 2)
+        self.mmPrStep    = 1.0/(self.steps_pr_mm*self.microsteps)
+        logging.debug("Value is: "+bin(value))
+        logging.debug("State is: "+bin(self.state))
+        logging.debug("Microsteps: "+str(self.microsteps))
+        logging.debug("mmPrStep is: "+str(self.mmPrStep))
         if force_update: 
             self.update()
 
