@@ -166,7 +166,7 @@ class Replicape:
             while True:
                 try:
                     gcode = Gcode(self.commands.get(True,1), self)
-                except Empty as e:
+                except Queue.Empty as e:
                     continue
                 self._execute(gcode)
                 if gcode.prot == "USB":
