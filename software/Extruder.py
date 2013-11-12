@@ -56,6 +56,7 @@ class Heater(object):
         self.enabled = True
         self.disabled = False
         self.t = Thread(target=self.keep_temperature)
+        self.t.daemon = True
         self.t.start()		
 
     ''' Set values for Proportional, Integral, Derivative'''

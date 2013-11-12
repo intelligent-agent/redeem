@@ -32,6 +32,7 @@ class Path_planner:
         self.running     = True                                 # Yes, we are running
         self.pru_data    = []
         self.t           = Thread(target=self._do_work)         # Make the thread
+        self.t.daemon = True
         if __name__ != '__main__':
             self.t.start()		 
 

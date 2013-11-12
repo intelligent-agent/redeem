@@ -23,6 +23,7 @@ class EndStop:
         self.key_code = key_code
         self.name = name
         self.t = Thread(target=self.wait_for_event)         # Make the thread
+        self.t.daemon = True
         self.t.start()
 	
     def wait_for_event(self):
