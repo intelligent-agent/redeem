@@ -15,12 +15,4 @@ Software features:
 - Printer settings loaded from file  
 - Controllable via ethernet, USB, printer display.   
 
-TODO for software:  
-- Better axis max-speed. It now limits the feed rate, but should instead take into account the speed in a given direction.  
-- PID autotune.  
-- Constant jerk?  
-
-Known issues:  
-- USB hugs all CPU, disabled for now. Use ethernet (over USB) instead.  
-
 Wiki: http://wiki.thing-printer.com/index.php?title=Redeem
