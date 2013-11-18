@@ -285,6 +285,8 @@ class Replicape:
                 self.fan_1.set_value(float(g.tokenValue(0))/255.0)	
         elif g.code() == "M108":									# Deprecated
             pass 													
+        elif g.code() == "M109":
+             self.hbp.setTargetTemperature(float(g.getValueByLetter("S")))
         elif g.code() == "M110":                                    # Reset the line number counter 
             Gcode.line_number = 0       
         elif g.code() == "M114": 
@@ -307,10 +309,8 @@ class Replicape:
             fan = self.fans[int(g.getValueByLetter("P"))]
             fan.setPWMFrequency(int(g.getValueByLetter("F")))
             fan.set_value(float(g.getValueByLetter("S")))	           
-        elif g.code() == "M142":
-            self.stat = True 
-        elif g.code() == "M143":
-            self.stat = False 
+        elif g.code() == "M190":
+            self.hbp.setTargetTemperature(float(g.getValueByLetter("S")))
         elif g.code() == "T0":                                      # Select tool 0
             self.current_tool = "E"
         elif g.code() == "T1":                                      # select tool 1

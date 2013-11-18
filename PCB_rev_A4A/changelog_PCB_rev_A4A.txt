@@ -5,6 +5,6 @@ Changelog Rev A4 -> Rev A4A
 + Moved text on R46
 + Moved R48
 + Switched text on LED4 and R11
-- Change C57, C58, C59 to 10nF?
-- Change R38, R39, R40 to 4.7K?
 + Moved the stepper motor wires more to the centre. 
++ Re-did the layout so top layer is vertical and bottom is horizontal. 
++ Swappd B1 and B2 on the steppers so they do not cross in the layout. 

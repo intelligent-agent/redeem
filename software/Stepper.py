@@ -10,14 +10,15 @@ License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 
 '''
 The bits in the shift register are as follows (Rev A4) :
+Bit - name   - init val 
 D0 = -		 = X
-D1 = MODE2   = X
-D2 = MODE1   = X
-D3 = MODE0   = X
-D4 = nENABLE = 0
-D5 = DECAY   = X
-D6 = nSLEEP  = 1
-D7 = nRESET  = 1
+D1 = MODE2   = 0
+D2 = MODE1   = 0
+D3 = MODE0   = 0
+D4 = nENABLE = 0  - Enabled
+D5 = DECAY   = 0  - Slow decay 
+D6 = nSLEEP  = 1  - Not sleeping 
+D7 = nRESET  = 1  - Not in reset mode
 '''
 from spi import SPI
 from threading import Thread
