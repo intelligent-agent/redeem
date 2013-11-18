@@ -4,11 +4,9 @@ For more info see:
 http://reprap.org/wiki/G-code
 
 Author: Elias Bakken
-email: elias.bakken@gmail.com
-Website: http://www.hipstercircuits.com
-License: BSD
-
-You can use and change this, but keep this heading :)
+email: elias(dot)bakken(at)gmail(dot)com
+Website: http://www.thing-printer.com
+License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 '''
 
 import logging

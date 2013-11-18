@@ -4,11 +4,9 @@ A class that listens for a button press
 and sends an event if that happens.
 
 Author: Elias Bakken
-email: elias.bakken@gmail.com
-Website: http://wiki.replicape.com
-License: BSD
-
-You can use and change this, but keep this heading :)
+email: elias(dot)bakken(at)gmail(dot)com
+Website: http://www.thing-printer.com
+License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 '''
 
 from threading import Thread

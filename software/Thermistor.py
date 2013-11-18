@@ -1,5 +1,13 @@
+#!/usr/bin/env python
+'''
+A Stepper Motor Driver class for Replicape. 
 
-# Import PyBBIO library:
+Author: Elias Bakken
+email: elias(dot)bakken(at)gmail(dot)com
+Website: http://www.thing-printer.com
+License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
+'''
+
 import numpy as np
 import logging
 from threading import Lock

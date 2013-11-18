@@ -3,10 +3,8 @@ C++ version of braid_data for speeding up the process
 
 Author: Øyvind Nydal Dahl
 email: oyvdahl@online.no
-Website: http://www.hipstercircuits.com
-License: BSD
-
-You can use and change this, but keep this heading :)
+Website: http://www.thing-printer.com
+License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 **/
 
 
