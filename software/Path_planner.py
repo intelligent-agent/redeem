@@ -165,7 +165,10 @@ class Path_planner:
             return ([], [])
         step_pin    = stepper.get_step_pin()                            # Get the step pin
         dir_pin     = stepper.get_dir_pin()                             # Get the direction pin
-        dir_pin     = 0 if vec < 0 else dir_pin                         # Disable the dir-pin if we are going backwards               
+        if stepper.get_direction() > 0:
+            dir_pin     = 0 if vec < 0 else dir_pin                         # Disable the dir-pin if we are going backwards  
+        else:
+            dir_pin     = 0 if vec < 0 else dir_pin
         pins        = [step_pin | dir_pin, dir_pin]*num_steps           # Make the pin states
 
         s           = abs(path.get_axis_length(axis))                   # Get the length of the vector
