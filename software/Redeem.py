@@ -320,6 +320,8 @@ class Redeem:
             self.current_tool = "E"
         elif g.code() == "T1":                                      # select tool 1
             self.current_tool = "H"
+        elif g.message == "ok":
+            pass
         else:
             logging.warning("Unknown command: "+g.message)
    
