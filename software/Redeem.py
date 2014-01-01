@@ -84,16 +84,16 @@ class Redeem:
         path = "/sys/bus/iio/devices/iio:device0/in_voltage"
 
         # init the 3 thermistors
-        self.therm_ext1 = Thermistor(path+"4_raw", "MOSFET Ext 1", "B57561G0103F000") # Epcos 10K
+        self.therm_ext1 = Thermistor(path+"4_raw", "MOSFET Ext 1", "B57560G104F") # Epcos 10K
         self.therm_hbp  = Thermistor(path+"6_raw", "MOSFET HBP",   "B57560G104F")	  # Epcos 100K
-        self.therm_ext2 = Thermistor(path+"5_raw", "MOSFET Ext 2", "B57561G0103F000") # Epcos 10K
+        self.therm_ext2 = Thermistor(path+"5_raw", "MOSFET Ext 2", "B57560G104F") # Epcos 10K
 
         if os.path.exists("/sys/bus/w1/devices/28-000002e34b73/w1_slave"):
             self.cold_end_1 = W1("/sys/bus/w1/devices/28-000002e34b73/w1_slave", "Cold End 1")
 		
         # init the 3 heaters
-        self.mosfet_ext1 = Mosfet(5) # Argument is channel number
-        self.mosfet_ext2 = Mosfet(3)
+        self.mosfet_ext1 = Mosfet(3) # Argument is channel number
+        self.mosfet_ext2 = Mosfet(5)
         self.mosfet_hbp  = Mosfet(4)
 
         # Make extruder 1
@@ -114,22 +114,22 @@ class Redeem:
         self.current_tool = "E"
 
         # Init the three fans
-        self.fan_1 = Fan(8)
-        self.fan_2 = Fan(9)
-        self.fan_3 = Fan(10)
+        self.fan_1 = Fan(9)
+        self.fan_2 = Fan(1)
+        self.fan_3 = Fan(2)
         self.fans = {0: self.fan_1, 1:self.fan_2, 2:self.fan_3 }
 
         self.fan_1.setPWMFrequency(100)
 
         # Init the end stops
         self.end_stops = {}
-        self.end_stops["X1"] = EndStop("GPIO3_21", self.steppers, 112, "X1")
-        self.end_stops["X2"] = EndStop("GPIO0_30", self.steppers, 113, "X2")
-        self.end_stops["Y1"] = EndStop("GPIO1_17", self.steppers, 114, "Y1")
-        self.end_stops["Y2"] = EndStop("GPIO1_19", self.steppers, 115, "Y2")
-        self.end_stops["Z1"] = EndStop("GPIO0_31", self.steppers, 116, "Z1")
-        self.end_stops["Z2"] = EndStop("GPIO0_4",  self.steppers, 117, "Z2")
-        
+        self.end_stops["X1"] = EndStop("GPIO2_2", self.steppers, 1, "X1")
+        self.end_stops["Y1"] = EndStop("GPIO0_14", self.steppers, 2, "Y1")
+        self.end_stops["Z1"] = EndStop("GPIO0_30", self.steppers, 3, "Z1")
+        self.end_stops["Y2"] = EndStop("GPIO3_21", self.steppers, 4, "Y2")
+        self.end_stops["X2"] = EndStop("GPIO0_31", self.steppers, 5, "X2")
+        self.end_stops["Z2"] = EndStop("GPIO0_4", self.steppers, 6, "Z2")
+         
         # Make a queue of commands
         self.commands = Queue.Queue(10)
 
@@ -282,6 +282,12 @@ class Redeem:
                 fan.set_value(float(g.getValueByLetter("S"))/255.0)	# According to reprap wiki, the number is 0..255
             else: # if there is no fan-number present, do it for the first fan
                 self.fan_1.set_value(float(g.tokenValue(0))/255.0)	
+        elif g.code() == "M107":                                    # Fan on
+            if g.hasLetter("P"):
+                fan = self.fans[int(g.getValueByLetter("P"))]
+                fan.set_value(0) # According to reprap wiki, the number is 0..255
+            else: # if there is no fan-number present, do it for the first fan
+                self.fan_1.set_value(0)  
         elif g.code() == "M108":									# Deprecated
             pass 													
         elif g.code() == "M109":

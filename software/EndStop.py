@@ -32,7 +32,7 @@ class EndStop:
             evt_file.read(16)       # Discard the debounce event 
             code = ord(evt[10])            
             direction  = "down" if ord(evt[12]) else "up"
-            if direction == "down" and code == self.key_code:
+            if direction == "up" and code == self.key_code:
                 for name, stepper in self.steppers.iteritems():
                     stepper.setDisabled()
                 Stepper.commit()           

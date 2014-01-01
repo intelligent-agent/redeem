@@ -2,9 +2,11 @@
 Extruder file for Replicape. 
 
 Author: Elias Bakken
-email: elias(dot)bakken(at)gmail(dot)com
-Website: http://www.thing-printer.com
-License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
+email: elias.bakken@gmail.com
+Website: http://www.hipstercircuits.com
+License: BSD
+
+You can use and change this, but keep this heading :)
 '''
 
 from threading import Thread
@@ -45,7 +47,7 @@ class Heater(object):
         # Wait for PID to stop
         while self.disabled == False:
             time.sleep(0.2)
-        # The PID loop has finished		
+        # The PID loop has finished     
         self.mosfet.setPower(0.0)
         self.mosfet.close()
 
@@ -55,7 +57,7 @@ class Heater(object):
         self.disabled = False
         self.t = Thread(target=self.keep_temperature)
         self.t.daemon = True
-        self.t.start()		
+        self.t.start()      
 
     ''' Set values for Proportional, Integral, Derivative'''
     def setPvalue(self, P):
@@ -69,26 +71,26 @@ class Heater(object):
 
     ''' PID Thread that keeps the temperature stable '''
     def keep_temperature(self):
-        while self.enabled:            			
-            self.current_temp = self.thermistor.getTemperature()    # Read the current temperature		
+        while self.enabled:                     
+            self.current_temp = self.thermistor.getTemperature()    # Read the current temperature      
             error = self.target_temp-self.current_temp   # Calculate the error 
             derivative = self._getErrorDerivative(error) # Calculate the error derivative 
             integral = self._getErrorIntegral(error)     # Calculate the error integral        
-            power = self.P*(error + self.D*derivative + self.I*integral) # The formula for the PID				
+            power = self.P*(error + self.D*derivative + self.I*integral) # The formula for the PID              
             power = max(min(power, 1.0), 0.0)            # Normalize to 0,1
-            self.mosfet.setPower(power)            		 # Update the mosfet            
+            self.mosfet.setPower(power)                  # Update the mosfet            
             log = self.name+": Tgt: %f, Cur: %f"%(self.target_temp, self.current_temp)
             log += ", Err: %f, Pow: %f"%(error, power)              
             #if self.name == "Ext1":
                 #logging.debug(log+", Der: %f, Int: %f"%(self.D*derivative, self.I*integral))
-            time.sleep(1)            					 # Wait one second        
-        self.disabled = True							 # Signal the disable that we are done
+            time.sleep(1)                                # Wait one second        
+        self.disabled = True                             # Signal the disable that we are done
 
 
     ''' Get the derivative of the error term '''
     def _getErrorDerivative(self, current_error):       
-        derivative = current_error-self.last_error		# Calculate the diff
-        self.last_error = current_error					# Update the last error 
+        derivative = current_error-self.last_error      # Calculate the diff
+        self.last_error = current_error                 # Update the last error 
         return derivative
 
     ''' Calculate and return the error integral '''
@@ -113,5 +115,22 @@ class HBP(Heater):
     def __init__(self, thermistor, mosfet):
         Heater.__init__(self, thermistor, mosfet, "HBP")
         self.enable()
+
+    def keep_temperature(self):
+        while self.enabled:                     
+            self.current_temp = self.thermistor.getTemperature()    # Read the current temperature      
+            error = self.target_temp-self.current_temp   # Calculate the error 
+
+            if error>1.0:
+                self.mosfet.setPower(1.0)
+            else:
+                self.mosfet.setPower(0.0)          
+         
+            log = self.name+": Tgt: %f, Cur: %f"%(self.target_temp, self.current_temp)
+            log += ", Err: %f, Pow: %f"%(error, 1.0)              
+            #if self.name == "Ext1":
+                #logging.debug(log+", Der: %f, Int: %f"%(self.D*derivative, self.I*integral))
+            time.sleep(1)                                # Wait one second        
+        self.disabled = True                             # Signal the disable that we are done
 
 
