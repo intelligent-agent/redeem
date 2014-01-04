@@ -140,7 +140,12 @@ class Path:
 
     def get_start_speed(self):
         """ Get the lowest speed along this segment """
-        return (1-self.angle_to_prev()/np.pi)*self.get_max_speed()
+
+        if hasattr(self, 'prev'):
+            return (1-self.angle_to_prev()/np.pi)*self.prev.get_end_speed()
+        else:
+            return 0.0
+        
 
     def get_end_speed(self):
         """ Get the lowest speed along this segment """
@@ -171,7 +176,7 @@ class Path:
         if hasattr(self, 'angle_to_next_cal'):
             return self.angle_to_next_cal
         if self.next_ok == False:
-            return 0
+            return np.pi
 
         v1 = [self.get_axis_length("X"), self.get_axis_length("Y")]
         v2 = [self.next.get_axis_length("X"), self.next.get_axis_length("Y")]
@@ -184,7 +189,7 @@ class Path:
         if hasattr(self, 'angle_to_prev_cal'):
             return self.angle_to_prev_cal
         if not hasattr(self, 'prev'):
-            return 0
+            return np.pi
 
         v1 = [self.get_axis_length("X"), self.get_axis_length("Y")]
         v2 = [self.prev.get_axis_length("X"), self.prev.get_axis_length("Y")]

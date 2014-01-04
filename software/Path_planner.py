@@ -177,6 +177,10 @@ class Path_planner:
         Vm       = path.get_max_speed()*ratio				            # The travelling speed in m/s
         a        = self.acceleration*ratio    		                    # Accelleration in m/s/s
         ds       = 1.0/steps_pr_meter                                   # Delta S, distance in meters travelled pr step.         
+        
+        #logging.debug('Start speed '+str(path.get_start_speed()))
+        #logging.debug('End speed '+str(path.get_end_speed()))
+
         if path.is_type_print_segment():                                # If there is currently a segment being processed, 
             u_start  = ratio*path.get_start_speed()                 	    # The end speed, depends on the angle to the next
         else:

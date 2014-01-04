@@ -66,8 +66,8 @@ class Redeem:
         self.steppers["X"] = Stepper("GPIO0_27", "GPIO1_29", "GPIO2_4",  0, "X",-1) 
         self.steppers["Y"] = Stepper("GPIO1_12", "GPIO0_22", "GPIO2_5",  1, "Y",1)  
         self.steppers["Z"] = Stepper("GPIO0_23", "GPIO0_26", "GPIO0_15", 2, "Z",1)  
-        self.steppers["E"] = Stepper("GPIO1_28", "GPIO1_15", "GPIO2_1",  3, "Ext1",1)
-        self.steppers["H"] = Stepper("GPIO1_13", "GPIO1_14", "GPIO2_3",  4, "Ext2",1)
+        self.steppers["E"] = Stepper("GPIO1_28", "GPIO1_15", "GPIO2_1",  3, "Ext1",-1)
+        self.steppers["H"] = Stepper("GPIO1_13", "GPIO1_14", "GPIO2_3",  4, "Ext2",-1)
 
         # Enable the steppers and set the current, steps pr mm and microstepping  
         for name, stepper in self.steppers.iteritems():
@@ -75,7 +75,7 @@ class Redeem:
             stepper.setEnabled(self.config.getboolean('Steppers', 'enabled_'+name)) 
             stepper.set_steps_pr_mm(self.config.getfloat('Steppers', 'steps_pr_mm_'+name))         
             stepper.set_microstepping(self.config.getint('Steppers', 'microstepping_'+name)) 
-            stepper.set_decay(0) 
+            stepper.set_decay(1) 
 
 		# Commit changes for the Steppers
         Stepper.commit()
@@ -114,7 +114,7 @@ class Redeem:
         self.current_tool = "E"
 
         # Init the three fans
-        self.fan_1 = Fan(9)
+        self.fan_1 = Fan(0)
         self.fan_2 = Fan(1)
         self.fan_3 = Fan(2)
         self.fans = {0: self.fan_1, 1:self.fan_2, 2:self.fan_3 }
@@ -142,7 +142,7 @@ class Redeem:
         self.movement = "RELATIVE"
         self.feed_rate = 3000.0
         self.current_pos = {"X":0.0, "Y":0.0, "Z":0.0, "E":0.0,"H":0.0}
-        self.acceleration = 0.3
+        self.acceleration = 0.1
         Path.axis_config = int(self.config.get('Geometry', 'axis_config'))
         Path.max_speed_x = float(self.config.get('Steppers', 'max_speed_x'))
         Path.max_speed_y = float(self.config.get('Steppers', 'max_speed_y'))
