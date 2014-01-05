@@ -131,7 +131,7 @@ class Redeem:
         self.end_stops["Z2"] = EndStop("GPIO0_4", self.steppers, 6, "Z2")
          
         # Make a queue of commands
-        self.commands = Queue.Queue(10)
+        self.commands = Queue.Queue(20)
 
         # Set up USB, this receives messages and pushes them on the queue
         #self.usb = USB(self.commands)		
@@ -142,7 +142,7 @@ class Redeem:
         self.movement = "RELATIVE"
         self.feed_rate = 3000.0
         self.current_pos = {"X":0.0, "Y":0.0, "Z":0.0, "E":0.0,"H":0.0}
-        self.acceleration = 0.1
+        self.acceleration = float(self.config.get('Steppers', 'acceleration'))
         Path.axis_config = int(self.config.get('Geometry', 'axis_config'))
         Path.max_speed_x = float(self.config.get('Steppers', 'max_speed_x'))
         Path.max_speed_y = float(self.config.get('Steppers', 'max_speed_y'))

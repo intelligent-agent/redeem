@@ -36,6 +36,7 @@ class Path:
         self.is_print_segment = is_print_segment         # If this is True, use angle stuff
         self.next_ok = False
 
+
     def is_G92(self):
         """ Special path, only set the global position on this """
         return (self.movement == "G92")
@@ -54,6 +55,7 @@ class Path:
     def unlink(self):
         self.next = None
         self.prev = None
+        self.next_ok = False
     
     def link(self, prev, next = None):
         """ Link this path with the previous and next one (if any, provide None otherwise) """

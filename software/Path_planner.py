@@ -31,7 +31,7 @@ class Path_planner:
     def __init__(self, steppers, current_pos):
         self.steppers    = steppers
         self.pru         = Pru()                                # Make the PRU
-        self.paths       = Queue.Queue(10)                      # Make a queue of paths
+        self.paths       = Queue.Queue(100)                      # Make a queue of paths
         self.current_pos = current_pos                          # Current position in (x, y, z, e)
         self.running     = True                                 # Yes, we are running
         self.pru_data    = []
@@ -49,7 +49,7 @@ class Path_planner:
         if not new.is_G92():     
             if hasattr(self, 'prev'):
                 self.prev.set_next(new)
-                new.link(self.prev)
+                new.set_prev(self.prev)
             self.prev = new        
         self.paths.put(new)
 
@@ -237,6 +237,10 @@ if __name__ == '__main__':
     import cProfile
     import ConfigParser
 
+    logging.basicConfig(level=logging.DEBUG, 
+                    format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
+                    datefmt='%m-%d %H:%M')
+
     print "Making steppers"
     steppers = {}
     steppers["X"] = Stepper("GPIO0_27", "GPIO1_29", "GPIO2_4",  0, "X",-1) 
@@ -244,7 +248,6 @@ if __name__ == '__main__':
     steppers["Z"] = Stepper("GPIO0_23", "GPIO0_26", "GPIO0_15", 2, "Z",1)  
     steppers["E"] = Stepper("GPIO1_28", "GPIO1_15", "GPIO2_1",  3, "Ext1",-1)
     steppers["H"] = Stepper("GPIO1_13", "GPIO1_14", "GPIO2_3",  4, "Ext2",-1)
-       
     config = ConfigParser.ConfigParser()
     config.readfp(open('config/default.cfg'))
 
@@ -258,25 +261,47 @@ if __name__ == '__main__':
     # Commit changes for the Steppers
     Stepper.commit()
 
+    Path.axis_config = int(config.get('Geometry', 'axis_config'))
+    Path.max_speed_x = float(config.get('Steppers', 'max_speed_x'))
+    Path.max_speed_y = float(config.get('Steppers', 'max_speed_y'))
+    Path.max_speed_z = float(config.get('Steppers', 'max_speed_z'))
+    Path.max_speed_e = float(config.get('Steppers', 'max_speed_e'))
+    Path.max_speed_h = float(config.get('Steppers', 'max_speed_h'))
+
+
     current_pos = {"X":0.0, "Y":0.0, "Z":0.0, "E":0.0} 
     pp = Path_planner(steppers, current_pos)
-    pp.set_acceleration(0.1)
+    pp.set_acceleration(0.3)
+
+    nb = 10
 
     print "Making paths"
-    next_pos = {"X":0.001, "Y":0.003, "Z":0.001} 
-    for x in range(100):
-        path = Path(next_pos.copy(), 0.3, "RELATIVE", False)
+    
+    for x in range(nb):
+        next_pos = {"Z":x*0.001} 
+        path = Path(next_pos, 0.1, "ABSOLUTE", True)
+
         pp.add_path(path)
 
     print "Doing work"
     
-    cProfile.run('[pp.do_work() for i in range(100)]', sort='time')
+    cProfile.run('[pp.do_work() for i in range('+str(nb)+')]', sort='time')
 
-    next_pos = {"X":0.15, "Y":0.21, "Z":0.1} 
-    path = Path(next_pos, 0.3, "RELATIVE", True)
+    print "Going back"
+
+    next_pos = {"Z":0} 
+    path = Path(next_pos, 0.1, "ABSOLUTE", False)
     pp.add_path(path)
 
     cProfile.run('pp.do_work()')
+
+    pp.wait_until_done()
+
+    for name, stepper in steppers.iteritems():
+            stepper.setDisabled() 
+
+    # Commit changes for the Steppers
+    Stepper.commit()
 
     print "done"
     
