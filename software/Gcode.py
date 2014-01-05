@@ -51,6 +51,10 @@ class Gcode:
         except Exception as e:
             logging.exception("Ooops: ")
 
+    ''' Return True if the command has to be processed immediatly '''
+    def is_urgent(self):
+        return False
+
     ''' The machinecode '''
     def code(self):
         return self.gcode
