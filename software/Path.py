@@ -55,6 +55,11 @@ class Path:
         self.next = None
         self.prev = None
     
+    def link(self, prev, next = None):
+        """ Link this path with the previous and next one (if any, provide None otherwise) """
+        self.next = next
+        self.prev = prev
+
     def set_global_pos(self, global_pos, update_next = True):
         """ Set the global position for the printer """
         self.global_pos = global_pos 
@@ -227,13 +232,14 @@ if __name__ == '__main__':
 
     # Add path segment B. Make prev point to A. Make next of A point to B. 
     b = Path({"X": 0.1, "Y": 0.1}, 0.3, "ABSOLUTE")
-    b.set_prev(a)
-    a.set_next(b)
 
     # Add path segment C. Make pre of C point to B and next of B point to C. 
     c = Path({"X": 0.0, "Y": 0.1}, 0.3, "ABSOLUTE")
-    c.set_prev(b)
-    b.set_next(c)
+
+
+    a.link(None,b)
+    b.link(a,c)
+    c.link(b,None)
 
     # A is fetched and executed. 
     a.set_global_pos({"X": 0, "Y": 0}) 

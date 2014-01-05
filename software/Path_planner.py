@@ -15,9 +15,15 @@ import time
 import logging
 import numpy as np  
 from threading import Thread
-from Pru import Pru
+
+try:
+    from Pru import Pru
+except ImportError:
+    pass
+
+
 import Queue
-from collections import defaultdict
+
 import braid
 
 class Path_planner:
@@ -43,7 +49,7 @@ class Path_planner:
         if not new.is_G92():     
             if hasattr(self, 'prev'):
                 self.prev.set_next(new)
-                new.set_prev(self.prev)
+                new.link(self.prev)
             self.prev = new        
         self.paths.put(new)
 
@@ -75,11 +81,9 @@ class Path_planner:
                 self.set_pos(axis, pos)           
             self.paths.task_done()            
             return                
-       
-        all_data = {}
         
         for axis in path.get_axes():                       # Run through all the axes in the path    
-            stepper = self.steppers[axis]                  # Get a handle of  the stepper                    
+            #stepper = self.steppers[axis]                  # Get a handle of  the stepper                    
             data = self._make_data(path, axis)            
             if len(data[0]) > 0:
                 if len(self.pru_data) == 0:
@@ -130,7 +134,7 @@ class Path_planner:
                     data1.insert(line, (pin1+pin2, dly))
                     (pin2, dly2) = data2.pop(0)
                 line += 1
-            except IndexError, e:
+            except IndexError:
                 break
 
         if dly2 > 0:   
@@ -228,39 +232,52 @@ class Path_planner:
 
 
 if __name__ == '__main__':
-    from Smd import SMD
+    from Stepper import Stepper
     from Path import Path
     import cProfile
-    
+    import ConfigParser
+
     print "Making steppers"
     steppers = {}
-    steppers["X"] = SMD("GPIO0_27", "GPIO1_29", "GPIO2_4",  0, "X")
-    steppers["X"].set_steps_pr_mm(4.3)          
-    steppers["Y"] = SMD("GPIO1_12", "GPIO0_22", "GPIO2_5",  1, "Y")  
-    steppers["Y"].set_steps_pr_mm(4.3)          
-    steppers["Z"] = SMD("GPIO0_23", "GPIO0_26", "GPIO0_15", 2, "Z")  
-    steppers["Z"].set_steps_pr_mm(4.3)          
-    steppers["H"] = SMD("GPIO1_28", "GPIO1_15", "GPIO2_1",  3, "Ext1")
-    steppers["H"].set_steps_pr_mm(4.3)          
-    steppers["E"] = SMD("GPIO1_13", "GPIO1_14", "GPIO2_3",  4, "Ext2") 
-    steppers["E"].set_steps_pr_mm(4.3)          
-    
+    steppers["X"] = Stepper("GPIO0_27", "GPIO1_29", "GPIO2_4",  0, "X",-1) 
+    steppers["Y"] = Stepper("GPIO1_12", "GPIO0_22", "GPIO2_5",  1, "Y",1)  
+    steppers["Z"] = Stepper("GPIO0_23", "GPIO0_26", "GPIO0_15", 2, "Z",1)  
+    steppers["E"] = Stepper("GPIO1_28", "GPIO1_15", "GPIO2_1",  3, "Ext1",-1)
+    steppers["H"] = Stepper("GPIO1_13", "GPIO1_14", "GPIO2_3",  4, "Ext2",-1)
+       
+    config = ConfigParser.ConfigParser()
+    config.readfp(open('config/default.cfg'))
+
+    for name, stepper in steppers.iteritems():
+            stepper.setCurrentValue(config.getfloat('Steppers', 'current_'+name)) 
+            stepper.setEnabled(config.getboolean('Steppers', 'enabled_'+name)) 
+            stepper.set_steps_pr_mm(config.getfloat('Steppers', 'steps_pr_mm_'+name))         
+            stepper.set_microstepping(config.getint('Steppers', 'microstepping_'+name)) 
+            stepper.set_decay(1) 
+
+    # Commit changes for the Steppers
+    Stepper.commit()
+
     current_pos = {"X":0.0, "Y":0.0, "Z":0.0, "E":0.0} 
     pp = Path_planner(steppers, current_pos)
-    pp.set_acceleration(0.3)
+    pp.set_acceleration(0.1)
 
     print "Making paths"
-    next_pos = {"X":0.001, "Y":0.003, "Z":0.001, "E":0.004} 
+    next_pos = {"X":0.001, "Y":0.003, "Z":0.001} 
     for x in range(100):
         path = Path(next_pos.copy(), 0.3, "RELATIVE", False)
         pp.add_path(path)
+
     print "Doing work"
+    
     cProfile.run('[pp.do_work() for i in range(100)]', sort='time')
 
-    next_pos = {"X":0.15, "Y":0.21, "Z":0.1, "E":0.13} 
+    next_pos = {"X":0.15, "Y":0.21, "Z":0.1} 
     path = Path(next_pos, 0.3, "RELATIVE", True)
     pp.add_path(path)
+
     cProfile.run('pp.do_work()')
+
     print "done"
     
 
