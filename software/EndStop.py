@@ -18,6 +18,8 @@ class EndStop:
     def __init__(self, pin, steppers, key_code, name):
         self.pin = pin
         self.steppers = steppers
+        for name, stepper in self.steppers.iteritems():
+            stepper.add_endstop(self);
         self.key_code = key_code
         self.name = name
         self.t = Thread(target=self.wait_for_event)         # Make the thread

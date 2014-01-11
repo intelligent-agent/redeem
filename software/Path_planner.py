@@ -71,6 +71,9 @@ class Path_planner:
         while self.running:       
            self.do_work()
     
+    def interrupt_move(self):
+        self.pru.interrupt_move()
+
     def do_work(self):
         """ This is just a separate function so the test at the bottom will pass """		
         path = self.paths.get()                            # Get the last path added

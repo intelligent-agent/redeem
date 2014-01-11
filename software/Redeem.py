@@ -128,9 +128,9 @@ class Redeem:
         self.end_stops = {}
         self.end_stops["X1"] = EndStop("GPIO2_2", self.steppers, 1, "X1")
         self.end_stops["Y1"] = EndStop("GPIO0_14", self.steppers, 2, "Y1")
-        #self.end_stops["Z1"] = EndStop("GPIO0_30", self.steppers, 3, "Z1")
-        self.end_stops["Y2"] = EndStop("GPIO3_21", self.steppers, 4, "Y2")
-        self.end_stops["X2"] = EndStop("GPIO0_31", self.steppers, 5, "X2")
+        self.end_stops["Z1"] = EndStop("GPIO0_30", self.steppers, 3, "Z1")
+        #self.end_stops["Y2"] = EndStop("GPIO3_21", self.steppers, 4, "Y2")
+        #self.end_stops["X2"] = EndStop("GPIO0_31", self.steppers, 5, "X2")
         #self.end_stops["Z2"] = EndStop("GPIO0_4", self.steppers, 6, "Z2")
          
         # Make a queue of commands
@@ -313,7 +313,7 @@ class Redeem:
             Gcode.line_number = 0      
         elif g.code() == "M112":                                    # Emergency stop
             #Reset PRU
-            pass              
+            self.path_planner.interrupt_move()          
         elif g.code() == "M114": 
              g.setAnswer("ok C: "+' '.join('%s:%s' % i for i in self.current_pos.iteritems()))
         elif g.code() == "M130":                                    # Set PID P-value, Format (M130 P0 S8.0)

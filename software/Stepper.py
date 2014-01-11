@@ -21,6 +21,7 @@ D7 =         = 0
 '''
 from spi import SPI
 from threading import Thread
+from EndStop import EndStop
 import time
 import logging
 
@@ -63,8 +64,15 @@ class Stepper:
         self.microsteps      = 1.0          # Well, this is the microstep number
         self.pru_num         = -1           # PRU number, if any 
         self.direction       = direction
+        self.endstops        = []
         Stepper.all_steppers.append(self)       # Add to list of steppers
-                        
+            
+    def add_endstop(self, endstop):
+        self.endstops.append(endstop)
+
+    def get_endstops(self):
+        return self.endstops
+
     ''' Sets the Stepper enabled '''
     def setEnabled(self, value=1, force_update=False):
         if not self.enabled:

@@ -35,7 +35,7 @@ class Pru:
     def __init__(self):
         pru_hz 			    = 200*1000*1000             # The PRU has a speed of 200 MHz
         self.s_pr_inst      = 2.0*(1.0/pru_hz)          # I take it every instruction is a single cycle instruction
-        self.inst_pr_loop 	= 42                        # This is the minimum number of instructions needed to step. 
+        self.inst_pr_loop 	= 45                        # This is the minimum number of instructions needed to step. 
         self.inst_pr_delay 	= 2                         # Every loop adds two instructions: i-- and i != 0            
         self.sec_to_inst_dev = (self.s_pr_inst*2)
         self.pru_data       = []      	    	        # This holds all data for one move (x,y,z,e1,e2)
@@ -63,7 +63,7 @@ class Pru:
         pypruss.init()						            # Init the PRU
         pypruss.open(PRU0)						        # Open PRU event 0 which is PRU0_ARM_INTERRUPT
         pypruss.pruintc_init()					        # Init the interrupt controller
-        pypruss.pru_write_memory(0, 0, [self.ddr_addr, self.ddr_nr_events])		# Put the ddr address in the first region 
+        pypruss.pru_write_memory(0, 0, [self.ddr_addr, self.ddr_nr_events, 0])		# Put the ddr address in the first region 
         pypruss.exec_program(0, dirname+"/../firmware/firmware_00A3.bin")	# Load firmware "ddr_write.bin" on PRU 0
         self.t = Thread(target=self._wait_for_events)         # Make the thread
         self.t.daemon = True
@@ -98,6 +98,11 @@ class Pru:
     def is_processing(self):
         """ Returns True if there are segments on queue """
         return not self.is_empty()
+
+    def interrupt_move(self):
+        """ Interrupt the current movements and all the ones which are stored in DDR """
+        self.ddr_mem[self.ddr_start:self.ddr_start+4] = struct.pack('L', 0)
+        pypruss.pru_write_memory(0, 0, [self.ddr_addr, self.ddr_nr_events, 1])
 
     def pack(self, word):
         return struct.pack('L', word)

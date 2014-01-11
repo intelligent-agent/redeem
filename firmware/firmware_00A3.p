@@ -54,6 +54,10 @@ DELAY:
     SUB r0, r0, 1
     QBNE DELAY, r0, 0
 
+    MOV  r0, 8									// Check for the emergency stop flag
+    LBBO r2, r0, 0, 4
+    QBNE EMERGENCY_STOP, 0
+
     SUB r1, r1, 1 								//r1 contains the number of PIN instructions in the DDR, we remove one.
     QBNE PINS, r1, 0							// Still more pins to go, jump back
 	ADD  r4, r4, 4								// The next DDR reading address is incremented by 4.			
@@ -61,6 +65,7 @@ DELAY:
 	ADD r5, r5, 1								// r5++, r5 is the event_counter.
 	SBBO r5, r6, 0, 4							// store the number of interrupts that have occured in the second reg of DRAM
     MOV R31.b0, PRU0_ARM_INTERRUPT+16   		// Send notification to Host that the instructions are done
+
 
 	MOV  r3, DDR_MAGIC							// Load the fancy word into r3
 	LBBO r2, r4, 0, 4							// Load the next data into r2
@@ -72,3 +77,9 @@ WAIT:
     QBNE PINS, r1, 0 							// Start to process the pins stored in DDR if we have a value != of 0 stored in the current location of the DDR
 	QBA WAIT									// Loop back to wait for new data
 
+
+EMERGENCY_STOP:
+	ADD r5, r5, 1								// r5++, r5 is the event_counter.
+	SBBO r5, r6, 0, 4							// store the number of interrupts that have occured in the second reg of DRAM
+    MOV R31.b0, PRU0_ARM_INTERRUPT+16   		// Send notification to Host that the instructions are done
+	QBA RESET_R4
