@@ -56,7 +56,7 @@ DELAY:
 
     MOV  r0, 8									// Check for the emergency stop flag
     LBBO r2, r0, 0, 4
-    QBNE EMERGENCY_STOP, 0
+    QBNE EMERGENCY_STOP, r2, 0
 
     SUB r1, r1, 1 								//r1 contains the number of PIN instructions in the DDR, we remove one.
     QBNE PINS, r1, 0							// Still more pins to go, jump back
