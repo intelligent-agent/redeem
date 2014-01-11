@@ -11,7 +11,6 @@ License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 
 from threading import Thread
 import logging
-from Stepper import Stepper
 
 class EndStop:
     # pin is the pin where the connector is attached. 
