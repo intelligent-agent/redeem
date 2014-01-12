@@ -65,12 +65,23 @@ class Redeem:
         # Make a list of steppers
         self.steppers = {}
 
+
+        # Init the end stops
+        self.end_stops = {}
+        self.end_stops["X1"] = EndStop("GPIO2_2", 1, "X1")
+        self.end_stops["Y1"] = EndStop("GPIO0_14", 2, "Y1")
+        self.end_stops["Z1"] = EndStop("GPIO0_30", 3, "Z1")
+        #self.end_stops["Y2"] = EndStop("GPIO3_21", self.steppers, 4, "Y2")
+        #self.end_stops["X2"] = EndStop("GPIO0_31", self.steppers, 5, "X2")
+        #self.end_stops["Z2"] = EndStop("GPIO0_4", self.steppers, 6, "Z2")
+
+
         # Init the 5 Stepper motors (step, dir, fault, DAC channel, name)
-        self.steppers["X"] = Stepper("GPIO0_27", "GPIO1_29", "GPIO2_4",  0, "X",-1) 
-        self.steppers["Y"] = Stepper("GPIO1_12", "GPIO0_22", "GPIO2_5",  1, "Y",1)  
-        self.steppers["Z"] = Stepper("GPIO0_23", "GPIO0_26", "GPIO0_15", 2, "Z",1)  
-        self.steppers["E"] = Stepper("GPIO1_28", "GPIO1_15", "GPIO2_1",  3, "Ext1",-1)
-        self.steppers["H"] = Stepper("GPIO1_13", "GPIO1_14", "GPIO2_3",  4, "Ext2",-1)
+        self.steppers["X"] = Stepper("GPIO0_27", "GPIO1_29", "GPIO2_4",  0, "X",-1,self.end_stops["X1"]) 
+        self.steppers["Y"] = Stepper("GPIO1_12", "GPIO0_22", "GPIO2_5",  1, "Y",1,self.end_stops["Y1"])  
+        self.steppers["Z"] = Stepper("GPIO0_23", "GPIO0_26", "GPIO0_15", 2, "Z",1,self.end_stops["Z1"])  
+        self.steppers["E"] = Stepper("GPIO1_28", "GPIO1_15", "GPIO2_1",  3, "Ext1",-1, None)
+        self.steppers["H"] = Stepper("GPIO1_13", "GPIO1_14", "GPIO2_3",  4, "Ext2",-1, None)
 
         # Enable the steppers and set the current, steps pr mm and microstepping  
         for name, stepper in self.steppers.iteritems():
@@ -83,7 +94,7 @@ class Redeem:
 		# Commit changes for the Steppers
         Stepper.commit()
 
-        # Find the path of the thermostors
+        # Find the path of the thermistors
         path = "/sys/bus/iio/devices/iio:device0/in_voltage"
 
         # init the 3 thermistors
@@ -123,15 +134,6 @@ class Redeem:
         self.fans = {0: self.fan_1, 1:self.fan_2, 2:self.fan_3 }
 
         self.fan_1.setPWMFrequency(100)
-
-        # Init the end stops
-        self.end_stops = {}
-        self.end_stops["X1"] = EndStop("GPIO2_2", self.steppers, 1, "X1")
-        self.end_stops["Y1"] = EndStop("GPIO0_14", self.steppers, 2, "Y1")
-        self.end_stops["Z1"] = EndStop("GPIO0_30", self.steppers, 3, "Z1")
-        #self.end_stops["Y2"] = EndStop("GPIO3_21", self.steppers, 4, "Y2")
-        #self.end_stops["X2"] = EndStop("GPIO0_31", self.steppers, 5, "X2")
-        #self.end_stops["Z2"] = EndStop("GPIO0_4", self.steppers, 6, "Z2")
          
         # Make a queue of commands
         self.commands = Queue.Queue(20)
@@ -154,7 +156,7 @@ class Redeem:
         Path.max_speed_h = float(self.config.get('Steppers', 'max_speed_h'))
 
         self.path_planner = Path_planner(self.steppers, self.current_pos)         
-        self.path_planner.set_acceleration(self.acceleration) 
+        self.path_planner.set_acceleration(self.acceleration)
 
         self.running = True
 
@@ -211,13 +213,17 @@ class Redeem:
         elif g.code() == "G28":                                     # Home the steppers
             if g.numTokens() == 0:                                  # If no token is given, home all
                 g.setTokens(["X0", "Y0", "Z0"])                
-            smds = {}                                               # All steppers 
-            for i in range(g.numTokens()):                          # Run through all tokens
-                axis = g.tokenLetter(i)                             # Get the axis, X, Y, Z or E
-                smds[axis] = float(g.tokenValue(i))                 # Get tha value, new position or vector             
-            path = Path(smds, self.feed_rate, "ABSOLUTE", False)    # Make a path segment from the axes
+            #smds = {}                                               # All steppers 
+            for i in range(g.numTokens()): # Run through all tokens
+                axis = g.tokenLetter(i)                         
+                self.path_planner.home(axis)
+                path = Path({axis: 0}, self.feed_rate, "G92")               # Make a path segment from the axes
+                self.path_planner.add_path(path) 
+                #axis = g.tokenLetter(i)                             # Get the axis, X, Y, Z or E
+                #smds[axis] = float(g.tokenValue(i))                 # Get tha value, new position or vector             
+            #path = Path(smds, self.feed_rate, "ABSOLUTE", False)    # Make a path segment from the axes
             #logging.debug("moving to "+str(smds))
-            self.path_planner.add_path(path)                        # Add the path. This blocks until the path planner has capacity
+            #self.path_planner.add_path(path)                        # Add the path. This blocks until the path planner has capacity
         elif g.code() == "G90":                                     # Absolute positioning
             self.movement = "ABSOLUTE"
         elif g.code() == "G91":                                     # Relative positioning 

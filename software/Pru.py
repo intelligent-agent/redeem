@@ -66,11 +66,32 @@ class Pru:
         pypruss.pruintc_init()					        # Init the interrupt controller
         pypruss.pru_write_memory(0, 0, [self.ddr_addr, self.ddr_nr_events, 0])		# Put the ddr address in the first region 
         pypruss.exec_program(0, dirname+"/../firmware/firmware_00A3.bin")	# Load firmware "ddr_write.bin" on PRU 0
+        
+        #Wait until we get the GPIO output in the DDR
+        self.dev = os.open("/dev/uio0", os.O_RDONLY)
+
+        ret = select.select( [self.dev],[],[], 1.0 )
+        if ret[0] == [self.dev]:
+            pypruss.clear_event(PRU0_ARM_INTERRUPT)         # Clear the event        
+        
+        self.initial_gpio = [struct.unpack("L", self.ddr_mem[self.DDR_START+4:self.DDR_START+8])[0], struct.unpack("L", self.ddr_mem[self.DDR_START+8:self.DDR_START+12])[0], struct.unpack("L", self.ddr_mem[self.DDR_START+12:self.DDR_START+16])[0], struct.unpack("L", self.ddr_mem[self.DDR_START+16:self.DDR_START+20])[0] ]
+
+        os.close(self.dev)
+
+        #Clear DDR
+        self.ddr_mem[self.DDR_START+4:self.DDR_START+8] = struct.pack('L', 0)
+        self.ddr_mem[self.DDR_START+8:self.DDR_START+12] = struct.pack('L', 0)
+        self.ddr_mem[self.DDR_START+12:self.DDR_START+16] = struct.pack('L', 0)
+        self.ddr_mem[self.DDR_START+16:self.DDR_START+20] = struct.pack('L', 0)
+
         self.t = Thread(target=self._wait_for_events)         # Make the thread
         self.t.daemon = True
         self.running = True
-        self.t.start()		        
+        self.t.start()		
 
+    def read_gpio_state(self, gpio_bank):
+        """ Return the initial state of a GPIO bank when the PRU was initialized """
+        return self.initial_gpio[gpio_bank]
     
     def add_data(self, data):
         """ Add some data to one of the PRUs """
@@ -166,7 +187,6 @@ class Pru:
             self.ddr_mem_used   = 0  
             self.clear_events   = []       
             self.ddr_start      = self.DDR_START
-            self.ddr_nr_events  = self.ddr_addr+self.ddr_size-4
             self.ddr_mem[self.ddr_start:self.ddr_start+4] = struct.pack('L', 0)  # Add a zero to the first reg to make it wait
             while True:
                 try:
@@ -175,7 +195,7 @@ class Pru:
                         self.ddr_used.task_done()
                 except Queue.Empty:
                     break
-                    
+
         self.interrupted = False
         pypruss.pru_write_memory(0, 0, [self.ddr_addr, self.ddr_nr_events, 0])
 

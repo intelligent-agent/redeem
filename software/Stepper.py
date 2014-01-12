@@ -44,12 +44,12 @@ class Stepper:
         bytes = []
         for stepper in Stepper.all_steppers:       
             bytes.append(stepper.getState())
-        txt = ", ".join([hex(b) for b in bytes[::-1]])
+        #txt = ", ".join([hex(b) for b in bytes[::-1]])
         #logging.debug("Writing SPI: "+txt)
         spi2_1.writebytes(bytes[::-1])
 
     ''' Init'''
-    def __init__(self, stepPin, dirPin, faultPin, dac_channel, name, direction):
+    def __init__(self, stepPin, dirPin, faultPin, dac_channel, name, direction, endstop):
         self.dac_channel     = dac_channel  # Which channel on the dac is connected to this stepper
         self.stepPin         = stepPin
         self.dirPin          = dirPin
@@ -64,14 +64,11 @@ class Stepper:
         self.microsteps      = 1.0          # Well, this is the microstep number
         self.pru_num         = -1           # PRU number, if any 
         self.direction       = direction
-        self.endstops        = []
+        self.endstop         = endstop
         Stepper.all_steppers.append(self)       # Add to list of steppers
-            
-    def add_endstop(self, endstop):
-        self.endstops.append(endstop)
 
-    def get_endstops(self):
-        return self.endstops
+    def getEndstop(self):
+        return self.endstop
 
     ''' Sets the Stepper enabled '''
     def setEnabled(self, value=1, force_update=False):

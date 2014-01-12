@@ -13,6 +13,7 @@ License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 
 import time
 import logging
+from Path import Path
 import numpy as np  
 from threading import Thread
 
@@ -35,6 +36,17 @@ class Path_planner:
         self.current_pos = current_pos                          # Current position in (x, y, z, e)
         self.running     = True                                 # Yes, we are running
         self.pru_data    = []
+
+        #Assign end stop initial values
+        for stepper in self.steppers.items():
+            if stepper[1].getEndstop() == None: continue
+
+            (bank, pin) = stepper[1].getEndstop().get_gpio_bank_and_pin()
+
+            pinValue = (self.pru.read_gpio_state(bank) >> pin) & 0x1
+            stepper[1].getEndstop().setInitialValue(True if pinValue==1 else False)
+            stepper[1].getEndstop().set_path_planner(self)
+
         self.t           = Thread(target=self._do_work)         # Make the thread
         self.t.daemon    = True
         self.interrupted = False
@@ -44,6 +56,21 @@ class Path_planner:
     ''' Set the acceleration used '''                           # Fix me, move this to path
     def set_acceleration(self, acceleration):
         self.acceleration = acceleration
+
+    ''' Home the given axis using endstops (min) '''
+    def home(self,axis):
+        #Check what is the direction of the first move
+        positive = self.steppers[axis].getEndstop().isHit()
+        if positive:
+            #schedule a move of 10mm
+            self.add_path(Path({axis:0.01}, 0.01, "RELATIVE", False))     
+            self.wait_until_done()
+
+        while not self.steppers[axis].getEndstop().isHit():
+            self.add_path(Path({axis:-0.10}, 0.01, "RELATIVE", False))    
+            time.sleep(0.1)
+
+
 
     ''' Add a path segment to the path planner '''        
     def add_path(self, new):   

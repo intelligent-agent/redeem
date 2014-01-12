@@ -3,9 +3,12 @@
 
 #define PRU0_ARM_INTERRUPT 	19
 #define GPIO_DATAOUT 		0x13c				// This is the register for setting data 
+#define GPIO_DATAIN 		0x138				// This is the register for reading data 
 #define DDR_MAGIC			0xbabe7175			// Magic number used to reset the DDR counter 
 #define GPIO0 				0x44E07000 			// The adress of the GPIO0 bank
 #define GPIO1 				0x4804C000			// The adress of the GPIO1 bank
+#define GPIO2 				0x481AC000			// The adress of the GPIO1 bank
+#define GPIO3 				0x481AE000			// The adress of the GPIO1 bank
 #define GPIO1_MASK			(1<<12)|(1<<13)|(1<<14)|(1<<15)|(1<<28)|(1<<29) // Only these are togglable
 #define GPIO0_MASK			(1<<22)|(1<<23)|(1<<26)|(1<<27)					// Only these are togglable
 
@@ -26,6 +29,32 @@ INIT:
 	MOV  r5, 0									// Make r5 the nr of events counter, 0 initially
 	SBBO r5, r6, 0, 4							// store the number of interrupts that have occured in the second reg of DRAM
 	
+	 //Load GPIO0,1,2,3 read register content to the DDR
+    MOV	 r0, 0									//Address in DDR, starts at 0
+    LBBO r2, r0, 0, 4
+    ADD  r2, r2, 4
+    
+    MOV  r0, GPIO0 | GPIO_DATAIN				// Load Address
+    LBBO r1, r0, 0, 4							//Read GPIO0 INPUT content
+    SBBO r1, r2, 0, 4							//Put GPIO INPUT content into local RAM
+    ADD  r2, r2, 4
+
+    MOV  r0, GPIO1 | GPIO_DATAIN				// Load Address
+    LBBO r1, r0, 0, 4							//Read GPIO1 INPUT content
+    SBBO r1, r2, 0, 4							//Put GPIO INPUT content into local RAM
+    ADD  r2, r2, 4
+
+  	MOV  r0, GPIO2 | GPIO_DATAIN				// Load Address
+    LBBO r1, r0, 0, 4							//Read GPIO2 INPUT content
+    SBBO r1, r2, 0, 4							//Put GPIO INPUT content into local RAM
+    ADD  r2, r2, 4
+
+  	MOV  r0, GPIO3 | GPIO_DATAIN				// Load Address
+    LBBO r1, r0, 0, 4							//Read GPIO3 INPUT content
+    SBBO r1, r2, 0, 4							//Put GPIO INPUT content into local RAM
+
+
+
 RESET_R4:
 	MOV  r0, 0
 	LBBO r4, r0, 0, 4							// Load the ddr_addr from the first adress in the PRU0 DRAM
