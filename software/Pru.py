@@ -162,13 +162,20 @@ class Pru:
     def _clear_after_interrupt(self):
         with Pru.ddr_lock: 
             self.pru_data       = []                        # This holds all data for one move (x,y,z,e1,e2)
-            self.ddr_used       = Queue.Queue()             # List of data lengths currently in DDR for execution
             self.ddr_reserved   = 0      
             self.ddr_mem_used   = 0  
             self.clear_events   = []       
             self.ddr_start      = self.DDR_START
             self.ddr_nr_events  = self.ddr_addr+self.ddr_size-4
             self.ddr_mem[self.ddr_start:self.ddr_start+4] = struct.pack('L', 0)  # Add a zero to the first reg to make it wait
+            while True:
+                try:
+                    v = self.ddr_used.get(block=False)
+                    if v != None:
+                        self.ddr_used.task_done()
+                except Queue.Empty:
+                    break
+                    
         self.interrupted = False
         pypruss.pru_write_memory(0, 0, [self.ddr_addr, self.ddr_nr_events, 0])
 
