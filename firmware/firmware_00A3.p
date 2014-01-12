@@ -79,7 +79,7 @@ WAIT:
 
 
 EMERGENCY_STOP:
-	ADD r5, r5, 1								// r5++, r5 is the event_counter.
-	SBBO r5, r6, 0, 4							// store the number of interrupts that have occured in the second reg of DRAM
+	MOV  r5, 0									// Make r5 the nr of events counter, 0 initially
+	SBBO r5, r6, 0, 4
     MOV R31.b0, PRU0_ARM_INTERRUPT+16   		// Send notification to Host that the instructions are done
 	QBA RESET_R4

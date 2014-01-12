@@ -54,6 +54,7 @@ class Pru:
         self.DDR_END        = 0x20000000+self.ddr_size
         self.ddr_start      = self.DDR_START
         self.ddr_nr_events  = self.ddr_addr+self.ddr_size-4
+        self.interrupted    = False
 
         with open("/dev/mem", "r+b") as f:	            # Open the memory device
             self.ddr_mem = mmap.mmap(f.fileno(), ddr_filelen, offset=ddr_offset) # mmap the right area            
@@ -101,7 +102,8 @@ class Pru:
 
     def interrupt_move(self):
         """ Interrupt the current movements and all the ones which are stored in DDR """
-        self.ddr_mem[self.ddr_start:self.ddr_start+4] = struct.pack('L', 0)
+        self.ddr_mem[self.DDR_START:self.DDR_START+4] = struct.pack('L', 0)
+        self.interrupted = True
         pypruss.pru_write_memory(0, 0, [self.ddr_addr, self.ddr_nr_events, 1])
 
     def pack(self, word):
@@ -157,6 +159,18 @@ class Pru:
         self.ddr_start  = self.ddr_end-4    # Update the start of ddr for next time 
         self.pru_data   = []                # Reset the pru_data list since it has been commited         
 
+    def _clear_after_interrupt(self):
+        with Pru.ddr_lock: 
+            self.pru_data       = []                        # This holds all data for one move (x,y,z,e1,e2)
+            self.ddr_used       = Queue.Queue()             # List of data lengths currently in DDR for execution
+            self.ddr_reserved   = 0      
+            self.ddr_mem_used   = 0  
+            self.clear_events   = []       
+            self.ddr_start      = self.DDR_START
+            self.ddr_nr_events  = self.ddr_addr+self.ddr_size-4
+            self.ddr_mem[self.ddr_start:self.ddr_start+4] = struct.pack('L', 0)  # Add a zero to the first reg to make it wait
+        self.interrupted = False
+        pypruss.pru_write_memory(0, 0, [self.ddr_addr, self.ddr_nr_events, 0])
 
     ''' Catch events coming from the PRU '''                
     def _wait_for_events(self):
@@ -173,6 +187,10 @@ class Pru:
                 nr_events = struct.unpack("L", self.ddr_mem[self.DDR_END-4:self.DDR_END])[0]   
             else:
                 nr_events = struct.unpack("L", self.ddr_mem[self.DDR_END-4:self.DDR_END])[0]
+
+            if self.interrupted:
+                self._clear_after_interrupt()
+                continue
 
             while nr_interrupts < nr_events:
                 ddr = self.ddr_used.get()                       # Pop the first ddr memory amount           

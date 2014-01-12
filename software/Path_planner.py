@@ -31,12 +31,13 @@ class Path_planner:
     def __init__(self, steppers, current_pos):
         self.steppers    = steppers
         self.pru         = Pru()                                # Make the PRU
-        self.paths       = Queue.Queue(100)                      # Make a queue of paths
+        self.paths       = Queue.Queue(10)                      # Make a queue of paths
         self.current_pos = current_pos                          # Current position in (x, y, z, e)
         self.running     = True                                 # Yes, we are running
         self.pru_data    = []
         self.t           = Thread(target=self._do_work)         # Make the thread
-        self.t.daemon = True
+        self.t.daemon    = True
+        self.interrupted = False
         if __name__ != '__main__':
             self.t.start()		 
 
@@ -72,6 +73,7 @@ class Path_planner:
            self.do_work()
     
     def interrupt_move(self):
+        self.interrupted = True
         self.pru.interrupt_move()
 
     def do_work(self):
@@ -98,9 +100,13 @@ class Path_planner:
         while len(self.pru_data) > 0:  
             data = self.pru_data[0:0x20000/8]
             del self.pru_data[0:0x20000/8]
+
+            if self.interrupted:
+                break
+
             if len(self.pru_data) > 0:
                 logging.debug("Long path segment is cut. remaining: "+str(len(self.pru_data)))       
-            while not self.pru.has_capacity_for(len(data)*8):          
+            while not self.pru.has_capacity_for(len(data)*8) and not self.interrupted:          
                 #logging.debug("Pru full")              
                 time.sleep(0.5)               
             self.pru.add_data(zip(*data))
@@ -111,6 +117,18 @@ class Path_planner:
         self.paths.task_done()
         path.unlink()                                         # Remove reference to enable garbage collection
         path = None
+
+        if self.interrupted:
+            #Remove all paths from queue
+            while True:
+                try:
+                    path = self.paths.get(block=False)
+                    if path != None:
+                        self.paths.task_done()
+                        path.unlink()
+                except Queue.Empty:
+                    break
+            self.interrupted = False
 
     def _braid_data(self, data1, data2):
         """ Braid/merge together the data from the two data sets"""
