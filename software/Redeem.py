@@ -37,7 +37,7 @@ from W1 import W1
     
 logging.basicConfig(level=logging.DEBUG, 
                     format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
-                    datefmt='%m-%d %H:%M',
+                    datefmt='%m-%d %H:%M:%S',
                     filename='/var/log/replicape.log',
                     filemode='w')
 
@@ -88,8 +88,12 @@ class Redeem:
         self.therm_hbp  = Thermistor(path+"6_raw", "MOSFET HBP",   "B57560G104F")	  # Epcos 100K
         self.therm_ext2 = Thermistor(path+"5_raw", "MOSFET Ext 2", "B57561G0103F000") # Epcos 10K
 
-        if os.path.exists("/sys/bus/w1/devices/28-000002e34b73/w1_slave"):
-            self.cold_end_1 = W1("/sys/bus/w1/devices/28-000002e34b73/w1_slave", "Cold End 1")
+        path = "/sys/bus/w1/devices/28-000002e34b73/w1_slave"
+        if os.path.exists(path):
+            self.cold_end_1 = W1(path, "Cold End 1")
+            logging.info("Found Cold end on "+path)
+        else:
+            logging.info("No cold end present in path: "+path)            
 		
         # init the 3 heaters
         self.mosfet_ext1 = Mosfet(5) # Argument is channel number
@@ -113,7 +117,7 @@ class Redeem:
 
         self.current_tool = "E"
 
-        # Init the three fans
+        # Init the three fans. Argument is PWM channel number
         self.fan_1 = Fan(8)
         self.fan_2 = Fan(9)
         self.fan_3 = Fan(10)
@@ -164,7 +168,7 @@ class Redeem:
         try:
             while True:
                 try:
-                    gcode = Gcode(self.commands.get(True,1), self)
+                    gcode = Gcode(self.commands.get(True,1.0), self)
                 except Queue.Empty as e:
                     continue
                 self._execute(gcode)
@@ -211,18 +215,17 @@ class Redeem:
         elif g.code() == "G91":                                     # Relative positioning 
             self.movement = "RELATIVE"		
         elif g.code() == "G92":                                     # Set the current position of the following steppers
-            #self.path_planner.wait_until_done()
             if g.numTokens() == 0:
                 logging.debug("Adding all to G92")
                 g.setTokens(["X0", "Y0", "Z0", "E0", "H0"])         # If no token is present, do this for all
-            #for i in range(g.numTokens()):
-            #    axis = g.tokenLetter(i)
-            #    val = float(g.tokenValue(i))
-            #    self.path_planner.set_pos(axis, val)
             pos = {}                                               # All steppers 
             for i in range(g.numTokens()):                          # Run through all tokens
                 axis = g.tokenLetter(i)                             # Get the axis, X, Y, Z or E
                 pos[axis] = float(g.tokenValue(i))/1000.0          # Get the value, new position or vector             
+            if self.current_tool == "H": 
+                logging.debug("Adding H to G92")
+                pos["H"] = 0.0;
+                del pos["E"]
             logging.debug(pos)
             path = Path(pos, self.feed_rate, "G92")               # Make a path segment from the axes
             self.path_planner.add_path(path)  
@@ -258,15 +261,20 @@ class Redeem:
         elif g.code() == "M103":									# Deprecated
             pass 													
         elif g.code() == "M104":                                    # Set extruder temperature
-            if g.hasLetter("P"):
+            if g.hasLetter("P"): # Set hotend temp based on the P-param
                 if int(g.getValueByLetter("P")) == 0:
+                    logging.debug("setting ext 0 temp to "+str(g.getValueByLetter("S")))
                     self.ext1.setTargetTemperature(float(g.getValueByLetter("S")))
                 elif int(g.getValueByLetter("P")) == 1:
-                    logging.debug("setting ext 2 temp to "+str(g.getValueByLetter("S")))
+                    logging.debug("setting ext 1 temp to "+str(g.getValueByLetter("S")))
                     self.ext2.setTargetTemperature(float(g.getValueByLetter("S")))
-            else:
-                logging.debug("setting ext 1 temp to "+str(g.tokenValue(0)))
-                self.ext1.setTargetTemperature(float(g.tokenValue(0)))
+            else: # Change hotend temperature based on the chosen tool
+                if self.current_tool == "E":
+                    logging.debug("setting ext 0 temp to "+str(g.tokenValue(0)))
+                    self.ext1.setTargetTemperature(float(g.tokenValue(0)))
+                elif self.current_tool == "H":
+                    logging.debug("setting ext 1 temp to "+str(g.tokenValue(0)))
+                    self.ext2.setTargetTemperature(float(g.tokenValue(0)))                    
         elif g.code() == "M105":                                    # Get Temperature
             answer = "ok T:"+str(self.ext1.getTemperature())
             if hasattr(self, "hbp"):
@@ -285,7 +293,9 @@ class Redeem:
         elif g.code() == "M108":									# Deprecated
             pass 													
         elif g.code() == "M109":
-             self.hbp.setTargetTemperature(float(g.getValueByLetter("S")))
+             #logging.debug("Setting bed temperature to "+str(float(g.getValueByLetter("S"))))
+             #self.hbp.setTargetTemperature(float(g.getValueByLetter("S")))
+            pass # FIXME: This must be implemented
         elif g.code() == "M110":                                    # Reset the line number counter 
             Gcode.line_number = 0       
         elif g.code() == "M114": 
@@ -303,6 +313,7 @@ class Redeem:
             #if int(self.tokens[0][1]) == 0:
             #    self.p.ext1.setPvalue(float(self.tokens[1][1::]))
         elif g.code() == "M140":                                    # Set bed temperature
+            logging.debug("Setting bed temperature to "+str(float(g.tokenValue(0))))
             self.hbp.setTargetTemperature(float(g.tokenValue(0)))
         elif g.code() == "M141":
             fan = self.fans[int(g.getValueByLetter("P"))]

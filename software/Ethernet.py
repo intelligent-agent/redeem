@@ -56,8 +56,8 @@ class Ethernet:
                 if not "\n" in line: # Make sure the whole line was read. 
                     break
                 message = line.strip("\n")
-                self.queue.put({"message": message, "prot": "Eth"})
 
+                self.queue.put({"message": message, "prot": "Eth"})
 
     # Send a message		
     def send_message(self, message):
