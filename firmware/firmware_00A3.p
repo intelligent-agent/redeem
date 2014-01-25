@@ -103,7 +103,7 @@ NEXT_COMMAND:
     //Load a command
     .enter CommandScope
 
-    LBBO r2, r4, 0, 4                           // Load pin command into r2 and r3, which is 8 bytes
+    LBBO r2, r4, 0, 8                           // Load pin command into r2 and r3, which is 8 bytes
     .assign SteppersCommand, r2,r3, pinCommand   // Assign the struct spanning onto r2 and r3
 
     //Translate the commands into pins
