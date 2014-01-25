@@ -3,7 +3,7 @@
 case $1 in 
 	start)
 		export LD_LIBRARY_PATH=/usr/local/lib
-		cd /opt/Replicape/software/ && python Redeem.py
+		cd /usr/src/redeem/software/ && python Redeem.py
 		echo "Redeem started ok"
 		exit 0
 		;;
