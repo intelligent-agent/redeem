@@ -2,7 +2,7 @@
 
 case $1 in 
 	start)
-		/usr/src/redeem/tty0tty/tty0tty > /var/log/tty0tty.log 2>&1 &
+		tty0tty > /var/log/tty0tty.log 2>&1 &
 		echo "tty0tty started ok"
 		exit 0
 		;;
