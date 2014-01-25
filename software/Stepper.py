@@ -49,7 +49,7 @@ class Stepper:
         spi2_1.writebytes(bytes[::-1])
 
     ''' Init'''
-    def __init__(self, stepPin, dirPin, faultPin, dac_channel, name, direction, endstop):
+    def __init__(self, stepPin, dirPin, faultPin, dac_channel, name, direction, endstop, internalStepPin, internalDirPin):
         self.dac_channel     = dac_channel  # Which channel on the dac is connected to this stepper
         self.stepPin         = stepPin
         self.dirPin          = dirPin
@@ -65,6 +65,8 @@ class Stepper:
         self.pru_num         = -1           # PRU number, if any 
         self.direction       = direction
         self.endstop         = endstop
+        self.internalStepPin = (1 << internalStepPin)
+        self.internalDirPin = (1 << internalDirPin)
         Stepper.all_steppers.append(self)       # Add to list of steppers
 
     def getEndstop(self):
@@ -184,11 +186,11 @@ class Stepper:
 
     ''' The pin that steps, it looks like GPIO1_31 aso '''
     def get_step_pin(self):
-        return (1<<int(self.stepPin.split("_")[1]))
+        return self.internalStepPin
     
     ''' Get the dir pin shifted into position '''
     def get_dir_pin(self):
-        return (1<<int(self.dirPin.split("_")[1]))
+        return self.internalDirPin
 
     def get_direction(self):
         return self.direction

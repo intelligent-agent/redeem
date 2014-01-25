@@ -121,8 +121,8 @@ class Path_planner:
                 if len(self.pru_data) == 0:
                     self.pru_data = zip(*data)
                 else:
-                    self.pru_data = self._braid_data(self.pru_data, zip(*data))
-                    #self._braid_data1(self.pru_data, zip(*data))
+                    #self.pru_data = self._braid_data(self.pru_data, zip(*data))
+                    self._braid_data1(self.pru_data, zip(*data))
 
         while len(self.pru_data) > 0:  
             data = self.pru_data[0:0x20000/8]
@@ -164,41 +164,41 @@ class Path_planner:
     def _braid_data1(self, data1, data2):
         """ Braid/merge together the data from the two data sets"""
         line = 0
-        (pin1, dly1) = data1[line]
-        (pin2, dly2) = data2.pop(0)
+        (pin1,dir1, dly1) = data1[line]
+        (pin2,dir2, dly2) = data2.pop(0)
         while True: 
             dly = min(dly1, dly2)
             dly1 -= dly    
             dly2 -= dly            
             try: 
                 if dly1 == 0 and dly2 == 0:
-                    data1[line] = (pin1+pin2, dly)
-                    (pin1, dly1) = data1[line+1]
-                    (pin2, dly2) = data2.pop(0)
+                    data1[line] = (pin1+pin2, dir1+dir2, dly)
+                    (pin1,dir1, dly1) = data1[line+1]
+                    (pin2,dir2, dly2) = data2.pop(0)
                 elif dly1 == 0:
-                    data1[line] = (pin1+pin2, dly)
-                    (pin1, dly1) = data1[line+1]
+                    data1[line] = (pin1+pin2, dir1+dir2, dly)
+                    (pin1,dir1, dly1) = data1[line+1]
                 elif dly2 == 0:    
-                    data1.insert(line, (pin1+pin2, dly))
-                    (pin2, dly2) = data2.pop(0)
+                    data1.insert(line, (pin1+pin2, dir1+dir2, dly))
+                    (pin2,dir2, dly2) = data2.pop(0)
                 line += 1
             except IndexError:
                 break
 
         if dly2 > 0:   
-            data1[line] =  (data1[line][0], data1[line][1]+dly2)        
+            data1[line] =  (data1[line][0],data1[line][1], data1[line][2]+dly2)        
         elif dly1 > 0:
-            data1[line] = (data1[line][0], data1[line][1]+dly1)  
+            data1[line] = (data1[line][0], data1[line][1], data1[line][2]+dly1)  
             data1.pop(line+1)
         
         while len(data2) > 0:
             line += 1
-            (pin2, dly2) = data2.pop(0)
-            data1.append((pin2+pin1, dly2))
+            (pin2,dir2, dly2) = data2.pop(0)
+            data1.append((pin2+pin1,dir1+dir2, dly2))
         while len(data1) > line+1:
             line += 1
-            (pin1, dly1) = data1[line]
-            data1[line] = (pin2+pin1, dly1)
+            (pin1, dir1, dly1) = data1[line]
+            data1[line] = (pin2+pin1,dir1+dir2, dly1)
 
     ''' Join the thread '''
     def exit(self):
@@ -225,7 +225,8 @@ class Path_planner:
             dir_pin     = 0 if vec < 0 else dir_pin                         # Disable the dir-pin if we are going backwards  
         else:
             dir_pin     = 0 if vec >= 0 else dir_pin
-        pins        = [step_pin | dir_pin, dir_pin]*num_steps           # Make the pin states
+        step_pins       = [step_pin]*num_steps           # Make the pin states
+        dir_pins        = [dir_pin]*num_steps 
 
         s           = abs(path.get_axis_length(axis))                   # Get the length of the vector
         ratio       = path.get_axis_ratio(axis)                         # Ratio is the length of this axis to the total length
@@ -268,8 +269,8 @@ class Path_planner:
             td     *= -1.0
 
 		# Make sure the dir pin is shifted 650 ns before the step pins
-        pins = [dir_pin]+pins
-        delays = np.array([650*10**-9])+delays
+        #pins = [dir_pin]+pins
+        #delays = np.array([650*10**-9])+delays
 
         # If the axes are X or Y, we need to transform back in case of 
         # H-belt or some other transform. 
@@ -280,7 +281,7 @@ class Path_planner:
         else:                        
             self.current_pos[axis] += td                                    # Update the global position vector
         
-        return (pins, delays)                                           # return the pin states and the data
+        return (step_pins,dir_pins, delays)                                           # return the pin states and the data
 
 
 if __name__ == '__main__':
@@ -295,11 +296,11 @@ if __name__ == '__main__':
 
     print "Making steppers"
     steppers = {}
-    steppers["X"] = Stepper("GPIO0_27", "GPIO1_29", "GPIO2_4",  0, "X",-1) 
-    steppers["Y"] = Stepper("GPIO1_12", "GPIO0_22", "GPIO2_5",  1, "Y",1)  
-    steppers["Z"] = Stepper("GPIO0_23", "GPIO0_26", "GPIO0_15", 2, "Z",1)  
-    steppers["E"] = Stepper("GPIO1_28", "GPIO1_15", "GPIO2_1",  3, "Ext1",-1)
-    steppers["H"] = Stepper("GPIO1_13", "GPIO1_14", "GPIO2_3",  4, "Ext2",-1)
+    steppers["X"] = Stepper("GPIO0_27", "GPIO1_29", "GPIO2_4",  0, "X",-1,None,0,0) 
+    steppers["Y"] = Stepper("GPIO1_12", "GPIO0_22", "GPIO2_5",  1, "Y",1,None,1,1)  
+    steppers["Z"] = Stepper("GPIO0_23", "GPIO0_26", "GPIO0_15", 2, "Z",1,None,2,2)  
+    steppers["E"] = Stepper("GPIO1_28", "GPIO1_15", "GPIO2_1",  3, "Ext1",-1,None,3,3)
+    steppers["H"] = Stepper("GPIO1_13", "GPIO1_14", "GPIO2_3",  4, "Ext2",-1,None,4,4)
     config = ConfigParser.ConfigParser()
     config.readfp(open('config/default.cfg'))
 
