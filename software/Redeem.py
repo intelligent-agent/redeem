@@ -349,7 +349,8 @@ class Redeem:
         elif g.message == "ok":
             pass
         else:
-            logging.warning("Unknown command: "+g.message)
+            pass
+            #logging.warning("Unknown command: "+g.message)
    
 r = Redeem()
 
