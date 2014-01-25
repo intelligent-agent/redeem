@@ -116,7 +116,9 @@ class Path_planner:
         
         for axis in path.get_axes():                       # Run through all the axes in the path    
             #stepper = self.steppers[axis]                  # Get a handle of  the stepper                    
-            data = self._make_data(path, axis)            
+            data = self._make_data(path, axis)     
+            print "AXIS " + axis 
+            print data       
             if len(data[0]) > 0:
                 if len(self.pru_data) == 0:
                     self.pru_data = zip(*data)
@@ -252,16 +254,18 @@ class Path_planner:
         sm_start = min(u_start*tm_start + 0.5*a*tm_start**2, s/2.0)     # Calculate the distance traveled when max speed is met
         sm_end   = min(u_end*tm_end + 0.5*a*tm_end**2, s/2.0)           # Calculate the distance traveled when max speed is met
 
-        distances_start  = np.arange(0, sm_start, ds)		            # Table of distances                       
-        distances_end    = np.arange(0, sm_end, ds)		                # Table of distances                       
+        distances_start  = np.arange(0, sm_start, ds)		            # Table of distances                     
+        distances_end    = np.arange(0, sm_end, ds)		                # Table of distances     
+
         timestamps_start = (-u_start+np.sqrt(2.0*a*distances_start+u_start**2))/a    # When ticks occur
         timestamps_end   = (-u_end  +np.sqrt(2.0*a*distances_end+u_end**2))/a        # When ticks occur
+
         delays_start     = np.diff(timestamps_start)/2.0			    # We are more interested in the delays pr second. 
         delays_end       = np.diff(timestamps_end)/2.0			        # We are more interested in the delays pr second.         
-        delays_start     = np.array([delays_start, delays_start]).transpose().flatten()
-        delays_end       = np.array([delays_end, delays_end]).transpose().flatten()
+        #delays_start     = np.array([delays_start, delays_start]).transpose().flatten()
+        #delays_end       = np.array([delays_end, delays_end]).transpose().flatten()
 
-        i_steps     = 2*num_steps-len(delays_start)-len(delays_end)     # Find out how many delays are missing
+        i_steps     = num_steps-len(delays_start)-len(delays_end)     # Find out how many delays are missing
         i_delays    = [(ds/Vm)/2.0]*i_steps  		                    # Make the intermediate steps
         delays      = np.concatenate([delays_start, i_delays, np.flipud(delays_end)])# Add the missing delays. 
         td          = num_steps/steps_pr_meter                          # Calculate the actual travelled distance        

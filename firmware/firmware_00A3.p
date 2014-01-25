@@ -77,7 +77,19 @@ INIT:
     LBBO r1, r0, 0, 4							//Read GPIO3 INPUT content
     SBBO r1, r2, 0, 4							//Put GPIO INPUT content into local RAM
 
+    LBBO r9, r11, 0,   4                         // Load pin data into r7 which is 4 bytes
+    LBBO r10, r17, 0,   4                         // Load pin data into r8 which is 4 bytes
 
+    MOV r0, (0xFFFFFFFF ^ GPIO0_MASK)
+    AND r9, r9, r0
+    MOV r0, (0xFFFFFFFF ^ GPIO1_MASK)
+    AND r10, r10, r0
+
+    //Store back the value
+    SBBO r9, r11, 0, 4
+    SBBO r10, r17, 0, 4
+
+    MOV R31.b0, PRU0_ARM_INTERRUPT+16           // Send notification to Host that the instructions are done
 
 RESET_R4:
 	MOV  r0, 0
@@ -85,8 +97,9 @@ RESET_R4:
 	QBA WAIT									// Check if the end of DDR is reached
 
 PINS:
-	ADD  r4, r4, 4								// Increment r4, the reading location of DDR by 4 bytes
+    ADD  r4, r4, 4                              // The next DDR reading address is incremented by 4.    
 
+NEXT_COMMAND:
     //Load a command
     .enter CommandScope
 
@@ -199,7 +212,6 @@ PINS:
     OR   r9, r9, r10
     AND  r8, r8, r9
 
-    .leave CommandScope
 
     //Here we have to wait DIRECTION_NB_CYCLE - 25 - 1 instructions which corresponds to the step instructions building
     //This comes down to < 0 instructions so we don't do anything
@@ -225,19 +237,21 @@ PINS:
 
     //Increment reading address
     ADD  r4, r4, SIZE(SteppersCommand)
-    LBBO r0, r4, 0, 4                           // Load delay data into r0
-    ADD  r4, r4, 4
-
+    
 
     //We have 81 instructions until here
     //74 instructions were for setuping the step
     //7 instructions were after the step
 
     // => 81 cycles, substract it from our delay (there will be three mores due to SBBO and NOP) (this will be therefore 86)
-    MAX  r0, r0, 87 //+1 so that the sub is 0 after delay
+    MAX  r0, pinCommand.delay, 87 //+1 so that the sub is 0 after delay
     SUB  r0, r0, 86
 
+
+
     //Needed for delay
+    ADD r0, r0, 0
+    ADD r0, r0, 0
     ADD r0, r0, 0
 
     //put the step pin to low
@@ -245,14 +259,15 @@ PINS:
     SBBO r10, r17, 0, 4
 
     //Now execute the delay, with the proper substraction
+    .leave CommandScope
 
 DELAY:
     SUB r0, r0, 1
     QBNE DELAY, r0, 0
 
     SUB r1, r1, 1 								//r1 contains the number of PIN instructions in the DDR, we remove one.
-    QBNE PINS, r1, 0							// Still more pins to go, jump back
-	ADD  r4, r4, 4								// The next DDR reading address is incremented by 4.			
+    QBNE NEXT_COMMAND, r1, 0							// Still more pins to go, jump back
+	//ADD  r4, r4, 4								// The next DDR reading address is incremented by 4.			
 
 	ADD r5, r5, 1								// r5++, r5 is the event_counter.
 	SBBO r5, r6, 0, 4							// store the number of interrupts that have occured in the second reg of DRAM

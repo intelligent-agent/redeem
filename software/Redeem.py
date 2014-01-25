@@ -39,9 +39,9 @@ from W1 import W1
     
 logging.basicConfig(level=logging.DEBUG, 
                     format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
-                    datefmt='%m-%d %H:%M',
-                    filename='/var/log/replicape.log',
-                    filemode='w')
+                    datefmt='%m-%d %H:%M')
+                    #filename='/var/log/replicape.log',
+                    #filemode='w')
 
 def log_ex(type, value, traceback):
     logging.error('God damnit, not again!')
