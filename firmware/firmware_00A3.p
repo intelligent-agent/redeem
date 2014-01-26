@@ -42,10 +42,10 @@ INIT:
 
     //MOV  r10, GPIO1_MASK                      // Make the mask
     MOV  r17, GPIO1 | GPIO_DATAOUT              // Load address
-    //MOV  r12, 0xFFFFFFFF ^ (GPIO1_MASK)           // Invert the mask
+    MOV  r16, 0xFFFFFFFF ^ (GPIO1_MASK)           // Invert the mask
     //MOV  r16, GPIO0_MASK                      // Make the mask
     MOV  r11, GPIO0 | GPIO_DATAOUT              // Load address
-   // MOV  r18, 0xFFFFFFFF ^ (GPIO0_MASK)           // Invert mask
+    MOV  r15, 0xFFFFFFFF ^ (GPIO0_MASK)           // Invert mask
     //MOV r18, 0xFFFFFFFF
 
     MOV  r0, 4                                  // Load the address of the events_counter, written by the host system
@@ -80,16 +80,14 @@ INIT:
     LBBO r9, r11, 0,   4                         // Load pin data into r7 which is 4 bytes
     LBBO r10, r17, 0,   4                         // Load pin data into r8 which is 4 bytes
 
-    MOV r0, (0xFFFFFFFF ^ GPIO0_MASK)
-    AND r9, r9, r0
-    MOV r0, (0xFFFFFFFF ^ GPIO1_MASK)
-    AND r10, r10, r0
+    AND r9, r9, r15
+    AND r10, r10, r16
 
     //Store back the value
     SBBO r9, r11, 0, 4
     SBBO r10, r17, 0, 4
 
-    MOV R31.b0, PRU0_ARM_INTERRUPT+16           // Send notification to Host that the instructions are done
+    //MOV R31.b0, PRU0_ARM_INTERRUPT+16           // Send notification to Host that the instructions are done
 
 RESET_R4:
     MOV  r0, 0
@@ -112,155 +110,161 @@ NEXT_COMMAND:
     //Store the pins of GPIO0 into r7 and GPUI1 into r8
 
     //FILL  7, 8                                // Store 0xFFFFFFFF into r7,r8
-    MOV r7, 0xFFFFFFFF
-    MOV r8, 0xFFFFFFFF
+    MOV r7, 0
+    MOV r8, 0
     
     //Stepper X
     AND  r9,  pinCommand.direction, 0x01
     LSL  r9, r9, STEPPER_X_DIR
-    MOV  r10, 0xFFFFFFFF ^ (1 << STEPPER_X_DIR)
-    OR   r9, r9, r10
-    AND  r8, r8, r9
+    OR  r8, r8, r9
 
     //Stepper Y
-    LSR  r9, pinCommand.direction, 0x02
+    LSR  r9, pinCommand.direction, 0x01
     AND  r9, r9, 0x01
     LSL  r9, r9, STEPPER_Y_DIR
-    MOV  r10, 0xFFFFFFFF ^ (1 << STEPPER_Y_DIR)
-    OR   r9, r9, r10
-    AND  r7, r7, r9
+    OR  r7, r7, r9
 
     //Stepper Z
-    LSR  r9, pinCommand.direction, 0x03
+    LSR  r9, pinCommand.direction, 0x02
     AND  r9, r9, 0x01
     LSL  r9, r9, STEPPER_Z_DIR
-    MOV  r10, 0xFFFFFFFF ^ (1 << STEPPER_Z_DIR)
-    OR   r9, r9, r10
-    AND  r7, r7, r9
+    OR  r7, r7, r9
 
     //Stepper E
-    LSR  r9, pinCommand.direction, 0x04
+    LSR  r9, pinCommand.direction, 0x03
     AND  r9, r9, 0x01
     LSL  r9, r9, STEPPER_E_DIR
-    MOV  r10, 0xFFFFFFFF ^ (1 << STEPPER_E_DIR)
-    OR   r9, r9, r10
-    AND  r8, r8, r9
+    OR  r8, r8, r9
 
     //Stepper H
-    LSR  r9, pinCommand.direction, 0x05
+    LSR  r9, pinCommand.direction, 0x04
     AND  r9, r9, 0x01
     LSL  r9, r9, STEPPER_H_DIR
-    MOV  r10, 0xFFFFFFFF ^ (1 << STEPPER_H_DIR)
-    OR   r9, r9, r10
-    AND  r8, r8, r9
+    OR  r8, r8, r9
 
     //Setup direction pin
     LBBO r9, r11, 0,   4                         // Load pin data into r7 which is 4 bytes
     LBBO r10, r17, 0,   4                         // Load pin data into r8 which is 4 bytes
 
-    AND  r9, r9, r7 //Set GPIO 0
-    AND  r10, r10, r8 //Set GPIO 1
+    AND  r9, r9, r15 //Set GPIO 0
+    AND  r10, r10, r16 //Set GPIO 1
+
+    OR  r9, r9, r7 //Set GPIO 0
+    OR  r10, r10, r8 //Set GPIO 1
+
+    MOV r18,r7
+    MOV r19,r8
 
     //Store back the value
     SBBO r9, r11, 0, 4
     SBBO r10, r17, 0, 4
 
-    //At that point the pins are set, from that point to the next set of the pin 650 NS should be spent
-#define DIRECTION_WAIT 650 //In nano seconds
-#define pru_hz 200000000 //200 MHZ
-#define CYCLE_PER_NANOSECOND    (pru_hz/1000000)
-#define DIRECTION_NB_CYCLE (DIRECTION_WAIT/CYCLE_PER_NANOSECOND)   //In number of CPU cycles, PRU is 200 MHZ, 
+    //32 INSTRUCTIONS UNTIL HERE SINCE THE START OF THE STEP COMMAND
 
     //Build GPIO for steps
 
     //FILL  7, 8                                // Store 0xFFFFFFFF into r7,r8
-    MOV r7, 0xFFFFFFFF
-    MOV r8, 0xFFFFFFFF
+    MOV r7, 0
+    MOV r8, 0
 
     //Stepper X
     AND  r9,  pinCommand.step, 0x01
     LSL  r9, r9, STEPPER_X_STEP
-    MOV  r10, 0xFFFFFFFF ^ (1 << STEPPER_X_STEP)
-    OR   r9, r9, r10
-    AND  r7, r7, r9
+    OR  r7, r7, r9
 
     //Stepper Y
-    LSR  r9, pinCommand.step, 0x02
+    LSR  r9, pinCommand.step, 0x01
     AND  r9, r9, 0x01
     LSL  r9, r9, STEPPER_Y_STEP
-    MOV  r10, 0xFFFFFFFF ^ (1 << STEPPER_Y_STEP)
-    OR   r9, r9, r10
-    AND  r8, r8, r9
+    OR  r8, r8, r9
 
     //Stepper Z
-    LSR  r9, pinCommand.step, 0x03
+    LSR  r9, pinCommand.step, 0x02
     AND  r9, r9, 0x01
     LSL  r9, r9, STEPPER_Z_STEP
-    MOV  r10, 0xFFFFFFFF ^ (1 << STEPPER_Z_STEP)
-    OR   r9, r9, r10
-    AND  r7, r7, r9
+    OR  r7, r7, r9
 
     //Stepper E
-    LSR  r9, pinCommand.step, 0x04
+    LSR  r9, pinCommand.step, 0x03
     AND  r9, r9, 0x01
     LSL  r9, r9, STEPPER_E_STEP
-    MOV  r10, 0xFFFFFFFF ^ (1 << STEPPER_E_STEP)
-    OR   r9, r9, r10
-    AND  r8, r8, r9
+    OR  r8, r8, r9
 
     //Stepper H
-    LSR  r9, pinCommand.step, 0x05
+    LSR  r9, pinCommand.step, 0x04
     AND  r9, r9, 0x01
     LSL  r9, r9, STEPPER_H_STEP
-    MOV  r10, 0xFFFFFFFF ^ (1 << STEPPER_H_STEP)
-    OR   r9, r9, r10
-    AND  r8, r8, r9
+    OR  r8, r8, r9
 
 
-    //Here we have to wait DIRECTION_NB_CYCLE - 25 - 1 instructions which corresponds to the step instructions building
-    //This comes down to < 0 instructions so we don't do anything
+    //Add directions
+
+    OR r7,r7,r18
+    OR r8,r8,r19
+
+    //55 INSTRUCTIONS UNTIL HERE SINCE THE START OF THE STEP COMMAND
+    //23 instructions since the direction command
+
+    //We have to wait 650 ns => 130 instructions - 23 instructions
+    MOV r0,54
+DELAY3:
+    SUB r0, r0, 1
+    QBNE DELAY3, r0, 0
+
+    //164 INSTRUCTIONS UNTIL HERE SINCE THE START OF THE STEP COMMAND
+
+
 
     //Setup direction pin
     LBBO r9, r11, 0,   4                         // Load pin data into r7 which is 4 bytes
     LBBO r10, r17, 0,   4                         // Load pin data into r8 which is 4 bytes
 
-    AND  r9, r9, r7 //Set GPIO 0
-    AND  r10, r10, r8 //Set GPIO 1
+    AND  r9, r9, r15 //Set GPIO 0
+    AND  r10, r10, r16 //Set GPIO 1
+
+    OR  r9, r9, r7 //Set GPIO 0
+    OR  r10, r10, r8 //Set GPIO 1
 
     //Store back the value
     SBBO r9, r11, 0, 4
     SBBO r10, r17, 0, 4
 
+    //172 INSTRUCTIONS UNTIL HERE
+
     //here we have to wait at least 10 instructions before putting the step to 0, we will implicitly do that with the next instructions
     //Set the step pins and dir pins to 0
 
-    MOV r0, (0xFFFFFFFF ^ GPIO0_MASK)
-    AND r9, r9, r0
-    MOV r0, (0xFFFFFFFF ^ GPIO1_MASK)
-    AND r10, r10, r0
+    AND r9, r9, r15
+    AND r10, r10, r16
 
     //Increment reading address
     ADD  r4, r4, SIZE(SteppersCommand)
     
-
-    //We have 83 instructions until here
-    //76 instructions were for setuping the step
-    //7 instructions were after the step
-
-    // => 83 cycles, substract it from our delay (there will be three mores due to SBBO and NOP) (this will be therefore 88)
-    MAX  r0, pinCommand.delay, 89 //+1 so that the sub is 0 after delay
-    SUB  r0, r0, 88
+    //197 INSTRUCTIONS UNTIL HERE
 
 
 
-    //Needed for delay
-    ADD r0, r0, 0
-    ADD r0, r0, 0
-    ADD r0, r0, 0
+    //We have to wait 380 instructions - 3 = 377   
+
+
+    MOV r0,189
+DELAY2:
+    SUB r0, r0, 1
+    QBNE DELAY2, r0, 0
 
     //put the step pin to low
     SBBO r9, r11, 0, 4
     SBBO r10, r17, 0, 4
+
+    //We need to have a min delay of 1.9us until the next steps =>  380 instructions
+
+    MOV  r0, pinCommand.delay   //, 89 //+1 so that the sub is 0 after delay
+    
+
+
+    ADD  r0,r0,190
+
+    //FIXME: We should adjust the delay due to the waiting time for signal.
 
     //Now execute the delay, with the proper substraction
     .leave CommandScope
