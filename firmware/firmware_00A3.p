@@ -22,6 +22,11 @@
 #define STEPPER_E_DIR       15  //On GPIO 1
 #define STEPPER_H_DIR       14  //On GPIO 1
 
+#define STEPPER_X_END_MIN   2   //On GPIO 2
+#define STEPPER_Y_END_MIN   14  //On GPIO 0
+#define STEPPER_Z_END_MIN   30  //On GPIO 0
+#define ENDSTOP_INVERSED    1
+
 #define GPIO1_MASK          ((1<<STEPPER_Y_STEP)|(1<<STEPPER_H_STEP)|(1<<STEPPER_H_DIR)|(1<<STEPPER_E_DIR)|(1<<STEPPER_E_STEP)|(1<<STEPPER_X_DIR)) // Only these are togglable
 #define GPIO0_MASK          ((1<<STEPPER_Y_DIR)|(1<<STEPPER_Z_STEP)|(1<<STEPPER_Z_DIR)|(1<<STEPPER_X_STEP))                 // Only these are togglable
 
@@ -30,7 +35,7 @@
 .struct SteppersCommand
     .u8     step                //Steppers are defined as 0b000HEZYX
     .u8     direction           //Steppers are defined as 0b000HEZYX
-    .u16    notused             //For future usage
+    .u16    options             //Options for the move
     .u32    delay               //number of delay cycle loop to do
 .ends
 
@@ -58,8 +63,8 @@ INIT:
     LBBO r2, r0, 0, 4
     ADD  r2, r2, 4
     
-    MOV  r0, GPIO0 | GPIO_DATAIN                // Load Address
-    LBBO r1, r0, 0, 4                           //Read GPIO0 INPUT content
+    MOV  r12, GPIO0 | GPIO_DATAIN                // Load Address
+    LBBO r1, r12, 0, 4                           //Read GPIO0 INPUT content
     SBBO r1, r2, 0, 4                           //Put GPIO INPUT content into local RAM
     ADD  r2, r2, 4
 
@@ -68,8 +73,8 @@ INIT:
     SBBO r1, r2, 0, 4                           //Put GPIO INPUT content into local RAM
     ADD  r2, r2, 4
 
-    MOV  r0, GPIO2 | GPIO_DATAIN                // Load Address
-    LBBO r1, r0, 0, 4                           //Read GPIO2 INPUT content
+    MOV  r13, GPIO2 | GPIO_DATAIN                // Load Address
+    LBBO r1, r13, 0, 4                           //Read GPIO2 INPUT content
     SBBO r1, r2, 0, 4                           //Put GPIO INPUT content into local RAM
     ADD  r2, r2, 4
 
@@ -162,6 +167,38 @@ NEXT_COMMAND:
     //32 INSTRUCTIONS UNTIL HERE SINCE THE START OF THE STEP COMMAND
 
     //Build GPIO for steps
+
+
+
+    //Read the endstop state and mask step with it
+    LBBO r9, r12, 0,   4  //GPIO0
+    LBBO r10, r13, 0,   4  //GPIO2
+
+    //X
+    LSR r0,r10,STEPPER_X_END_MIN     
+    AND r7.b0,r0,0x01
+    
+    //Y
+    LSR r0,r9,STEPPER_Y_END_MIN     
+    AND r0,r0,0x01
+    LSL r0,r0,0x01
+    OR  r7.b0,r7.b0,r0
+
+    //Z
+    LSR r0,r9,STEPPER_Z_END_MIN     
+    AND r0,r0,0x01
+    LSL r0,r0,0x02
+    OR  r7.b0,r7.b0,r0
+
+    //Inverse it as endstops are inversed
+#ifdef ENDSTOP_INVERSED
+    XOR r7.b0,r7.b0,0xFF
+#endif
+
+    AND pinCommand.step,pinCommand.step,r7.b0
+
+
+
 
     //FILL  7, 8                                // Store 0xFFFFFFFF into r7,r8
     MOV r7, 0
@@ -262,7 +299,7 @@ DELAY2:
     
 
 
-    ADD  r0,r0,190
+    MAX  r0,r0,190
 
     //FIXME: We should adjust the delay due to the waiting time for signal.
 
