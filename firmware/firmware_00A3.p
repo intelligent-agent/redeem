@@ -27,6 +27,8 @@
 #define STEPPER_Z_END_MIN   30  //On GPIO 0
 #define ENDSTOP_INVERSED    1
 
+#define DIRECTION_MASK    0b00011001  //Specify 1 if a direction pin of 0 goes positive, specify 0 otherwise for all the 5 axis
+
 #define GPIO1_MASK          ((1<<STEPPER_Y_STEP)|(1<<STEPPER_H_STEP)|(1<<STEPPER_H_DIR)|(1<<STEPPER_E_DIR)|(1<<STEPPER_E_STEP)|(1<<STEPPER_X_DIR)) // Only these are togglable
 #define GPIO0_MASK          ((1<<STEPPER_Y_DIR)|(1<<STEPPER_Z_STEP)|(1<<STEPPER_Z_DIR)|(1<<STEPPER_X_STEP))                 // Only these are togglable
 
@@ -191,9 +193,17 @@ NEXT_COMMAND:
     OR  r7.b0,r7.b0,r0
 
     //Inverse it as endstops are inversed
+
 #ifdef ENDSTOP_INVERSED
     XOR r7.b0,r7.b0,0xFF
 #endif
+    
+    XOR r7.b1,pinCommand.direction, DIRECTION_MASK
+
+    OR r7.b0,r7.b1,r7.b0 
+
+    //Only for axis X,Y,Z, the other are untouched
+    OR r7.b0,r7.b0,0xF8
 
     AND pinCommand.step,pinCommand.step,r7.b0
 
