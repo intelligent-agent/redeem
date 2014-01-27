@@ -22,13 +22,14 @@ class Gcode:
         try:
             self.message = packet["message"].split(";")[0]
             self.message = self.message.strip(' \t\n\r')
-            #logging.debug(self.message)        
+            #logging.debug(self.message) 
             self.prot = packet["prot"]
             self.p = printer        
             self.has_crc = False
             self.debug = 0
             self.answer = "ok"
             if len(self.message) == 0:
+                print packet
                 logging.debug("Empty message")
                 self.gcode = "No-Gcode"
                 return 

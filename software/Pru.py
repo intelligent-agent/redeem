@@ -54,18 +54,12 @@ class Pru:
         self.DDR_END        = 0x20000000+self.ddr_size
         self.ddr_start      = self.DDR_START
         self.ddr_nr_events  = self.ddr_addr+self.ddr_size-4
-        self.interrupted    = False
 
         with open("/dev/mem", "r+b") as f:	            # Open the memory device
             self.ddr_mem = mmap.mmap(f.fileno(), ddr_filelen, offset=ddr_offset) # mmap the right area            
             self.ddr_mem[self.ddr_start:self.ddr_start+4] = struct.pack('L', 0)  # Add a zero to the first reg to make it wait
        
-        dirname = os.path.dirname(os.path.realpath(__file__))
-        pypruss.init()						            # Init the PRU
-        pypruss.open(PRU0)						        # Open PRU event 0 which is PRU0_ARM_INTERRUPT
-        pypruss.pruintc_init()					        # Init the interrupt controller
-        pypruss.pru_write_memory(0, 0, [self.ddr_addr, self.ddr_nr_events, 0])		# Put the ddr address in the first region 
-        pypruss.exec_program(0, dirname+"/../firmware/firmware_00A3.bin")	# Load firmware "ddr_write.bin" on PRU 0
+        self.init_pru();
         
         #Wait until we get the GPIO output in the DDR
         self.dev = os.open("/dev/uio0", os.O_RDONLY)
@@ -89,15 +83,24 @@ class Pru:
         self.running = True
         self.t.start()		
 
+    def init_pru(self):
+        self.ddr_mem[self.ddr_start:self.ddr_start+4] = struct.pack('L', 0)  # Add a zero to the first reg to make it wait
+        dirname = os.path.dirname(os.path.realpath(__file__))
+        pypruss.init()                                  # Init the PRU
+        pypruss.open(PRU0)                              # Open PRU event 0 which is PRU0_ARM_INTERRUPT
+        pypruss.pruintc_init()                          # Init the interrupt controller
+        pypruss.pru_write_memory(0, 0, [self.ddr_addr, self.ddr_nr_events, 0])      # Put the ddr address in the first region 
+        pypruss.exec_program(0, dirname+"/../firmware/firmware_00A3.bin")   # Load firmware "ddr_write.bin" on PRU 0
+
     def read_gpio_state(self, gpio_bank):
         """ Return the initial state of a GPIO bank when the PRU was initialized """
         return self.initial_gpio[gpio_bank]
     
     def add_data(self, data):
         """ Add some data to one of the PRUs """
-        (pins, dirs, delays) = data                       	    # Get the data
+        (pins, dirs, options, delays) = data                       	    # Get the data
         delays = np.clip(0.5*((np.array(delays)/self.s_pr_inst)-self.inst_pr_loop), 1, 4294967296L)
-        data = np.array([pins,dirs, delays.astype(int)])		        	    # Make a 2D matrix combining the ticks and delays
+        data = np.array([pins,dirs,options, delays.astype(int)])		        	    # Make a 2D matrix combining the ticks and delays
         #data = list(.flatten())     	    # Braid the data so every other item is a pin and delay
         self.pru_data = data.transpose()   
 
@@ -121,25 +124,43 @@ class Pru:
         """ Returns True if there are segments on queue """
         return not self.is_empty()
 
-    def interrupt_move(self):
-        """ Interrupt the current movements and all the ones which are stored in DDR """
-        self.ddr_mem[self.DDR_START:self.DDR_START+4] = struct.pack('L', 0)
-        self.interrupted = True
-        pypruss.pru_write_memory(0, 0, [self.ddr_addr, self.ddr_nr_events, 1])
-
     def pack(self, word):
         return struct.pack('L', word)
+
+    def emergency_interrupt(self):
+        pypruss.pru_disable(0)                                  # Disable PRU 0, this is already done by the firmware
+        pypruss.exit()                                          # Exit, don't know what this does. 
+        logging.debug('Resetting PRU...')
+      
+        self.pru_data       = []
+
+        while True:
+            try:
+                b = self.ddr_used.get(block=False)
+                if b != None:
+                    self.ddr_used.task_done()
+            except Queue.Empty:
+                break
+
+        self.ddr_reserved   = 0      
+        with Pru.ddr_lock: 
+            self.ddr_mem_used   = 0  
+        self.clear_events   = []       
+        self.ddr_start      = self.DDR_START
+        self.ddr_nr_events  = self.ddr_addr+self.ddr_size-4
+
+        self.init_pru()
 
     ''' Commit the data to the DDR memory '''
     def commit_data(self):
         
         data = struct.pack('L', len(self.pru_data))	    	# Pack the number of toggles. 
         #Then we have one byte, one byte, one 16 bit (dummy), and one 32 bits
-        print "PRU"
-        print self.pru_data
-        data += ''.join([struct.pack('BBHL', instr[0],instr[1],0,instr[2]) for instr in self.pru_data])
+        #print "PRU"
+        #print self.pru_data
+        data += ''.join([struct.pack('BBHL', instr[0],instr[1],instr[2],instr[3]) for instr in self.pru_data])
         data += struct.pack('L', 0)                             # Add a terminating 0, this keeps the fw waiting for a new command.
-        print ":".join("{0:x}".format(ord(c)) for c in data)
+        #print ":".join("{0:x}".format(ord(c)) for c in data)
         self.ddr_end = self.ddr_start+len(data)       
         if self.ddr_end >= self.DDR_END-16:                     # If the data is too long, wrap it around to the start
             multiple = (self.DDR_END-16-self.ddr_start)%2       # Find a multiple of 8: 4*(pins, delays)
@@ -185,28 +206,9 @@ class Pru:
         self.ddr_start  = self.ddr_end-4    # Update the start of ddr for next time 
         self.pru_data   = []                # Reset the pru_data list since it has been commited         
 
-    def _clear_after_interrupt(self):
-        with Pru.ddr_lock: 
-            self.pru_data       = []                        # This holds all data for one move (x,y,z,e1,e2)
-            self.ddr_reserved   = 0      
-            self.ddr_mem_used   = 0  
-            self.clear_events   = []       
-            self.ddr_start      = self.DDR_START
-            self.ddr_mem[self.ddr_start:self.ddr_start+4] = struct.pack('L', 0)  # Add a zero to the first reg to make it wait
-            while True:
-                try:
-                    v = self.ddr_used.get(block=False)
-                    if v != None:
-                        self.ddr_used.task_done()
-                except Queue.Empty:
-                    break
-
-        self.interrupted = False
-        pypruss.pru_write_memory(0, 0, [self.ddr_addr, self.ddr_nr_events, 0])
 
     ''' Catch events coming from the PRU '''                
     def _wait_for_events(self):
-        events_caught = 0
         self.dev = os.open("/dev/uio0", os.O_RDONLY)
         self.new_events = 0
         self.old_events = 0
@@ -219,10 +221,6 @@ class Pru:
                 nr_events = struct.unpack("L", self.ddr_mem[self.DDR_END-4:self.DDR_END])[0]   
             else:
                 nr_events = struct.unpack("L", self.ddr_mem[self.DDR_END-4:self.DDR_END])[0]
-
-            if self.interrupted:
-                self._clear_after_interrupt()
-                continue
 
             while nr_interrupts < nr_events:
                 ddr = self.ddr_used.get()                       # Pop the first ddr memory amount           

@@ -49,7 +49,6 @@ class Path_planner:
 
         self.t           = Thread(target=self._do_work)         # Make the thread
         self.t.daemon    = True
-        self.interrupted = False
         if __name__ != '__main__':
             self.t.start()		 
 
@@ -61,14 +60,17 @@ class Path_planner:
     def home(self,axis):
         #Check what is the direction of the first move
         positive = self.steppers[axis].getEndstop().isHit()
-        if positive:
-            #schedule a move of 10mm
-            self.add_path(Path({axis:0.01}, 0.01, "RELATIVE", False))     
-            self.wait_until_done()
+        if not positive:
+            while not self.steppers[axis].getEndstop().isHit():
+                self.add_path(Path({axis:-0.50}, 0.02, "RELATIVE", False, True))    
+                self.wait_until_done()
 
-        while not self.steppers[axis].getEndstop().isHit():
-            self.add_path(Path({axis:-0.10}, 0.01, "RELATIVE", False))    
-            time.sleep(0.1)
+        #schedule a move of 10mm
+        self.add_path(Path({axis:0.01}, 0.005, "RELATIVE", False, True))     
+        self.wait_until_done()
+
+        self.add_path(Path({axis:-0.015}, 0.005, "RELATIVE", False, True))     
+        self.wait_until_done()
 
 
 
@@ -99,9 +101,6 @@ class Path_planner:
         while self.running:       
            self.do_work()
     
-    def interrupt_move(self):
-        self.interrupted = True
-        self.pru.interrupt_move()
 
     def do_work(self):
         """ This is just a separate function so the test at the bottom will pass """		
@@ -117,8 +116,8 @@ class Path_planner:
         for axis in path.get_axes():                       # Run through all the axes in the path    
             #stepper = self.steppers[axis]                  # Get a handle of  the stepper                    
             data = self._make_data(path, axis)     
-            print "AXIS " + axis 
-            print data       
+            #print "AXIS " + axis 
+            #print data       
             if len(data[0]) > 0:
                 if len(self.pru_data) == 0:
                     self.pru_data = zip(*data)
@@ -130,12 +129,9 @@ class Path_planner:
             data = self.pru_data[0:0x20000/8]
             del self.pru_data[0:0x20000/8]
 
-            if self.interrupted:
-                break
-
             if len(self.pru_data) > 0:
                 logging.debug("Long path segment is cut. remaining: "+str(len(self.pru_data)))       
-            while not self.pru.has_capacity_for(len(data)*8) and not self.interrupted:          
+            while not self.pru.has_capacity_for(len(data)*8):          
                 #logging.debug("Pru full")              
                 time.sleep(0.5)               
             self.pru.add_data(zip(*data))
@@ -147,17 +143,18 @@ class Path_planner:
         path.unlink()                                         # Remove reference to enable garbage collection
         path = None
 
-        if self.interrupted:
-            #Remove all paths from queue
-            while True:
-                try:
-                    path = self.paths.get(block=False)
-                    if path != None:
-                        self.paths.task_done()
-                        path.unlink()
-                except Queue.Empty:
-                    break
-            self.interrupted = False
+    def emergency_interrupt(self):
+        self.pru.emergency_interrupt()
+        while True:
+            try:
+                path = self.paths.get(block=False)
+                if path != None:
+                    self.paths.task_done()
+                    path.unlink()
+            except Queue.Empty:
+                break
+
+
 
     def _braid_data(self, data1, data2):
         """ Braid/merge together the data from the two data sets"""
@@ -166,41 +163,41 @@ class Path_planner:
     def _braid_data1(self, data1, data2):
         """ Braid/merge together the data from the two data sets"""
         line = 0
-        (pin1,dir1, dly1) = data1[line]
-        (pin2,dir2, dly2) = data2.pop(0)
+        (pin1,dir1,o1, dly1) = data1[line]
+        (pin2,dir2,o2, dly2) = data2.pop(0)
         while True: 
             dly = min(dly1, dly2)
             dly1 -= dly    
             dly2 -= dly            
             try: 
                 if dly1 == 0 and dly2 == 0:
-                    data1[line] = (pin1+pin2, dir1+dir2, dly)
-                    (pin1,dir1, dly1) = data1[line+1]
-                    (pin2,dir2, dly2) = data2.pop(0)
+                    data1[line] = (pin1+pin2, dir1+dir2,o1 | o2, dly)
+                    (pin1,dir1,o1, dly1) = data1[line+1]
+                    (pin2,dir2,o2, dly2) = data2.pop(0)
                 elif dly1 == 0:
-                    data1[line] = (pin1+pin2, dir1+dir2, dly)
-                    (pin1,dir1, dly1) = data1[line+1]
+                    data1[line] = (pin1+pin2, dir1+dir2,o1 | o2, dly)
+                    (pin1,dir1,o1, dly1) = data1[line+1]
                 elif dly2 == 0:    
-                    data1.insert(line, (pin1+pin2, dir1+dir2, dly))
-                    (pin2,dir2, dly2) = data2.pop(0)
+                    data1.insert(line, (pin1+pin2, dir1+dir2,o1 | o2, dly))
+                    (pin2,dir2,o2, dly2) = data2.pop(0)
                 line += 1
             except IndexError:
                 break
 
         if dly2 > 0:   
-            data1[line] =  (data1[line][0],data1[line][1], data1[line][2]+dly2)        
+            data1[line] =  (data1[line][0],data1[line][1],data1[line][2], data1[line][3]+dly2)        
         elif dly1 > 0:
-            data1[line] = (data1[line][0], data1[line][1], data1[line][2]+dly1)  
+            data1[line] = (data1[line][0], data1[line][1],data1[line][2], data1[line][3]+dly1)  
             data1.pop(line+1)
         
         while len(data2) > 0:
             line += 1
-            (pin2,dir2, dly2) = data2.pop(0)
-            data1.append((pin2+pin1,dir1+dir2, dly2))
+            (pin2,dir2,o2, dly2) = data2.pop(0)
+            data1.append((pin2+pin1,dir1+dir2,o1 | o2, dly2))
         while len(data1) > line+1:
             line += 1
-            (pin1, dir1, dly1) = data1[line]
-            data1[line] = (pin2+pin1,dir1+dir2, dly1)
+            (pin1, dir1,o1, dly1) = data1[line]
+            data1[line] = (pin2+pin1,dir1+dir2,o1 | o2, dly1)
 
     ''' Join the thread '''
     def exit(self):
@@ -229,6 +226,7 @@ class Path_planner:
             dir_pin     = 0 if vec >= 0 else dir_pin
         step_pins       = [step_pin]*num_steps           # Make the pin states
         dir_pins        = [dir_pin]*num_steps 
+        option_pins      = [1 if path.is_cancellable() else 0]*num_steps 
 
         s           = abs(path.get_axis_length(axis))                   # Get the length of the vector
         ratio       = path.get_axis_ratio(axis)                         # Ratio is the length of this axis to the total length
@@ -285,7 +283,7 @@ class Path_planner:
         else:                        
             self.current_pos[axis] += td                                    # Update the global position vector
         
-        return (step_pins,dir_pins, delays)                                           # return the pin states and the data
+        return (step_pins,dir_pins,option_pins, delays)                                           # return the pin states and the data
 
 
 if __name__ == '__main__':

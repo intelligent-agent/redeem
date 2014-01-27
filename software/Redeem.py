@@ -319,7 +319,7 @@ class Redeem:
             Gcode.line_number = 0      
         elif g.code() == "M112":                                    # Emergency stop
             #Reset PRU
-            self.path_planner.interrupt_move()          
+            self.path_planner.emergency_interrupt()          
         elif g.code() == "M114": 
              g.setAnswer("ok C: "+' '.join('%s:%s' % i for i in self.current_pos.iteritems()))
         elif g.code() == "M130":                                    # Set PID P-value, Format (M130 P0 S8.0)

@@ -42,6 +42,7 @@
 .ends
 
 
+
 INIT:
     LBCO r0, C4, 4, 4                           // Load the PRU-ICSS SYSCFG register (4 bytes) into R0
     CLR  r0, r0, 4                              // Clear bit 4 in reg 0 (copy of SYSCFG). This enables OCP master ports needed to access all OMAP peripherals
@@ -205,6 +206,24 @@ NEXT_COMMAND:
     //Only for axis X,Y,Z, the other are untouched
     OR r7.b0,r7.b0,0xF8
 
+    //Check if this is a cancellable move
+    QBNE notcancel, pinCommand.options, 0x01
+
+    //Check if we need to cancel the move, we have to if the step is 1 and the endstop is 0
+    AND r7.b1,pinCommand.step,r7.b0
+
+
+    QBEQ notcancel, r7.b1,pinCommand.step
+
+    //Remove all the command from the buffer
+start_loop_remove:
+    ADD  r4, r4, SIZE(SteppersCommand)
+    SUB r1, r1, 1                               //r1 contains the number of PIN instructions in the DDR, we remove one.
+    QBNE start_loop_remove, r1, 0                            // Still more pins to go, jump back
+
+    QBA CANCEL_COMMAND_AFTER
+
+notcancel:
     AND pinCommand.step,pinCommand.step,r7.b0
 
 
@@ -307,7 +326,7 @@ DELAY2:
 
     MOV  r0, pinCommand.delay   //, 89 //+1 so that the sub is 0 after delay
     
-
+    ADD r0,r0,r0
 
     MAX  r0,r0,190
 
@@ -320,9 +339,12 @@ DELAY:
     SUB r0, r0, 1
     QBNE DELAY, r0, 0
 
+
     SUB r1, r1, 1                               //r1 contains the number of PIN instructions in the DDR, we remove one.
     QBNE NEXT_COMMAND, r1, 0                            // Still more pins to go, jump back
     //ADD  r4, r4, 4                                // The next DDR reading address is incremented by 4.            
+
+CANCEL_COMMAND_AFTER:
 
     ADD r5, r5, 1                               // r5++, r5 is the event_counter.
     SBBO r5, r6, 0, 4                           // store the number of interrupts that have occured in the second reg of DRAM

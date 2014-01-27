@@ -27,7 +27,7 @@ class Path:
     max_speed_e = 1.0
     max_speed_h = 1.0
 
-    def __init__(self, axes, feed_rate, movement, is_print_segment=True):
+    def __init__(self, axes, feed_rate, movement, is_print_segment=True, cancellable = False):
         """ The axes of evil, the feed rate in m/s and ABS or REL """
         self.axes = axes
         self.feed_rate = feed_rate
@@ -35,12 +35,15 @@ class Path:
         self.global_pos = {"X":0, "Y":0, "Z":0, "E":0} 
         self.is_print_segment = is_print_segment         # If this is True, use angle stuff
         self.next_ok = False
-
+        self.cancellable = cancellable
 
     def is_G92(self):
         """ Special path, only set the global position on this """
         return (self.movement == "G92")
   
+    def is_cancellable(self):
+        return self.cancellable
+
     def get_pos(self):
         return self.axes
 
