@@ -268,11 +268,11 @@ notcancel:
     OR r7,r7,r18
     OR r8,r8,r19
 
-    //55 INSTRUCTIONS UNTIL HERE SINCE THE START OF THE STEP COMMAND
-    //23 instructions since the direction command
+    //73 INSTRUCTIONS UNTIL HERE SINCE THE START OF THE STEP COMMAND
+    //41 instructions since the direction command
 
-    //We have to wait 650 ns => 130 instructions - 23 instructions
-    MOV r0,54
+    //We have to wait 650 ns => 130 instructions - 41 instructions
+    MOV r0,45
 DELAY3:
     SUB r0, r0, 1
     QBNE DELAY3, r0, 0
@@ -295,23 +295,15 @@ DELAY3:
     SBBO r9, r11, 0, 4
     SBBO r10, r17, 0, 4
 
-    //172 INSTRUCTIONS UNTIL HERE
-
-    //here we have to wait at least 10 instructions before putting the step to 0, we will implicitly do that with the next instructions
-    //Set the step pins and dir pins to 0
+    //176 INSTRUCTIONS UNTIL HERE
 
     AND r9, r9, r15
     AND r10, r10, r16
 
     //Increment reading address
     ADD  r4, r4, SIZE(SteppersCommand)
-    
-    //197 INSTRUCTIONS UNTIL HERE
-
-
 
     //We have to wait 380 instructions - 3 = 377   
-
 
     MOV r0,189
 DELAY2:
@@ -324,13 +316,17 @@ DELAY2:
 
     //We need to have a min delay of 1.9us until the next steps =>  380 instructions
 
-    MOV  r0, pinCommand.delay   //, 89 //+1 so that the sub is 0 after delay
-    
-    ADD r0,r0,r0
+    MOV  r0, pinCommand.delay
+
+    //561 INSTRUCTIONS UNTIL HERE
+
+    //We substract the time to setup a step to the delay to be more precise
+    MOV r9,576
+    MAX r0,r0,r9
+    SUB r0,r0,r9
+
 
     MAX  r0,r0,190
-
-    //FIXME: We should adjust the delay due to the waiting time for signal.
 
     //Now execute the delay, with the proper substraction
     .leave CommandScope
