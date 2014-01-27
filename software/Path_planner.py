@@ -130,8 +130,8 @@ class Path_planner:
                 if len(self.pru_data) == 0:
                     self.pru_data = zip(*data)
                 else:
-                    #self.pru_data = self._braid_data(self.pru_data, zip(*data))
-                    self._braid_data1(self.pru_data, zip(*data))
+                    self.pru_data = self._braid_data(self.pru_data, zip(*data))
+                    #self._braid_data1(self.pru_data, zip(*data))
 
         while len(self.pru_data) > 0:  
             data = self.pru_data[0:0x20000/8]
