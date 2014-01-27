@@ -149,11 +149,18 @@ class Redeem:
         self.current_pos = {"X":0.0, "Y":0.0, "Z":0.0, "E":0.0,"H":0.0}
         self.acceleration = float(self.config.get('Steppers', 'acceleration'))
         Path.axis_config = int(self.config.get('Geometry', 'axis_config'))
+        
         Path.max_speed_x = float(self.config.get('Steppers', 'max_speed_x'))
         Path.max_speed_y = float(self.config.get('Steppers', 'max_speed_y'))
         Path.max_speed_z = float(self.config.get('Steppers', 'max_speed_z'))
         Path.max_speed_e = float(self.config.get('Steppers', 'max_speed_e'))
         Path.max_speed_h = float(self.config.get('Steppers', 'max_speed_h'))
+
+        Path.home_speed_x = float(self.config.get('Steppers', 'home_speed_x'))
+        Path.home_speed_y = float(self.config.get('Steppers', 'home_speed_y'))
+        Path.home_speed_z = float(self.config.get('Steppers', 'home_speed_z'))
+        Path.home_speed_e = float(self.config.get('Steppers', 'home_speed_e'))
+        Path.home_speed_h = float(self.config.get('Steppers', 'home_speed_h'))
 
         self.path_planner = Path_planner(self.steppers, self.current_pos)         
         self.path_planner.set_acceleration(self.acceleration)
@@ -213,7 +220,8 @@ class Redeem:
         elif g.code() == "G28":                                     # Home the steppers
             if g.numTokens() == 0:                                  # If no token is given, home all
                 g.setTokens(["X0", "Y0", "Z0"])                
-            #smds = {}                                               # All steppers 
+            #smds = {}
+            self.path_planner.wait_until_done()                                               # All steppers 
             for i in range(g.numTokens()): # Run through all tokens
                 axis = g.tokenLetter(i)                         
                 self.path_planner.home(axis)

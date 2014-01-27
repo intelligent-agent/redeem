@@ -62,14 +62,22 @@ class Path_planner:
         positive = self.steppers[axis].getEndstop().isHit()
         if not positive:
             while not self.steppers[axis].getEndstop().isHit():
-                self.add_path(Path({axis:-0.50}, 0.02, "RELATIVE", False, True))    
+                p = Path({axis:-0.01}, 0.1, "RELATIVE", True, True)
+                p.set_homing_feedrate()
+                self.add_path(p)    
                 self.wait_until_done()
 
         #schedule a move of 10mm
-        self.add_path(Path({axis:0.01}, 0.005, "RELATIVE", False, True))     
+        p = Path({axis:0.003}, 0.01, "RELATIVE", False, True)
+        p.set_homing_feedrate()
+        p.set_max_speed(p.get_max_speed()*0.2)
+        self.add_path(p)     
         self.wait_until_done()
 
-        self.add_path(Path({axis:-0.015}, 0.005, "RELATIVE", False, True))     
+        p = Path({axis:-0.003}, 0.1, "RELATIVE", False, True)
+        p.set_homing_feedrate()
+        p.set_max_speed(p.get_max_speed()*0.2)
+        self.add_path(p)     
         self.wait_until_done()
 
 

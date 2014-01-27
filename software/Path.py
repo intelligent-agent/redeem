@@ -27,6 +27,12 @@ class Path:
     max_speed_e = 1.0
     max_speed_h = 1.0
 
+    home_speed_x = 1.0
+    home_speed_y = 1.0
+    home_speed_z = 1.0
+    home_speed_e = 1.0
+    home_speed_h = 1.0
+
     def __init__(self, axes, feed_rate, movement, is_print_segment=True, cancellable = False):
         """ The axes of evil, the feed rate in m/s and ABS or REL """
         self.axes = axes
@@ -64,6 +70,18 @@ class Path:
         """ Link this path with the previous and next one (if any, provide None otherwise) """
         self.next = next
         self.prev = prev
+
+    def set_homing_feedrate(self):
+        if "X" in self.axes:
+            self.feed_rate = min(self.feed_rate, Path.home_speed_x)
+        if "Y" in self.axes:
+            self.feed_rate = min(self.feed_rate, Path.home_speed_y)
+        if "Z" in self.axes:
+            self.feed_rate = min(self.feed_rate, Path.home_speed_z)
+        if "E" in self.axes:
+            self.feed_rate = min(self.feed_rate, Path.home_speed_e)
+        if "H" in self.axes:
+            self.feed_rate = min(self.feed_rate, Path.home_speed_h)
 
     def set_global_pos(self, global_pos, update_next = True):
         """ Set the global position for the printer """
@@ -136,6 +154,9 @@ class Path:
     def get_axis_length(self, axis):
         """ Get the length of the axis """
         return self.vector[axis]
+
+    def set_max_speed(self,s):
+        self.feed_rate = s
 
     def get_max_speed(self):
         """ Get the top speed of this segment """
