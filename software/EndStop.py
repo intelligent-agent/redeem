@@ -55,7 +55,7 @@ class EndStop:
             direction  = "down" if ord(evt[12]) else "up"
             if direction == "up" and code == self.key_code:
                 self.hit = True          
-                if self.path_planner != None: self.path_planner.interrupt_move();
+                #if self.path_planner != None: self.path_planner.interrupt_move();
                 logging.warning("End Stop " + self.name +" hit! Disabling all steppers")
             elif direction == "down" and code == self.key_code:
                 self.hit = False  
