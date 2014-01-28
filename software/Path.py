@@ -36,6 +36,10 @@ class Path:
         self.is_print_segment = is_print_segment         # If this is True, use angle stuff
         self.next_ok = False
 
+        # Default values
+        self.start_speed = 0
+        self.end_speed = 0
+
     def is_G92(self):
         """ Special path, only set the global position on this """
         return (self.movement == "G92")
@@ -62,7 +66,6 @@ class Path:
             x = self.axes["X"]
             if self.movement == "ABSOLUTE":
                 x -= self.global_pos["X"]
-
             self.feed_rate = min(self.feed_rate, Path.max_speed_x)
         else:
             x = 0
@@ -105,6 +108,7 @@ class Path:
             a = self.global_pos
             b = self.cartesian_vector
             # Do not continue the update beyond the next segment
+            
             self.next.set_global_pos(dict( (n, a.get(n, 0)+b.get(n, 0)) for n in set(a)|set(b) ), False)
             self.next_ok = True
 
@@ -114,6 +118,9 @@ class Path:
             b = np.array([x, y])
             X = np.dot(Path.Ainv, b)
             self.vector = {"X":X[0, 0], "Y":X[0, 1], "Z":z, "E":e, "H": h}
+
+
+        
 
     def get_length(self):     
         """ Get the length of this path segment """
@@ -139,7 +146,7 @@ class Path:
         return abs(self.get_axis_length(axis))/hyp
 
     def get_start_speed(self):
-        """ Get the lowest speed along this segment """
+        """ Get the lowest speed along this segment """        
         return (1-self.angle_to_prev()/np.pi)*self.get_max_speed()
 
     def get_end_speed(self):
@@ -215,6 +222,11 @@ class Path:
     def is_type_print_segment(self): 
         """ Returns true if this is a print segment and not a relative move """
         return self.is_print_segment
+
+
+
+
+
 
 if __name__ == '__main__':
     # Add path segment A. None before, none after

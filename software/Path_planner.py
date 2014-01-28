@@ -103,11 +103,10 @@ class Path_planner:
         
         self.paths.task_done()
         path.unlink()                                         # Remove reference to enable garbage collection
-        path = None
 
     def _braid_data(self, data1, data2):
         """ Braid/merge together the data from the two data sets"""
-        return braid.braid_data_c(data1, data2)
+        return braid.braid_data_c(data1, data2)               # Use the Optimized C-function foir this. 
     
     def _braid_data1(self, data1, data2):
         """ Braid/merge together the data from the two data sets"""

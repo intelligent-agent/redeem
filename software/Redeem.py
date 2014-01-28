@@ -38,7 +38,7 @@ from W1 import W1
 logging.basicConfig(level=logging.DEBUG, 
                     format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
                     datefmt='%m-%d %H:%M:%S',
-                    filename='/var/log/replicape.log',
+                    filename='/var/log/redeem.log',
                     filemode='w')
 
 def log_ex(type, value, traceback):
