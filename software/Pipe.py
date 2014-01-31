@@ -29,11 +29,12 @@ class Pipe:
         self.debug = 0
         self.fifo = os.open(filename, os.O_RDWR)
         self.t = Thread(target=self.get_message)
+        self.send_response = False
         self.t.daemon = True
         self.t.start()		
 
-    # Loop that gets messages and pushes them on the queue
     def get_message(self):
+        """ Loop that gets messages and pushes them on the queue """
         while self.running:
             ret = select.select( [self.fifo],[],[], 1.0 )
     	    if ret[0] == [self.fifo]:
@@ -43,16 +44,19 @@ class Pipe:
                     #logging.debug("Message: "+message+" ("+message.encode("hex")+")")
                     self.queue.put({"message": message, "prot": "PIPE"})            
 
-    # Send a message		
     def send_message(self, message):
-        #logging.debug("FIFO: writing '"+message+"'")
-        if message[-1] != "\n":
-            message += "\n"
-            os.write(self.fifo, message)
-        #logging.debug("FIFO: written")
+        """ Send response """
+        if self.send_response: 
+            if message[-1] != "\n":
+                message += "\n"
+                os.write(self.fifo, message)
 
-    # Stop receiving mesassages
+    def set_send_reponse(self, val):
+        """ Sets wheter or not a response should be sent """
+        self.send_response = val
+
     def close(self):
+        """ Stop receiving mesassages """
         self.running = False
         self.t.join()
         self.fifo.close()

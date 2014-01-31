@@ -140,6 +140,7 @@ class Redeem:
         # Set up USB, this receives messages and pushes them on the queue
         #self.usb = USB(self.commands)		
         self.pipe = Pipe(self.commands)
+        self.pipe.set_send_reponse(False)
         self.ethernet = Ethernet(self.commands)
         
         # Init the path planner
@@ -184,7 +185,7 @@ class Redeem:
 		
     ''' Execute a G-code '''
     def _execute(self, g):
-        if g.code() == "G1":                                        # Move (G1 X0.1 Y40.2 F3000)                        
+        if g.code() == "G1" or g.code() == "G0":                                        # Move (G1 X0.1 Y40.2 F3000)                        
             if g.hasLetter("F"):                                    # Get the feed rate                 
                 self.feed_rate = float(g.getValueByLetter("F"))/60000.0 # Convert from mm/min to SI unit m/s
                 g.removeTokenByLetter("F")
