@@ -6,7 +6,11 @@ Author: Elias Bakken
 email: elias(dot)bakken(at)gmail(dot)com
 Website: http://www.thing-printer.com
 License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
+
+Minor verion tag (starting from 0.8) is Arhold Schwartsnegger movies chronologically. 
 '''
+
+version = "0.8.0~Hercules-in-New-York"
 
 from math import sqrt
 import time
@@ -48,7 +52,6 @@ def log_ex(type, value, traceback):
     logging.error('Traceback:'+str(traceback))
 
 sys.excepthook = log_ex
-version = "0.7.2"
 
 print "Redeem v. "+version
 
