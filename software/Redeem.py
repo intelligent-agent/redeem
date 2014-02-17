@@ -142,8 +142,9 @@ class Redeem:
 
         # Set up USB, this receives messages and pushes them on the queue
         #self.usb = USB(self.commands)		
+        # Virtual TTY 
         self.pipe = Pipe(self.commands)
-        self.pipe.set_send_reponse(False)
+        #self.pipe.set_send_reponse(False)
         self.ethernet = Ethernet(self.commands)
         
         # Init the path planner
@@ -288,12 +289,14 @@ class Redeem:
             if hasattr(self, "cold_end_1"):
                 answer += " T2:"+str(int(self.cold_end_1.getTemperature()))         
             g.setAnswer(answer)
-        elif g.code() == "M106":                                    # Fan on
+       elif g.code() == "M106":                                    # Fan on
             if g.hasLetter("P"):
                 fan = self.fans[int(g.getValueByLetter("P"))]
-                fan.set_value(float(g.getValueByLetter("S"))/255.0)	# According to reprap wiki, the number is 0..255
+                fan.set_value(float(g.getValueByLetter("S"))/255.0)     # According to reprap wiki, the number is 0..255
+            elif g.numTokens() == 1:
+                self.fan_1.set_value(float(g.tokenValue(0))/255.0)
             else: # if there is no fan-number present, do it for the first fan
-                self.fan_1.set_value(float(g.tokenValue(0))/255.0)	
+                self.fan_1.set_value(1.0)
         elif g.code() == "M108":									# Deprecated
             pass 													
         elif g.code() == "M109":
