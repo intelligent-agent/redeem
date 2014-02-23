@@ -80,8 +80,8 @@ class Redeem:
         self.steppers["X"] = Stepper("GPIO0_27", "GPIO1_29", "GPIO2_4",  0, "X",-1,self.end_stops["X1"], 0,0) 
         self.steppers["Y"] = Stepper("GPIO1_12", "GPIO0_22", "GPIO2_5",  1, "Y",1,self.end_stops["Y1"], 1,1)  
         self.steppers["Z"] = Stepper("GPIO0_23", "GPIO0_26", "GPIO0_15", 2, "Z",1,self.end_stops["Z1"],2,2)  
-        self.steppers["E"] = Stepper("GPIO1_28", "GPIO1_15", "GPIO2_1",  3, "Ext1",-1, None,3,3)
-        self.steppers["H"] = Stepper("GPIO1_13", "GPIO1_14", "GPIO2_3",  4, "Ext2",-1, None,4,4)
+        self.steppers["E"] = Stepper("GPIO1_28", "GPIO1_15", "GPIO2_1",  3, "Ext1",-1, None,5,5)
+        self.steppers["H"] = Stepper("GPIO1_13", "GPIO1_14", "GPIO2_3",  4, "Ext2",-1, None,6,6)
 
         # Enable the steppers and set the current, steps pr mm and microstepping  
         for name, stepper in self.steppers.iteritems():
@@ -141,6 +141,7 @@ class Redeem:
         # Set up USB, this receives messages and pushes them on the queue
         #self.usb = USB(self.commands)		
         self.pipe = Pipe(self.commands)
+        self.pipe.set_send_response(False) # Disable return messages through the pipe. 
         self.ethernet = Ethernet(self.commands)
         
         # Init the path planner
@@ -201,7 +202,7 @@ class Redeem:
 
     ''' Execute a G-code '''
     def _execute(self, g):
-        if g.code() == "G1":                                        # Move (G1 X0.1 Y40.2 F3000)                        
+        if g.code() == "G1" or g.code() == "G0":                                        # Move (G1 X0.1 Y40.2 F3000)                        
             if g.hasLetter("F"):                                    # Get the feed rate                 
                 self.feed_rate = float(g.getValueByLetter("F"))/60000.0 # Convert from mm/min to SI unit m/s
                 g.removeTokenByLetter("F")
@@ -255,7 +256,11 @@ class Redeem:
         elif g.code() == "M17":                                     # Enable all steppers
             self.path_planner.wait_until_done()
             for name, stepper in self.steppers.iteritems():
-                stepper.setEnabled() 
+                if name!='E' and name!='H':
+                    print name
+                    stepper.setEnabled() 
+                else:
+                    stepper.setDisabled()
             Stepper.commit()           
         elif g.code() == "M19":                                     # Reset all steppers
             self.path_planner.wait_until_done()

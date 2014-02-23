@@ -130,8 +130,8 @@ class Path_planner:
                 if len(self.pru_data) == 0:
                     self.pru_data = zip(*data)
                 else:
-                    self.pru_data = self._braid_data(self.pru_data, zip(*data))
-                    #self._braid_data1(self.pru_data, zip(*data))
+                    #self.pru_data = self._braid_data(self.pru_data, zip(*data))
+                    self._braid_data1(self.pru_data, zip(*data))
 
         while len(self.pru_data) > 0:  
             data = self.pru_data[0:0x20000/8]
@@ -179,14 +179,14 @@ class Path_planner:
             dly2 -= dly            
             try: 
                 if dly1 == 0 and dly2 == 0:
-                    data1[line] = (pin1+pin2, dir1+dir2,o1 | o2, dly)
+                    data1[line] = (pin1|pin2, dir1 | dir2,o1 | o2, dly)
                     (pin1,dir1,o1, dly1) = data1[line+1]
                     (pin2,dir2,o2, dly2) = data2.pop(0)
                 elif dly1 == 0:
-                    data1[line] = (pin1+pin2, dir1+dir2,o1 | o2, dly)
+                    data1[line] = (pin1|pin2, dir1 | dir2,o1 | o2, dly)
                     (pin1,dir1,o1, dly1) = data1[line+1]
                 elif dly2 == 0:    
-                    data1.insert(line, (pin1+pin2, dir1+dir2,o1 | o2, dly))
+                    data1.insert(line, (pin1|pin2, dir1 | dir2,o1 | o2, dly))
                     (pin2,dir2,o2, dly2) = data2.pop(0)
                 line += 1
             except IndexError:
@@ -201,11 +201,11 @@ class Path_planner:
         while len(data2) > 0:
             line += 1
             (pin2,dir2,o2, dly2) = data2.pop(0)
-            data1.append((pin2+pin1,dir1+dir2,o1 | o2, dly2))
+            data1.append((pin2|pin1,dir1 | dir2,o1 | o2, dly2))
         while len(data1) > line+1:
             line += 1
             (pin1, dir1,o1, dly1) = data1[line]
-            data1[line] = (pin2+pin1,dir1+dir2,o1 | o2, dly1)
+            data1[line] = (pin2|pin1,dir1 | dir2,o1 | o2, dly1)
 
     ''' Join the thread '''
     def exit(self):

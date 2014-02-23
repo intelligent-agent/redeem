@@ -21,6 +21,7 @@ with open("/var/log/tty0tty.log", 'r') as f:
 
 m = re.search('\(.*\) ', line)
 filename = m.group(0)[1:-2]
+pipename = line.rstrip()
 
 class Pipe:
     def __init__(self, queue):
@@ -28,31 +29,36 @@ class Pipe:
         self.running = True
         self.debug = 0
         self.fifo = os.open(filename, os.O_RDWR)
+        logging.info("Pipe connected to end '"+str(filename)+"' on virtual tty '"+str(pipename)+"'")
         self.t = Thread(target=self.get_message)
         self.t.daemon = True
-        self.t.start()		
+        self.send_response = True   
+        self.t.start()
+        	
 
     # Loop that gets messages and pushes them on the queue
     def get_message(self):
         while self.running:
             ret = select.select( [self.fifo],[],[], 1.0 )
     	    if ret[0] == [self.fifo]:
-                #message = os.read(self.fifo, 100).strip("\n")  
                 message = readline_custom(self.fifo)
                 if len(message) > 0:        
-                    #logging.debug("Message: "+message+" ("+message.encode("hex")+")")
                     self.queue.put({"message": message, "prot": "PIPE"})            
 
     # Send a message		
     def send_message(self, message):
-        #logging.debug("FIFO: writing '"+message+"'")
-        if message[-1] != "\n":
-            message += "\n"
-            os.write(self.fifo, message)
-        #logging.debug("FIFO: written")
+        """ Send response """
+        if self.send_response: 
+            if message[-1] != "\n":
+                message += "\n"
+                os.write(self.fifo, message)
 
-    # Stop receiving mesassages
+    def set_send_response(self, val):
+        """ Sets wheter or not a response should be sent """
+        self.send_response = val
+
     def close(self):
+        """ Stop receiving mesassages """
         self.running = False
         self.t.join()
         self.fifo.close()
