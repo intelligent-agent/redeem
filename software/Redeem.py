@@ -289,7 +289,7 @@ class Redeem:
             if hasattr(self, "cold_end_1"):
                 answer += " T2:"+str(int(self.cold_end_1.getTemperature()))         
             g.setAnswer(answer)
-       elif g.code() == "M106":                                    # Fan on
+        elif g.code() == "M106":                                    # Fan on
             if g.hasLetter("P"):
                 fan = self.fans[int(g.getValueByLetter("P"))]
                 fan.set_value(float(g.getValueByLetter("S"))/255.0)     # According to reprap wiki, the number is 0..255
