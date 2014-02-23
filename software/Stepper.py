@@ -57,7 +57,7 @@ class Stepper:
         self.name            = name
         self.state           = (1<<6)|(1<<7)# The initial state of the inputs
         self.dacvalue 	     = 0x00   	    # The voltage value on the VREF		
-        self.enabled 	     = False	    # Start disabled
+        self.enabled 	       = False	    # Start disabled
         self.seconds_pr_step = 0.001        # Delay between each step (will be set by feed rate)
         self.steps_pr_mm     = 1            # Numer of steps pr mm. 
         self.debug           = 2            # Debug level

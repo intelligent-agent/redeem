@@ -17,10 +17,11 @@ import re
 
 with open("/var/log/tty0tty.log", 'r') as f:
     for line in f:
-		pass
+        pass
 
 m = re.search('\(.*\) ', line)
 filename = m.group(0)[1:-2]
+pipename = line.rstrip()
 
 class Pipe:
     def __init__(self, queue):
@@ -28,6 +29,7 @@ class Pipe:
         self.running = True
         self.debug = 0
         self.fifo = os.open(filename, os.O_RDWR)
+        logging.info("Pipe connected to end '"+str(filename)+"' on virtual tty '"+str(pipename)+"'")        
         self.t = Thread(target=self.get_message)
         self.send_response = True
         self.t.daemon = True
@@ -38,10 +40,8 @@ class Pipe:
         while self.running:
             ret = select.select( [self.fifo],[],[], 1.0 )
     	    if ret[0] == [self.fifo]:
-                #message = os.read(self.fifo, 100).strip("\n")  
                 message = readline_custom(self.fifo)
                 if len(message) > 0:        
-                    #logging.debug("Message: "+message+" ("+message.encode("hex")+")")
                     self.queue.put({"message": message, "prot": "PIPE"})            
 
     def send_message(self, message):
