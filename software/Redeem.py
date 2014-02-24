@@ -80,8 +80,8 @@ class Redeem:
         self.steppers["X"] = Stepper("GPIO0_27", "GPIO1_29", "GPIO2_4",  0, "X",-1,self.end_stops["X1"], 0,0) 
         self.steppers["Y"] = Stepper("GPIO1_12", "GPIO0_22", "GPIO2_5",  1, "Y",1,self.end_stops["Y1"], 1,1)  
         self.steppers["Z"] = Stepper("GPIO0_23", "GPIO0_26", "GPIO0_15", 2, "Z",1,self.end_stops["Z1"],2,2)  
-        self.steppers["E"] = Stepper("GPIO1_28", "GPIO1_15", "GPIO2_1",  3, "Ext1",-1, None,5,5)
-        self.steppers["H"] = Stepper("GPIO1_13", "GPIO1_14", "GPIO2_3",  4, "Ext2",-1, None,6,6)
+        self.steppers["E"] = Stepper("GPIO1_28", "GPIO1_15", "GPIO2_1",  3, "Ext1",-1, None,3,3)
+        self.steppers["H"] = Stepper("GPIO1_13", "GPIO1_14", "GPIO2_3",  4, "Ext2",-1, None,4,4)
 
         # Enable the steppers and set the current, steps pr mm and microstepping  
         for name, stepper in self.steppers.iteritems():
