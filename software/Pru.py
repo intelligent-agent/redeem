@@ -163,7 +163,7 @@ class Pru:
         #print ":".join("{0:x}".format(ord(c)) for c in data)
         self.ddr_end = self.ddr_start+len(data)       
         if self.ddr_end >= self.DDR_END-16:                     # If the data is too long, wrap it around to the start
-            multiple = (self.DDR_END-16-self.ddr_start)%2       # Find a multiple of 8: 4*(pins, delays)
+            multiple = (self.DDR_END-16-self.ddr_start)%8       # Find a multiple of 8: 4*(pins, delays)
             cut = self.DDR_END-16-self.ddr_start-multiple-4     # The cut must be done after a delay, so a multiple of 8 bytes +/-4
             
             if cut == 4: 
@@ -171,7 +171,7 @@ class Pru:
                 cut = 12                
             logging.debug("Data len is "+hex(len(data))+", Cutting the data at "+hex(cut))
 
-            first = struct.pack('L', len(data[4:cut])/2)+data[4:cut]    # Update the loop count
+            first = struct.pack('L', len(data[4:cut])/8)+data[4:cut]    # Update the loop count
             first += struct.pack('L', DDR_MAGIC)                        # Add the magic number to force a reset of DDR memory counter
             #logging.warning("First batch starts from "+hex(self.ddr_start)+" to "+hex(self.ddr_start+len(first)))
             self.ddr_mem[self.ddr_start:self.ddr_start+len(first)] = first  # Write the first part of the data to the DDR memory.

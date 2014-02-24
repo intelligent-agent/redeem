@@ -256,11 +256,9 @@ class Redeem:
         elif g.code() == "M17":                                     # Enable all steppers
             self.path_planner.wait_until_done()
             for name, stepper in self.steppers.iteritems():
-                if name!='E' and name!='H':
-                    print name
-                    stepper.setEnabled() 
-                else:
-                    stepper.setDisabled()
+                #if name!='E' and name!='H':
+                stepper.setEnabled() 
+
             Stepper.commit()           
         elif g.code() == "M19":                                     # Reset all steppers
             self.path_planner.wait_until_done()

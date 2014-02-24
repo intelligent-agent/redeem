@@ -61,6 +61,11 @@ class Path_planner:
         #Check what is the direction of the first move
         positive = self.steppers[axis].getEndstop().isHit()
         if not positive:
+            if self.current_pos[axis]>0:
+                p = Path({axis:0}, 0.1, "ABSOLUTE", True, True)
+                p.set_homing_feedrate()
+                self.add_path(p)    
+                self.wait_until_done()
             while not self.steppers[axis].getEndstop().isHit():
                 p = Path({axis:-0.01}, 0.1, "RELATIVE", True, True)
                 p.set_homing_feedrate()
@@ -133,6 +138,9 @@ class Path_planner:
                     #self.pru_data = self._braid_data(self.pru_data, zip(*data))
                     self._braid_data1(self.pru_data, zip(*data))
 
+        #print "AFTER"
+        #print self.pru_data
+
         while len(self.pru_data) > 0:  
             data = self.pru_data[0:0x20000/8]
             del self.pru_data[0:0x20000/8]
@@ -178,15 +186,15 @@ class Path_planner:
             dly1 -= dly    
             dly2 -= dly            
             try: 
-                if dly1 == 0 and dly2 == 0:
+                if dly1==0 and dly2==0:
                     data1[line] = (pin1|pin2, dir1 | dir2,o1 | o2, dly)
                     (pin1,dir1,o1, dly1) = data1[line+1]
                     (pin2,dir2,o2, dly2) = data2.pop(0)
-                elif dly1 == 0:
-                    data1[line] = (pin1|pin2, dir1 | dir2,o1 | o2, dly)
+                elif dly1==0:
+                    data1[line] = (pin1, dir1 ,o1 , dly)
                     (pin1,dir1,o1, dly1) = data1[line+1]
-                elif dly2 == 0:    
-                    data1.insert(line, (pin1|pin2, dir1 | dir2,o1 | o2, dly))
+                elif dly2==0:    
+                    data1.insert(line, (pin2, dir2, o2, dly))
                     (pin2,dir2,o2, dly2) = data2.pop(0)
                 line += 1
             except IndexError:
@@ -196,16 +204,16 @@ class Path_planner:
             data1[line] =  (data1[line][0],data1[line][1],data1[line][2], data1[line][3]+dly2)        
         elif dly1 > 0:
             data1[line] = (data1[line][0], data1[line][1],data1[line][2], data1[line][3]+dly1)  
-            data1.pop(line+1)
+            #data1.pop(line+1)
         
         while len(data2) > 0:
             line += 1
             (pin2,dir2,o2, dly2) = data2.pop(0)
-            data1.append((pin2|pin1,dir1 | dir2,o1 | o2, dly2))
-        while len(data1) > line+1:
-            line += 1
-            (pin1, dir1,o1, dly1) = data1[line]
-            data1[line] = (pin2|pin1,dir1 | dir2,o1 | o2, dly1)
+            data1.append((pin2, dir2,o2, dly2))
+        #while len(data1) > line+1:
+        #    line += 1
+        #    (pin1, dir1,o1, dly1) = data1[line]
+        #    data1[line] = (pin2|pin1,dir1 | dir2,o1 | o2, dly1)
 
     ''' Join the thread '''
     def exit(self):
