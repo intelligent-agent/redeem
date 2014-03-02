@@ -360,6 +360,7 @@ class Redeem:
             fan.set_value(float(g.get_value_by_letter("S")))	           
         elif g.code() == "M190":
             self.hbp.set_target_temperature(float(g.get_value_by_letter("S")))
+            self._execute(Gcode({"message": "M116", "prot": g.prot}))
         elif g.code() == "T0":                                      # Select tool 0
             self.current_tool = "E"
         elif g.code() == "T1":                                      # select tool 1
