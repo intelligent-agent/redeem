@@ -18,26 +18,31 @@ either an extruder, a HBP or could even be a heated chamber
 class Heater(object):
     ''' Init '''
     def __init__(self, thermistor, mosfet, name):
-        self.thermistor = thermistor     # A handle to the thermistor instance used. 
-        self.mosfet = mosfet             # A handle to the mosfet instance used. 
-        self.name = name                 # Name, used for debugging
+        self.thermistor = thermistor     
+        self.mosfet = mosfet             
+        self.name = name                   # Name, used for debugging
         self.current_temp = 0.0
         self.target_temp = 0.0             # Target temperature (Ts). Start off. 
         self.last_error = 0.0              # Previous error term, used in calculating the derivative
         self.error_integral = 0.0          # Accumulated integral since the temperature came within the boudry
-        self.error_integral_limit = 40.0 # Integral temperature boundry
-        self.debug = 0                   # Debug level
-        self.P = 1.0                     # Proportional 
-        self.I = 0.0                     # Integral 
-        self.D = 0.0                     # Derivative
+        self.error_integral_limit = 40.0  # Integral temperature boundry
+        self.P = 1.0                      # Proportional 
+        self.I = 0.0                      # Integral 
+        self.D = 0.0                      # Derivative
 
     ''' Set the desired temperature of the extruder '''
-    def setTargetTemperature(self, temp):
+    def set_target_temperature(self, temp):
         self.target_temp = float(temp)
 
     ''' get the temperature of the thermistor'''
-    def getTemperature(self):
+    def get_temperature(self):
         return self.current_temp
+
+    ''' Returns true if the target temperature is reached '''
+    def is_target_temperature_reached(self):
+        if self.target_temp  == 0:
+          return True
+        return (self.current_temp >= self.target_temp)
 
     ''' Stops the heater and the PID controller '''
     def disable(self):
@@ -46,7 +51,7 @@ class Heater(object):
         while self.disabled == False:
             time.sleep(0.2)
         # The PID loop has finished		
-        self.mosfet.setPower(0.0)
+        self.mosfet.set_power(0.0)
         self.mosfet.close()
 
     ''' Start the PID controller '''
@@ -58,37 +63,33 @@ class Heater(object):
         self.t.start()		
 
     ''' Set values for Proportional, Integral, Derivative'''
-    def setPvalue(self, P):
+    def set_p_value(self, P):
         self.P = P # Proportional 
 
-    def setIvalue(self, I):
+    def set_i_value(self, I):
         self.I = I # Integral
 
-    def setDvalue(self, D):
+    def set_d_value(self, D):
         self.D = D # Derivative
 
     ''' PID Thread that keeps the temperature stable '''
     def keep_temperature(self):
         while self.enabled:            			
-            self.current_temp = self.thermistor.getTemperature()    # Read the current temperature		
-            error = self.target_temp-self.current_temp   # Calculate the error 
-            derivative = self._getErrorDerivative(error) # Calculate the error derivative 
-            integral = self._getErrorIntegral(error)     # Calculate the error integral        
-            power = self.P*(error + self.D*derivative + self.I*integral) # The formula for the PID				
-            power = max(min(power, 1.0), 0.0)            # Normalize to 0,1
-            self.mosfet.setPower(power)            		 # Update the mosfet            
-            log = self.name+": Tgt: %f, Cur: %f"%(self.target_temp, self.current_temp)
-            log += ", Err: %f, Pow: %f"%(error, power)              
-            #if self.name == "Ext1":
-                #logging.debug(log+", Der: %f, Int: %f"%(self.D*derivative, self.I*integral))
-            time.sleep(1)            					 # Wait one second        
-        self.disabled = True							 # Signal the disable that we are done
+            self.current_temp = self.thermistor.getTemperature()    
+            error = self.target_temp-self.current_temp              
+            derivative = self._getErrorDerivative(error)            
+            integral = self._getErrorIntegral(error)     
+            power = self.P*(error + self.D*derivative + self.I*integral)  # The formula for the PID				
+            power = max(min(power, 1.0), 0.0)                             # Normalize to 0,1
+            self.mosfet.set_power(power)            		 
+            time.sleep(1)
+        self.disabled = True
 
 
     ''' Get the derivative of the error term '''
     def _getErrorDerivative(self, current_error):       
         derivative = current_error-self.last_error		# Calculate the diff
-        self.last_error = current_error					# Update the last error 
+        self.last_error = current_error					      # Update the last error 
         return derivative
 
     ''' Calculate and return the error integral '''

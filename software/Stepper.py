@@ -43,7 +43,7 @@ class Stepper:
     def commit():        
         bytes = []
         for stepper in Stepper.all_steppers:	   
-            bytes.append(stepper.getState())
+            bytes.append(stepper.get_state())
         txt = ", ".join([hex(b) for b in bytes[::-1]])
         #logging.debug("Writing SPI: "+txt)
         spi2_1.writebytes(bytes[::-1])
@@ -66,7 +66,7 @@ class Stepper:
         Stepper.all_steppers.append(self) 	    # Add to list of steppers
  						
     ''' Sets the Stepper enabled '''
-    def setEnabled(self, value=1, force_update=False):
+    def set_enabled(self, value=1, force_update=False):
         if not self.enabled:
             self.state &= ~(value<<4)
             self.enabled = value
@@ -74,7 +74,7 @@ class Stepper:
             self.update()
             	
     ''' Sets the Stepper disabled '''
-    def setDisabled(self, force_update=False):
+    def set_disabled(self, force_update=False):
         if self.enabled:
             self.state |= (1<<4)
             self.enabled = False
@@ -83,14 +83,14 @@ class Stepper:
 
     '''Logic high to enable device, logic low to enter
     low-power sleep mode. Internal pulldown.'''
-    def enableSleepmode(self, force_update=False):
+    def enable_sleepmode(self, force_update=False):
         self.state &= ~(1<<6)		
         if force_update: 
             self.update()
 
 
     ''' Disables sleepmode (awake) '''
-    def disableSleepmode(self, force_update=False):
+    def disable_sleepmode(self, force_update=False):
         self.state |= (1<<6)		
         if force_update: 
             self.update()
@@ -113,10 +113,10 @@ class Stepper:
         self.microsteps  = 2**value 	
         self.state = int("0b"+bin(self.state)[2:].rjust(8, '0')[:4]+bin(value)[2:].rjust(3, '0')[::-1]+"0", 2)
         self.mmPrStep    = 1.0/(self.steps_pr_mm*self.microsteps)
-        logging.debug("Value is: "+bin(value))
-        logging.debug("State is: "+bin(self.state))
-        logging.debug("Microsteps: "+str(self.microsteps))
-        logging.debug("mmPrStep is: "+str(self.mmPrStep))
+        #logging.debug("Value is: "+bin(value))
+        #logging.debug("State is: "+bin(self.state))
+        #logging.debug("Microsteps: "+str(self.microsteps))
+        #logging.debug("mmPrStep is: "+str(self.mmPrStep))
         if force_update: 
             self.update()
 
@@ -128,7 +128,7 @@ class Stepper:
             self.update()
 
     ''' Current chopping limit (This is the value you can change) '''
-    def setCurrentValue(self, iChop):        
+    def set_current_value(self, iChop):        
         vRef = 3.3                              # Voltage reference on the DAC
         rSense = 0.1                            # Resistance for the 
         vOut = iChop*5.0*rSense                 # Calculated voltage out from the DAC 
@@ -141,7 +141,7 @@ class Stepper:
 
 
     ''' Returns the current state '''
-    def getState(self):
+    def get_state(self):
         return self.state & 0xFF				# Return the state of the serial to parallel
 
     ''' Commits the changes	'''
@@ -153,7 +153,7 @@ class Stepper:
     '''
 
     ''' Set the feed rate in mm/min '''
-    def setFeedRate(self, feed_rate):		
+    def set_feed_rate(self, feed_rate):
         minutes_pr_mm = 1.0/float(feed_rate)
         seconds_pr_mm = minutes_pr_mm*60.0
         self.seconds_pr_step = self.mmPrStep*seconds_pr_mm

@@ -16,3 +16,7 @@ Software features:
 - Controllable via ethernet, USB, printer display.   
 
 Wiki: http://wiki.thing-printer.com/index.php?title=Redeem
+
+- Changed the systemd file to a oneshot. 
+- made the Redeem.py file executable
+- 

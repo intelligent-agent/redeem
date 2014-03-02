@@ -99,9 +99,6 @@ class Pru:
         """ Returns True if there are segments on queue """
         return not self.is_empty()
 
-    def pack(self, word):
-        return struct.pack('L', word)
-
     ''' Commit the data to the DDR memory '''
     def commit_data(self):
         data = struct.pack('L', len(self.pru_data)/2)	    	# Pack the number of toggles. 

@@ -1,13 +1,10 @@
 [Unit]
-Description=Redeem is the Replicape Dameon
+Description=The Replicape Dameon
 
 [Service]
-RemainAfterExit=yes
 Type=simple
-ExecStart=/etc/init.d/redeem.sh start
-ExecStop=/etc/init.d/redeem.sh stop
-Restart=always
+RemainAfterExit=True
+ExecStart=/usr/src/redeem/software/Redeem.py
 
 [Install]
 WantedBy=basic.target
-

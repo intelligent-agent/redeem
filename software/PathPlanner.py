@@ -20,7 +20,7 @@ import Queue
 from collections import defaultdict
 import braid
 
-class Path_planner:
+class PathPlanner:
     ''' Init the planner '''
     def __init__(self, steppers, current_pos):
         self.steppers    = steppers
@@ -52,9 +52,9 @@ class Path_planner:
         return self.paths.qsize()
 
     ''' Set position for an axis '''
-    def set_pos(self, axis, val):
+    def _set_pos(self, axis, val):
         self.current_pos[axis] = val
-	
+
     def wait_until_done(self):
         '''Wait until planner is done'''
         self.paths.join()
@@ -72,7 +72,7 @@ class Path_planner:
 
         if path.is_G92():                                   # Only set the position of the axes
             for axis, pos in path.get_pos().iteritems():                       # Run through all the axes in the path    
-                self.set_pos(axis, pos)           
+                self._set_pos(axis, pos)           
             self.paths.task_done()            
             return                
        

@@ -161,7 +161,7 @@ class Path:
         """ Returns the unit vector of the vector.  """
         return vector / np.linalg.norm(vector)        
 
-    def angle_between(self, v1, v2):
+    def _angle_between(self, v1, v2):
         """ Returns the angle in radians between vectors 'v1' and 'v2':: Creds to David Wolever for this """
         v1_u = self.unit_vector(v1)
         v2_u = self.unit_vector(v2)
@@ -182,7 +182,7 @@ class Path:
 
         v1 = [self.get_axis_length("X"), self.get_axis_length("Y")]
         v2 = [self.next.get_axis_length("X"), self.next.get_axis_length("Y")]
-        angle = self.angle_between(v1, v2)
+        angle = self._angle_between(v1, v2)
         self.angle_to_next_cal = angle
         return angle
     
@@ -195,7 +195,7 @@ class Path:
 
         v1 = [self.get_axis_length("X"), self.get_axis_length("Y")]
         v2 = [self.prev.get_axis_length("X"), self.prev.get_axis_length("Y")]
-        angle = self.angle_between(v1, v2)
+        angle = self._angle_between(v1, v2)
         self.angle_to_prev_cal = angle
         return angle
         
