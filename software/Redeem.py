@@ -10,7 +10,7 @@ License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 Minor verion tag (starting from 0.8) is Arhold Schwartsnegger movies chronologically. 
 '''
 
-version = "0.8.0~Hercules-in-New-York"
+version = "0.9.0~The Long Goodbye"
 
 from math import sqrt
 import time
@@ -119,20 +119,20 @@ class Redeem:
 
         # Make extruder 1
         self.ext1 = Extruder(self.steppers["E"], self.therm_ext1, self.mosfet_ext1, "Ext1")
-        self.ext1.set_p_value(0.1)
-        self.ext1.set_d_value(0.3)     
-        self.ext1.set_i_value(0.0)
+        self.ext1.set_p_value(self.config.getfloat('Heaters', "ext1_pid_p"))
+        self.ext1.set_d_value(self.config.getfloat('Heaters', "ext1_pid_d"))
+        self.ext1.set_i_value(self.config.getfloat('Heaters', "ext1_pid_i"))
 
         # Make Heated Build platform 
         self.hbp = HBP( self.therm_hbp, self.mosfet_hbp)       
 
         # Make extruder 2.
         self.ext2 = Extruder(self.steppers["H"], self.therm_ext2, self.mosfet_ext2, "Ext2")
-        self.ext1.set_p_value(0.1)
-        self.ext1.set_d_value(0.3)     
-        self.ext1.set_i_value(0.0)
+        self.ext1.set_p_value(self.config.getfloat('Heaters', "ext2_pid_p"))
+        self.ext1.set_d_value(self.config.getfloat('Heaters', "ext2_pid_i"))     
+        self.ext1.set_i_value(self.config.getfloat('Heaters', "ext2_pid_d"))
 
-        self.current_tool = "E"
+        self.current_tool = "E" # Use Extruder 0 as default
 
         # Init the three fans. Argument is PWM channel number
         if self.revision == "A3":
@@ -170,7 +170,6 @@ class Redeem:
         self.movement = "RELATIVE"
         self.feed_rate = 3000.0
         self.current_pos = {"X":0.0, "Y":0.0, "Z":0.0, "E":0.0,"H":0.0}
-        self.acceleration = 0.3
         Path.axis_config = int(self.config.get('Geometry', 'axis_config'))
         Path.max_speed_x = float(self.config.get('Steppers', 'max_speed_x'))
         Path.max_speed_y = float(self.config.get('Steppers', 'max_speed_y'))
@@ -179,7 +178,7 @@ class Redeem:
         Path.max_speed_h = float(self.config.get('Steppers', 'max_speed_h'))
 
         self.path_planner = PathPlanner(self.steppers, self.current_pos)         
-        self.path_planner.set_acceleration(self.acceleration) 
+        self.path_planner.set_acceleration(self.config.getfloat('Steppers', 'accelleration')) 
 
         
 

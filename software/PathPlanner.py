@@ -30,7 +30,7 @@ class PathPlanner:
         self.running     = True                                 # Yes, we are running
         self.pru_data    = []
         self.t           = Thread(target=self._do_work)         # Make the thread
-        self.t.daemon = True
+        self.t.daemon    = True
         if __name__ != '__main__':
             self.t.start()		 
 
@@ -203,7 +203,7 @@ class PathPlanner:
         if vec < 0:                                                     # If the vector is negative, negate it.      
             td     *= -1.0
 
-		# Make sure the dir pin is shifted 650 ns before the step pins
+		    # Make sure the dir pin is shifted 650 ns before the step pins
         pins = [dir_pin]+pins
         delays = np.array([650*10**-9])+delays
 

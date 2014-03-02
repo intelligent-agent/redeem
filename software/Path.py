@@ -119,9 +119,6 @@ class Path:
             X = np.dot(Path.Ainv, b)
             self.vector = {"X":X[0, 0], "Y":X[0, 1], "Z":z, "E":e, "H": h}
 
-
-        
-
     def get_length(self):     
         """ Get the length of this path segment """
         x = self.vector["X"]
