@@ -64,8 +64,11 @@ class Redeem:
         config_filename = '/etc/redeem/default.cfg'
         if os.path.isfile(config_filename):
           self.config.readfp(open(config_filename))
+          logging.info("using config file "+config_filename)
         else:
-          self.config.readfp(open("/usr/src/redeem/software/config/default.cfg"))  
+          config_filename = "/usr/src/redeem/software/config/default.cfg"
+          self.config.readfp(open(config_filename))  
+          logging.info("using config file "+config_filename)
 
         # Get the revision from the Config file
         self.revision = self.config.get('System', 'revision', "A4")
@@ -263,6 +266,8 @@ class Redeem:
             for i in range(g.num_tokens()):                         
                 self.steppers[g.token_letter(i)].set_current_value(float(g.token_value(i)))            
             Stepper.commit() 
+        elif g.code() == "M81": 
+            os.system("shutdown now")
         elif g.code() == "M84" or g.code() == "M18":                # Disable all steppers           
             self.path_planner.wait_until_done()
             for name, stepper in self.steppers.iteritems():
