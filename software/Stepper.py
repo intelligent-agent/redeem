@@ -11,7 +11,7 @@ License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 '''
 The bits in the shift register are as follows (Rev A4) :
 Bit - name   - init val 
-D0 = -		 = X
+D0 = -		   = X
 D1 = MODE2   = 0
 D2 = MODE1   = 0
 D3 = MODE0   = 0
@@ -20,6 +20,19 @@ D5 = DECAY   = 0  - Slow decay
 D6 = nSLEEP  = 1  - Not sleeping 
 D7 = nRESET  = 1  - Not in reset mode
 '''
+
+'''
+The bits in the shift register are as follows (Rev A3):
+D0 = DECAY   = X
+D1 = MODE0   = X
+D2 = MODE1   = X
+D3 = MODE2 	 = X
+D4 = nRESET  = 1
+D5 = nSLEEP  = 1
+D6 = nENABLE = 0
+D7 = -   		 = X
+'''
+
 from spi import SPI
 from threading import Thread
 import time
@@ -35,9 +48,13 @@ spi2_1.bpw = 8
 spi2_1.mode = 0
 
 class Stepper:
-
     all_steppers = list()
-
+    revision    = "A4"
+    SLEEP       = 6
+    ENABLED     = 4
+    RESET       = 7
+    DECAY       = 5
+    
     ''' Send the values to the serial to parallel chips '''
     @staticmethod
     def commit():        
@@ -45,7 +62,7 @@ class Stepper:
         for stepper in Stepper.all_steppers:	   
             bytes.append(stepper.get_state())
         txt = ", ".join([hex(b) for b in bytes[::-1]])
-        #logging.debug("Writing SPI: "+txt)
+        logging.debug("Updating steppers: "+txt)
         spi2_1.writebytes(bytes[::-1])
 
     ''' Init'''
@@ -55,12 +72,11 @@ class Stepper:
         self.dirPin          = dirPin
         self.faultPin        = faultPin
         self.name            = name
-        self.state           = (1<<6)|(1<<7)# The initial state of the inputs
+        self.state           = (1<<Stepper.SLEEP)|(1<<Stepper.RESET)# The initial state of the inputs
         self.dacvalue 	     = 0x00   	    # The voltage value on the VREF		
-        self.enabled 	       = False	    # Start disabled
+        self.enabled 	     = False	      # Start disabled
         self.seconds_pr_step = 0.001        # Delay between each step (will be set by feed rate)
         self.steps_pr_mm     = 1            # Numer of steps pr mm. 
-        self.debug           = 2            # Debug level
         self.microsteps      = 1.0          # Well, this is the microstep number
         self.pru_num         = -1           # PRU number, if any 
         Stepper.all_steppers.append(self) 	    # Add to list of steppers
@@ -68,7 +84,7 @@ class Stepper:
     ''' Sets the Stepper enabled '''
     def set_enabled(self, value=1, force_update=False):
         if not self.enabled:
-            self.state &= ~(value<<4)
+            self.state &= ~(value<<Stepper.ENABLED)
             self.enabled = value
         if force_update: 
             self.update()
@@ -76,7 +92,7 @@ class Stepper:
     ''' Sets the Stepper disabled '''
     def set_disabled(self, force_update=False):
         if self.enabled:
-            self.state |= (1<<4)
+            self.state |= (1<<Stepper.ENABLED)
             self.enabled = False
         if force_update: 
             self.update()
@@ -84,14 +100,14 @@ class Stepper:
     '''Logic high to enable device, logic low to enter
     low-power sleep mode. Internal pulldown.'''
     def enable_sleepmode(self, force_update=False):
-        self.state &= ~(1<<6)		
+        self.state &= ~(1<<Stepper.SLEEP)		
         if force_update: 
             self.update()
 
 
     ''' Disables sleepmode (awake) '''
     def disable_sleepmode(self, force_update=False):
-        self.state |= (1<<6)		
+        self.state |= (1<<Stepper.SLEEP)		
         if force_update: 
             self.update()
 
@@ -99,10 +115,10 @@ class Stepper:
     logic and disables the H-bridge outputs.
     Internal pulldown.'''
     def reset(self, force_update=False):
-        self.state &= ~(1<<7)
+        self.state &= ~(1<<Stepper.RESET)
         self.update()
         time.sleep(0.001)
-        self.state |= (1<<7)
+        self.state |= (1<<Stepper.RESET)
         self.update()
 
     ''' Microstepping (default = 0) 0 to 5 '''
@@ -110,20 +126,22 @@ class Stepper:
         if not value in [0, 1, 2, 3, 4, 5]: # Full, half, 1/4, 1/8, 1/16, 1/32. 
             logging.warning("Tried to set illegal microstepping value: {0} for stepper {1}".format(value, self.name))
             return
-        self.microsteps  = 2**value 	
-        self.state = int("0b"+bin(self.state)[2:].rjust(8, '0')[:4]+bin(value)[2:].rjust(3, '0')[::-1]+"0", 2)
+        self.microsteps  = 2**value     # 2^val
+        if Stepper.revision == "A4":
+            # Keep bit 4, 5, 6, 7 intact but replace and reverse bit 1, 2, 3
+            self.state = int("0b"+bin(self.state)[2:].rjust(8, '0')[:4]+bin(value)[2:].rjust(3, '0')[::-1]+"0", 2)
+        else:
+            # Keep bit 0, 4, 5, 6 intact but replace bit 1, 2, 3
+            #self.state = int("0b"+bin(self.state)[2:].rjust(8, '0')[:4]+bin(value)[2:].rjust(3, '0')+bin(self.state)[-1:], 2)
+            self.state = int("0b"+bin(self.state)[2:].rjust(8, '0')[:4]+bin(value)[2:].rjust(3, '0')+"0", 2)
         self.mmPrStep    = 1.0/(self.steps_pr_mm*self.microsteps)
-        #logging.debug("Value is: "+bin(value))
-        #logging.debug("State is: "+bin(self.state))
-        #logging.debug("Microsteps: "+str(self.microsteps))
-        #logging.debug("mmPrStep is: "+str(self.mmPrStep))
         if force_update: 
             self.update()
 
     def set_decay(self, value, force_update=False):
         ''' Decay mode, look in the data sheet '''
-        self.state &= ~(1<<5)        # bit 5 
-        self.state |= (value<<5) 
+        self.state &= ~(1<<Stepper.DECAY)        # bit 5 
+        self.state |= (value<<Stepper.DECAY) 
         if force_update: 
             self.update()
 

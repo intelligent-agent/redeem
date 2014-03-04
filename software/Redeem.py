@@ -66,7 +66,7 @@ class Redeem:
           self.config.readfp(open(config_filename))
           logging.info("using config file "+config_filename)
         else:
-          config_filename = "/usr/src/redeem/software/config/default.cfg"
+          config_filename = "/usr/src/redeem/configs/default.cfg"
           self.config.readfp(open(config_filename))  
           logging.info("using config file "+config_filename)
 
@@ -76,6 +76,13 @@ class Redeem:
 
         # Make a list of steppers
         self.steppers = {}
+
+        if self.revision == "A3":
+            Stepper.revision = "A3"
+            Stepper.ENABLED = 6
+            Stepper.SLEEP   = 5
+            Stepper.RESET   = 4
+            Stepper.DECAY   = 0
 
         # Init the 5 Stepper motors (step, dir, fault, DAC channel, name)
         self.steppers["X"] = Stepper("GPIO0_27", "GPIO1_29", "GPIO2_4",  0, "X") 
@@ -152,13 +159,21 @@ class Redeem:
 
         # Init the end stops
         self.end_stops = {}
-        self.end_stops["X1"] = EndStop("GPIO3_21", self.steppers, 112, "X1")
-        self.end_stops["X2"] = EndStop("GPIO0_30", self.steppers, 113, "X2")
-        self.end_stops["Y1"] = EndStop("GPIO1_17", self.steppers, 114, "Y1")
-        self.end_stops["Y2"] = EndStop("GPIO1_19", self.steppers, 115, "Y2")
-        self.end_stops["Z1"] = EndStop("GPIO0_31", self.steppers, 116, "Z1")
-        self.end_stops["Z2"] = EndStop("GPIO0_4",  self.steppers, 117, "Z2")
-        
+        if self.revision == "A4": 
+            self.end_stops["X1"] = EndStop("GPIO3_21", self.steppers, 112, "X1")
+            self.end_stops["X2"] = EndStop("GPIO0_30", self.steppers, 113, "X2")
+            self.end_stops["Y1"] = EndStop("GPIO1_17", self.steppers, 114, "Y1")
+            self.end_stops["Y2"] = EndStop("GPIO1_19", self.steppers, 115, "Y2")
+            self.end_stops["Z1"] = EndStop("GPIO0_31", self.steppers, 116, "Z1")
+            self.end_stops["Z2"] = EndStop("GPIO0_4",  self.steppers, 117, "Z2")
+        else: 
+            self.end_stops["X1"] = EndStop("GPIO2_2", self.steppers, 112, "X1")
+            self.end_stops["X2"] = EndStop("GPIO0_14", self.steppers, 113, "X2")
+            self.end_stops["Y1"] = EndStop("GPIO0_30", self.steppers, 114, "Y1")
+            self.end_stops["Y2"] = EndStop("GPIO3_21", self.steppers, 115, "Y2")
+            self.end_stops["Z1"] = EndStop("GPIO0_31", self.steppers, 116, "Z1")
+            self.end_stops["Z2"] = EndStop("GPIO0_4",  self.steppers, 117, "Z2")
+                    
         # Make a queue of commands
         self.commands = Queue.Queue(10)
 

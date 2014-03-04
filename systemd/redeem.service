@@ -2,8 +2,6 @@
 Description=The Replicape Dameon
 
 [Service]
-Type=simple
-RemainAfterExit=True
 ExecStart=/usr/src/redeem/software/Redeem.py
 
 [Install]
