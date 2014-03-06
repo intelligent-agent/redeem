@@ -13,14 +13,13 @@ from numpy import linalg as la
 import ConfigParser
 import logging
 
-AXIS_CONFIG_XY     = 0
-AXIS_CONFIG_H_BELT = 1
-
-
 class Path: 	
+    AXIS_CONFIG_XY     = 0
+    AXIS_CONFIG_H_BELT = 1
+
     A = np.matrix('-0.5 0.5; -0.5 -0.5')
     Ainv = np.linalg.inv(A)
-    axis_config=AXIS_CONFIG_XY # Default config is normal cartesian XY
+    axis_config = AXIS_CONFIG_XY # Default config is normal cartesian XY
     max_speed_x = 1.0
     max_speed_y = 1.0
     max_speed_z = 1.0
@@ -114,7 +113,7 @@ class Path:
 
         # implement any transformation. Hipsterbot has an H-type belt, so: 
         # This was taken from the article "Dynamic modelling of a Two-axis, Parallel H-frame-Type XY Positioning System".
-        if Path.axis_config == AXIS_CONFIG_H_BELT:            
+        if Path.axis_config == Path.AXIS_CONFIG_H_BELT:            
             b = np.array([x, y])
             X = np.dot(Path.Ainv, b)
             self.vector = {"X":X[0, 0], "Y":X[0, 1], "Z":z, "E":e, "H": h}
@@ -199,14 +198,14 @@ class Path:
     def stepper_to_axis(self, pos, axis):
         """ Give a steppers position, return the position along the axis """
         if axis == "X":
-            if Path.axis_config == AXIS_CONFIG_H_BELT:
+            if Path.axis_config == Path.AXIS_CONFIG_H_BELT:
                 X = np.array([pos, 0])
                 b = np.dot(Path.A, X)
                 return tuple(np.array(b)[0])
             else:
                 return (pos, 0.0)
         if axis == "Y":
-            if Path.axis_config == AXIS_CONFIG_H_BELT:
+            if Path.axis_config == Path.AXIS_CONFIG_H_BELT:
                 X = np.array([0, pos])
                 b = np.dot(Path.A, X)
                 return tuple(np.array(b)[0])

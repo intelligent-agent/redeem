@@ -60,7 +60,7 @@ class Redeem:
     ''' Init '''
     def __init__(self):
         logging.info("Redeem initializing "+version)
-        self.config = ConfigParser.ConfigParser()
+        self.config = ConfigParser.SafeConfigParser()
         config_filename = '/etc/redeem/default.cfg'
         if os.path.isfile(config_filename):
           self.config.readfp(open(config_filename))
@@ -158,22 +158,16 @@ class Redeem:
         self.fan_1.setPWMFrequency(100)
 
         # Init the end stops
+        EndStop.callback = self.end_stop_hit # The callback to call when an endstop is hit. 
+        EndStop.inputdev = self.config.get('Endstops', 'inputdev')
         self.end_stops = {}
-        if self.revision == "A4": 
-            self.end_stops["X1"] = EndStop("GPIO3_21", self.steppers, 112, "X1")
-            self.end_stops["X2"] = EndStop("GPIO0_30", self.steppers, 113, "X2")
-            self.end_stops["Y1"] = EndStop("GPIO1_17", self.steppers, 114, "Y1")
-            self.end_stops["Y2"] = EndStop("GPIO1_19", self.steppers, 115, "Y2")
-            self.end_stops["Z1"] = EndStop("GPIO0_31", self.steppers, 116, "Z1")
-            self.end_stops["Z2"] = EndStop("GPIO0_4",  self.steppers, 117, "Z2")
-        else: 
-            self.end_stops["X1"] = EndStop("GPIO2_2", self.steppers, 112, "X1")
-            self.end_stops["X2"] = EndStop("GPIO0_14", self.steppers, 113, "X2")
-            self.end_stops["Y1"] = EndStop("GPIO0_30", self.steppers, 114, "Y1")
-            self.end_stops["Y2"] = EndStop("GPIO3_21", self.steppers, 115, "Y2")
-            self.end_stops["Z1"] = EndStop("GPIO0_31", self.steppers, 116, "Z1")
-            self.end_stops["Z2"] = EndStop("GPIO0_4",  self.steppers, 117, "Z2")
-                    
+        self.end_stops["X1"] = EndStop(112, "X1", self.config.getboolean('Endstops', 'invert_X1')) 
+        self.end_stops["X2"] = EndStop(113, "X2", self.config.getboolean('Endstops', 'invert_X2'))
+        self.end_stops["Y1"] = EndStop(114, "Y1", self.config.getboolean('Endstops', 'invert_Y1'))
+        self.end_stops["Y2"] = EndStop(115, "Y2", self.config.getboolean('Endstops', 'invert_Y2'))
+        self.end_stops["Z1"] = EndStop(116, "Z1", self.config.getboolean('Endstops', 'invert_Z1'))
+        self.end_stops["Z2"] = EndStop(117, "Z2", self.config.getboolean('Endstops', 'invert_Z2'))
+
         # Make a queue of commands
         self.commands = Queue.Queue(10)
 
@@ -224,56 +218,63 @@ class Redeem:
             if g.has_letter("F"):                                    # Get the feed rate                 
                 self.feed_rate = float(g.get_value_by_letter("F"))/60000.0 # Convert from mm/min to SI unit m/s
                 g.remove_token_by_letter("F")
-            smds = {}                                               # All steppers 
-            for i in range(g.num_tokens()):                          # Run through all tokens
-                axis = g.token_letter(i)                             # Get the axis, X, Y, Z or E
+            smds = {}                                               
+            for i in range(g.num_tokens()):                          
+                axis = g.token_letter(i)                             
                 smds[axis] = float(g.token_value(i))/1000.0          # Get the value, new position or vector             
             if g.has_letter("E") and self.current_tool != "E":       # We are using a different tool, switch..
                 smds[self.current_tool] = smds["E"]
                 del smds["E"]
-            path = Path(smds, self.feed_rate, self.movement, g.is_crc())# Make a path segment from the axes  
+            path = Path(smds, self.feed_rate, self.movement, g.is_crc())
             self.path_planner.add_path(path)                        # Add the path. This blocks until the path planner has capacity
-            #logging.debug("Moving to: "+' '.join('%s:%s' % i for i in smds.iteritems()))
-        elif g.code() == "G21":                                     # Set units to mm
+        elif g.code() == "G21":                                      # Set units to mm
             self.factor = 1.0
-        elif g.code() == "G28":                                     # Home the steppers
+        elif g.code() == "G28":                                      # Home the steppers
             if g.num_tokens() == 0:                                  # If no token is given, home all
                 g.set_tokens(["X0", "Y0", "Z0"])                
-            smds = {}                                               # All steppers 
-            for i in range(g.num_tokens()):                          # Run through all tokens
-                axis = g.token_letter(i)                             # Get the axis, X, Y, Z or E
-                smds[axis] = float(g.token_value(i))                 # Get tha value, new position or vector             
-            path = Path(smds, self.feed_rate, "ABSOLUTE", False)    # Make a path segment from the axes
-            #logging.debug("moving to "+str(smds))
-            self.path_planner.add_path(path)                        # Add the path. This blocks until the path planner has capacity
-        elif g.code() == "G90":                                     # Absolute positioning
+            for i in range(g.num_tokens()):                         
+                axis = g.token_letter(i)
+                if not self.config.getboolean('Endstops', "has_"+axis.lower()):
+                    continue
+                length = self.config.getfloat('Geometry', "travel_"+axis.lower())
+                path = Path({axis: -length}, self.feed_rate, "RELATIVE", False)   
+                # This will cause the axes to hit an endstop and disable the steppers. 
+                # So enable all axes again
+                logging.debug("moving to "+str({axis: -length}))
+                self.path_planner.add_path(path)                        # Add the path. This blocks until the path planner has capacity
+                self._execute(Gcode({"message": "M17", "prot": g.prot}))
+                offset = self.config.getfloat('Geometry', "offset_"+axis.lower())
+                self._execute(Gcode({"message": "G92 "+axis+str(-offset*1000), "prot": g.prot}))
+            self._execute(Gcode({"message": "G90 ", "prot": g.prot}))   # Absolute coords 
+            self._execute(Gcode({"message": "G1 X0 Y0 Z0", "prot": g.prot})) # Move to origin
+        elif g.code() == "G90":                                         # Absolute positioning
             self.movement = "ABSOLUTE"
-        elif g.code() == "G91":                                     # Relative positioning 
+        elif g.code() == "G91":                                         # Relative positioning 
             self.movement = "RELATIVE"		
-        elif g.code() == "G92":                                     # Set the current position of the following steppers
+        elif g.code() == "G92":                                         # Set the current position of the following steppers
             if g.num_tokens() == 0:
                 logging.debug("Adding all to G92")
-                g.set_tokens(["X0", "Y0", "Z0", "E0", "H0"])         # If no token is present, do this for all
-            pos = {}                                               # All steppers 
-            for i in range(g.num_tokens()):                          # Run through all tokens
-                axis = g.token_letter(i)                             # Get the axis, X, Y, Z or E
-                pos[axis] = float(g.token_value(i))/1000.0          # Get the value, new position or vector             
-            if self.current_tool == "H": 
+                g.set_tokens(["X0", "Y0", "Z0", "E0", "H0"])            # If no token is present, do this for all
+            pos = {}                                                    # All steppers 
+            for i in range(g.num_tokens()):                             # Run through all tokens
+                axis = g.token_letter(i)                                # Get the axis, X, Y, Z or E
+                pos[axis] = float(g.token_value(i))/1000.0              # Get the value, new position or vector             
+            if self.current_tool == "H" and "E" in pos: 
                 logging.debug("Adding H to G92")
-                pos["H"] = 0.0;
+                pos["H"] = pos["E"];
                 del pos["E"]
-            path = Path(pos, self.feed_rate, "G92")               # Make a path segment from the axes
+            path = Path(pos, self.feed_rate, "G92")                     # Make a path segment from the axes
             self.path_planner.add_path(path)  
-        elif g.code() == "M17":                                     # Enable all steppers
+        elif g.code() == "M17":                                         # Enable all steppers
             self.path_planner.wait_until_done()
             for name, stepper in self.steppers.iteritems():
                 stepper.set_enabled() 
             Stepper.commit()           
-        elif g.code() == "M19":                                     # Reset all steppers
+        elif g.code() == "M19":                                         # Reset all steppers
             self.path_planner.wait_until_done()
             for name, stepper in self.steppers.iteritems():
                 stepper.reset() 
-        elif g.code() == "M30":                                     # Set microstepping (Propietary to Replicape)
+        elif g.code() == "M30":                                         # Set microstepping (Propietary to Replicape)
             for i in range(g.num_tokens()):
                 self.steppers[g.token_letter(i)].set_microstepping(int(g.token_value(i)))            
             Stepper.commit() 
@@ -398,6 +399,21 @@ class Redeem:
         else:
             self.ethernet.send_message(gcode.get_answer())
 
+
+    ''' An endStop has been hit '''
+    def end_stop_hit(self, endstop):
+        axis = endstop.name[:1]
+        if Path.axis_config == Path.AXIS_CONFIG_XY: 
+            self.steppers[axis].set_disabled(True)
+        elif Path.axis_config == Path.AXIS_CONFIG_H_BELT:
+            if axis == "X" or axis == "Y":                  # X and Y are connected, must disable both
+                self.steppers["X"].set_disabled()
+                self.steppers["Y"].set_disabled(True)
+            else:
+                self.steppers[axis].set_disabled(True)           # Z-axis
+        else:
+            logging.error("Unknown axis config")    
+        logging.warning("End Stop " + endstop.name +" hit!")
 
 r = Redeem()
 r.loop()

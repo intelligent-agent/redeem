@@ -14,32 +14,30 @@ import logging
 from Stepper import Stepper
 
 class EndStop:
-    # pin is the pin where the connector is attached. 
-    def __init__(self, pin, steppers, key_code, name):
-        self.pin = pin
-        self.steppers = steppers
+
+    callback = None                 # Override this to get events
+    inputdev = "/dev/input/event0"  # File to listen to events
+
+    def __init__(self, key_code, name, invert=False):
         self.key_code = key_code
         self.name = name
-        self.t = Thread(target=self.wait_for_event)         # Make the thread
+        self.invert = invert
+        self.t = Thread(target=self._wait_for_event)
         self.t.daemon = True
         self.t.start()
 	
-    def wait_for_event(self):
-        #logging.debug("Waiting for end-stop events...")
-        # FIXME: configurable
-        evt_file = open("/dev/input/event0", "rb")
+    def _wait_for_event(self):
+        evt_file = open(EndStop.inputdev, "rb")
         while True:
             evt = evt_file.read(16) # Read the event
-            evt_file.read(16)       # Discard the debounce event 
+            evt_file.read(16)       # Discard the debounce event (or whatever)
             code = ord(evt[10])            
             direction  = "down" if ord(evt[12]) else "up"
-            if direction == "down" and code == self.key_code:
-                for name, stepper in self.steppers.iteritems():
-                    stepper.setDisabled()
-                Stepper.commit()           
-                logging.warning("End Stop " + self.name +" hit! Disabling all steppers")
-
-
+            if code == self.key_code and EndStop.callback != None:
+                if self.invert == False and direction == "down":
+                    EndStop.callback(self)
+                elif self.invert == True and direction == "up":
+                    EndStop.callback(self)
 
 if __name__ == '__main__':
     evt_file = open("/dev/input/event1", "rb")
