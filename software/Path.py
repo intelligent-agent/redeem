@@ -6,7 +6,6 @@ Author: Elias Bakken
 email: elias(dot)bakken(at)gmail(dot)com
 Website: http://www.thing-printer.com
 License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
-
 """
 
 import numpy as np                                                          # Needed for sqrt
@@ -14,14 +13,13 @@ from numpy import linalg as la
 import ConfigParser
 import logging
 
-AXIS_CONFIG_XY     = 0
-AXIS_CONFIG_H_BELT = 1
-
-
 class Path: 	
+    AXIS_CONFIG_XY     = 0
+    AXIS_CONFIG_H_BELT = 1
+
     A = np.matrix('-0.5 0.5; -0.5 -0.5')
     Ainv = np.linalg.inv(A)
-    axis_config=AXIS_CONFIG_XY # Default config is normal cartesian XY
+    axis_config = AXIS_CONFIG_XY # Default config is normal cartesian XY
     max_speed_x = 1.0
     max_speed_y = 1.0
     max_speed_z = 1.0
@@ -36,6 +34,10 @@ class Path:
         self.global_pos = {"X":0, "Y":0, "Z":0, "E":0} 
         self.is_print_segment = is_print_segment         # If this is True, use angle stuff
         self.next_ok = False
+
+        # Default values
+        self.start_speed = 0
+        self.end_speed = 0
 
     def is_G92(self):
         """ Special path, only set the global position on this """
@@ -63,7 +65,6 @@ class Path:
             x = self.axes["X"]
             if self.movement == "ABSOLUTE":
                 x -= self.global_pos["X"]
-
             self.feed_rate = min(self.feed_rate, Path.max_speed_x)
         else:
             x = 0
@@ -106,12 +107,13 @@ class Path:
             a = self.global_pos
             b = self.cartesian_vector
             # Do not continue the update beyond the next segment
+            
             self.next.set_global_pos(dict( (n, a.get(n, 0)+b.get(n, 0)) for n in set(a)|set(b) ), False)
             self.next_ok = True
 
         # implement any transformation. Hipsterbot has an H-type belt, so: 
         # This was taken from the article "Dynamic modelling of a Two-axis, Parallel H-frame-Type XY Positioning System".
-        if Path.axis_config == AXIS_CONFIG_H_BELT:            
+        if Path.axis_config == Path.AXIS_CONFIG_H_BELT:            
             b = np.array([x, y])
             X = np.dot(Path.Ainv, b)
             self.vector = {"X":X[0, 0], "Y":X[0, 1], "Z":z, "E":e, "H": h}
@@ -140,7 +142,7 @@ class Path:
         return abs(self.get_axis_length(axis))/hyp
 
     def get_start_speed(self):
-        """ Get the lowest speed along this segment """
+        """ Get the lowest speed along this segment """        
         return (1-self.angle_to_prev()/np.pi)*self.get_max_speed()
 
     def get_end_speed(self):
@@ -155,7 +157,7 @@ class Path:
         """ Returns the unit vector of the vector.  """
         return vector / np.linalg.norm(vector)        
 
-    def angle_between(self, v1, v2):
+    def _angle_between(self, v1, v2):
         """ Returns the angle in radians between vectors 'v1' and 'v2':: Creds to David Wolever for this """
         v1_u = self.unit_vector(v1)
         v2_u = self.unit_vector(v2)
@@ -176,7 +178,7 @@ class Path:
 
         v1 = [self.get_axis_length("X"), self.get_axis_length("Y")]
         v2 = [self.next.get_axis_length("X"), self.next.get_axis_length("Y")]
-        angle = self.angle_between(v1, v2)
+        angle = self._angle_between(v1, v2)
         self.angle_to_next_cal = angle
         return angle
     
@@ -189,21 +191,21 @@ class Path:
 
         v1 = [self.get_axis_length("X"), self.get_axis_length("Y")]
         v2 = [self.prev.get_axis_length("X"), self.prev.get_axis_length("Y")]
-        angle = self.angle_between(v1, v2)
+        angle = self._angle_between(v1, v2)
         self.angle_to_prev_cal = angle
         return angle
         
     def stepper_to_axis(self, pos, axis):
         """ Give a steppers position, return the position along the axis """
         if axis == "X":
-            if Path.axis_config == AXIS_CONFIG_H_BELT:
+            if Path.axis_config == Path.AXIS_CONFIG_H_BELT:
                 X = np.array([pos, 0])
                 b = np.dot(Path.A, X)
                 return tuple(np.array(b)[0])
             else:
                 return (pos, 0.0)
         if axis == "Y":
-            if Path.axis_config == AXIS_CONFIG_H_BELT:
+            if Path.axis_config == Path.AXIS_CONFIG_H_BELT:
                 X = np.array([0, pos])
                 b = np.dot(Path.A, X)
                 return tuple(np.array(b)[0])

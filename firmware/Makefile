@@ -1,5 +1,5 @@
 
-FILENAME=firmware_00A3
+FILENAME=firmware_00A4
 
 .PHONY: clean all
 

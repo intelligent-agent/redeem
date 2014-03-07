@@ -20,7 +20,7 @@ import Queue
 from collections import defaultdict
 import braid
 
-class Path_planner:
+class PathPlanner:
     ''' Init the planner '''
     def __init__(self, steppers, current_pos):
         self.steppers    = steppers
@@ -30,6 +30,7 @@ class Path_planner:
         self.running     = True                                 # Yes, we are running
         self.pru_data    = []
         self.t           = Thread(target=self._do_work)         # Make the thread
+        self.t.daemon    = True
         if __name__ != '__main__':
             self.t.start()		 
 
@@ -51,9 +52,9 @@ class Path_planner:
         return self.paths.qsize()
 
     ''' Set position for an axis '''
-    def set_pos(self, axis, val):
+    def _set_pos(self, axis, val):
         self.current_pos[axis] = val
-	
+
     def wait_until_done(self):
         '''Wait until planner is done'''
         self.paths.join()
@@ -71,7 +72,7 @@ class Path_planner:
 
         if path.is_G92():                                   # Only set the position of the axes
             for axis, pos in path.get_pos().iteritems():                       # Run through all the axes in the path    
-                self.set_pos(axis, pos)           
+                self._set_pos(axis, pos)           
             self.paths.task_done()            
             return                
        
@@ -102,11 +103,10 @@ class Path_planner:
         
         self.paths.task_done()
         path.unlink()                                         # Remove reference to enable garbage collection
-        path = None
 
     def _braid_data(self, data1, data2):
         """ Braid/merge together the data from the two data sets"""
-        return braid.braid_data_c(data1, data2)
+        return braid.braid_data_c(data1, data2)               # Use the Optimized C-function foir this. 
     
     def _braid_data1(self, data1, data2):
         """ Braid/merge together the data from the two data sets"""
@@ -203,7 +203,7 @@ class Path_planner:
         if vec < 0:                                                     # If the vector is negative, negate it.      
             td     *= -1.0
 
-		# Make sure the dir pin is shifted 650 ns before the step pins
+		    # Make sure the dir pin is shifted 650 ns before the step pins
         pins = [dir_pin]+pins
         delays = np.array([650*10**-9])+delays
 

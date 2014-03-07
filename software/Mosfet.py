@@ -23,7 +23,7 @@ time.sleep(0.05)				   # Wait for reset
 class Mosfet:
     # Set the PWM frequency for all fans connected on this PWM-chip
     @staticmethod
-    def setPWMFrequency(freq):
+    def set_pwm_frequency(freq):
         prescaleval = 25000000
         prescaleval /= 4096;
         prescaleval /= float(freq);
@@ -43,7 +43,7 @@ class Mosfet:
         self.channel = channel
 	
     '''Set duty cycle between 0 and 1'''
-    def setPower(self, value):
+    def set_power(self, value):
         self.power = value
         off = min(1.0, value)
         off = int(value*4095)

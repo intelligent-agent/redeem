@@ -3,7 +3,7 @@
 Ethernet communication file for Replicape. 
 
 Author: Elias Bakken
-email: elias.bakken@gmail.com
+email: elias(dot)bakken(at)gmail(dot)com
 Website: http://www.thing-printer.com
 License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 '''
@@ -35,6 +35,7 @@ class Ethernet:
         self.running = True
         self.debug = 0
         self.t = Thread(target=self.get_message)
+        self.t.daemon = True
         self.t.start()		
 
     # Loop that gets messages and pushes them on the queue
@@ -56,7 +57,6 @@ class Ethernet:
                     break
                 message = line.strip("\n")
                 self.queue.put({"message": message, "prot": "Eth"})
-
 
     # Send a message		
     def send_message(self, message):

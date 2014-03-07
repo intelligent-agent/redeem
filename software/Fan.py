@@ -3,7 +3,7 @@
 A fan is for blowing stuff away. This one is for Replicape. 
 
 Author: Elias Bakken
-email: elias.bakken@gmail.com
+email: elias(dot)bakken(at)gmail(dot)com
 Website: http://www.thing-printer.com
 License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 '''

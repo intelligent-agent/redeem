@@ -1,8 +1,9 @@
-*.*~
+*~
 *.b#*
 *.s#*
 stl/
 *~.*
+*.*~
 *.pyc
 libs/PyBBIO
 libs/pypruss
