@@ -237,14 +237,15 @@ class Redeem:
                 if not self.config.getboolean('Endstops', "has_"+axis.lower()):
                     continue
                 length = self.config.getfloat('Geometry', "travel_"+axis.lower())
-                path = Path({axis: -length}, self.feed_rate, "RELATIVE", False)   
+                feed_rate = self.config.getfloat('Steppers', "max_speed_"+axis.lower())
+                path = Path({axis: -length}, feed_rate*1000, "RELATIVE", False)   
                 # This will cause the axes to hit an endstop and disable the steppers. 
                 # So enable all axes again
                 logging.debug("moving to "+str({axis: -length}))
                 self.path_planner.add_path(path)                        # Add the path. This blocks until the path planner has capacity
                 self._execute(Gcode({"message": "M17", "prot": g.prot}))
                 offset = self.config.getfloat('Geometry', "offset_"+axis.lower())
-                self._execute(Gcode({"message": "G92 "+axis+str(-offset*1000), "prot": g.prot}))
+                self._execute(Gcode({"message": "G92 "+axis+str(offset*1000), "prot": g.prot}))
             self._execute(Gcode({"message": "G90 ", "prot": g.prot}))   # Absolute coords 
             self._execute(Gcode({"message": "G1 X0 Y0 Z0", "prot": g.prot})) # Move to origin
         elif g.code() == "G90":                                         # Absolute positioning
