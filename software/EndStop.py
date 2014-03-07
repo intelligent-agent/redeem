@@ -47,7 +47,7 @@ class EndStop:
 
     def wait_for_event(self):
         #logging.debug("Waiting for end-stop events...")
-        evt_file = open("/dev/input/event1", "rb")
+        evt_file = open("/dev/input/event0", "rb")
         while True:
             evt = evt_file.read(16) # Read the event
             evt_file.read(16)       # Discard the debounce event 

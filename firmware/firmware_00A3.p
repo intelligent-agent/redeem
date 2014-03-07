@@ -25,7 +25,7 @@
 #define STEPPER_X_END_MIN   2   //On GPIO 2
 #define STEPPER_Y_END_MIN   14  //On GPIO 0
 #define STEPPER_Z_END_MIN   30  //On GPIO 0
-#define ENDSTOP_INVERSED    1
+//#define ENDSTOP_INVERSED    1
 
 #define DIRECTION_MASK    0b00011001  //Specify 1 if a direction pin of 0 goes positive, specify 0 otherwise for all the 5 axis
 

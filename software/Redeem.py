@@ -98,17 +98,17 @@ class Redeem:
         path = "/sys/bus/iio/devices/iio:device0/in_voltage"
 
         # init the 3 thermistors
-        self.therm_ext1 = Thermistor(path+"4_raw", "MOSFET Ext 1", "B57560G104F") # Epcos 10K
-        self.therm_hbp  = Thermistor(path+"6_raw", "MOSFET HBP",   "B57560G104F")	  # Epcos 100K
-        self.therm_ext2 = Thermistor(path+"5_raw", "MOSFET Ext 2", "B57560G104F") # Epcos 10K
+        self.therm_ext1 = Thermistor(path+"6_raw", "MOSFET Ext 1", "B57561G0103F000") # 10 K - not used
+        self.therm_hbp  = Thermistor(path+"4_raw", "MOSFET HBP",   "B57560G104F") # 100 K
+        self.therm_ext2 = Thermistor(path+"5_raw", "MOSFET Ext 2", "B57561G0103F000") #10 K
 
         if os.path.exists("/sys/bus/w1/devices/28-000002e34b73/w1_slave"):
             self.cold_end_1 = W1("/sys/bus/w1/devices/28-000002e34b73/w1_slave", "Cold End 1")
 		
         # init the 3 heaters
-        self.mosfet_ext1 = Mosfet(3) # Argument is channel number
-        self.mosfet_ext2 = Mosfet(5)
-        self.mosfet_hbp  = Mosfet(4)
+        self.mosfet_ext1 = Mosfet(4) # Argument is channel number
+        self.mosfet_ext2 = Mosfet(3)
+        self.mosfet_hbp  = Mosfet(5)
 
         # Make extruder 1
         self.ext1 = Extruder(self.steppers["E"], self.therm_ext1, self.mosfet_ext1, "Ext1")
@@ -337,6 +337,8 @@ class Redeem:
             self.path_planner.emergency_interrupt()          
         elif g.code() == "M114": 
              g.setAnswer("ok C: "+' '.join('%s:%s' % i for i in self.current_pos.iteritems()))
+        elif g.code() == "M119": 
+             pass
         elif g.code() == "M130":                                    # Set PID P-value, Format (M130 P0 S8.0)
             pass
             #if int(self.tokens[0][1]) == 0:
