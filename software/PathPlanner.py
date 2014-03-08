@@ -40,12 +40,12 @@ class PathPlanner:
 
         #Assign end stop initial values
         for stepper in self.steppers.items():
-            if stepper[1].getEndstop() == None: continue
+            if stepper[1].get_endstop() == None: continue
 
-            (bank, pin) = stepper[1].getEndstop().get_gpio_bank_and_pin()
+            (bank, pin) = stepper[1].get_endstop().get_gpio_bank_and_pin()
 
             pinValue = (self.pru.read_gpio_state(bank) >> pin) & 0x1
-            stepper[1].getEndstop().set_initial_value_from_gpio(pinValue)
+            stepper[1].get_endstop().set_initial_value_from_gpio(pinValue)
 
         self.t           = Thread(target=self._do_work)         # Make the thread
         self.t.daemon    = True
@@ -59,14 +59,14 @@ class PathPlanner:
     ''' Home the given axis using endstops (min) '''
     def home(self,axis):
         #Check what is the direction of the first move
-        positive = self.steppers[axis].getEndstop().isHit()
+        positive = self.steppers[axis].get_endstop().isHit()
         if not positive:
             if self.current_pos[axis]>0:
                 p = Path({axis:0}, 0.1, "ABSOLUTE", True, True)
                 p.set_homing_feedrate()
                 self.add_path(p)    
                 self.wait_until_done()
-            while not self.steppers[axis].getEndstop().isHit():
+            while not self.steppers[axis].get_endstop().isHit():
                 p = Path({axis:-0.01}, 0.1, "RELATIVE", True, True)
                 p.set_homing_feedrate()
                 self.add_path(p)    

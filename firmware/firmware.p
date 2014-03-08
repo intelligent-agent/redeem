@@ -5,7 +5,7 @@
 //*************************/
 
 //* PRU Register and constants */
-#define PRU_SPEED           100000000           //PRU clock speed in Hz - Should be 100'000'000 - IF YOU CHANGE IT YOU NEED TO RECOMPUTE ALL THE DELAYS.
+#define PRU_SPEED           200000000           //PRU clock speed in Hz - Should be 200'000'000 - IF YOU CHANGE IT YOU NEED TO RECOMPUTE ALL THE DELAYS.
 #define PRU0_ARM_INTERRUPT  19
 #define GPIO_DATAOUT        0x13c               // This is the register for setting data 
 #define GPIO_DATAIN         0x138               // This is the register for reading data 
