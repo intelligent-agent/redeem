@@ -13,14 +13,13 @@ from numpy import linalg as la
 import ConfigParser
 import logging
 
-AXIS_CONFIG_XY     = 0
-AXIS_CONFIG_H_BELT = 1
-
-
 class Path: 	
+    AXIS_CONFIG_XY     = 0
+    AXIS_CONFIG_H_BELT = 1
+
     A = np.matrix('-0.5 0.5; -0.5 -0.5')
     Ainv = np.linalg.inv(A)
-    axis_config=AXIS_CONFIG_XY # Default config is normal cartesian XY
+    axis_config = AXIS_CONFIG_XY # Default config is normal cartesian XY
     max_speed_x = 1.0
     max_speed_y = 1.0
     max_speed_z = 1.0
@@ -42,6 +41,9 @@ class Path:
         self.is_print_segment = is_print_segment         # If this is True, use angle stuff
         self.next_ok = False
         self.cancellable = cancellable
+      	# Default values
+        self.start_speed = 0
+        self.end_speed = 0
 
     def is_G92(self):
         """ Special path, only set the global position on this """
@@ -138,7 +140,7 @@ class Path:
 
         # implement any transformation. Hipsterbot has an H-type belt, so: 
         # This was taken from the article "Dynamic modelling of a Two-axis, Parallel H-frame-Type XY Positioning System".
-        if Path.axis_config == AXIS_CONFIG_H_BELT:            
+        if Path.axis_config == Path.AXIS_CONFIG_H_BELT:            
             b = np.array([x, y])
             X = np.dot(Path.Ainv, b)
             self.vector = {"X":X[0, 0], "Y":X[0, 1], "Z":z, "E":e, "H": h}
@@ -190,7 +192,7 @@ class Path:
         """ Returns the unit vector of the vector.  """
         return vector / np.linalg.norm(vector)        
 
-    def angle_between(self, v1, v2):
+    def _angle_between(self, v1, v2):
         """ Returns the angle in radians between vectors 'v1' and 'v2':: Creds to David Wolever for this """
         v1_u = self.unit_vector(v1)
         v2_u = self.unit_vector(v2)
@@ -211,7 +213,7 @@ class Path:
 
         v1 = [self.get_axis_length("X"), self.get_axis_length("Y")]
         v2 = [self.next.get_axis_length("X"), self.next.get_axis_length("Y")]
-        angle = self.angle_between(v1, v2)
+        angle = self._angle_between(v1, v2)
         self.angle_to_next_cal = angle
         return angle
     
@@ -224,21 +226,21 @@ class Path:
 
         v1 = [self.get_axis_length("X"), self.get_axis_length("Y")]
         v2 = [self.prev.get_axis_length("X"), self.prev.get_axis_length("Y")]
-        angle = self.angle_between(v1, v2)
+        angle = self._angle_between(v1, v2)
         self.angle_to_prev_cal = angle
         return angle
         
     def stepper_to_axis(self, pos, axis):
         """ Give a steppers position, return the position along the axis """
         if axis == "X":
-            if Path.axis_config == AXIS_CONFIG_H_BELT:
+            if Path.axis_config == Path.AXIS_CONFIG_H_BELT:
                 X = np.array([pos, 0])
                 b = np.dot(Path.A, X)
                 return tuple(np.array(b)[0])
             else:
                 return (pos, 0.0)
         if axis == "Y":
-            if Path.axis_config == AXIS_CONFIG_H_BELT:
+            if Path.axis_config == Path.AXIS_CONFIG_H_BELT:
                 X = np.array([0, pos])
                 b = np.dot(Path.A, X)
                 return tuple(np.array(b)[0])
@@ -258,14 +260,13 @@ if __name__ == '__main__':
 
     # Add path segment B. Make prev point to A. Make next of A point to B. 
     b = Path({"X": 0.1, "Y": 0.1}, 0.3, "ABSOLUTE")
+    b.set_prev(a)
+    a.set_next(b)
 
     # Add path segment C. Make pre of C point to B and next of B point to C. 
     c = Path({"X": 0.0, "Y": 0.1}, 0.3, "ABSOLUTE")
-
-
-    a.link(None,b)
-    b.link(a,c)
-    c.link(b,None)
+    c.set_prev(b)
+    b.set_next(c)
 
     # A is fetched and executed. 
     a.set_global_pos({"X": 0, "Y": 0}) 

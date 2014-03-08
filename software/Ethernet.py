@@ -58,7 +58,6 @@ class Ethernet:
                 message = line.strip("\n")
                 self.queue.put({"message": message, "prot": "Eth"})
 
-
     # Send a message		
     def send_message(self, message):
         #logging.debug("'"+message+"'")

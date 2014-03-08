@@ -16,3 +16,4 @@ Software features:
 - Controllable via ethernet, USB, printer display.   
 
 Wiki: http://wiki.thing-printer.com/index.php?title=Redeem
+

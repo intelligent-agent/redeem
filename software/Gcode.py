@@ -4,11 +4,9 @@ For more info see:
 http://reprap.org/wiki/G-code
 
 Author: Elias Bakken
-email: elias.bakken@gmail.com
-Website: http://www.hipstercircuits.com
-License: BSD
-
-You can use and change this, but keep this heading :)
+email: elias(dot)bakken(at)gmail(dot)com
+Website: http://www.thing-printer.com
+License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 '''
 
 import logging
@@ -18,15 +16,13 @@ class Gcode:
 
     line_number = 0
     ''' Init; parse the token '''
-    def __init__(self, packet, printer):
+    def __init__(self, packet):
         try:
             self.message = packet["message"].split(";")[0]
             self.message = self.message.strip(' \t\n\r')
             #logging.debug(self.message) 
             self.prot = packet["prot"]
-            self.p = printer        
             self.has_crc = False
-            self.debug = 0
             self.answer = "ok"
             if len(self.message) == 0:
                 print packet
@@ -61,50 +57,44 @@ class Gcode:
         return self.gcode
 
     ''' Get the letter '''
-    def tokenLetter(self, index):
+    def token_letter(self, index):
         return self.tokens[index][0]
 
     ''' Get the value aafter the letter '''
-    def tokenValue(self, index):
+    def token_value(self, index):
         return self.tokens[index][1::]
      
     ''' Return the tokens '''
-    def tokens(self):
+    def get_tokens(self):
         return self.tokens   
 
     ''' Set the tokens '''
-    def setTokens(self, tokens):
+    def set_tokens(self, tokens):
         self.tokens = tokens
 
     ''' Check if the letter exists as token '''
-    def hasLetter(self, letter):
+    def has_letter(self, letter):
         for token in self.tokens:
             if token[0] == letter:
                 return True
         return False
     
-    ''' Get a token value by the token letter '''
-    def getValueByLetter(self, letter):
+    def get_value_by_letter(self, letter):
         for token in self.tokens:           
             if token[0] == letter:
                 return token[1::]
         return None
 
-    ''' Remove a token by it's letter '''
-    def removeTokenByLetter(self, letter):
+    def remove_token_by_letter(self, letter):
          for i, token in enumerate(self.tokens):
             if token[0] == letter:
                 self.tokens.pop(i)
 
-    def numTokens(self):
+    def num_tokens(self):
         return len(self.tokens)
 
-    ''' Get the tokens '''
-    def getTokens(self):
-        return self.tokens
-
     ''' Compute a Checksum of the letters in the command '''
-    def getCS(self, cmd):
+    def _getCS(self, cmd):
         cs = 0
         for c in cmd:            
             cs = cs ^ ord(c)
@@ -115,11 +105,11 @@ class Gcode:
         return self.has_crc
 
     ''' Get the result of the execution '''
-    def getAnswer(self):
+    def get_answer(self):
         return self.answer
     
     ''' Set a new answer other than 'ok'  '''
-    def setAnswer(self, answer):
+    def set_answer(self, answer):
         self.answer = answer
 
 

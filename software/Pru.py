@@ -32,7 +32,7 @@ DDR_MAGIC			= 0xbabe7175
 class Pru:
     ddr_lock = Lock()
 
-    def __init__(self):
+    def __init__(self, firmware_binary):
         pru_hz 			    = 200*1000*1000             # The PRU has a speed of 200 MHz
         self.s_pr_inst      = (1.0/pru_hz)          # I take it every instruction is a single cycle instruction
         self.inst_pr_loop 	= 0                        # This is the minimum number of instructions needed to step.  It is already substracted into the PRU
@@ -43,6 +43,7 @@ class Pru:
         self.ddr_reserved   = 0      
         self.ddr_mem_used   = 0  
         self.clear_events   = []       
+        self.firmware_binary = firmware_binary
 
         self.ddr_addr = int(open("/sys/class/uio/uio0/maps/map1/addr","rb").read().rstrip(), 0)
         self.ddr_size = int(open("/sys/class/uio/uio0/maps/map1/size","rb").read().rstrip(), 0)
@@ -85,12 +86,11 @@ class Pru:
 
     def init_pru(self):
         self.ddr_mem[self.ddr_start:self.ddr_start+4] = struct.pack('L', 0)  # Add a zero to the first reg to make it wait
-        dirname = os.path.dirname(os.path.realpath(__file__))
         pypruss.init()                                  # Init the PRU
         pypruss.open(PRU0)                              # Open PRU event 0 which is PRU0_ARM_INTERRUPT
         pypruss.pruintc_init()                          # Init the interrupt controller
-        pypruss.pru_write_memory(0, 0, [self.ddr_addr, self.ddr_nr_events, 0])      # Put the ddr address in the first region 
-        pypruss.exec_program(0, dirname+"/../firmware/firmware_00A3.bin")   # Load firmware "ddr_write.bin" on PRU 0
+        pypruss.pru_write_memory(0, 0, [self.ddr_addr, self.ddr_nr_events, 0])      # Put the ddr address in the first region         
+        pypruss.exec_program(0, self.firmware_binary)   # Load firmware "ddr_write.bin" on PRU 0
 
     def read_gpio_state(self, gpio_bank):
         """ Return the initial state of a GPIO bank when the PRU was initialized """
@@ -158,6 +158,7 @@ class Pru:
         #Then we have one byte, one byte, one 16 bit (dummy), and one 32 bits
         data += ''.join([struct.pack('BBHL', instr[0],instr[1],instr[2],instr[3]) for instr in self.pru_data])
         data += struct.pack('L', 0)                             # Add a terminating 0, this keeps the fw waiting for a new command.
+    
         self.ddr_end = self.ddr_start+len(data)       
         if self.ddr_end >= self.DDR_END-16:                     # If the data is too long, wrap it around to the start
             multiple = (self.DDR_END-16-self.ddr_start)%8       # Find a multiple of 8: 4*(pins, delays)
@@ -198,7 +199,7 @@ class Pru:
             with Pru.ddr_lock: 
                 self.ddr_mem_used += data_len               
             self.ddr_used.put(data_len)                         # update the amount of memory used 
-            logging.debug("Pushed "+str(data_len)+" from "+hex(self.ddr_start)+" to "+hex(self.ddr_end))
+            #logging.debug("Pushed "+str(data_len)+" from "+hex(self.ddr_start)+" to "+hex(self.ddr_end))
             
         self.ddr_start  = self.ddr_end-4    # Update the start of ddr for next time 
         self.pru_data   = []                # Reset the pru_data list since it has been commited         
@@ -206,6 +207,7 @@ class Pru:
 
     ''' Catch events coming from the PRU '''                
     def _wait_for_events(self):
+        events_caught = 0
         self.dev = os.open("/dev/uio0", os.O_RDONLY)
         self.new_events = 0
         self.old_events = 0
@@ -223,7 +225,7 @@ class Pru:
                 ddr = self.ddr_used.get()                       # Pop the first ddr memory amount           
                 with Pru.ddr_lock: 
                     self.ddr_mem_used -= ddr                    
-                logging.debug("Popped "+str(ddr)+"\tnow "+hex(self.get_capacity()))
+                #logging.debug("Popped "+str(ddr)+"\tnow "+hex(self.get_capacity()))
                 if self.get_capacity() < 0:
                     logging.error("Capacity less than 0!")
                 if self.get_capacity() == 0x40000:

@@ -12,14 +12,19 @@ License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 from threading import Thread
 import logging
 import re
+from Stepper import Stepper
 
 class EndStop:
-    # pin is the pin where the connector is attached. 
-    def __init__(self, pin, key_code, name):
+
+    callback = None                 # Override this to get events
+    inputdev = "/dev/input/event0"  # File to listen to events
+
+    def __init__(self, pin, key_code, name, invert=False):
         self.pin = pin
         self.key_code = key_code
         self.name = name
-        self.t = Thread(target=self.wait_for_event)         # Make the thread
+        self.invert = invert
+        self.t = Thread(target=self._wait_for_event)
         self.t.daemon = True
         self.path_planner = None
         self.hit = True
@@ -45,21 +50,19 @@ class EndStop:
     def get_pin(self):
         return self.pin
 
-    def wait_for_event(self):
+    def _wait_for_event(self):
         #logging.debug("Waiting for end-stop events...")
-        evt_file = open("/dev/input/event0", "rb")
+        evt_file = open(EndStop.inputdev, "rb")
         while True:
             evt = evt_file.read(16) # Read the event
-            evt_file.read(16)       # Discard the debounce event 
+            evt_file.read(16)       # Discard the debounce event (or whatever)
             code = ord(evt[10])            
             direction  = "down" if ord(evt[12]) else "up"
-            if direction == "up" and code == self.key_code:
-                self.hit = True          
-                #if self.path_planner != None: self.path_planner.interrupt_move();
-                logging.warning("End Stop " + self.name +" hit! Disabling all steppers")
-            elif direction == "down" and code == self.key_code:
-                self.hit = False  
-
+            if code == self.key_code and EndStop.callback != None:
+                if self.invert == False and direction == "down":
+                    EndStop.callback(self)
+                elif self.invert == True and direction == "up":
+                    EndStop.callback(self)
 
 if __name__ == '__main__':
     evt_file = open("/dev/input/event1", "rb")

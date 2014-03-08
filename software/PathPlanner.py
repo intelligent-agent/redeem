@@ -16,6 +16,7 @@ import logging
 from Path import Path
 import numpy as np  
 from threading import Thread
+import os 
 
 try:
     from Pru import Pru
@@ -24,16 +25,16 @@ except ImportError:
 
 
 import Queue
-
+from collections import defaultdict
 import braid
 
-class Path_planner:
+class PathPlanner:
     ''' Init the planner '''
-    def __init__(self, steppers, current_pos):
+    def __init__(self, steppers, firmware_binary):
         self.steppers    = steppers
-        self.pru         = Pru()                                # Make the PRU
+        self.pru         = Pru(firmware_binary)                 # Make the PRU
         self.paths       = Queue.Queue(10)                      # Make a queue of paths
-        self.current_pos = current_pos                          # Current position in (x, y, z, e)
+        self.current_pos = {"X":0.0, "Y":0.0, "Z":0.0, "E":0.0,"H":0.0}
         self.running     = True                                 # Yes, we are running
         self.pru_data    = []
 
@@ -101,9 +102,9 @@ class Path_planner:
         return self.paths.qsize()
 
     ''' Set position for an axis '''
-    def set_pos(self, axis, val):
+    def _set_pos(self, axis, val):
         self.current_pos[axis] = val
-	
+
     def wait_until_done(self):
         '''Wait until planner is done'''
         self.paths.join()
@@ -114,7 +115,6 @@ class Path_planner:
         while self.running:       
            self.do_work()
     
-
     def do_work(self):
         """ This is just a separate function so the test at the bottom will pass """		
         path = self.paths.get()                            # Get the last path added
@@ -122,7 +122,7 @@ class Path_planner:
 
         if path.is_G92():                                   # Only set the position of the axes
             for axis, pos in path.get_pos().iteritems():                       # Run through all the axes in the path    
-                self.set_pos(axis, pos)           
+                self._set_pos(axis, pos)           
             self.paths.task_done()            
             return                
         
@@ -132,33 +132,11 @@ class Path_planner:
                 if len(self.pru_data) == 0:
                     self.pru_data = zip(*data)
                 else:
-                    
-                    #Debug code to make sure we have the right number of steps
-                    #orig1 = list(zip(*data))
-                    #orig2=list(self.pru_data)
-                    #orig_nb = len(orig1)
-                    #stepper         = self.steppers[axis]
-                    #step_pin    = stepper.get_step_pin()
-
-
                     self._braid_data1(self.pru_data, zip(*data))
                     #self.pru_data = self._braid_data(self.pru_data, zip(*data))
-
-
-                    #nb=0
-                    #for instr in self.pru_data:
-                    #    if instr[0] & step_pin:
-                    #       nb+=1
-                    #if orig_nb!=nb:
-                    #    print "Got "+str(orig_nb)+" and produced "+str(nb)
-                    #    print orig1
-                    #    print orig2
-                    #    #raise AttributeError()
-
         while len(self.pru_data) > 0:  
             data = self.pru_data[0:0x20000/8]
             del self.pru_data[0:0x20000/8]
-
             if len(self.pru_data) > 0:
                 logging.debug("Long path segment is cut. remaining: "+str(len(self.pru_data)))       
             while not self.pru.has_capacity_for(len(data)*8):          
@@ -171,7 +149,6 @@ class Path_planner:
         
         self.paths.task_done()
         path.unlink()                                         # Remove reference to enable garbage collection
-        path = None
 
     def emergency_interrupt(self):
         self.pru.emergency_interrupt()
@@ -184,11 +161,9 @@ class Path_planner:
             except Queue.Empty:
                 break
 
-
-
     def _braid_data(self, data1, data2):
         """ Braid/merge together the data from the two data sets"""
-        return braid.braid_data_c(data1, data2)
+        return braid.braid_data_c(data1, data2)               # Use the Optimized C-function foir this. 
     
     def _braid_data1(self, data1, data2):
         """ Braid/merge together the data from the two data sets"""
@@ -316,7 +291,6 @@ class Path_planner:
             self.current_pos[axis] += td                                    # Update the global position vector
         
         return (step_pins,dir_pins,option_pins, delays)                                           # return the pin states and the data
-
 
 if __name__ == '__main__':
     from Stepper import Stepper

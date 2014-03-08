@@ -10,13 +10,13 @@ License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 
 import logging
 
-class W1: 
+class ColdEnd: 
     def __init__(self, pin, name):
         ''' Init '''
         self.pin = pin
         self.name = name
 
-    def getTemperature(self):	
+    def get_temperature(self):	
         ''' Return the temperature in degrees celcius '''
         with open(self.pin, "r") as f:
             try:
