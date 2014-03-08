@@ -41,7 +41,8 @@ from Pru import Pru
 from Path import Path
 from PathPlanner import PathPlanner
 from ColdEnd import ColdEnd
-    
+from PruFirmware import PruFirmware
+
 logging.basicConfig(level=logging.DEBUG, 
                     format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
                     datefmt='%m-%d %H:%M')
@@ -61,11 +62,11 @@ class Redeem:
     def __init__(self):
         logging.info("Redeem initializing "+version)
         self.config = ConfigParser.SafeConfigParser()
-        config_filename = '/etc/redeem/default.cfg'
-        if not os.path.isfile(config_filename):
+        self.config_filename = '/etc/redeem/default.cfg'
+        if not os.path.isfile(self.config_filename):
             logging.error("Missing config file. Please add /etc/redeem/default.cfg")
-        self.config.readfp(open(config_filename))  
-        logging.info("using config file "+config_filename)
+        self.config.readfp(open(self.config_filename))  
+        logging.info("using config file "+self.config_filename)
 
         # Get the revision from the Config file
         self.revision = self.config.get('System', 'revision', "A4")
@@ -193,11 +194,11 @@ class Redeem:
         Path.home_speed_h = float(self.config.get('Steppers', 'home_speed_h'))
 
         dirname = os.path.dirname(os.path.realpath(__file__))
-        firmware_binary = dirname+"/../firmware/firmware_00A4.bin"
-        if self.revision == "A3":
-            firmware_binary = dirname+"/../firmware/firmware_00A3.bin"
 
-        self.path_planner = PathPlanner(self.steppers, firmware_binary)
+        # Create the firmware compiler
+        self.pru_firmware = PruFirmware(dirname+"/../firmware/firmware.p",dirname+"/../firmware/firmware_runtime.bin",self.revision,self.config_filename,self.config,dirname+"/../firmware/pasm")
+
+        self.path_planner = PathPlanner(self.steppers, self.pru_firmware)
         self.path_planner.set_acceleration(float(self.config.get('Steppers', 'acceleration'))) 
 
         self.running = True

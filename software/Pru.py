@@ -32,7 +32,7 @@ DDR_MAGIC			= 0xbabe7175
 class Pru:
     ddr_lock = Lock()
 
-    def __init__(self, firmware_binary):
+    def __init__(self, firmware):
         pru_hz 			    = 200*1000*1000             # The PRU has a speed of 200 MHz
         self.s_pr_inst      = (1.0/pru_hz)          # I take it every instruction is a single cycle instruction
         self.inst_pr_loop 	= 0                        # This is the minimum number of instructions needed to step.  It is already substracted into the PRU
@@ -43,7 +43,7 @@ class Pru:
         self.ddr_reserved   = 0      
         self.ddr_mem_used   = 0  
         self.clear_events   = []       
-        self.firmware_binary = firmware_binary
+        self.firmware = firmware
 
         self.ddr_addr = int(open("/sys/class/uio/uio0/maps/map1/addr","rb").read().rstrip(), 0)
         self.ddr_size = int(open("/sys/class/uio/uio0/maps/map1/size","rb").read().rstrip(), 0)
@@ -90,7 +90,7 @@ class Pru:
         pypruss.open(PRU0)                              # Open PRU event 0 which is PRU0_ARM_INTERRUPT
         pypruss.pruintc_init()                          # Init the interrupt controller
         pypruss.pru_write_memory(0, 0, [self.ddr_addr, self.ddr_nr_events, 0])      # Put the ddr address in the first region         
-        pypruss.exec_program(0, self.firmware_binary)   # Load firmware "ddr_write.bin" on PRU 0
+        pypruss.exec_program(0, self.firmware.get_firmware())   # Load firmware "ddr_write.bin" on PRU 0
 
     def read_gpio_state(self, gpio_bank):
         """ Return the initial state of a GPIO bank when the PRU was initialized """

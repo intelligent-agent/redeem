@@ -6,16 +6,19 @@ FILENAME=firmware
 all: A3 A4
 		
 
-A3:
-		pasm -b -DREV_A3 $(FILENAME).p
-		mv $(FILENAME).bin $(FILENAME)_00A3.bin
-A4:
-		pasm -b -DREV_A4 $(FILENAME).p
-		mv $(FILENAME).bin $(FILENAME)_00A4.bin
+A3:		compiler
+	./pasm -b -DREV_A3 $(FILENAME).p
+	mv $(FILENAME).bin $(FILENAME)_00A3.bin
+A4:		compiler
+	./pasm -b -DREV_A4 $(FILENAME).p
+	mv $(FILENAME).bin $(FILENAME)_00A4.bin
+
+compiler:
+	make -C pasm_source
 
 clean: 
-		rm -f $(FILENAME)_00A3.bin
-		rm -f $(FILENAME)_00A4.bin
+	rm -f $(FILENAME)_00A3.bin
+	rm -f $(FILENAME)_00A4.bin
 
 
 

@@ -30,9 +30,9 @@ import braid
 
 class PathPlanner:
     ''' Init the planner '''
-    def __init__(self, steppers, firmware_binary):
+    def __init__(self, steppers, pru_firmware):
         self.steppers    = steppers
-        self.pru         = Pru(firmware_binary)                 # Make the PRU
+        self.pru         = Pru(pru_firmware)                 # Make the PRU
         self.paths       = Queue.Queue(10)                      # Make a queue of paths
         self.current_pos = {"X":0.0, "Y":0.0, "Z":0.0, "E":0.0,"H":0.0}
         self.running     = True                                 # Yes, we are running
