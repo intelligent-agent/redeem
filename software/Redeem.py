@@ -161,7 +161,7 @@ class Redeem:
             self.fan_3 = Fan(10)
         self.fans = {0: self.fan_1, 1:self.fan_2, 2:self.fan_3 }
 
-        self.fan_1.setPWMFrequency(100)
+        Fan.set_PWM_frequency(100)
          
         for i in self.fans:
             self.fans[i].set_value(0)
@@ -381,7 +381,7 @@ class Redeem:
                 m105 = Gcode({"message": "M105", "prot": g.prot})
                 self._execute(m105)
                 print all_ok
-                if False in all_ok:
+                if not False in all_ok:
                     self._reply(m105)
                     return 
                 else:
@@ -391,22 +391,16 @@ class Redeem:
                     time.sleep(1)
         elif g.code() == "M130":                                    # Set PID P-value, Format (M130 P0 S8.0)
             pass
-            #if int(self.tokens[0][1]) == 0:
-            #    self.ext1.setPvalue(float(self.tokens[1][1::]))
         elif g.code() == "M131":                                    # Set PID I-value, Format (M131 P0 S8.0) 
             pass
-            #if int(self.tokens[0][1]) == 0:
-            #    self.p.ext1.setPvalue(float(self.tokens[1][1::]))
         elif g.code() == "M132":                                    # Set PID D-value, Format (M132 P0 S8.0)
             pass
-            #if int(self.tokens[0][1]) == 0:
-            #    self.p.ext1.setPvalue(float(self.tokens[1][1::]))
         elif g.code() == "M140":                                    # Set bed temperature
             logging.debug("Setting bed temperature to "+str(float(g.token_value(0))))
             self.hbp.set_target_temperature(float(g.token_value(0)))
         elif g.code() == "M141":
             fan = self.fans[int(g.get_value_by_letter("P"))]
-            fan.setPWMFrequency(int(g.get_value_by_letter("F")))
+            fan.set_PWM_frequency(int(g.get_value_by_letter("F")))
             fan.set_value(float(g.get_value_by_letter("S")))	           
         elif g.code() == "M190":
             self.hbp.set_target_temperature(float(g.get_value_by_letter("S")))
