@@ -67,7 +67,7 @@ class Stepper:
         spi2_1.writebytes(bytes[::-1])
 
     ''' Init'''
-    def __init__(self, stepPin, dirPin, faultPin, dac_channel, name, direction, endstop, internalStepPin, internalDirPin):
+    def __init__(self, stepPin, dirPin, faultPin, dac_channel, name, endstop, internalStepPin, internalDirPin):
         self.dac_channel     = dac_channel  # Which channel on the dac is connected to this stepper
         self.stepPin         = stepPin
         self.dirPin          = dirPin
@@ -80,7 +80,7 @@ class Stepper:
         self.steps_pr_mm     = 1            # Numer of steps pr mm. 
         self.microsteps      = 1.0          # Well, this is the microstep number
         self.pru_num         = -1           # PRU number, if any 
-        self.direction       = direction
+        self.direction       = 1
         self.endstop         = endstop
         self.internalStepPin = (1 << internalStepPin)
         self.internalDirPin = (1 << internalDirPin)
@@ -212,7 +212,6 @@ class Stepper:
 
     def get_direction(self):
         return self.direction
-
 
 
 
