@@ -225,7 +225,7 @@ class Pru:
                 ddr = self.ddr_used.get()                       # Pop the first ddr memory amount           
                 with Pru.ddr_lock: 
                     self.ddr_mem_used -= ddr                    
-                #logging.debug("Popped "+str(ddr)+"\tnow "+hex(self.get_capacity()))
+                logging.debug("Popped "+str(ddr)+"\tnow "+hex(self.get_capacity()))
                 if self.get_capacity() < 0:
                     logging.error("Capacity less than 0!")
                 if self.get_capacity() == 0x40000:

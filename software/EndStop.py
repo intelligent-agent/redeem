@@ -26,15 +26,11 @@ class EndStop:
         self.invert = invert
         self.t = Thread(target=self._wait_for_event)
         self.t.daemon = True
-        self.path_planner = None
         self.hit = True
         self.t.start()
 	   
-    def setInitialValue(self,v):
-        self.hit=v
-
-    def set_path_planner(self,planner):
-        self.path_planner=planner
+    def set_initial_value_from_gpio(self,v):
+        self.hit=True if (v==1 and not self.invert) or (v==0 and self.invert) else False
 
     def isHit(self):
         return self.hit
@@ -58,11 +54,18 @@ class EndStop:
             evt_file.read(16)       # Discard the debounce event (or whatever)
             code = ord(evt[10])            
             direction  = "down" if ord(evt[12]) else "up"
-            if code == self.key_code and EndStop.callback != None:
-                if self.invert == False and direction == "down":
-                    EndStop.callback(self)
-                elif self.invert == True and direction == "up":
-                    EndStop.callback(self)
+            if code == self.key_code:
+                if self.invert == True and direction == "down":
+                    self.hit = True 
+                    if EndStop.callback != None:
+                        EndStop.callback(self)
+                elif self.invert == False and direction == "up":
+                    self.hit = True
+                    if EndStop.callback != None:
+                        EndStop.callback(self)
+                else:
+                    self.hit = False
+
 
 if __name__ == '__main__':
     evt_file = open("/dev/input/event1", "rb")

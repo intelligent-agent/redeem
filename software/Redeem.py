@@ -75,7 +75,11 @@ class Redeem:
         # Make a list of steppers
         self.steppers = {}
 
+
         # Init the end stops
+        inputdev = self.config.get("Endstops","inputdev");
+        EndStop.inputdev = inputdev
+
         self.end_stops = {}
         self.end_stops["X1"] = EndStop("GPIO2_2", 1, "X1")
         self.end_stops["Y1"] = EndStop("GPIO0_14", 2, "Y1")

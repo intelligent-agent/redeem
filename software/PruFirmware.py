@@ -98,6 +98,7 @@ class PruFirmware:
 
         return True
 
+    ''' Return the path to the firmware bin file, None if the firmware cannot be produced. '''
     def get_firmware(self):
         if not os.path.exists(self.binary_filename) or self.is_needing_firmware_compilation():
             if not self.produce_firmware():

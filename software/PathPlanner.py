@@ -45,8 +45,7 @@ class PathPlanner:
             (bank, pin) = stepper[1].getEndstop().get_gpio_bank_and_pin()
 
             pinValue = (self.pru.read_gpio_state(bank) >> pin) & 0x1
-            stepper[1].getEndstop().setInitialValue(True if pinValue==1 else False)
-            stepper[1].getEndstop().set_path_planner(self)
+            stepper[1].getEndstop().set_initial_value_from_gpio(pinValue)
 
         self.t           = Thread(target=self._do_work)         # Make the thread
         self.t.daemon    = True
