@@ -50,6 +50,10 @@ class PruFirmware:
 
         self.binary_filename_compiler=os.path.splitext(self.binary_filename)[0]
 
+        if not os.path.exists(self.compiler):
+            logging.error('PASM compiler not found. Go to the firmware directory and issue the `make` command.')
+            raise RuntimeError('PASM compiler not found.')
+
     def is_needing_firmware_compilation(self):
         if os.path.exists(self.binary_filename):
             #Check if we need to rebuild the firmware
