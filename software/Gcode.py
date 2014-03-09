@@ -34,7 +34,7 @@ class Gcode:
                 line_num = self.message.split(" ")[0][1::]
                 cmd = self.message.split("*")[0]                             # Command
                 csc = self.message.split("*")[1]                             # Command to compare with
-                if int(csc) != self.getCS(cmd):
+                if int(csc) != self._getCS(cmd):
                     logging.error("CRC error!")
                 self.message =  self.message.split("*")[0][(1+len(line_num)+1)::] # Remove crc stuff
                 self.line_number = int(line_num)                        # Set the line number

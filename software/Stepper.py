@@ -62,8 +62,8 @@ class Stepper:
         bytes = []
         for stepper in Stepper.all_steppers:	   
             bytes.append(stepper.get_state())
-        txt = ", ".join([hex(b) for b in bytes[::-1]])
-        logging.debug("Updating steppers: "+txt)
+        #txt = ", ".join([hex(b) for b in bytes[::-1]])
+        #logging.debug("Updating steppers: "+txt)
         spi2_1.writebytes(bytes[::-1])
 
     ''' Init'''
@@ -86,7 +86,7 @@ class Stepper:
         self.internalDirPin = (1 << internalDirPin)
         Stepper.all_steppers.append(self)       # Add to list of steppers
 
-    def getEndstop(self):
+    def get_endstop(self):
         return self.endstop
 
     ''' Sets the Stepper enabled '''

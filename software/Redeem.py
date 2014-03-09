@@ -41,7 +41,8 @@ from Pru import Pru
 from Path import Path
 from PathPlanner import PathPlanner
 from ColdEnd import ColdEnd
-    
+from PruFirmware import PruFirmware
+
 logging.basicConfig(level=logging.DEBUG, 
                     format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
                     datefmt='%m-%d %H:%M')
@@ -61,11 +62,11 @@ class Redeem:
     def __init__(self):
         logging.info("Redeem initializing "+version)
         self.config = ConfigParser.SafeConfigParser()
-        config_filename = '/etc/redeem/default.cfg'
-        if not os.path.isfile(config_filename):
+        self.config_filename = '/etc/redeem/default.cfg'
+        if not os.path.isfile(self.config_filename):
             logging.error("Missing config file. Please add /etc/redeem/default.cfg")
-        self.config.readfp(open(config_filename))  
-        logging.info("using config file "+config_filename)
+        self.config.readfp(open(self.config_filename))  
+        logging.info("using config file "+self.config_filename)
 
         # Get the revision from the Config file
         self.revision = self.config.get('System', 'revision', "A4")
@@ -74,7 +75,11 @@ class Redeem:
         # Make a list of steppers
         self.steppers = {}
 
+
         # Init the end stops
+        inputdev = self.config.get("Endstops","inputdev");
+        EndStop.inputdev = inputdev
+
         self.end_stops = {}
         # We should use key codes that are not used on a keyboard etc. 
         self.end_stops["X1"] = EndStop("GPIO0_31", 116, "X1", self.config.getboolean("Endstops", "invert_X1"))
@@ -139,16 +144,16 @@ class Redeem:
           self.mosfet_hbp  = Mosfet(4)
 
         # Make extruder 1
-        self.ext1 = Extruder(self.steppers["E"], self.therm_ext1, self.mosfet_ext1, "Ext1")
+        self.ext1 = Extruder(self.steppers["E"], self.therm_ext1, self.mosfet_ext1, "Ext1", self.config.getboolean('Heaters', 'ext1_onoff_control'))
         self.ext1.set_p_value(self.config.getfloat('Heaters', "ext1_pid_p"))
         self.ext1.set_d_value(self.config.getfloat('Heaters', "ext1_pid_d"))
         self.ext1.set_i_value(self.config.getfloat('Heaters', "ext1_pid_i"))
 
         # Make Heated Build platform 
-        self.hbp = HBP( self.therm_hbp, self.mosfet_hbp)       
+        self.hbp = HBP( self.therm_hbp, self.mosfet_hbp, self.config.getboolean('Heaters', 'hbp_onoff_control'))       
 
         # Make extruder 2.
-        self.ext2 = Extruder(self.steppers["H"], self.therm_ext2, self.mosfet_ext2, "Ext2")
+        self.ext2 = Extruder(self.steppers["H"], self.therm_ext2, self.mosfet_ext2, "Ext2", self.config.getboolean('Heaters', 'ext2_onoff_control'))
         self.ext1.set_p_value(self.config.getfloat('Heaters', "ext2_pid_p"))
         self.ext1.set_d_value(self.config.getfloat('Heaters', "ext2_pid_i"))     
         self.ext1.set_i_value(self.config.getfloat('Heaters', "ext2_pid_d"))
@@ -198,11 +203,11 @@ class Redeem:
         Path.home_speed_h = float(self.config.get('Steppers', 'home_speed_h'))
 
         dirname = os.path.dirname(os.path.realpath(__file__))
-        firmware_binary = dirname+"/../firmware/firmware_00A4.bin"
-        if self.revision == "A3":
-            firmware_binary = dirname+"/../firmware/firmware_00A3.bin"
 
-        self.path_planner = PathPlanner(self.steppers, firmware_binary)
+        # Create the firmware compiler
+        self.pru_firmware = PruFirmware(dirname+"/../firmware/firmware.p",dirname+"/../firmware/firmware_runtime.bin",self.revision,self.config_filename,self.config,dirname+"/../firmware/pasm")
+
+        self.path_planner = PathPlanner(self.steppers, self.pru_firmware)
         self.path_planner.set_acceleration(float(self.config.get('Steppers', 'acceleration'))) 
 
         self.running = True
