@@ -144,16 +144,16 @@ class Redeem:
           self.mosfet_hbp  = Mosfet(4)
 
         # Make extruder 1
-        self.ext1 = Extruder(self.steppers["E"], self.therm_ext1, self.mosfet_ext1, "Ext1")
+        self.ext1 = Extruder(self.steppers["E"], self.therm_ext1, self.mosfet_ext1, "Ext1", self.config.getboolean('Heaters', 'ext1_onoff_control'))
         self.ext1.set_p_value(self.config.getfloat('Heaters', "ext1_pid_p"))
         self.ext1.set_d_value(self.config.getfloat('Heaters', "ext1_pid_d"))
         self.ext1.set_i_value(self.config.getfloat('Heaters', "ext1_pid_i"))
 
         # Make Heated Build platform 
-        self.hbp = HBP( self.therm_hbp, self.mosfet_hbp)       
+        self.hbp = HBP( self.therm_hbp, self.mosfet_hbp, self.config.getboolean('Heaters', 'hbp_onoff_control'))       
 
         # Make extruder 2.
-        self.ext2 = Extruder(self.steppers["H"], self.therm_ext2, self.mosfet_ext2, "Ext2")
+        self.ext2 = Extruder(self.steppers["H"], self.therm_ext2, self.mosfet_ext2, "Ext2", self.config.getboolean('Heaters', 'ext2_onoff_control'))
         self.ext1.set_p_value(self.config.getfloat('Heaters', "ext2_pid_p"))
         self.ext1.set_d_value(self.config.getfloat('Heaters', "ext2_pid_i"))     
         self.ext1.set_i_value(self.config.getfloat('Heaters', "ext2_pid_d"))
