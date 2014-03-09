@@ -59,7 +59,8 @@ class PruFirmware:
             #Check if we need to rebuild the firmware
             config_mtime = os.path.getmtime(self.config_filename) #modif time of config file
             fw_mtime = os.path.getmtime(self.binary_filename) #modif time of firmware file
-            if fw_mtime >= config_mtime: #already up to date
+            fw_src_mtime = os.path.getmtime(self.firmware_source_file) #modif time of firmware source file
+            if fw_mtime >= config_mtime and fw_mtime>=fw_src_mtime: #already up to date
                 return False
 
         return True
@@ -81,6 +82,11 @@ class PruFirmware:
         revision = "-DREV_A3" if self.revision == "A3" else "-DREV_A4"
         
         cmd = [self.compiler,'-b',revision]
+
+        for s in ['x','y','z','e','h']:
+            cmd.append('-DSTEPPER_'+s.upper()+'_DIRECTION='+("0" if self.config.getint('Steppers', 'direction_'+s)>0 else "1"))
+
+        
 
         if shouldInvert:
             cmd.append("-DENDSTOP_INVERSED=1");

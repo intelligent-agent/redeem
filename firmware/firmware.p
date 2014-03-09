@@ -215,7 +215,7 @@ NEXT_COMMAND:
 
     //Inverse the endstops if they are inversed
 
-#ifdef ENDSTOP_INVERSED
+#ifndef ENDSTOP_INVERSED
     XOR r7.b0,r7.b0,0xFF
 #endif
     
