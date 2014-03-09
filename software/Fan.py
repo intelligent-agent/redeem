@@ -13,21 +13,15 @@ import time
 
 PCA9685_MODE1 = 0x0
 PCA9685_PRESCALE = 0xFE
-DEVICE_TREE = True
 
-if DEVICE_TREE:
-	pwm = Adafruit_I2C(0x70, 1, False) # Open device
-else:
-	pwm = Adafruit_I2C(0x70, 3, False) # Open device
+pwm = Adafruit_I2C(0x70, 1, False) # Open device
 	
 pwm.write8(PCA9685_MODE1, 0x01)    # Reset 
 time.sleep(0.05)				   # Wait for reset
 
 class Fan:
-	
-
 	@staticmethod
-	def setPWMFrequency(freq):
+	def set_PWM_frequency(freq):
 		""" Set the PWM frequency for all fans connected on this PWM-chip """
 		prescaleval = 25000000
 		prescaleval /= 4096;

@@ -48,6 +48,7 @@ spi2_1.bpw = 8
 spi2_1.mode = 0
 
 class Stepper:
+
     all_steppers = list()
     revision    = "A4"
     SLEEP       = 6
@@ -61,12 +62,12 @@ class Stepper:
         bytes = []
         for stepper in Stepper.all_steppers:	   
             bytes.append(stepper.get_state())
-        txt = ", ".join([hex(b) for b in bytes[::-1]])
-        logging.debug("Updating steppers: "+txt)
+        #txt = ", ".join([hex(b) for b in bytes[::-1]])
+        #logging.debug("Updating steppers: "+txt)
         spi2_1.writebytes(bytes[::-1])
 
     ''' Init'''
-    def __init__(self, stepPin, dirPin, faultPin, dac_channel, name):
+    def __init__(self, stepPin, dirPin, faultPin, dac_channel, name, endstop, internalStepPin, internalDirPin):
         self.dac_channel     = dac_channel  # Which channel on the dac is connected to this stepper
         self.stepPin         = stepPin
         self.dirPin          = dirPin
@@ -79,8 +80,15 @@ class Stepper:
         self.steps_pr_mm     = 1            # Numer of steps pr mm. 
         self.microsteps      = 1.0          # Well, this is the microstep number
         self.pru_num         = -1           # PRU number, if any 
-        Stepper.all_steppers.append(self) 	    # Add to list of steppers
- 						
+        self.direction       = 1
+        self.endstop         = endstop
+        self.internalStepPin = (1 << internalStepPin)
+        self.internalDirPin = (1 << internalDirPin)
+        Stepper.all_steppers.append(self)       # Add to list of steppers
+
+    def get_endstop(self):
+        return self.endstop
+
     ''' Sets the Stepper enabled '''
     def set_enabled(self, value=1, force_update=False):
         if not self.enabled:
@@ -132,8 +140,8 @@ class Stepper:
             self.state = int("0b"+bin(self.state)[2:].rjust(8, '0')[:4]+bin(value)[2:].rjust(3, '0')[::-1]+"0", 2)
         else:
             # Keep bit 0, 4, 5, 6 intact but replace bit 1, 2, 3
-            #self.state = int("0b"+bin(self.state)[2:].rjust(8, '0')[:4]+bin(value)[2:].rjust(3, '0')+bin(self.state)[-1:], 2)
-            self.state = int("0b"+bin(self.state)[2:].rjust(8, '0')[:4]+bin(value)[2:].rjust(3, '0')+"0", 2)
+            self.state = int("0b"+bin(self.state)[2:].rjust(8, '0')[:4]+bin(value)[2:].rjust(3, '0')+bin(self.state)[-1:], 2)
+            #self.state = int("0b"+bin(self.state)[2:].rjust(8, '0')[:4]+bin(value)[2:].rjust(3, '0')+"0", 2)
         self.mmPrStep    = 1.0/(self.steps_pr_mm*self.microsteps)
         if force_update: 
             self.update()
@@ -181,11 +189,11 @@ class Stepper:
     def _setMMPrstep(self, mmPrStep):
         self.mmPrStep = mmPrStep
 
-    ''' Set the number of steps pr mm. '''			
+    ''' Set the number of steps pr mm. '''          
     def set_steps_pr_mm(self, steps_pr_mm):
         self.steps_pr_mm = steps_pr_mm
         self.mmPrStep = 1.0/(steps_pr_mm*self.microsteps)
-	
+    
     ''' Well, you can only guess what this function does. '''
     def set_max_feed_rate(self, max_feed_rate):
         self.max_feed_rate = max_feed_rate
@@ -196,12 +204,14 @@ class Stepper:
 
     ''' The pin that steps, it looks like GPIO1_31 aso '''
     def get_step_pin(self):
-        return (1<<int(self.stepPin.split("_")[1]))
+        return self.internalStepPin
     
     ''' Get the dir pin shifted into position '''
     def get_dir_pin(self):
-        return (1<<int(self.dirPin.split("_")[1]))
+        return self.internalDirPin
 
+    def get_direction(self):
+        return self.direction
 
 
 

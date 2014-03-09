@@ -21,6 +21,8 @@ PyObject* _braid_data_c(PyObject* data1, PyObject* data2)
     PyObject* tmp_tuple1;
     PyObject* tmp_tuple2;
     int pin1, pin2;
+    int dir1, dir2;
+    int o1, o2;
     float dly1, dly2;
 
     //Calculate max size (Is this correct?)
@@ -28,20 +30,28 @@ PyObject* _braid_data_c(PyObject* data1, PyObject* data2)
     
     // Allocate memory for two arrays of maximum possible size to contain result
     int * pins = (int*) malloc(sizeof(int) * max_size);
+    int * dirs = (int*) malloc(sizeof(int) * max_size);
+    int * options = (int*) malloc(sizeof(int) * max_size);
     float * delay = (float*) malloc(sizeof(float) * max_size);
         
     //Get first tuples from data1 and data2    
     tmp_tuple1 = PyList_GetItem(data1,idx1);
     pin1 = (int)PyInt_AsLong(PyTuple_GetItem(tmp_tuple1,0));
-    dly1 = (float)PyFloat_AsDouble(PyTuple_GetItem(tmp_tuple1,1));
+    dir1 = (int)PyInt_AsLong(PyTuple_GetItem(tmp_tuple1,1));
+    o1 = (int)PyInt_AsLong(PyTuple_GetItem(tmp_tuple1,2));
+    dly1 = (float)PyFloat_AsDouble(PyTuple_GetItem(tmp_tuple1,3));
     tmp_tuple2 = PyList_GetItem(data2,idx2);
     pin2 = (int)PyInt_AsLong(PyTuple_GetItem(tmp_tuple2,0));
-    dly2 = (float)PyFloat_AsDouble(PyTuple_GetItem(tmp_tuple2,1));
+    dir2 = (int)PyInt_AsLong(PyTuple_GetItem(tmp_tuple2,1));
+    o2 = (int)PyInt_AsLong(PyTuple_GetItem(tmp_tuple2,2));
+    dly2 = (float)PyFloat_AsDouble(PyTuple_GetItem(tmp_tuple2,3));
         
     while (1) {
         if (dly1 == dly2) {
             //Create resulting pin number
-            pins[line] = pin1 + pin2;
+            pins[line] = pin1 | pin2;
+            dirs[line] = dir1 | dir2;
+            options[line] = o1 | o2;
             //Create resulting delay
             delay[line] = dly1;
         
@@ -64,15 +74,21 @@ PyObject* _braid_data_c(PyObject* data1, PyObject* data2)
             //Get next tuples from data1 and data2
             tmp_tuple1 = PyList_GetItem(data1,idx1);
             pin1 = (int)PyInt_AsLong(PyTuple_GetItem(tmp_tuple1,0));
-            dly1 = (float)PyFloat_AsDouble(PyTuple_GetItem(tmp_tuple1,1));
+            dir1 = (int)PyInt_AsLong(PyTuple_GetItem(tmp_tuple1,1));
+            o1 = (int)PyInt_AsLong(PyTuple_GetItem(tmp_tuple1,2));
+            dly1 = (float)PyFloat_AsDouble(PyTuple_GetItem(tmp_tuple1,3));
             tmp_tuple2 = PyList_GetItem(data2,idx2);
             pin2 = (int)PyInt_AsLong(PyTuple_GetItem(tmp_tuple2,0));
-            dly2 = (float)PyFloat_AsDouble(PyTuple_GetItem(tmp_tuple2,1));
+            dir2 = (int)PyInt_AsLong(PyTuple_GetItem(tmp_tuple2,1));
+            o2 = (int)PyInt_AsLong(PyTuple_GetItem(tmp_tuple2,2));
+            dly2 = (float)PyFloat_AsDouble(PyTuple_GetItem(tmp_tuple2,3));
         }
         
         else if (dly1 > dly2) {
             //Create resulting pin number
-            pins[line] = pin1 + pin2;
+            pins[line] = pin1 | pin2;
+            dirs[line] = dir1 | dir2;
+            options[line] = o1 | o2;
             //Create resulting delay
             delay[line] = dly2;
             
@@ -99,12 +115,16 @@ PyObject* _braid_data_c(PyObject* data1, PyObject* data2)
             //Get next tuple from data2
             tmp_tuple2 = PyList_GetItem(data2,idx2);
             pin2 = (int)PyInt_AsLong(PyTuple_GetItem(tmp_tuple2,0));
-            dly2 = (float)PyFloat_AsDouble(PyTuple_GetItem(tmp_tuple2,1));
+            dir2 = (int)PyInt_AsLong(PyTuple_GetItem(tmp_tuple2,1));
+            o2 = (int)PyInt_AsLong(PyTuple_GetItem(tmp_tuple2,2));
+            dly2 = (float)PyFloat_AsDouble(PyTuple_GetItem(tmp_tuple2,3));
         }
         
         else if (dly1 < dly2) {
             //Create resulting pin number
-            pins[line] = pin1 + pin2;
+            pins[line] = pin1 | pin2;
+            dirs[line] = dir1 | dir2;
+            options[line] = o1 | o2;
             //Create resulting delay
             delay[line] = dly1;
             
@@ -131,7 +151,9 @@ PyObject* _braid_data_c(PyObject* data1, PyObject* data2)
             //Get next tuple from data1
             tmp_tuple1 = PyList_GetItem(data1,idx1);
             pin1 = (int)PyInt_AsLong(PyTuple_GetItem(tmp_tuple1,0));
-            dly1 = (float)PyFloat_AsDouble(PyTuple_GetItem(tmp_tuple1,1));
+            dir1 = (int)PyInt_AsLong(PyTuple_GetItem(tmp_tuple1,1));
+            o1 = (int)PyInt_AsLong(PyTuple_GetItem(tmp_tuple1,2));
+            dly1 = (float)PyFloat_AsDouble(PyTuple_GetItem(tmp_tuple1,3));
         }
     }    
 
@@ -141,20 +163,26 @@ PyObject* _braid_data_c(PyObject* data1, PyObject* data2)
     if (idx1 < PyList_Size(data1)) 
     {
         pins[line] = pin1;
+        dirs[line] = dir1;
+        options[line] = o1;
         delay[line] = dly1;
         line++;
         idx1++;
 
         //Iterate through any items left in data1
-        for (idx1; idx1 < PyList_Size(data1); idx1++) 
+        for (; idx1 < PyList_Size(data1); idx1++) 
         {
             //Get tuple from data1
             tmp_tuple1 = PyList_GetItem(data1,idx1);
             pin1 = (int)PyInt_AsLong(PyTuple_GetItem(tmp_tuple1,0));
-            dly1 = (float)PyFloat_AsDouble(PyTuple_GetItem(tmp_tuple1,1));
+            dir1 = (int)PyInt_AsLong(PyTuple_GetItem(tmp_tuple1,1));
+            o1 = (int)PyInt_AsLong(PyTuple_GetItem(tmp_tuple1,2));
+            dly1 = (float)PyFloat_AsDouble(PyTuple_GetItem(tmp_tuple1,3));
 
             //Add new tuple to result
             pins[line] = pin1;
+            dirs[line] = dir1;
+            options[line] = o1;
             delay[line] = dly1;
             
             //Increase indexes
@@ -165,21 +193,27 @@ PyObject* _braid_data_c(PyObject* data1, PyObject* data2)
     if (idx2 < PyList_Size(data2)) 
     {
         pins[line] = pin2;
+        dirs[line] =   dir2;
+        options[line] =  o2;
         delay[line] = dly2;
         line++;
         idx2++;     
             
             
         //Iterate through any items left in data2
-        for (idx2; idx2 < PyList_Size(data2); idx2++) 
+        for (; idx2 < PyList_Size(data2); idx2++) 
         {
             //Get tuple from data2
             tmp_tuple2 = PyList_GetItem(data2,idx2);
             pin2 = (int)PyInt_AsLong(PyTuple_GetItem(tmp_tuple2,0));
-            dly2 = (float)PyFloat_AsDouble(PyTuple_GetItem(tmp_tuple2,1));
+            dir2 = (int)PyInt_AsLong(PyTuple_GetItem(tmp_tuple2,1));
+            o2 = (int)PyInt_AsLong(PyTuple_GetItem(tmp_tuple2,2));
+            dly2 = (float)PyFloat_AsDouble(PyTuple_GetItem(tmp_tuple2,3));
 
             //Add new tuple to result
             pins[line] = pin2;
+            dirs[line] =   dir2;
+            options[line] =  o2;
             delay[line] = dly2;
             
             //Increase indexes
@@ -200,11 +234,13 @@ PyObject* _braid_data_c(PyObject* data1, PyObject* data2)
     PyObject *pylist = PyList_New(line);
     int i;
     for (i=0; i<line; i++){
-		PyList_SetItem(pylist, i, Py_BuildValue("(id)", pins[i], delay[i]));
+		PyList_SetItem(pylist, i, Py_BuildValue("(iiid)", pins[i],dirs[i],options[i], delay[i]));
     }
 
     //Free allocated memory
     free(pins);
+    free(dirs);
+    free(options);
     free(delay);
 	
     //Return array

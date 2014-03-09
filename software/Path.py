@@ -26,7 +26,13 @@ class Path:
     max_speed_e = 1.0
     max_speed_h = 1.0
 
-    def __init__(self, axes, feed_rate, movement, is_print_segment=True):
+    home_speed_x = 1.0
+    home_speed_y = 1.0
+    home_speed_z = 1.0
+    home_speed_e = 1.0
+    home_speed_h = 1.0
+
+    def __init__(self, axes, feed_rate, movement, is_print_segment=True, cancellable = False):
         """ The axes of evil, the feed rate in m/s and ABS or REL """
         self.axes = axes
         self.feed_rate = feed_rate
@@ -34,8 +40,8 @@ class Path:
         self.global_pos = {"X":0, "Y":0, "Z":0, "E":0} 
         self.is_print_segment = is_print_segment         # If this is True, use angle stuff
         self.next_ok = False
-
-        # Default values
+        self.cancellable = cancellable
+      	# Default values
         self.start_speed = 0
         self.end_speed = 0
 
@@ -43,6 +49,9 @@ class Path:
         """ Special path, only set the global position on this """
         return (self.movement == "G92")
   
+    def is_cancellable(self):
+        return self.cancellable
+
     def get_pos(self):
         return self.axes
 
@@ -57,7 +66,25 @@ class Path:
     def unlink(self):
         self.next = None
         self.prev = None
+        self.next_ok = False
     
+    def link(self, prev, next = None):
+        """ Link this path with the previous and next one (if any, provide None otherwise) """
+        self.next = next
+        self.prev = prev
+
+    def set_homing_feedrate(self):
+        if "X" in self.axes:
+            self.feed_rate = min(self.feed_rate, Path.home_speed_x)
+        if "Y" in self.axes:
+            self.feed_rate = min(self.feed_rate, Path.home_speed_y)
+        if "Z" in self.axes:
+            self.feed_rate = min(self.feed_rate, Path.home_speed_z)
+        if "E" in self.axes:
+            self.feed_rate = min(self.feed_rate, Path.home_speed_e)
+        if "H" in self.axes:
+            self.feed_rate = min(self.feed_rate, Path.home_speed_h)
+
     def set_global_pos(self, global_pos, update_next = True):
         """ Set the global position for the printer """
         self.global_pos = global_pos 
@@ -65,6 +92,7 @@ class Path:
             x = self.axes["X"]
             if self.movement == "ABSOLUTE":
                 x -= self.global_pos["X"]
+
             self.feed_rate = min(self.feed_rate, Path.max_speed_x)
         else:
             x = 0
@@ -107,7 +135,6 @@ class Path:
             a = self.global_pos
             b = self.cartesian_vector
             # Do not continue the update beyond the next segment
-            
             self.next.set_global_pos(dict( (n, a.get(n, 0)+b.get(n, 0)) for n in set(a)|set(b) ), False)
             self.next_ok = True
 
@@ -130,6 +157,9 @@ class Path:
         """ Get the length of the axis """
         return self.vector[axis]
 
+    def set_max_speed(self,s):
+        self.feed_rate = s
+
     def get_max_speed(self):
         """ Get the top speed of this segment """
         return self.feed_rate
@@ -142,8 +172,13 @@ class Path:
         return abs(self.get_axis_length(axis))/hyp
 
     def get_start_speed(self):
-        """ Get the lowest speed along this segment """        
-        return (1-self.angle_to_prev()/np.pi)*self.get_max_speed()
+        """ Get the lowest speed along this segment """
+
+        if hasattr(self, 'prev'):
+            return (1-self.angle_to_prev()/np.pi)*self.prev.get_end_speed()
+        else:
+            return 0.0
+        
 
     def get_end_speed(self):
         """ Get the lowest speed along this segment """
@@ -174,7 +209,7 @@ class Path:
         if hasattr(self, 'angle_to_next_cal'):
             return self.angle_to_next_cal
         if self.next_ok == False:
-            return 0
+            return np.pi
 
         v1 = [self.get_axis_length("X"), self.get_axis_length("Y")]
         v2 = [self.next.get_axis_length("X"), self.next.get_axis_length("Y")]
@@ -187,7 +222,7 @@ class Path:
         if hasattr(self, 'angle_to_prev_cal'):
             return self.angle_to_prev_cal
         if not hasattr(self, 'prev'):
-            return 0
+            return np.pi
 
         v1 = [self.get_axis_length("X"), self.get_axis_length("Y")]
         v2 = [self.prev.get_axis_length("X"), self.prev.get_axis_length("Y")]
