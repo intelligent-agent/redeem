@@ -81,12 +81,16 @@ class Redeem:
         EndStop.inputdev = inputdev
 
         self.end_stops = {}
-        self.end_stops["X1"] = EndStop("GPIO2_2", 1, "X1")
-        self.end_stops["Y1"] = EndStop("GPIO0_14", 2, "Y1")
-        self.end_stops["Z1"] = EndStop("GPIO0_30", 3, "Z1")
+        # We should use key codes that are not used on a keyboard etc. 
+        self.end_stops["X1"] = EndStop("GPIO0_31", 116, "X1", self.config.getboolean("Endstops", "invert_X1"))
+        self.end_stops["Y1"] = EndStop("GPIO0_14", 2, "Y1", self.config.getboolean("Endstops", "invert_Y1"))
+        self.end_stops["Z1"] = EndStop("GPIO0_30", 3, "Z1", self.config.getboolean("Endstops", "invert_Z1"))
         #self.end_stops["Y2"] = EndStop("GPIO3_21", self.steppers, 4, "Y2")
         #self.end_stops["X2"] = EndStop("GPIO0_31", self.steppers, 5, "X2")
         #self.end_stops["Z2"] = EndStop("GPIO0_4", self.steppers, 6, "Z2")
+
+        EndStop.callback = self.end_stop_hit
+        EndStop.inputdev = self.config.get("Endstops","inputdev");
 
         if self.revision == "A3":
             Stepper.revision = "A3"
@@ -96,11 +100,11 @@ class Redeem:
             Stepper.DECAY   = 0
 
         # Init the 5 Stepper motors (step, dir, fault, DAC channel, name)
-        self.steppers["X"] = Stepper("GPIO0_27", "GPIO1_29", "GPIO2_4",  0, "X",   -1, self.end_stops["X1"], 0,0) 
-        self.steppers["Y"] = Stepper("GPIO1_12", "GPIO0_22", "GPIO2_5",  1, "Y",    1, self.end_stops["Y1"], 1,1)  
-        self.steppers["Z"] = Stepper("GPIO0_23", "GPIO0_26", "GPIO0_15", 2, "Z",    1, self.end_stops["Z1"],2,2)  
-        self.steppers["E"] = Stepper("GPIO1_28", "GPIO1_15", "GPIO2_1",  3, "Ext1",-1, None,3,3)
-        self.steppers["H"] = Stepper("GPIO1_13", "GPIO1_14", "GPIO2_3",  4, "Ext2",-1, None,4,4)
+        self.steppers["X"] = Stepper("GPIO0_27", "GPIO1_29", "GPIO2_4",  0, "X",  self.end_stops["X1"], 0,0) 
+        self.steppers["Y"] = Stepper("GPIO1_12", "GPIO0_22", "GPIO2_5",  1, "Y",  self.end_stops["Y1"], 1,1)  
+        self.steppers["Z"] = Stepper("GPIO0_23", "GPIO0_26", "GPIO0_15", 2, "Z",  self.end_stops["Z1"],2,2)  
+        self.steppers["E"] = Stepper("GPIO1_28", "GPIO1_15", "GPIO2_1",  3, "Ext1", None,3,3)
+        self.steppers["H"] = Stepper("GPIO1_13", "GPIO1_14", "GPIO2_3",  4, "Ext2", None,4,4)
 
         # Enable the steppers and set the current, steps pr mm and microstepping  
         for name, stepper in self.steppers.iteritems():
@@ -108,6 +112,7 @@ class Redeem:
             stepper.set_enabled(self.config.getboolean('Steppers', 'enabled_'+name)) 
             stepper.set_steps_pr_mm(self.config.getfloat('Steppers', 'steps_pr_mm_'+name))         
             stepper.set_microstepping(self.config.getint('Steppers', 'microstepping_'+name)) 
+            stepper.direction = self.config.getint('Steppers', 'direction_'+name)
             stepper.set_decay(0) 
 
 		# Commit changes for the Steppers
@@ -254,18 +259,15 @@ class Redeem:
         elif g.code() == "G28":                                     # Home the steppers
             if g.num_tokens() == 0:                                  # If no token is given, home all
                 g.set_tokens(["X0", "Y0", "Z0"])                
-            #smds = {}
             self.path_planner.wait_until_done()                                               # All steppers 
             for i in range(g.num_tokens()): # Run through all tokens
                 axis = g.token_letter(i)                         
                 self.path_planner.home(axis)
-                path = Path({axis: 0}, self.feed_rate, "G92")               # Make a path segment from the axes
-                self.path_planner.add_path(path) 
-                #axis = g.tokenLetter(i)                             # Get the axis, X, Y, Z or E
-                #smds[axis] = float(g.tokenValue(i))                 # Get tha value, new position or vector             
-            #path = Path(smds, self.feed_rate, "ABSOLUTE", False)    # Make a path segment from the axes
-            #logging.debug("moving to "+str(smds))
-            #self.path_planner.add_path(path)                        # Add the path. This blocks until the path planner has capacity
+                offset = self.config.getfloat('Geometry', 'offset_'+axis.lower())
+                self._execute(Gcode({"message": "G92 "+axis+str(-offset*1000), "prot": g.prot})) # Convert to mm
+                self._execute(Gcode({"message": "G90 ", "prot": g.prot}))               
+                self._execute(Gcode({"message": "G1 "+axis+"0", "prot": g.prot}))       
+                
         elif g.code() == "G90":                                     # Absolute positioning
             self.movement = "ABSOLUTE"
         elif g.code() == "G91":                                         # Relative positioning 
@@ -431,17 +433,17 @@ class Redeem:
 
     ''' An endStop has been hit '''
     def end_stop_hit(self, endstop):
-        axis = endstop.name[:1]
-        if Path.axis_config == Path.AXIS_CONFIG_XY: 
-            self.steppers[axis].set_disabled(True)
-        elif Path.axis_config == Path.AXIS_CONFIG_H_BELT:
-            if axis == "X" or axis == "Y":                  # X and Y are connected, must disable both
-                self.steppers["X"].set_disabled()
-                self.steppers["Y"].set_disabled(True)
-            else:
-                self.steppers[axis].set_disabled(True)           # Z-axis
-        else:
-            logging.error("Unknown axis config")    
+        #axis = endstop.name[:1]
+        #if Path.axis_config == Path.AXIS_CONFIG_XY: 
+        #    self.steppers[axis].set_disabled(True)
+        #elif Path.axis_config == Path.AXIS_CONFIG_H_BELT:
+        #    if axis == "X" or axis == "Y":                  # X and Y are connected, must disable both
+        #        self.steppers["X"].set_disabled()
+        #        self.steppers["Y"].set_disabled(True)
+        #    else:
+        #        self.steppers[axis].set_disabled(True)           # Z-axis
+        #else:
+        #    logging.error("Unknown axis config")    
         logging.warning("End Stop " + endstop.name +" hit!")
 
 def signal_handler(signal, frame):

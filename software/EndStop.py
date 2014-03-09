@@ -26,28 +26,22 @@ class EndStop:
         self.invert = invert
         self.t = Thread(target=self._wait_for_event)
         self.t.daemon = True
-        self.hit = True
+        self.hit = False
         self.t.start()
 	   
     def set_initial_value_from_gpio(self,v):
         self.hit=True if (v==1 and not self.invert) or (v==0 and self.invert) else False
 
-    def isHit(self):
-        return self.hit
-
     def get_gpio_bank_and_pin(self):
         matches=re.compile('GPIO([0-9])_([0-9]+)').search(self.pin)
         tup =  matches.group(1,2)
-
         tup = (int(tup[0]), int(tup[1]))
-
         return tup
 
     def get_pin(self):
         return self.pin
 
     def _wait_for_event(self):
-        #logging.debug("Waiting for end-stop events...")
         evt_file = open(EndStop.inputdev, "rb")
         while True:
             evt = evt_file.read(16) # Read the event
@@ -65,13 +59,3 @@ class EndStop:
                         EndStop.callback(self)
                 else:
                     self.hit = False
-
-
-if __name__ == '__main__':
-    evt_file = open("/dev/input/event1", "rb")
-    while True:
-        evt = evt_file.read(16) # Read the event
-        evt_file.read(16)       # Discard the debounce event 
-        code = ord(evt[10])
-        direction  = "down" if ord(evt[12]) else "up"
-        print "Switch "+str(code)+" "+direction
