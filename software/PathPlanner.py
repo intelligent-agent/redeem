@@ -30,9 +30,9 @@ import braid
 
 class PathPlanner:
     ''' Init the planner '''
-    def __init__(self, steppers, firmware_binary):
+    def __init__(self, steppers, pru_firmware):
         self.steppers    = steppers
-        self.pru         = Pru(firmware_binary)                 # Make the PRU
+        self.pru         = Pru(pru_firmware)                 # Make the PRU
         self.paths       = Queue.Queue(10)                      # Make a queue of paths
         self.current_pos = {"X":0.0, "Y":0.0, "Z":0.0, "E":0.0,"H":0.0}
         self.running     = True                                 # Yes, we are running
@@ -40,13 +40,13 @@ class PathPlanner:
 
         #Assign end stop initial values
         for stepper in self.steppers.items():
-            if stepper[1].getEndstop() == None: continue
+            if stepper[1].get_endstop() == None: continue
 
-            (bank, pin) = stepper[1].getEndstop().get_gpio_bank_and_pin()
+            (bank, pin) = stepper[1].get_endstop().get_gpio_bank_and_pin()
 
             pinValue = (self.pru.read_gpio_state(bank) >> pin) & 0x1
-            stepper[1].getEndstop().set_initial_value_from_gpio(pinValue)
-            stepper[1].getEndstop().set_path_planner(self)
+            stepper[1].get_endstop().set_initial_value_from_gpio(pinValue)
+
 
         self.t           = Thread(target=self._do_work)         # Make the thread
         self.t.daemon    = True
@@ -60,15 +60,15 @@ class PathPlanner:
     ''' Home the given axis using endstops (min) '''
     def home(self,axis):
         # Check what is the direction of the first move
-        is_hit = self.steppers[axis].getEndstop().hit
+        is_hit = self.steppers[axis].get_endstop().hit
         if not is_hit:
-            if self.current_pos[axis]>0:                
+            if self.current_pos[axis]>0:
                 p = Path({axis:0}, 0.1, "ABSOLUTE", True, True)
                 p.set_homing_feedrate()
                 self.add_path(p)    
                 self.wait_until_done()
-            while not self.steppers[axis].getEndstop().hit:
-                logging.debug(axis+" not hit yet hit")
+
+            while not self.steppers[axis].get_endstop().hit:
                 p = Path({axis:-0.01}, 0.1, "RELATIVE", True, True)
                 p.set_homing_feedrate()
                 self.add_path(p)    

@@ -1,3 +1,4 @@
+
 FILENAME=firmware
 
 .PHONY: clean all
@@ -18,4 +19,6 @@ compiler:
 clean: 
 	rm -f $(FILENAME)_00A3.bin
 	rm -f $(FILENAME)_00A4.bin
+
+
 

@@ -26,22 +26,17 @@ class EndStop:
         self.invert = invert
         self.t = Thread(target=self._wait_for_event)
         self.t.daemon = True
-        self.path_planner = None
         self.hit = False
         self.t.start()
 	   
-    def set_path_planner(self,planner):
-        self.path_planner=planner
+    def set_initial_value_from_gpio(self,v):
+        self.hit=True if (v==1 and not self.invert) or (v==0 and self.invert) else False
 
     def get_gpio_bank_and_pin(self):
         matches=re.compile('GPIO([0-9])_([0-9]+)').search(self.pin)
         tup =  matches.group(1,2)
         tup = (int(tup[0]), int(tup[1]))
         return tup
-
-    def set_initial_value_from_gpio(self,v):
-        self.hit=True if (v==1 and not self.invert) or (v==0 and self.invert) else False
-        logging.debug("Endstop "+self.name+": "+("hit" if self.hit else "not hit"))
 
     def get_pin(self):
         return self.pin
