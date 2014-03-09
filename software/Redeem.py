@@ -257,9 +257,10 @@ class Redeem:
             self.path_planner.wait_until_done()                                               # All steppers 
             for i in range(g.num_tokens()): # Run through all tokens
                 axis = g.token_letter(i)                         
-                self.path_planner.home(axis)
-                offset = self.config.getfloat('Geometry', 'offset_'+axis.lower())
-                self._execute(Gcode({"message": "G92 "+axis+str(-offset*1000), "prot": g.prot})) # Convert to mm
+                if self.config.getboolean('Endstops', 'has_'+axis.lower()):
+                    self.path_planner.home(axis)
+                    offset = self.config.getfloat('Geometry', 'offset_'+axis.lower())
+                    self._execute(Gcode({"message": "G92 "+axis+str(-offset*1000), "prot": g.prot})) # Convert to mm
                 self._execute(Gcode({"message": "G90 ", "prot": g.prot}))               
                 self._execute(Gcode({"message": "G1 "+axis+"0", "prot": g.prot}))       
                 
