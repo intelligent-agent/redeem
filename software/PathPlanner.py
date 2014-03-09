@@ -62,12 +62,13 @@ class PathPlanner:
         # Check what is the direction of the first move
         is_hit = self.steppers[axis].getEndstop().hit
         if not is_hit:
-            if self.current_pos[axis]>0:
+            if self.current_pos[axis]>0:                
                 p = Path({axis:0}, 0.1, "ABSOLUTE", True, True)
                 p.set_homing_feedrate()
                 self.add_path(p)    
                 self.wait_until_done()
             while not self.steppers[axis].getEndstop().hit:
+                logging.debug(axis+" not hit yet hit")
                 p = Path({axis:-0.01}, 0.1, "RELATIVE", True, True)
                 p.set_homing_feedrate()
                 self.add_path(p)    

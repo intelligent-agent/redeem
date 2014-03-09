@@ -76,10 +76,11 @@ class Redeem:
 
         # Init the end stops
         self.end_stops = {}
-        # We should use key codes that are not used on a keyboard etc. 
-        self.end_stops["X1"] = EndStop("GPIO0_31", 116, "X1", self.config.getboolean("Endstops", "invert_X1"))
-        self.end_stops["Y1"] = EndStop("GPIO0_14", 2, "Y1", self.config.getboolean("Endstops", "invert_Y1"))
-        self.end_stops["Z1"] = EndStop("GPIO0_30", 3, "Z1", self.config.getboolean("Endstops", "invert_Z1"))
+        # We should use key codes that are not used on a keyboard etc.         
+        self.end_stops["X1"] = EndStop("GPIO0_31", 116, "X2", self.config.getboolean("Endstops", "invert_X2"))
+        self.end_stops["Y1"] = EndStop("GPIO3_21", 112, "Y2", self.config.getboolean("Endstops", "invert_Y2"))
+        self.end_stops["Z1"] = EndStop("GPIO0_30", 113, "Z1", self.config.getboolean("Endstops", "invert_Z1"))
+
         #self.end_stops["Y2"] = EndStop("GPIO3_21", self.steppers, 4, "Y2")
         #self.end_stops["X2"] = EndStop("GPIO0_31", self.steppers, 5, "X2")
         #self.end_stops["Z2"] = EndStop("GPIO0_4", self.steppers, 6, "Z2")
@@ -444,6 +445,7 @@ class Redeem:
 
 def signal_handler(signal, frame):
         print 'Cleaning up...'
+        logging.info("KTHNXBYE!")
         r.exit()
         sys.exit(0)
 
