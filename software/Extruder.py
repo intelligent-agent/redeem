@@ -114,5 +114,23 @@ class HBP(Heater):
     def __init__(self, thermistor, mosfet):
         Heater.__init__(self, thermistor, mosfet, "HBP")
         self.enable()
+        
+    def keep_temperature(self):
+        while self.enabled:                     
+            self.current_temp = self.thermistor.getTemperature()    # Read the current temperature      
+            error = self.target_temp-self.current_temp   # Calculate the error 
+
+            if error>1.0:
+                self.mosfet.set_power(1.0)
+            else:
+                self.mosfet.set_power(0.0)          
+         
+            log = self.name+": Tgt: %f, Cur: %f"%(self.target_temp, self.current_temp)
+            log += ", Err: %f, Pow: %f"%(error, 1.0)              
+            #if self.name == "Ext1":
+                #logging.debug(log+", Der: %f, Int: %f"%(self.D*derivative, self.I*integral))
+            time.sleep(1)                                # Wait one second        
+        self.disabled = True                             # Signal the disable that we are done
+
 
 
