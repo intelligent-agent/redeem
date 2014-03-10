@@ -3,8 +3,6 @@
 
 
 all:
-	dtc -O dtb -o BB-BONE-REPLICAP-00A1.dtbo -b 0 -@ BB-BONE-REPLICAP-00A1.dts
-	dtc -O dtb -o BB-BONE-REPLICAP-00A2.dtbo -b 0 -@ BB-BONE-REPLICAP-00A2.dts
 	dtc -O dtb -o BB-BONE-REPLICAP-00A3.dtbo -b 0 -@ BB-BONE-REPLICAP-00A3.dts
 	dtc -O dtb -o BB-BONE-REPLICAP-00A4.dtbo -b 0 -@ BB-BONE-REPLICAP-00A4.dts
 	cp BB-BONE-REPLICAP* /lib/firmware/

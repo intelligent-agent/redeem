@@ -32,17 +32,18 @@ DDR_MAGIC			= 0xbabe7175
 class Pru:
     ddr_lock = Lock()
 
-    def __init__(self):
+    def __init__(self, firmware):
         pru_hz 			    = 200*1000*1000             # The PRU has a speed of 200 MHz
-        self.s_pr_inst      = 2.0*(1.0/pru_hz)          # I take it every instruction is a single cycle instruction
-        self.inst_pr_loop 	= 42                        # This is the minimum number of instructions needed to step. 
-        self.inst_pr_delay 	= 2                         # Every loop adds two instructions: i-- and i != 0            
+        self.s_pr_inst      = (1.0/pru_hz)          # I take it every instruction is a single cycle instruction
+        self.inst_pr_loop 	= 0                        # This is the minimum number of instructions needed to step.  It is already substracted into the PRU
+        self.inst_pr_delay 	= 1                         # Every loop adds two instructions: i-- and i != 0            
         self.sec_to_inst_dev = (self.s_pr_inst*2)
         self.pru_data       = []      	    	        # This holds all data for one move (x,y,z,e1,e2)
         self.ddr_used       = Queue.Queue()             # List of data lengths currently in DDR for execution
         self.ddr_reserved   = 0      
         self.ddr_mem_used   = 0  
         self.clear_events   = []       
+        self.firmware = firmware
 
         self.ddr_addr = int(open("/sys/class/uio/uio0/maps/map1/addr","rb").read().rstrip(), 0)
         self.ddr_size = int(open("/sys/class/uio/uio0/maps/map1/size","rb").read().rstrip(), 0)
@@ -59,25 +60,49 @@ class Pru:
             self.ddr_mem = mmap.mmap(f.fileno(), ddr_filelen, offset=ddr_offset) # mmap the right area            
             self.ddr_mem[self.ddr_start:self.ddr_start+4] = struct.pack('L', 0)  # Add a zero to the first reg to make it wait
        
-        dirname = os.path.dirname(os.path.realpath(__file__))
-        pypruss.init()						            # Init the PRU
-        pypruss.open(PRU0)						        # Open PRU event 0 which is PRU0_ARM_INTERRUPT
-        pypruss.pruintc_init()					        # Init the interrupt controller
-        pypruss.pru_write_memory(0, 0, [self.ddr_addr, self.ddr_nr_events])		# Put the ddr address in the first region 
-        pypruss.exec_program(0, dirname+"/../firmware/firmware_00A4.bin")	# Load firmware "ddr_write.bin" on PRU 0
+        self.init_pru();
+        
+        #Wait until we get the GPIO output in the DDR
+        self.dev = os.open("/dev/uio0", os.O_RDONLY)
+
+        ret = select.select( [self.dev],[],[], 1.0 )
+        if ret[0] == [self.dev]:
+            pypruss.clear_event(PRU0_ARM_INTERRUPT)         # Clear the event        
+        
+        self.initial_gpio = [struct.unpack("L", self.ddr_mem[self.DDR_START+4:self.DDR_START+8])[0], struct.unpack("L", self.ddr_mem[self.DDR_START+8:self.DDR_START+12])[0], struct.unpack("L", self.ddr_mem[self.DDR_START+12:self.DDR_START+16])[0], struct.unpack("L", self.ddr_mem[self.DDR_START+16:self.DDR_START+20])[0] ]
+
+        os.close(self.dev)
+
+        #Clear DDR
+        self.ddr_mem[self.DDR_START+4:self.DDR_START+8] = struct.pack('L', 0)
+        self.ddr_mem[self.DDR_START+8:self.DDR_START+12] = struct.pack('L', 0)
+        self.ddr_mem[self.DDR_START+12:self.DDR_START+16] = struct.pack('L', 0)
+        self.ddr_mem[self.DDR_START+16:self.DDR_START+20] = struct.pack('L', 0)
+
         self.t = Thread(target=self._wait_for_events)         # Make the thread
         self.t.daemon = True
         self.running = True
-        self.t.start()		        
+        self.t.start()		
 
+    def init_pru(self):
+        self.ddr_mem[self.ddr_start:self.ddr_start+4] = struct.pack('L', 0)  # Add a zero to the first reg to make it wait
+        pypruss.init()                                  # Init the PRU
+        pypruss.open(PRU0)                              # Open PRU event 0 which is PRU0_ARM_INTERRUPT
+        pypruss.pruintc_init()                          # Init the interrupt controller
+        pypruss.pru_write_memory(0, 0, [self.ddr_addr, self.ddr_nr_events, 0])      # Put the ddr address in the first region         
+        pypruss.exec_program(0, self.firmware.get_firmware())   # Load firmware "ddr_write.bin" on PRU 0
+
+    def read_gpio_state(self, gpio_bank):
+        """ Return the initial state of a GPIO bank when the PRU was initialized """
+        return self.initial_gpio[gpio_bank]
     
     def add_data(self, data):
         """ Add some data to one of the PRUs """
-        (pins, delays) = data                       	    # Get the data
+        (pins, dirs, options, delays) = data                       	    # Get the data
         delays = np.clip(0.5*((np.array(delays)/self.s_pr_inst)-self.inst_pr_loop), 1, 4294967296L)
-        data = np.array([pins, delays.astype(int)])		        	    # Make a 2D matrix combining the ticks and delays
-        data = list(data.transpose().flatten())     	    # Braid the data so every other item is a pin and delay
-        self.pru_data = data   
+        data = np.array([pins,dirs,options, delays.astype(int)])		        	    # Make a 2D matrix combining the ticks and delays
+        #data = list(.flatten())     	    # Braid the data so every other item is a pin and delay
+        self.pru_data = data.transpose()   
 
     def has_capacity_for(self, data_len):
         """ Check if the PRU has capacity for a chunk of data """
@@ -99,10 +124,39 @@ class Pru:
         """ Returns True if there are segments on queue """
         return not self.is_empty()
 
+    def pack(self, word):
+        return struct.pack('L', word)
+
+    def emergency_interrupt(self):
+        pypruss.pru_disable(0)                                  # Disable PRU 0, this is already done by the firmware
+        pypruss.exit()                                          # Exit, don't know what this does. 
+        logging.debug('Resetting PRU...')
+      
+        self.pru_data       = []
+
+        while True:
+            try:
+                b = self.ddr_used.get(block=False)
+                if b != None:
+                    self.ddr_used.task_done()
+            except Queue.Empty:
+                break
+
+        self.ddr_reserved   = 0      
+        with Pru.ddr_lock: 
+            self.ddr_mem_used   = 0  
+        self.clear_events   = []       
+        self.ddr_start      = self.DDR_START
+        self.ddr_nr_events  = self.ddr_addr+self.ddr_size-4
+
+        self.init_pru()
+
     ''' Commit the data to the DDR memory '''
     def commit_data(self):
-        data = struct.pack('L', len(self.pru_data)/2)	    	# Pack the number of toggles. 
-        data += ''.join([struct.pack('L', word) for word in self.pru_data])
+        
+        data = struct.pack('L', len(self.pru_data))	    	# Pack the number of toggles. 
+        #Then we have one byte, one byte, one 16 bit (dummy), and one 32 bits
+        data += ''.join([struct.pack('BBHL', instr[0],instr[1],instr[2],instr[3]) for instr in self.pru_data])
         data += struct.pack('L', 0)                             # Add a terminating 0, this keeps the fw waiting for a new command.
     
         self.ddr_end = self.ddr_start+len(data)       
@@ -117,7 +171,7 @@ class Pru:
 
             first = struct.pack('L', len(data[4:cut])/8)+data[4:cut]    # Update the loop count
             first += struct.pack('L', DDR_MAGIC)                        # Add the magic number to force a reset of DDR memory counter
-            #logging.warning("First batch starts from "+hex(self.ddr_start)+" to "+hex(self.ddr_start+len(first)))
+            #logging.debug("First batch starts from "+hex(self.ddr_start)+" to "+hex(self.ddr_start+len(first)))
             self.ddr_mem[self.ddr_start:self.ddr_start+len(first)] = first  # Write the first part of the data to the DDR memory.
 
             with Pru.ddr_lock: 
@@ -127,7 +181,7 @@ class Pru:
             if len(data[cut:-4]) > 0:                                 # If len(data) == 4, only the terminating zero is present..
                 second = struct.pack('L', (len(data[cut:-4])/8))+data[cut:]     # Add the number of steps in this iteration
                 self.ddr_end = self.DDR_START+len(second)           # Update the end counter
-                #logging.warning("Second batch starts from "+hex(self.DDR_START)+" to "+hex(self.ddr_end))
+                #logging.debug("Second batch starts from "+hex(self.DDR_START)+" to "+hex(self.ddr_end))
                 self.ddr_mem[self.DDR_START:self.ddr_end] = second  # Write the second half of data to the DDR memory.
                 with Pru.ddr_lock: 
                     self.ddr_mem_used += len(second)
@@ -136,9 +190,10 @@ class Pru:
             else:
                 self.ddr_end = self.DDR_START+4
                 self.ddr_mem[self.DDR_START:self.ddr_end] = struct.pack('L', 0) # Terminate the first word
-                logging.debug("Second batch skipped, 0 length")
+                #logging.debug("Second batch skipped, 0 length")
             #logging.warning("")
         else:
+
             self.ddr_mem[self.ddr_start:self.ddr_end] = data    # Write the data to the DDR memory.
             data_len = len(data)
             with Pru.ddr_lock: 
@@ -170,7 +225,7 @@ class Pru:
                 ddr = self.ddr_used.get()                       # Pop the first ddr memory amount           
                 with Pru.ddr_lock: 
                     self.ddr_mem_used -= ddr                    
-                #logging.debug("Popped "+str(ddr)+"\tnow "+hex(self.get_capacity()))
+                logging.debug("Popped "+str(ddr)+"\tnow "+hex(self.get_capacity()))
                 if self.get_capacity() < 0:
                     logging.error("Capacity less than 0!")
                 if self.get_capacity() == 0x40000:
@@ -185,6 +240,11 @@ class Pru:
         ret = self.new_events-self.old_events
         self.old_events = self.new_events
         return ret
+
+    def force_exit(self):
+        self.running = False  
+        pypruss.pru_disable(0)                                  # Disable PRU 0, this is already done by the firmware
+        pypruss.exit()                                          # Exit, don't know what this does. 
 
     ''' Close shit up '''
     def join(self):

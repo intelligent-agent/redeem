@@ -17,7 +17,7 @@ either an extruder, a HBP or could even be a heated chamber
 '''
 class Heater(object):
     ''' Init '''
-    def __init__(self, thermistor, mosfet, name):
+    def __init__(self, thermistor, mosfet, name, onoff_control):
         self.thermistor = thermistor     
         self.mosfet = mosfet             
         self.name = name                   # Name, used for debugging
@@ -29,6 +29,7 @@ class Heater(object):
         self.P = 1.0                      # Proportional 
         self.I = 0.0                      # Integral 
         self.D = 0.0                      # Derivative
+        self.onoff_control = onoff_control #If we use PID or ON/OFF control
 
     ''' Set the desired temperature of the extruder '''
     def set_target_temperature(self, temp):
@@ -76,11 +77,19 @@ class Heater(object):
     def keep_temperature(self):
         while self.enabled:            			
             self.current_temp = self.thermistor.getTemperature()    
-            error = self.target_temp-self.current_temp              
-            derivative = self._getErrorDerivative(error)            
-            integral = self._getErrorIntegral(error)     
-            power = self.P*(error + self.D*derivative + self.I*integral)  # The formula for the PID				
-            power = max(min(power, 1.0), 0.0)                             # Normalize to 0,1
+            error = self.target_temp-self.current_temp    
+            
+            if self.onoff_control:
+                if error>1.0:
+                    power=1.0
+                else:
+                    power=0.0
+            else:
+                derivative = self._getErrorDerivative(error)            
+                integral = self._getErrorIntegral(error)     
+                power = self.P*(error + self.D*derivative + self.I*integral)  # The formula for the PID				
+                power = max(min(power, 1.0), 0.0)                             # Normalize to 0,1
+
             self.mosfet.set_power(power)            		 
             time.sleep(1)
         self.disabled = True
@@ -103,16 +112,14 @@ class Heater(object):
 
 ''' Subclass for Heater, this is an extruder '''
 class Extruder(Heater):
-    def __init__(self, smd, thermistor, mosfet, name):
-        Heater.__init__(self, thermistor, mosfet, name)
+    def __init__(self, smd, thermistor, mosfet, name, onoff_control):
+        Heater.__init__(self, thermistor, mosfet, name, onoff_control)
         self.smd = smd
         self.enable()  
 
 
 ''' Subclass for heater, this is a Heated build platform '''
 class HBP(Heater):
-    def __init__(self, thermistor, mosfet):
-        Heater.__init__(self, thermistor, mosfet, "HBP")
+    def __init__(self, thermistor, mosfet, onoff_control):
+        Heater.__init__(self, thermistor, mosfet, "HBP", onoff_control)
         self.enable()
-
-

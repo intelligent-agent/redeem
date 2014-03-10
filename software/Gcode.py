@@ -17,32 +17,40 @@ class Gcode:
     line_number = 0
     ''' Init; parse the token '''
     def __init__(self, packet):
-        self.message = packet["message"].split(";")[0]
-        #logging.debug(self.message)		
-        self.prot = packet["prot"]
-        self.has_crc = False
-        self.debug = 0
-        self.answer = "ok"
-        if len(self.message) == 0:
-            logging.debug("Empty message")
-            self.gcode = "No-Gcode"
-            return 
-        self.tokens = self.message.split(" ")
-        if self.tokens[0][0] == "N":                                # Ok, checksum
-            line_num = self.message.split(" ")[0][1::]
-            cmd = self.message.split("*")[0]                             # Command
-            csc = self.message.split("*")[1]                             # Command to compare with
-            if int(csc) != self._getCS(cmd):
-                logging.error("CRC error!")
-            self.message =  self.message.split("*")[0][(1+len(line_num)+1)::] # Remove crc stuff
-            self.line_number = int(line_num)                        # Set the line number
-            Gcode.line_number += 1                                  # Increase the global counter 
-            self.has_crc = True
-        
-        # Parse 
-        self.tokens = self.message.split(" ")    
-        self.gcode = self.tokens.pop(0) # gcode number
-        self.tokens = filter(None, self.tokens)        
+        try:
+            self.message = packet["message"].split(";")[0]
+            self.message = self.message.strip(' \t\n\r')
+            #logging.debug(self.message) 
+            self.prot = packet["prot"]
+            self.has_crc = False
+            self.answer = "ok"
+            if len(self.message) == 0:
+                print packet
+                logging.debug("Empty message")
+                self.gcode = "No-Gcode"
+                return 
+            self.tokens = self.message.split(" ")
+            if self.tokens[0][0] == "N":                                # Ok, checksum
+                line_num = self.message.split(" ")[0][1::]
+                cmd = self.message.split("*")[0]                             # Command
+                csc = self.message.split("*")[1]                             # Command to compare with
+                if int(csc) != self._getCS(cmd):
+                    logging.error("CRC error!")
+                self.message =  self.message.split("*")[0][(1+len(line_num)+1)::] # Remove crc stuff
+                self.line_number = int(line_num)                        # Set the line number
+                Gcode.line_number += 1                                  # Increase the global counter 
+                self.has_crc = True
+            
+            # Parse 
+            self.tokens = self.message.split(" ")    
+            self.gcode = self.tokens.pop(0) # gcode number
+            self.tokens = filter(None, self.tokens)        
+        except Exception as e:
+            logging.exception("Ooops: ")
+
+    ''' Return True if the command has to be processed immediatly '''
+    def is_urgent(self):
+        return False
 
     ''' The machinecode '''
     def code(self):

@@ -52,12 +52,11 @@ class Pipe:
                 message += "\n"
                 os.write(self.fifo, message)
 
-    def set_send_reponse(self, val):
+    def set_send_response(self, val):
         """ Sets wheter or not a response should be sent """
         self.send_response = val
 
     def close(self):
-        """ Stop receiving mesassages """
         self.running = False
         self.t.join()
         self.fifo.close()
