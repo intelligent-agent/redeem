@@ -31,6 +31,7 @@ class EndStop:
 	   
     def set_initial_value_from_gpio(self,v):
         self.hit=True if (v==1 and not self.invert) or (v==0 and self.invert) else False
+        logging.debug("Startup value for Endstop "+self.name+" is "+( "hit" if self.hit else "not hit"))
 
     def get_gpio_bank_and_pin(self):
         matches=re.compile('GPIO([0-9])_([0-9]+)').search(self.pin)

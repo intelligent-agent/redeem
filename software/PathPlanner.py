@@ -234,7 +234,7 @@ class PathPlanner:
             dir_pin     = 0 if vec >= 0 else dir_pin
         step_pins       = [step_pin]*num_steps           # Make the pin states
         dir_pins        = [dir_pin]*num_steps 
-        option_pins      = [1 if path.is_cancellable() else 0]*num_steps 
+        option_pins     = [1 if path.is_cancellable() else 0]*num_steps 
 
         s           = abs(path.get_axis_length(axis))                   # Get the length of the vector
         ratio       = path.get_axis_ratio(axis)                         # Ratio is the length of this axis to the total length
@@ -277,10 +277,6 @@ class PathPlanner:
         td          = num_steps/steps_pr_meter                          # Calculate the actual travelled distance        
         if vec < 0:                                                     # If the vector is negative, negate it.      
             td     *= -1.0
-
-		# Make sure the dir pin is shifted 650 ns before the step pins
-        #pins = [dir_pin]+pins
-        #delays = np.array([650*10**-9])+delays
 
         # If the axes are X or Y, we need to transform back in case of 
         # H-belt or some other transform. 

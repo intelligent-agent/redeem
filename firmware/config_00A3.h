@@ -43,13 +43,13 @@
 
 //* End stops pins
 #define STEPPER_X_END_MIN_PIN       2
-#define STEPPER_X_END_MIN_BANK      ENSTOP_GPIO_2
+#define STEPPER_X_END_MIN_BANK      GPIO_2_IN
 
 #define STEPPER_Y_END_MIN_PIN       14
-#define STEPPER_Y_END_MIN_BANK      ENSTOP_GPIO_0
+#define STEPPER_Y_END_MIN_BANK      GPIO_0_IN
 
 #define STEPPER_Z_END_MIN_PIN       30
-#define STEPPER_Z_END_MIN_BANK      ENSTOP_GPIO_0
+#define STEPPER_Z_END_MIN_BANK      GPIO_0_IN
 
 //* Uncomment it if the end stop are inversed
 //#define ENDSTOP_INVERSED    		1
