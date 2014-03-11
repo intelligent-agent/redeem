@@ -81,6 +81,7 @@ class Redeem:
         EndStop.inputdev = inputdev
 
         self.end_stops = {}
+
         # We should use key codes that are not used on a keyboard etc.         
         if self.revision == "A4":
             self.end_stops["X1"] = EndStop("GPIO3_21", 112, "X1", self.config.getboolean("Endstops", "invert_X1"))
@@ -90,12 +91,12 @@ class Redeem:
             self.end_stops["Z1"] = EndStop("GPIO0_31", 116, "Z1", self.config.getboolean("Endstops", "invert_Z1"))
             self.end_stops["Z2"] = EndStop("GPIO0_4" , 117, "Z2", self.config.getboolean("Endstops", "invert_Z2"))
         else:
-            self.end_stops["X1"] = EndStop("GPIO0_31", 116, "X1", self.config.getboolean("Endstops", "invert_X2"))
-            self.end_stops["Y1"] = EndStop("GPIO3_21", 112, "Y1", self.config.getboolean("Endstops", "invert_Y2"))
-            self.end_stops["Z1"] = EndStop("GPIO0_30", 113, "Z1", self.config.getboolean("Endstops", "invert_Z1"))
-            #self.end_stops["Y2"] = EndStop("GPIO3_21", self.steppers, 4, "Y2")
-            #self.end_stops["X2"] = EndStop("GPIO0_31", self.steppers, 5, "X2")
-            #self.end_stops["Z2"] = EndStop("GPIO0_4", self.steppers, 6, "Z2")
+            self.end_stops["X1"] = EndStop("GPIO0_14", 112, "X1", self.config.getboolean("Endstops", "invert_X1"))
+            self.end_stops["X2"] = EndStop("GPIO3_21", 113, "X2", self.config.getboolean("Endstops", "invert_X2"))
+            self.end_stops["Y1"] = EndStop("GPIO2_2",  114, "Y1", self.config.getboolean("Endstops", "invert_Y1"))
+            self.end_stops["Y2"] = EndStop("GPIO0_31", 115, "Y2", self.config.getboolean("Endstops", "invert_Y2"))
+            self.end_stops["Z1"] = EndStop("GPIO0_30", 116, "Z1", self.config.getboolean("Endstops", "invert_Z1"))
+            self.end_stops["Z2"] = EndStop("GPIO0_4",  117, "Z2", self.config.getboolean("Endstops", "invert_Z2"))
             
         EndStop.callback = self.end_stop_hit
         EndStop.inputdev = self.config.get("Endstops","inputdev");
@@ -216,7 +217,7 @@ class Redeem:
         dirname = os.path.dirname(os.path.realpath(__file__))
 
         # Create the firmware compiler
-        self.pru_firmware = PruFirmware(dirname+"/../firmware/firmware.p",dirname+"/../firmware/firmware_runtime.bin",self.revision,self.config_filename,self.config,"/usr/bin/pasm")
+        self.pru_firmware = PruFirmware(dirname+"/../firmware/firmware.p",dirname+"/../firmware/firmware_runtime.bin",self.revision,self.config_filename,self.config,"/usr/bin/pasm",self.end_stops)
 
         self.path_planner = PathPlanner(self.steppers, self.pru_firmware)
         self.path_planner.set_acceleration(float(self.config.get('Steppers', 'acceleration'))) 
