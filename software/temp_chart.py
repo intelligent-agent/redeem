@@ -4,7 +4,9 @@
 
 temp_chart = {}
 # This conversion table has been found in the datasheet for B57560G104F and is the one sold for MakerBot Plastruder MK4
-temp_chart["B57560G104F"] = [[0.0, 333964. ], 
+# 100 K
+temp_chart["B57560G104F"] = [
+[0.0, 333964. ], 
 [2.63472, 295180. ], 
 [4.79911, 265211. ], 
 [6.58348, 242322. ], 
@@ -606,7 +608,7 @@ temp_chart["QU-BD"] = [
 [300, 103]]
 
 
-
+# Epcos 10 K
 temp_chart["B57561G0103F000"] = [
 [0, 29255.8365974],
 [1, 27921.0321822],

@@ -121,7 +121,7 @@ class Redeem:
             stepper.set_steps_pr_mm(self.config.getfloat('Steppers', 'steps_pr_mm_'+name))         
             stepper.set_microstepping(self.config.getint('Steppers', 'microstepping_'+name)) 
             stepper.direction = self.config.getint('Steppers', 'direction_'+name)
-            stepper.set_decay(0) 
+            stepper.set_decay(0)
 
 		# Commit changes for the Steppers
         Stepper.commit()
@@ -130,9 +130,9 @@ class Redeem:
         path = "/sys/bus/iio/devices/iio:device0/in_voltage"
 
         # init the 3 thermistors
-        self.therm_ext1 = Thermistor(path+"6_raw", "MOSFET Ext 1", "B57561G0103F000") # 10 K - not used
-        self.therm_hbp  = Thermistor(path+"4_raw", "MOSFET HBP",   "B57560G104F") # 100 K
-        self.therm_ext2 = Thermistor(path+"5_raw", "MOSFET Ext 2", "B57561G0103F000") #10 K
+        self.therm_ext1 = Thermistor(path+"4_raw", "MOSFET Ext 1", self.config.get('Heaters', "ext1_temp_chart"))
+        self.therm_hbp  = Thermistor(path+"6_raw", "MOSFET HBP",   self.config.get('Heaters', "hbp_temp_chart"))
+        self.therm_ext2 = Thermistor(path+"5_raw", "MOSFET Ext 2", self.config.get('Heaters', "ext2_temp_chart"))
 
         path = self.config.get('Cold-ends', 'path', 0)
         if os.path.exists(path):
@@ -159,12 +159,15 @@ class Redeem:
 
         # Make Heated Build platform 
         self.hbp = HBP( self.therm_hbp, self.mosfet_hbp, self.config.getboolean('Heaters', 'hbp_onoff_control'))       
+        self.hbp.set_p_value(self.config.getfloat('Heaters', "hbp_pid_p"))
+        self.hbp.set_d_value(self.config.getfloat('Heaters', "hbp_pid_i"))     
+        self.hbp.set_i_value(self.config.getfloat('Heaters', "hbp_pid_d"))
 
         # Make extruder 2.
         self.ext2 = Extruder(self.steppers["H"], self.therm_ext2, self.mosfet_ext2, "Ext2", self.config.getboolean('Heaters', 'ext2_onoff_control'))
-        self.ext1.set_p_value(self.config.getfloat('Heaters', "ext2_pid_p"))
-        self.ext1.set_d_value(self.config.getfloat('Heaters', "ext2_pid_i"))     
-        self.ext1.set_i_value(self.config.getfloat('Heaters', "ext2_pid_d"))
+        self.ext2.set_p_value(self.config.getfloat('Heaters', "ext2_pid_p"))
+        self.ext2.set_d_value(self.config.getfloat('Heaters', "ext2_pid_i"))     
+        self.ext2.set_i_value(self.config.getfloat('Heaters', "ext2_pid_d"))
 
         self.current_tool = "E" # Use Extruder 0 as default
 
@@ -271,12 +274,17 @@ class Redeem:
             for i in range(g.num_tokens()): # Run through all tokens
                 axis = g.token_letter(i)                         
                 if self.config.getboolean('Endstops', 'has_'+axis.lower()):
-                    self.path_planner.home(axis)
-                    offset = self.config.getfloat('Geometry', 'offset_'+axis.lower())
-                    self._execute(Gcode({"message": "G92 "+axis+str(-offset*1000), "prot": g.prot})) # Convert to mm
-                self._execute(Gcode({"message": "G90 ", "prot": g.prot}))               
-                self._execute(Gcode({"message": "G1 "+axis+"0", "prot": g.prot}))       
-                
+                    #self.path_planner.home(axis)
+                    logging.debug("homing "+axis)
+                    travel = self.config.getfloat('Geometry', 'travel_'+axis.lower())*1000.0 # Convert to mm
+                    feed_rate = self.config.getfloat('Steppers', 'home_speed_'+axis.lower())*60000.0 # Convert to mm/min 
+                    offset = self.config.getfloat('Geometry', 'offset_'+axis.lower())*1000.0 # Convert to mm
+                    self._execute(Gcode({"message": "G91"})) # Relative coords               
+                    self._execute(Gcode({"message": "G1 "+axis+str(-travel)+" F"+str(feed_rate)}))    
+                    self._execute(Gcode({"message": "G92 "+axis+str(-offset)}))
+                    self._execute(Gcode({"message": "G90"})) # Abolsute coords               
+                    self._execute(Gcode({"message": "G1 "+axis+"0"}))       
+            logging.info("Homing complete")
         elif g.code() == "G90":                                     # Absolute positioning
             self.movement = "ABSOLUTE"
         elif g.code() == "G91":                                         # Relative positioning 
@@ -405,6 +413,8 @@ class Redeem:
                     m105.set_answer(answer[2:]) # strip away the "ok"
                     self._reply(m105)
                     time.sleep(1)
+        elif g.code() == "M119": 
+            g.set_answer("ok "+", ".join([v.name+": "+("1" if v.hit else "0") for k,v in self.end_stops.iteritems()]))
         elif g.code() == "M130":                                    # Set PID P-value, Format (M130 P0 S8.0)
             pass
         elif g.code() == "M131":                                    # Set PID I-value, Format (M131 P0 S8.0) 
