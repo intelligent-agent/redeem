@@ -15,7 +15,7 @@ import subprocess
 
 class PruFirmware:
 
-    def __init__(self, firmware_source_file, binary_filename, revision, config_filename, config_parser,compiler):
+    def __init__(self, firmware_source_file, binary_filename, revision, config_filename, config_parser,compiler,end_stops):
         """Create and initialize a PruFirmware
 
         Parameters
@@ -33,6 +33,9 @@ class PruFirmware:
             The config parser with the config file already loaded
         compiler : string
             Path to the pasm compiler
+        end_stops : Dictionary of EndStop
+            Dictionary of all end stops
+               
         """
 
         self.firmware_source_file = os.path.realpath(firmware_source_file)
@@ -41,6 +44,7 @@ class PruFirmware:
         self.config_filename = os.path.realpath(config_filename)
         self.config = config_parser
         self.compiler = os.path.realpath(compiler)
+        self.end_stops = end_stops
 
         #Remove the bin extension of the firmware output filename
 
@@ -83,10 +87,38 @@ class PruFirmware:
         
         cmd = [self.compiler,'-b',revision]
 
+        #Add stepper config
         for s in ['x','y','z','e','h']:
             cmd.append('-DSTEPPER_'+s.upper()+'_DIRECTION='+("0" if self.config.getint('Steppers', 'direction_'+s)>0 else "1"))
 
-        
+        #Add endstop config
+
+        #FIXME: Put everything in a header file included by the firmware as the command line is too big
+
+        #Min X
+        (pin,bank) = self.end_stops["X1"].get_gpio_bank_and_pin()
+        cmd.extend(['-DSTEPPER_X_END_MIN_PIN='+str(pin),'-DSTEPPER_X_END_MIN_BANK=GPIO_'+str(bank)+'_IN']);
+
+        #Min Y
+        (pin,bank) = self.end_stops["Y1"].get_gpio_bank_and_pin()
+        cmd.extend(['-DSTEPPER_Y_END_MIN_PIN='+str(pin),'-DSTEPPER_Y_END_MIN_BANK=GPIO_'+str(bank)+'_IN']);
+
+        #Min Z
+        (pin,bank) = self.end_stops["Z1"].get_gpio_bank_and_pin()
+        cmd.extend(['-DSTEPPER_X_END_MIN_PIN='+str(pin),'-DSTEPPER_Z_END_MIN_BANK=GPIO_'+str(bank)+'_IN']);
+
+        #Max X
+        (pin,bank) = self.end_stops["X2"].get_gpio_bank_and_pin()
+        cmd.extend(['-DSTEPPER_X_END_MAX_PIN='+str(pin),'-DSTEPPER_X_END_MAX_BANK=GPIO_'+str(bank)+'_IN']);
+
+        #Max Y
+        (pin,bank) = self.end_stops["Y2"].get_gpio_bank_and_pin()
+        cmd.extend(['-DSTEPPER_Y_END_MAX_PIN='+str(pin),'-DSTEPPER_Y_END_MAX_BANK=GPIO_'+str(bank)+'_IN']);
+
+        #Max Z
+        (pin,bank) = self.end_stops["Z2"].get_gpio_bank_and_pin()
+        cmd.extend(['-DSTEPPER_X_END_MAX_PIN='+str(pin),'-DSTEPPER_Z_END_MAX_BANK=GPIO_'+str(bank)+'_IN']);
+
 
         if shouldInvert:
             cmd.append("-DENDSTOP_INVERSED=1");

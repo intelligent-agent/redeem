@@ -93,8 +93,8 @@ INIT:
     LBBO r2, r0, 0, 4   
     ADD  r2, r2, 4  
         
-    MOV  r12, GPIO0 | GPIO_DATAIN                           // Load Address
-    LBBO r1, r12, 0, 4                                      // Read GPIO0 INPUT content
+    MOV  GPIO_0_IN, GPIO0 | GPIO_DATAIN                     // Load Address
+    LBBO r1, GPIO_0_IN, 0, 4                                      // Read GPIO0 INPUT content
     SBBO r1, r2, 0, 4                                       // Put GPIO INPUT content into local RAM
     ADD  r2, r2, 4  
     
@@ -103,13 +103,13 @@ INIT:
     SBBO r1, r2, 0, 4                                       // Put GPIO INPUT content into local RAM
     ADD  r2, r2, 4  
     
-    MOV  r13, GPIO2 | GPIO_DATAIN                           // Load Address
-    LBBO r1, r13, 0, 4                                      // Read GPIO2 INPUT content
+    MOV  GPIO_2_IN, GPIO2 | GPIO_DATAIN                           // Load Address
+    LBBO r1, GPIO_2_IN, 0, 4                                      // Read GPIO2 INPUT content
     SBBO r1, r2, 0, 4                                       // Put GPIO INPUT content into local RAM
     ADD  r2, r2, 4  
     
-    MOV  GPIO_3_IN, GPIO3 | GPIO_DATAIN                            // Load Address
-    LBBO r1, GPIO_3_IN, 0, 4                                       // Read GPIO3 INPUT content
+    MOV  GPIO_3_IN, GPIO3 | GPIO_DATAIN                       // Load Address
+    LBBO r1, GPIO_3_IN, 0, 4                                  // Read GPIO3 INPUT content
     SBBO r1, r2, 0, 4                                        // Put GPIO INPUT content into local RAM
     
     //Set all the stepper pins to 0 
