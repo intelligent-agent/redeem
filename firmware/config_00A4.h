@@ -42,14 +42,23 @@
 //#define STEPPER_H_DIRECTION     	1   //Set to 1 so that the motor direction is inversed
 
 //* End stops pins
-#define STEPPER_X_END_MIN_PIN       2
-#define STEPPER_X_END_MIN_BANK      ENSTOP_GPIO_2
+#define STEPPER_X_END_MIN_PIN       21
+#define STEPPER_X_END_MIN_BANK      GPIO_3_IN
 
-#define STEPPER_Y_END_MIN_PIN       14
-#define STEPPER_Y_END_MIN_BANK      ENSTOP_GPIO_0
+#define STEPPER_Y_END_MIN_PIN       17
+#define STEPPER_Y_END_MIN_BANK      GPIO_1_IN
 
-#define STEPPER_Z_END_MIN_PIN       30
-#define STEPPER_Z_END_MIN_BANK      ENSTOP_GPIO_0
+#define STEPPER_Z_END_MIN_PIN       31
+#define STEPPER_Z_END_MIN_BANK      GPIO_0_IN
+
+#define STEPPER_X_END_MAX_PIN       30
+#define STEPPER_X_END_MAX_BANK      GPIO_0_IN
+
+#define STEPPER_Y_END_MAX_PIN       19
+#define STEPPER_Y_END_MAX_BANK      GPIO_1_IN
+
+#define STEPPER_Z_END_MAX_PIN       4
+#define STEPPER_Z_END_MAX_BANK      GPIO_0_IN
 
 //* Uncomment it if the end stop are inversed
 //#define ENDSTOP_INVERSED    		1

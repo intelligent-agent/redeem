@@ -60,8 +60,9 @@ class PathPlanner:
     ''' Home the given axis using endstops (min) '''
     def home(self,axis):
         # Check what is the direction of the first move
-        is_hit = self.steppers[axis].get_endstop().hit
+        is_hit = self.steppers[axis].get_endstop().hit        
         if not is_hit:
+            logging.debug("if "+axis+ " not hit")
             if self.current_pos[axis]>0:
                 p = Path({axis:0}, 0.1, "ABSOLUTE", True, True)
                 p.set_homing_feedrate()
@@ -69,6 +70,7 @@ class PathPlanner:
                 self.wait_until_done()
 
             while not self.steppers[axis].get_endstop().hit:
+                logging.debug("while "+axis+ " not hit")
                 p = Path({axis:-0.01}, 0.1, "RELATIVE", True, True)
                 p.set_homing_feedrate()
                 self.add_path(p)    
@@ -234,7 +236,7 @@ class PathPlanner:
             dir_pin     = 0 if vec >= 0 else dir_pin
         step_pins       = [step_pin]*num_steps           # Make the pin states
         dir_pins        = [dir_pin]*num_steps 
-        option_pins      = [1 if path.is_cancellable() else 0]*num_steps 
+        option_pins     = [1 if path.is_cancellable() else 0]*num_steps 
 
         s           = abs(path.get_axis_length(axis))                   # Get the length of the vector
         ratio       = path.get_axis_ratio(axis)                         # Ratio is the length of this axis to the total length
@@ -277,10 +279,6 @@ class PathPlanner:
         td          = num_steps/steps_pr_meter                          # Calculate the actual travelled distance        
         if vec < 0:                                                     # If the vector is negative, negate it.      
             td     *= -1.0
-
-		# Make sure the dir pin is shifted 650 ns before the step pins
-        #pins = [dir_pin]+pins
-        #delays = np.array([650*10**-9])+delays
 
         # If the axes are X or Y, we need to transform back in case of 
         # H-belt or some other transform. 

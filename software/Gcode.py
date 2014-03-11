@@ -20,8 +20,7 @@ class Gcode:
         try:
             self.message = packet["message"].split(";")[0]
             self.message = self.message.strip(' \t\n\r')
-            #logging.debug(self.message) 
-            self.prot = packet["prot"]
+            self.prot = packet["prot"] if "prot" in packet else "None"
             self.has_crc = False
             self.answer = "ok"
             if len(self.message) == 0:

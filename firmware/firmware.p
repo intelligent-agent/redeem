@@ -11,8 +11,8 @@
 #define GPIO_DATAIN         0x138               // This is the register for reading data 
 #define GPIO0               0x44E07000          // The adress of the GPIO0 bank
 #define GPIO1               0x4804C000          // The adress of the GPIO1 bank
-#define GPIO2               0x481AC000          // The adress of the GPIO1 bank
-#define GPIO3               0x481AE000          // The adress of the GPIO1 bank
+#define GPIO2               0x481AC000          // The adress of the GPIO2 bank
+#define GPIO3               0x481AE000          // The adress of the GPIO3 bank
 
 //* Magic number set by the host for DDR reset */
 #define DDR_MAGIC           0xbabe7175          // Magic number used to reset the DDR counter 
@@ -33,8 +33,10 @@
 #define STEPPER_GPIO_0  r7
 #define STEPPER_GPIO_1  r8
 
-#define ENSTOP_GPIO_0  r9
-#define ENSTOP_GPIO_2  r10
+#define GPIO_0_IN r12
+#define GPIO_1_IN r20
+#define GPIO_2_IN r13
+#define GPIO_3_IN r14
 
 #define DIRECTION_MASK    ((STEPPER_H_DIRECTION << 4) | (STEPPER_E_DIRECTION << 3) | (STEPPER_Z_DIRECTION << 2) | (STEPPER_Y_DIRECTION << 1) | STEPPER_X_DIRECTION)
 
@@ -56,12 +58,17 @@
 //
 // r1 : Remaining number of commands to process since we started to read DRAM
 // r4 : Current command reading address in DRAM
-// r6 : Address in DRAM where tu put the events counter
+// r5 : Event counter
+// r6 : Address in DRAM where to put the events counter
+// r7 :  
 // r11: Adress for reading/writing GPIO0 OUT pins
+// r12: GPIO0_IN
+// r13: GPIO2_IN
+// r14: GPIO_3_IN
 // r15: Inverted mask for GPIO0 togglable pin
 // r16: Inverted mask for GPIO1 togglable pin
 // r17: Adress for reading/writing GPIO1 OUT pins
-
+// r20: GPIO1_IN
 
 
 INIT:
@@ -91,8 +98,8 @@ INIT:
     SBBO r1, r2, 0, 4                                       // Put GPIO INPUT content into local RAM
     ADD  r2, r2, 4  
     
-    MOV  r0, GPIO1 | GPIO_DATAIN                            // Load Address
-    LBBO r1, r0, 0, 4                                       // Read GPIO1 INPUT content
+    MOV  GPIO_1_IN, GPIO1 | GPIO_DATAIN                     // Load Address
+    LBBO r1, GPIO_1_IN, 0, 4                                // Read GPIO1 INPUT content
     SBBO r1, r2, 0, 4                                       // Put GPIO INPUT content into local RAM
     ADD  r2, r2, 4  
     
@@ -101,9 +108,9 @@ INIT:
     SBBO r1, r2, 0, 4                                       // Put GPIO INPUT content into local RAM
     ADD  r2, r2, 4  
     
-    MOV  r0, GPIO3 | GPIO_DATAIN                            // Load Address
-    LBBO r1, r0, 0, 4                                       // Read GPIO3 INPUT content
-    SBBO r1, r2, 0, 4                                       // Put GPIO INPUT content into local RAM
+    MOV  GPIO_3_IN, GPIO3 | GPIO_DATAIN                            // Load Address
+    LBBO r1, GPIO_3_IN, 0, 4                                       // Read GPIO3 INPUT content
+    SBBO r1, r2, 0, 4                                        // Put GPIO INPUT content into local RAM
     
     //Set all the stepper pins to 0 
     
@@ -192,34 +199,33 @@ NEXT_COMMAND:
 
     //Build GPIOs for step pins
 
-    //We first read the endstop state and mask step pin with it so that we don't step if we are hitting an endstop
-
-    LBBO r9, r12, 0,   4                                    // Read GPIO0
-    LBBO r10, r13, 0,   4                                   // Read GPIO2
-
-    //X
-    LSR r0,r10,STEPPER_X_END_MIN_PIN
+    // We first read the endstop state and mask step pin with it so that we don't step if we are hitting an endstop
+    // Endstop X.
+    MOV  r9, GPIO3 | GPIO_DATAIN
+    LBBO r0, r9, 0, 4                   // Read the GPIO bank
+    LSR r0, r0, STEPPER_X_END_MIN_PIN                       // Right shift pin to bit 0
     AND r7.b0,r0,0x01                                       // Endstop Xmin - Build a mask into r7.b0 that contains the end stop state. This will be used to mask the command.step field.
-    
-    //Y
-    LSR r0,r9,STEPPER_Y_END_MIN_PIN
-    AND r0,r0,0x01
-    LSL r0,r0,0x01
-    OR  r7.b0,r7.b0,r0                                      // Endstop Ymin - Build a mask into r7.b0 that contains the end stop state. This will be used to mask the command.step field.
 
-    //Z
-    LSR r0,r9,STEPPER_Z_END_MIN_PIN
+    // Endstop Y
+    LBBO r0, STEPPER_Y_END_MIN_BANK, 0, 4                   // Read the GPIO bank
+    LSR r0,r0,STEPPER_Y_END_MIN_PIN                         // Right shift the end stop pin to bit 0
+    AND r0,r0,0x01                                          // Clear the other bits 
+    LSL r0,r0,0x01                                          // Shift pin one left since it is Y
+    OR r7.b0,r7.b0,r0                                      // Mask away the step pin if the end stop is set
+
+    // Endstop Z
+    LBBO r0, STEPPER_Z_END_MIN_BANK, 0, 4                   // Read the GPIO
+    LSR r0,r0,STEPPER_Z_END_MIN_PIN
     AND r0,r0,0x01
     LSL r0,r0,0x02
     OR  r7.b0,r7.b0,r0                                      // Endstop Zmin - Build a mask into r7.b0 that contains the end stop state. This will be used to mask the command.step field.
 
-    //Inverse the endstops if they are inversed
-
+    //Invert the endstops if they are inverted
 #ifndef ENDSTOP_INVERSED
     XOR r7.b0,r7.b0,0xFF
 #endif
-    
-    XOR r7.b1,pinCommand.direction, DIRECTION_MASK          // Inverse the stepper direction mask to compare it with the end stop state (we support only endstop min for now)
+
+    XOR r7.b1,pinCommand.direction,DIRECTION_MASK          // Inverse the stepper direction mask to compare it with the end stop state (we support only endstop min for now)
 
     OR r7.b0,r7.b1,r7.b0 
 

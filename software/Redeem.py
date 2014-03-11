@@ -82,14 +82,21 @@ class Redeem:
 
         self.end_stops = {}
         # We should use key codes that are not used on a keyboard etc.         
-        self.end_stops["X1"] = EndStop("GPIO0_31", 116, "X2", self.config.getboolean("Endstops", "invert_X2"))
-        self.end_stops["Y1"] = EndStop("GPIO3_21", 112, "Y2", self.config.getboolean("Endstops", "invert_Y2"))
-        self.end_stops["Z1"] = EndStop("GPIO0_30", 113, "Z1", self.config.getboolean("Endstops", "invert_Z1"))
-
-        #self.end_stops["Y2"] = EndStop("GPIO3_21", self.steppers, 4, "Y2")
-        #self.end_stops["X2"] = EndStop("GPIO0_31", self.steppers, 5, "X2")
-        #self.end_stops["Z2"] = EndStop("GPIO0_4", self.steppers, 6, "Z2")
-
+        if self.revision == "A4":
+            self.end_stops["X1"] = EndStop("GPIO3_21", 112, "X1", self.config.getboolean("Endstops", "invert_X1"))
+            self.end_stops["X2"] = EndStop("GPIO0_30", 113, "X2", self.config.getboolean("Endstops", "invert_X2"))
+            self.end_stops["Y1"] = EndStop("GPIO1_17", 114, "Y1", self.config.getboolean("Endstops", "invert_Y1"))
+            self.end_stops["Y2"] = EndStop("GPIO1_19", 115, "Y2", self.config.getboolean("Endstops", "invert_Y2"))
+            self.end_stops["Z1"] = EndStop("GPIO0_31", 116, "Z1", self.config.getboolean("Endstops", "invert_Z1"))
+            self.end_stops["Z2"] = EndStop("GPIO0_4" , 117, "Z2", self.config.getboolean("Endstops", "invert_Z2"))
+        else:
+            self.end_stops["X1"] = EndStop("GPIO0_31", 116, "X1", self.config.getboolean("Endstops", "invert_X2"))
+            self.end_stops["Y1"] = EndStop("GPIO3_21", 112, "Y1", self.config.getboolean("Endstops", "invert_Y2"))
+            self.end_stops["Z1"] = EndStop("GPIO0_30", 113, "Z1", self.config.getboolean("Endstops", "invert_Z1"))
+            #self.end_stops["Y2"] = EndStop("GPIO3_21", self.steppers, 4, "Y2")
+            #self.end_stops["X2"] = EndStop("GPIO0_31", self.steppers, 5, "X2")
+            #self.end_stops["Z2"] = EndStop("GPIO0_4", self.steppers, 6, "Z2")
+            
         EndStop.callback = self.end_stop_hit
         EndStop.inputdev = self.config.get("Endstops","inputdev");
 
@@ -103,7 +110,7 @@ class Redeem:
         # Init the 5 Stepper motors (step, dir, fault, DAC channel, name)
         self.steppers["X"] = Stepper("GPIO0_27", "GPIO1_29", "GPIO2_4",  0, "X",  self.end_stops["X1"], 0,0) 
         self.steppers["Y"] = Stepper("GPIO1_12", "GPIO0_22", "GPIO2_5",  1, "Y",  self.end_stops["Y1"], 1,1)  
-        self.steppers["Z"] = Stepper("GPIO0_23", "GPIO0_26", "GPIO0_15", 2, "Z",  self.end_stops["Z1"],2,2)  
+        self.steppers["Z"] = Stepper("GPIO0_23", "GPIO0_26", "GPIO0_15", 2, "Z",  self.end_stops["Z1"], 2,2)  
         self.steppers["E"] = Stepper("GPIO1_28", "GPIO1_15", "GPIO2_1",  3, "Ext1", None,3,3)
         self.steppers["H"] = Stepper("GPIO1_13", "GPIO1_14", "GPIO2_3",  4, "Ext2", None,4,4)
 
@@ -114,7 +121,7 @@ class Redeem:
             stepper.set_steps_pr_mm(self.config.getfloat('Steppers', 'steps_pr_mm_'+name))         
             stepper.set_microstepping(self.config.getint('Steppers', 'microstepping_'+name)) 
             stepper.direction = self.config.getint('Steppers', 'direction_'+name)
-            stepper.set_decay(0) 
+            stepper.set_decay(0)
 
 		# Commit changes for the Steppers
         Stepper.commit()
@@ -123,9 +130,9 @@ class Redeem:
         path = "/sys/bus/iio/devices/iio:device0/in_voltage"
 
         # init the 3 thermistors
-        self.therm_ext1 = Thermistor(path+"6_raw", "MOSFET Ext 1", "B57561G0103F000") # 10 K - not used
-        self.therm_hbp  = Thermistor(path+"4_raw", "MOSFET HBP",   "B57560G104F") # 100 K
-        self.therm_ext2 = Thermistor(path+"5_raw", "MOSFET Ext 2", "B57561G0103F000") #10 K
+        self.therm_ext1 = Thermistor(path+"4_raw", "MOSFET Ext 1", self.config.get('Heaters', "ext1_temp_chart"))
+        self.therm_hbp  = Thermistor(path+"6_raw", "MOSFET HBP",   self.config.get('Heaters', "hbp_temp_chart"))
+        self.therm_ext2 = Thermistor(path+"5_raw", "MOSFET Ext 2", self.config.get('Heaters', "ext2_temp_chart"))
 
         path = self.config.get('Cold-ends', 'path', 0)
         if os.path.exists(path):
@@ -152,12 +159,15 @@ class Redeem:
 
         # Make Heated Build platform 
         self.hbp = HBP( self.therm_hbp, self.mosfet_hbp, self.config.getboolean('Heaters', 'hbp_onoff_control'))       
+        self.hbp.set_p_value(self.config.getfloat('Heaters', "hbp_pid_p"))
+        self.hbp.set_d_value(self.config.getfloat('Heaters', "hbp_pid_i"))     
+        self.hbp.set_i_value(self.config.getfloat('Heaters', "hbp_pid_d"))
 
         # Make extruder 2.
         self.ext2 = Extruder(self.steppers["H"], self.therm_ext2, self.mosfet_ext2, "Ext2", self.config.getboolean('Heaters', 'ext2_onoff_control'))
-        self.ext1.set_p_value(self.config.getfloat('Heaters', "ext2_pid_p"))
-        self.ext1.set_d_value(self.config.getfloat('Heaters', "ext2_pid_i"))     
-        self.ext1.set_i_value(self.config.getfloat('Heaters', "ext2_pid_d"))
+        self.ext2.set_p_value(self.config.getfloat('Heaters', "ext2_pid_p"))
+        self.ext2.set_d_value(self.config.getfloat('Heaters', "ext2_pid_i"))     
+        self.ext2.set_i_value(self.config.getfloat('Heaters', "ext2_pid_d"))
 
         self.current_tool = "E" # Use Extruder 0 as default
 
@@ -206,7 +216,7 @@ class Redeem:
         dirname = os.path.dirname(os.path.realpath(__file__))
 
         # Create the firmware compiler
-        self.pru_firmware = PruFirmware(dirname+"/../firmware/firmware.p",dirname+"/../firmware/firmware_runtime.bin",self.revision,self.config_filename,self.config,dirname+"/../firmware/pasm")
+        self.pru_firmware = PruFirmware(dirname+"/../firmware/firmware.p",dirname+"/../firmware/firmware_runtime.bin",self.revision,self.config_filename,self.config,"/usr/bin/pasm")
 
         self.path_planner = PathPlanner(self.steppers, self.pru_firmware)
         self.path_planner.set_acceleration(float(self.config.get('Steppers', 'acceleration'))) 
@@ -264,12 +274,17 @@ class Redeem:
             for i in range(g.num_tokens()): # Run through all tokens
                 axis = g.token_letter(i)                         
                 if self.config.getboolean('Endstops', 'has_'+axis.lower()):
-                    self.path_planner.home(axis)
-                    offset = self.config.getfloat('Geometry', 'offset_'+axis.lower())
-                    self._execute(Gcode({"message": "G92 "+axis+str(-offset*1000), "prot": g.prot})) # Convert to mm
-                self._execute(Gcode({"message": "G90 ", "prot": g.prot}))               
-                self._execute(Gcode({"message": "G1 "+axis+"0", "prot": g.prot}))       
-                
+                    #self.path_planner.home(axis)
+                    logging.debug("homing "+axis)
+                    travel = self.config.getfloat('Geometry', 'travel_'+axis.lower())*1000.0 # Convert to mm
+                    feed_rate = self.config.getfloat('Steppers', 'home_speed_'+axis.lower())*60000.0 # Convert to mm/min 
+                    offset = self.config.getfloat('Geometry', 'offset_'+axis.lower())*1000.0 # Convert to mm
+                    self._execute(Gcode({"message": "G91"})) # Relative coords               
+                    self._execute(Gcode({"message": "G1 "+axis+str(-travel)+" F"+str(feed_rate)}))    
+                    self._execute(Gcode({"message": "G92 "+axis+str(-offset)}))
+                    self._execute(Gcode({"message": "G90"})) # Abolsute coords               
+                    self._execute(Gcode({"message": "G1 "+axis+"0"}))       
+            logging.info("Homing complete")
         elif g.code() == "G90":                                     # Absolute positioning
             self.movement = "ABSOLUTE"
         elif g.code() == "G91":                                         # Relative positioning 
@@ -398,6 +413,8 @@ class Redeem:
                     m105.set_answer(answer[2:]) # strip away the "ok"
                     self._reply(m105)
                     time.sleep(1)
+        elif g.code() == "M119": 
+            g.set_answer("ok "+", ".join([v.name+": "+("1" if v.hit else "0") for k,v in self.end_stops.iteritems()]))
         elif g.code() == "M130":                                    # Set PID P-value, Format (M130 P0 S8.0)
             pass
         elif g.code() == "M131":                                    # Set PID I-value, Format (M131 P0 S8.0) 
