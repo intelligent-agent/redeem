@@ -221,6 +221,10 @@ class Redeem:
         self.path_planner = PathPlanner(self.steppers, self.pru_firmware)
         self.path_planner.set_acceleration(float(self.config.get('Steppers', 'acceleration'))) 
 
+        # After the firmwares are loaded, the endstop states can be updated.
+        for k, endstop in self.end_stops.iteritems():
+            logging.debug("Endstop "+endstop.name+" hit? : "+ str(endstop.read_value()))
+
         self.running = True
 
         # Signal everything ready
@@ -414,7 +418,7 @@ class Redeem:
                     self._reply(m105)
                     time.sleep(1)
         elif g.code() == "M119": 
-            g.set_answer("ok "+", ".join([v.name+": "+("1" if v.hit else "0") for k,v in self.end_stops.iteritems()]))
+            g.set_answer("ok "+", ".join([v.name+": "+str(int(v.hit)) for k,v in self.end_stops.iteritems()]))
         elif g.code() == "M130":                                    # Set PID P-value, Format (M130 P0 S8.0)
             pass
         elif g.code() == "M131":                                    # Set PID I-value, Format (M131 P0 S8.0) 

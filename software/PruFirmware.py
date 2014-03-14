@@ -15,7 +15,7 @@ import subprocess
 
 class PruFirmware:
 
-    def __init__(self, firmware_source_file, binary_filename, revision, config_filename, config_parser,compiler):
+    def __init__(self, firmware_source_file0, binary_filename0, revision, config_filename, config_parser,compiler):
         """Create and initialize a PruFirmware
 
         Parameters
@@ -35,32 +35,51 @@ class PruFirmware:
             Path to the pasm compiler
         """
 
-        self.firmware_source_file = os.path.realpath(firmware_source_file)
-        self.binary_filename = os.path.realpath(binary_filename)
+        
+        firmware_source_file1 = "/usr/src/redeem/firmware/firmware_endstops.p"
+        binary_filename1 = "/usr/src/redeem/firmware/firmware_endstops.bin"
+    
+        self.firmware_source_file0 = os.path.realpath(firmware_source_file0)
+        self.firmware_source_file1 = os.path.realpath(firmware_source_file1)
+        self.binary_filename0 = os.path.realpath(binary_filename0)
+        self.binary_filename1 = os.path.realpath(binary_filename1)
         self.revision = revision
         self.config_filename = os.path.realpath(config_filename)
         self.config = config_parser
         self.compiler = os.path.realpath(compiler)
 
         #Remove the bin extension of the firmware output filename
+        if os.path.splitext(self.binary_filename0)[1]!='.bin':
+            logging.error('Invalid binary output filename on file 0. It should have the .bin extension.')
+            raise RuntimeError('Invalid binary output filename on file 0. It should have the .bin extension.')
 
-        if os.path.splitext(self.binary_filename)[1]!='.bin':
-            logging.error('Invalid binary output filename. It should have the .bin extension.')
-            raise RuntimeError('Invalid binary output filename. It should have the .bin extension.')
+        if os.path.splitext(self.binary_filename1)[1]!='.bin':
+            logging.error('Invalid binary output filename on file 1. It should have the .bin extension.')
+            raise RuntimeError('Invalid binary output filenameon file 1. It should have the .bin extension.')
 
-        self.binary_filename_compiler=os.path.splitext(self.binary_filename)[0]
+        self.binary_filename_compiler0 = os.path.splitext(self.binary_filename0)[0]
+        self.binary_filename_compiler1 = os.path.splitext(self.binary_filename1)[0]
 
         if not os.path.exists(self.compiler):
             logging.error('PASM compiler not found. Go to the firmware directory and issue the `make` command.')
             raise RuntimeError('PASM compiler not found.')
 
+    ''' Returns True if the firmware needs recompilation '''
     def is_needing_firmware_compilation(self):
-        if os.path.exists(self.binary_filename):
+        config_mtime  = os.path.getmtime(self.config_filename) #modif time of config file
+
+        if os.path.exists(self.binary_filename0):
             #Check if we need to rebuild the firmware
-            config_mtime = os.path.getmtime(self.config_filename) #modif time of config file
-            fw_mtime = os.path.getmtime(self.binary_filename) #modif time of firmware file
-            fw_src_mtime = os.path.getmtime(self.firmware_source_file) #modif time of firmware source file
-            if fw_mtime >= config_mtime and fw_mtime>=fw_src_mtime: #already up to date
+            fw_mtime      = os.path.getmtime(self.binary_filename0) #modif time of firmware file
+            fw_src_mtime  = os.path.getmtime(self.firmware_source_file0) #modif time of firmware source file
+            if fw_mtime  >= config_mtime and fw_mtime>=fw_src_mtime: #already up to date
+                return False
+
+        if os.path.exists(self.binary_filename1):
+            #Check if we need to rebuild the firmware
+            fw_mtime      = os.path.getmtime(self.binary_filename1) #modif time of firmware file
+            fw_src_mtime  = os.path.getmtime(self.firmware_source_file1) #modif time of firmware source file
+            if fw_mtime  >= config_mtime and fw_mtime>=fw_src_mtime: #already up to date
                 return False
 
         return True
@@ -69,33 +88,42 @@ class PruFirmware:
         if not self.is_needing_firmware_compilation():
             return True
 
-        #First setting: end stop inversion
-
-        #FIXME: We support only all inverted or nothing inverted for now in the firmware.
-        shouldInvert = self.config.getboolean('Endstops', 'invert_X1')
-        shouldInvert |= self.config.getboolean('Endstops', 'invert_X2')
-        shouldInvert |= self.config.getboolean('Endstops', 'invert_Y1')
-        shouldInvert |= self.config.getboolean('Endstops', 'invert_Y2')
-        shouldInvert |= self.config.getboolean('Endstops', 'invert_Z1')
-        shouldInvert |= self.config.getboolean('Endstops', 'invert_Z2')
-
+        # Revision define
         revision = "-DREV_A3" if self.revision == "A3" else "-DREV_A4"
         
-        cmd = [self.compiler,'-b',revision]
+        cmd0 = [self.compiler,'-b', revision]
+        cmd1 = [self.compiler,'-b', revision]
 
+        # Define direction
         for s in ['x','y','z','e','h']:
-            cmd.append('-DSTEPPER_'+s.upper()+'_DIRECTION='+("0" if self.config.getint('Steppers', 'direction_'+s)>0 else "1"))
+            cmd0.append('-DSTEPPER_'+s.upper()+'_DIRECTION='+("0" if self.config.getint('Steppers', 'direction_'+s)>0 else "1"))
 
-        
+        # Construct the inversion mask
+        inversion_mask = "-DINVERSION_MASK=0b00"
+        for axis in ["X1", "X2", "Y1", "Y2", "Z1", "Z2"]:
+            inversion_mask += "1" if self.config.getboolean('Endstops', 'invert_'+axis) else "0"
 
-        if shouldInvert:
-            cmd.append("-DENDSTOP_INVERSED=1");
+        cmd1.append(inversion_mask)
 
-        cmd.extend([self.firmware_source_file,self.binary_filename_compiler])
+        # Construct the endstop lookup table. 
+        for axis in ["X1", "X2", "Y1", "Y2", "Z1", "Z2"]:
+            cmd1.append("-DSTEPPER_MASK_"+axis+"="+self.config.get('Endstops', 'lookup_mask_'+axis))
 
-        logging.debug("Compiling firmware with "+' '.join(cmd))
+        cmd0.extend([self.firmware_source_file0, self.binary_filename_compiler0])
+        cmd1.extend([self.firmware_source_file1, self.binary_filename_compiler1])
+
+        logging.debug("Compiling firmware 0 with "+' '.join(cmd0))
         try:
-            subprocess.check_output(cmd, stderr=subprocess.STDOUT)
+            subprocess.check_output(cmd0, stderr=subprocess.STDOUT)
+            logging.debug("Compilation succeeded.")
+        except subprocess.CalledProcessError as e:
+            logging.exception('Error while compiling firmware: ')
+            logging.error('Command output:'+e.output)
+            return False
+
+        logging.debug("Compiling firmware 1 with "+' '.join(cmd1))
+        try:
+            subprocess.check_output(cmd1, stderr=subprocess.STDOUT)
             logging.debug("Compilation succeeded.")
         except subprocess.CalledProcessError as e:
             logging.exception('Error while compiling firmware: ')
@@ -105,11 +133,15 @@ class PruFirmware:
         return True
 
     ''' Return the path to the firmware bin file, None if the firmware cannot be produced. '''
-    def get_firmware(self):
-        if not os.path.exists(self.binary_filename) or self.is_needing_firmware_compilation():
-            if not self.produce_firmware():
-                return None
-
-        return self.binary_filename
-
+    def get_firmware(self, prunum = 0):
+        if prunum == 0:
+            if not os.path.exists(self.binary_filename0) or self.is_needing_firmware_compilation():
+                if not self.produce_firmware():
+                    return None
+            return self.binary_filename0
+        else:
+            if not os.path.exists(self.binary_filename1) or self.is_needing_firmware_compilation():
+                if not self.produce_firmware():
+                    return None
+            return self.binary_filename1
     

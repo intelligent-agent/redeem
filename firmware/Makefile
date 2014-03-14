@@ -13,6 +13,9 @@ A4:		compiler
 	./pasm -b -DREV_A4 $(FILENAME).p
 	mv $(FILENAME).bin $(FILENAME)_00A4.bin
 
+endstops: 
+	pasm -b -DREV_A4 firmware_endstops.p
+
 compiler:
 	make -C pasm_source
 

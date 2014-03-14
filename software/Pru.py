@@ -11,6 +11,12 @@ PRU1_ARM_INTERRUPT     = 20
 ARM_PRU0_INTERRUPT     = 21
 ARM_PRU1_INTERRUPT     = 22
 
+PRUSS0_PRU0_DATARAM    = 0
+PRUSS0_PRU1_DATARAM    = 1
+PRUSS0_PRU0_IRAM       = 2
+PRUSS0_PRU1_IRAM       = 3
+PRUSS0_SHARED_DATARAM  = 4
+
 PRU0                   = 0
 PRU1                   = 1
 
@@ -61,7 +67,7 @@ class Pru:
             self.ddr_mem[self.ddr_start:self.ddr_start+4] = struct.pack('L', 0)  # Add a zero to the first reg to make it wait
        
         self.init_pru();
-        
+       
         #Wait until we get the GPIO output in the DDR
         self.dev = os.open("/dev/uio0", os.O_RDONLY)
 
@@ -87,10 +93,12 @@ class Pru:
     def init_pru(self):
         self.ddr_mem[self.ddr_start:self.ddr_start+4] = struct.pack('L', 0)  # Add a zero to the first reg to make it wait
         pypruss.init()                                  # Init the PRU
-        pypruss.open(PRU0)                              # Open PRU event 0 which is PRU0_ARM_INTERRUPT
+        pypruss.open(0)                                 # Open PRU event 0 which is PRU0_ARM_INTERRUPT
+        pypruss.open(1)                                 # Open PRU event 1 which is PRU1_ARM_INTERRUPT
         pypruss.pruintc_init()                          # Init the interrupt controller
         pypruss.pru_write_memory(0, 0, [self.ddr_addr, self.ddr_nr_events, 0])      # Put the ddr address in the first region         
-        pypruss.exec_program(0, self.firmware.get_firmware())   # Load firmware "ddr_write.bin" on PRU 0
+        pypruss.exec_program(0, self.firmware.get_firmware(0))                      # Load firmware on PRU 0
+        pypruss.exec_program(1, self.firmware.get_firmware(1))                      # Load firmware on PRU 1
 
     def read_gpio_state(self, gpio_bank):
         """ Return the initial state of a GPIO bank when the PRU was initialized """
