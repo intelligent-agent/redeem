@@ -13,6 +13,9 @@
 #define GPIO1               0x4804C000          // The adress of the GPIO1 bank
 #define GPIO2               0x481AC000          // The adress of the GPIO2 bank
 #define GPIO3               0x481AE000          // The adress of the GPIO3 bank
+#define PRU1_CONTROL_REGISTER_BASE      0x00024000                              //The base address for all the PRU1 control registers
+#define CTPPR0_REGISTER                 PRU1_CONTROL_REGISTER_BASE + 0x28       //The CTPPR0 register for programming C28 and C29 entries
+#define SHARED_RAM_ENDSTOPS_ADDR        0x0120
 
 //* Magic number set by the host for DDR reset */
 #define DDR_MAGIC           0xbabe7175          // Magic number used to reset the DDR counter 
@@ -81,8 +84,8 @@ INIT:
     CLR  r0, r0, 4                                          // Clear bit 4 in reg 0 (copy of SYSCFG). This enables OCP master ports needed to access all OMAP peripherals
     SBCO r0, C4, 4, 4                                       // Load back the modified SYSCFG register
     
-    MOV  r0, 0x0120                                         // Set the C28 address for shared ram
-    MOV  r1, 0x00022028
+    MOV  r0, SHARED_RAM_ENDSTOPS_ADDR                       // Set the C28 address for shared ram, C29 is set to 0
+    MOV  r1, CTPPR0_REGISTER
     SBBO r0, r1, 0, 4
 
     MOV  r17, GPIO1 | GPIO_DATAOUT                          // Load address for GPIO 1
@@ -207,9 +210,9 @@ NEXT_COMMAND:
     //32 INSTRUCTIONS UNTIL HERE SINCE THE START OF THE STEP COMMAND
 
     // Get the direction mask posted by PRU1. 
-    // r7.b2 conatins the mask for positive direction, (dir = 1)
-    // and r7.b3 the mask for negative direction (dir = 0)
-    LBCO r7, c28, 8, 4
+    // r7.b0 contains the mask for positive direction, (dir = 1)
+    // and r7.b1 the mask for negative direction (dir = 0)
+    LBCO r7, C28, 4, 4
     
     // After this, r7.b0 will have the positive mask for the step pins. 
     // If all steppers can move, the value of r7.b0 will be 0b00011111
@@ -220,8 +223,8 @@ NEXT_COMMAND:
 
     OR  r7.b0, r7.b3, r7.b2                 // r7.b0 = r7.b3 | r7.b2
     
-    AND r7, r7, 0x000000FF 
-    SBCO r7, c28, 12, 4
+    //AND r7, r7, 0x000000FF 
+    //SBCO r7, C28, 8, 4
 
     //Check if this is a cancellable move
     QBNE notcancel, pinCommand.options, 0x01

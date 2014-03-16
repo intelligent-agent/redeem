@@ -67,7 +67,7 @@ class EndStop:
     def read_value(self):
         with open("/dev/mem", "r+b") as f:	       
             ddr_mem = mmap.mmap(f.fileno(), self.PRU_ICSS_LEN, offset=self.PRU_ICSS) 
-            state = struct.unpack('LLL', ddr_mem[self.RAM2_START:self.RAM2_START+12])
+            state = struct.unpack('LL', ddr_mem[self.RAM2_START:self.RAM2_START+8])
             if self.name == "X1":
                 self.hit = bool(state[0] & (1<<0))
             elif self.name == "Y1":
