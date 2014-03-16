@@ -12,6 +12,7 @@ License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 import os
 import logging
 import subprocess
+import shutil
 
 class PruFirmware:
 
@@ -85,54 +86,62 @@ class PruFirmware:
         if not self.is_needing_firmware_compilation():
             return True
 
-        # Revision define
-        revision = "-DREV_A3" if self.revision == "A3" else "-DREV_A4"
-        
-        cmd0 = [self.compiler,'-b', revision]
-        cmd1 = [self.compiler,'-b', revision]
+        # Create a config file
+        configFile_0 = os.path.join(os.path.dirname(self.firmware_source_file0) ,'config.h')
 
-        # Define direction
-        for s in ['x','y','z','e','h']:
-            cmd0.append('-DSTEPPER_'+s.upper()+'_DIRECTION='+("0" if self.config.getint('Steppers', 'direction_'+s)>0 else "1"))
 
-        # #Add endstop config
 
-        # #FIXME: Put everything in a header file included by the firmware as the command line is too big
+        with open(configFile_0, 'w') as configFile:
+            configFile.write("#define REV_A3\n" if self.revision == "A3" else "#define REV_A4\n")
 
-        # #Min X
-        # (pin,bank) = self.end_stops["X1"].get_gpio_bank_and_pin()
-        # cmd.extend(['-DSTEPPER_X_END_MIN_PIN='+str(pin),'-DSTEPPER_X_END_MIN_BANK=GPIO_'+str(bank)+'_IN']);
+            # Define direction
+            for s in ['x','y','z','e','h']:
+                configFile.write('#define STEPPER_'+s.upper()+'_DIRECTION\t\t'+("0" if self.config.getint('Steppers', 'direction_'+s)>0 else "1")+'\n')
 
-        # #Min Y
-        # (pin,bank) = self.end_stops["Y1"].get_gpio_bank_and_pin()
-        # cmd.extend(['-DSTEPPER_Y_END_MIN_PIN='+str(pin),'-DSTEPPER_Y_END_MIN_BANK=GPIO_'+str(bank)+'_IN']);
+            # #Add endstop config
 
-        # #Min Z
-        # (pin,bank) = self.end_stops["Z1"].get_gpio_bank_and_pin()
-        # cmd.extend(['-DSTEPPER_X_END_MIN_PIN='+str(pin),'-DSTEPPER_Z_END_MIN_BANK=GPIO_'+str(bank)+'_IN']);
+            # #Min X
+            # (pin,bank) = self.end_stops["X1"].get_gpio_bank_and_pin()
+            # cmd.extend(['#define STEPPER_X_END_MIN_PIN\t\t'+str(pin),'#define STEPPER_X_END_MIN_BANK\t\tGPIO_'+str(bank)+'_IN']);
 
-        # #Max X
-        # (pin,bank) = self.end_stops["X2"].get_gpio_bank_and_pin()
-        # cmd.extend(['-DSTEPPER_X_END_MAX_PIN='+str(pin),'-DSTEPPER_X_END_MAX_BANK=GPIO_'+str(bank)+'_IN']);
+            # #Min Y
+            # (pin,bank) = self.end_stops["Y1"].get_gpio_bank_and_pin()
+            # cmd.extend(['#define STEPPER_Y_END_MIN_PIN\t\t'+str(pin),'#define STEPPER_Y_END_MIN_BANK\t\tGPIO_'+str(bank)+'_IN']);
 
-        # #Max Y
-        # (pin,bank) = self.end_stops["Y2"].get_gpio_bank_and_pin()
-        # cmd.extend(['-DSTEPPER_Y_END_MAX_PIN='+str(pin),'-DSTEPPER_Y_END_MAX_BANK=GPIO_'+str(bank)+'_IN']);
+            # #Min Z
+            # (pin,bank) = self.end_stops["Z1"].get_gpio_bank_and_pin()
+            # cmd.extend(['#define STEPPER_X_END_MIN_PIN\t\t'+str(pin),'#define STEPPER_Z_END_MIN_BANK\t\tGPIO_'+str(bank)+'_IN']);
 
-        # #Max Z
-        # (pin,bank) = self.end_stops["Z2"].get_gpio_bank_and_pin()
-        # cmd.extend(['-DSTEPPER_X_END_MAX_PIN='+str(pin),'-DSTEPPER_Z_END_MAX_BANK=GPIO_'+str(bank)+'_IN']);
+            # #Max X
+            # (pin,bank) = self.end_stops["X2"].get_gpio_bank_and_pin()
+            # cmd.extend(['#define STEPPER_X_END_MAX_PIN\t\t'+str(pin),'#define STEPPER_X_END_MAX_BANK\t\tGPIO_'+str(bank)+'_IN']);
 
-        # Construct the inversion mask
-        inversion_mask = "-DINVERSION_MASK=0b00"
-        for axis in ["X1", "X2", "Y1", "Y2", "Z1", "Z2"]:
-            inversion_mask += "1" if self.config.getboolean('Endstops', 'invert_'+axis) else "0"
+            # #Max Y
+            # (pin,bank) = self.end_stops["Y2"].get_gpio_bank_and_pin()
+            # cmd.extend(['#define STEPPER_Y_END_MAX_PIN\t\t'+str(pin),'#define STEPPER_Y_END_MAX_BANK\t\tGPIO_'+str(bank)+'_IN']);
 
-        cmd1.append(inversion_mask)
+            # #Max Z
+            # (pin,bank) = self.end_stops["Z2"].get_gpio_bank_and_pin()
+            # cmd.extend(['#define STEPPER_X_END_MAX_PIN\t\t'+str(pin),'#define STEPPER_Z_END_MAX_BANK\t\tGPIO_'+str(bank)+'_IN']);
 
-        # Construct the endstop lookup table. 
-        for axis in ["X1", "X2", "Y1", "Y2", "Z1", "Z2"]:
-            cmd1.append("-DSTEPPER_MASK_"+axis+"="+self.config.get('Endstops', 'lookup_mask_'+axis))
+            # Construct the inversion mask
+            inversion_mask = "#define INVERSION_MASK\t\t0b00"
+            for axis in ["X1", "X2", "Y1", "Y2", "Z1", "Z2"]:
+                inversion_mask += "1" if self.config.getboolean('Endstops', 'invert_'+axis) else "0"
+
+            configFile.write(inversion_mask+"\n");
+
+            # Construct the endstop lookup table. 
+            for axis in ["X1", "X2", "Y1", "Y2", "Z1", "Z2"]:
+                configFile.write("#define STEPPER_MASK_"+axis+"\t\t"+self.config.get('Endstops', 'lookup_mask_'+axis)+"\n")
+
+        configFile_1 = os.path.join(os.path.dirname(self.firmware_source_file1) ,'config.h')
+
+        if os.path.dirname(self.firmware_source_file0)!=os.path.dirname(self.firmware_source_file0):
+            shutil.copyfile(configFile_0,configFile_1)
+
+        cmd0 = [self.compiler,'-b','-DHAS_CONFIG_H']
+        cmd1 = [self.compiler,'-b','-DHAS_CONFIG_H']
 
         cmd0.extend([self.firmware_source_file0, self.binary_filename_compiler0])
         cmd1.extend([self.firmware_source_file1, self.binary_filename_compiler1])

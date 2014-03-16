@@ -18,6 +18,10 @@ from Stepper import Stepper
 
 class EndStop:
 
+    PRU_ICSS = 0x4A300000 
+    PRU_ICSS_LEN = 512*1024
+    RAM2_START = 0x00012000
+
     callback = None                 # Override this to get events
     inputdev = "/dev/input/event0"  # File to listen to events
 
@@ -61,13 +65,9 @@ class EndStop:
 
     ''' Read the current ensdstop value from GPIO using PRU1 '''
     def read_value(self):
-        PRU_ICSS = 0x4A300000 
-        PRU_ICSS_LEN = 512*1024
-        RAM2_START = 0x00012000
-
         with open("/dev/mem", "r+b") as f:	       
-            ddr_mem = mmap.mmap(f.fileno(), PRU_ICSS_LEN, offset=PRU_ICSS) 
-            state = struct.unpack('LLL', ddr_mem[RAM2_START:RAM2_START+12])
+            ddr_mem = mmap.mmap(f.fileno(), self.PRU_ICSS_LEN, offset=self.PRU_ICSS) 
+            state = struct.unpack('LLL', ddr_mem[self.RAM2_START:self.RAM2_START+12])
             if self.name == "X1":
                 self.hit = bool(state[0] & (1<<0))
             elif self.name == "Y1":

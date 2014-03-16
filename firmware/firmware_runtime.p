@@ -17,6 +17,10 @@
 //* Magic number set by the host for DDR reset */
 #define DDR_MAGIC           0xbabe7175          // Magic number used to reset the DDR counter 
 
+#ifdef HAS_CONFIG_H
+#include "config.h"
+#endif
+
 #ifdef REV_A3
 #include "config_00A3.h"
 #endif
@@ -24,6 +28,7 @@
 #ifdef REV_A4
 #include "config_00A4.h"
 #endif
+
 
 #ifndef FIRMWARE_CONFIG
 #error You must define the REV_A3 or REV_A4 preprocessor flag
