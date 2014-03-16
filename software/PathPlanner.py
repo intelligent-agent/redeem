@@ -68,7 +68,7 @@ class PathPlanner:
         
         p = Path({axis:-self.travel_length[axis]}, 0.01, "RELATIVE", False, True)
         p.set_homing_feedrate()
-        print p.feed_rate
+
         #p.set_max_speed(p.get_max_speed()*0.2)
         self.add_path(p)
         path = Path({axis:-self.center_offset[axis]}, 0.01, "G92")
