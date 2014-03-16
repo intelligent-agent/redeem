@@ -113,8 +113,8 @@ COLLECT:
     OR r7, r7 ,r0                                      
 
     // Endstop Z MAX
-    LBBO r0, STEPPER_Z_END_MIN_BANK, 0, 4                  
-    LSR r0,r0,STEPPER_Z_END_MIN_PIN
+    LBBO r0, STEPPER_Z_END_MAX_BANK, 0, 4                  
+    LSR r0,r0,STEPPER_Z_END_MAX_PIN
     AND r0,r0,0x01
     LSL r0,r0,0x05
     OR  r7, r7, r0
