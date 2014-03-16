@@ -130,7 +130,7 @@ class PruFirmware:
 
             # Construct the inversion mask
             inversion_mask = "#define INVERSION_MASK\t\t0b00"
-            for axis in ["X1", "X2", "Y1", "Y2", "Z1", "Z2"]:
+            for axis in ["Z2","Y2","X2","Z1","Y1","X1"]:
                 inversion_mask += "1" if self.config.getboolean('Endstops', 'invert_'+axis) else "0"
 
             configFile.write(inversion_mask+"\n");
