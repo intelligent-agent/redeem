@@ -13,9 +13,16 @@
 #define GPIO1               0x4804C000          // The adress of the GPIO1 bank
 #define GPIO2               0x481AC000          // The adress of the GPIO2 bank
 #define GPIO3               0x481AE000          // The adress of the GPIO3 bank
+#define PRU1_CONTROL_REGISTER_BASE      0x00024000                              //The base address for all the PRU1 control registers
+#define CTPPR0_REGISTER                 PRU1_CONTROL_REGISTER_BASE + 0x28       //The CTPPR0 register for programming C28 and C29 entries
+#define SHARED_RAM_ENDSTOPS_ADDR        0x0120
 
 //* Magic number set by the host for DDR reset */
 #define DDR_MAGIC           0xbabe7175          // Magic number used to reset the DDR counter 
+
+#ifdef HAS_CONFIG_H
+#include "config.h"
+#endif
 
 #ifdef REV_A3
 #include "config_00A3.h"
@@ -24,6 +31,7 @@
 #ifdef REV_A4
 #include "config_00A4.h"
 #endif
+
 
 #ifndef FIRMWARE_CONFIG
 #error You must define the REV_A3 or REV_A4 preprocessor flag
@@ -76,8 +84,8 @@ INIT:
     CLR  r0, r0, 4                                          // Clear bit 4 in reg 0 (copy of SYSCFG). This enables OCP master ports needed to access all OMAP peripherals
     SBCO r0, C4, 4, 4                                       // Load back the modified SYSCFG register
     
-    MOV  r0, 0x0120                                         // Set the C28 address for shared ram
-    MOV  r1, 0x00022028
+    MOV  r0, SHARED_RAM_ENDSTOPS_ADDR                       // Set the C28 address for shared ram, C29 is set to 0
+    MOV  r1, CTPPR0_REGISTER
     SBBO r0, r1, 0, 4
 
     MOV  r17, GPIO1 | GPIO_DATAOUT                          // Load address for GPIO 1
@@ -97,8 +105,8 @@ INIT:
     LBBO r2, r0, 0, 4   
     ADD  r2, r2, 4  
         
-    MOV  r12, GPIO0 | GPIO_DATAIN                           // Load Address
-    LBBO r1, r12, 0, 4                                      // Read GPIO0 INPUT content
+    MOV  GPIO_0_IN, GPIO0 | GPIO_DATAIN                     // Load Address
+    LBBO r1, GPIO_0_IN, 0, 4                                      // Read GPIO0 INPUT content
     SBBO r1, r2, 0, 4                                       // Put GPIO INPUT content into local RAM
     ADD  r2, r2, 4  
     
@@ -107,13 +115,13 @@ INIT:
     SBBO r1, r2, 0, 4                                       // Put GPIO INPUT content into local RAM
     ADD  r2, r2, 4  
     
-    MOV  r13, GPIO2 | GPIO_DATAIN                           // Load Address
-    LBBO r1, r13, 0, 4                                      // Read GPIO2 INPUT content
+    MOV  GPIO_2_IN, GPIO2 | GPIO_DATAIN                           // Load Address
+    LBBO r1, GPIO_2_IN, 0, 4                                      // Read GPIO2 INPUT content
     SBBO r1, r2, 0, 4                                       // Put GPIO INPUT content into local RAM
     ADD  r2, r2, 4  
     
-    MOV  GPIO_3_IN, GPIO3 | GPIO_DATAIN                            // Load Address
-    LBBO r1, GPIO_3_IN, 0, 4                                       // Read GPIO3 INPUT content
+    MOV  GPIO_3_IN, GPIO3 | GPIO_DATAIN                       // Load Address
+    LBBO r1, GPIO_3_IN, 0, 4                                  // Read GPIO3 INPUT content
     SBBO r1, r2, 0, 4                                        // Put GPIO INPUT content into local RAM
     
     //Set all the stepper pins to 0 
@@ -149,39 +157,42 @@ NEXT_COMMAND:
     //First load the direction pins
 
     //Store the pins of GPIO0 into r7 and GPIO1 into r8
-                          
+
     MOV r7, 0
     MOV r8, 0
     
+    XOR r21,pinCommand.direction,DIRECTION_MASK          // Inverse the stepper direction mask
+    AND r21,r21,0x1F
+
     //Stepper X
-    AND  r9,  pinCommand.direction, 0x01
+    AND  r9,  r21, 0x01
     LSL  r9, r9, STEPPER_X_DIR_PIN    
     OR  STEPPER_X_DIR_BANK, STEPPER_X_DIR_BANK, r9          // Put a 1/0 into the pin register for the stepper direction
     
     //Stepper Y     
-    LSR  r9, pinCommand.direction, 0x01     
+    LSR  r9, r21, 0x01     
     AND  r9, r9, 0x01   
     LSL  r9, r9, STEPPER_Y_DIR_PIN      
     OR  STEPPER_Y_DIR_BANK, STEPPER_Y_DIR_BANK, r9          // Put a 1/0 into the pin register for the stepper direction
     
     //Stepper Z     
-    LSR  r9, pinCommand.direction, 0x02     
+    LSR  r9, r21, 0x02     
     AND  r9, r9, 0x01   
     LSL  r9, r9, STEPPER_Z_DIR_PIN      
     OR  STEPPER_Z_DIR_BANK, STEPPER_Z_DIR_BANK, r9          // Put a 1/0 into the pin register for the stepper direction
     
     //Stepper E     
-    LSR  r9, pinCommand.direction, 0x03     
+    LSR  r9, r21, 0x03     
     AND  r9, r9, 0x01   
     LSL  r9, r9, STEPPER_E_DIR_PIN      
     OR  STEPPER_E_DIR_BANK, STEPPER_E_DIR_BANK, r9          // Put a 1/0 into the pin register for the stepper direction
     
     //Stepper H     
-    LSR  r9, pinCommand.direction, 0x04     
+    LSR  r9, r21, 0x04     
     AND  r9, r9, 0x01   
     LSL  r9, r9, STEPPER_H_DIR_PIN      
     OR  STEPPER_H_DIR_BANK, STEPPER_H_DIR_BANK, r9          // Put a 1/0 into the pin register for the stepper direction
-    
+
     //Setup direction pin   
     LBBO r9, r11, 0,   4                                    // Load pin data into r7 which is 4 bytes
     LBBO r10, r17, 0,   4                                   // Load pin data into r8 which is 4 bytes
@@ -202,21 +213,18 @@ NEXT_COMMAND:
     //32 INSTRUCTIONS UNTIL HERE SINCE THE START OF THE STEP COMMAND
 
     // Get the direction mask posted by PRU1. 
-    // r7.b2 conatins the mask for positive direction, (dir = 1)
-    // and r7.b3 the mask for negative direction (dir = 0)
-    LBCO r7, c28, 8, 4
+    // r7.b0 contains the mask for positive direction, (dir = 1)
+    // and r7.b1 the mask for negative direction (dir = 0)
+    LBCO r7, C28, 4, 4
     
     // After this, r7.b0 will have the positive mask for the step pins. 
     // If all steppers can move, the value of r7.b0 will be 0b00011111
-    AND r7.b2, pinCommand.direction, r7.b0  // Build the mask for positive direction
+    AND r7.b2, pinCommand.direction, r7.b1  // Build the mask for positive direction
     
     NOT r7.b3, pinCommand.direction         
-    AND r7.b3, r7.b3, r7.b1                 // r7.b3 &= r7.b1  Build a mask for the negative direction
+    AND r7.b3, r7.b3, r7.b0                 // r7.b3 &= r7.b1  Build a mask for the negative direction
 
     OR  r7.b0, r7.b3, r7.b2                 // r7.b0 = r7.b3 | r7.b2
-    
-    AND r7, r7, 0x000000FF 
-    SBCO r7, c28, 12, 4
 
     //Check if this is a cancellable move
     QBNE notcancel, pinCommand.options, 0x01

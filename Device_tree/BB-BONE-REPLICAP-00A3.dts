@@ -204,77 +204,77 @@
 				switch_x1 {
 					label = "End-stop-X1";
 					debounce_interval = <50>;
-					linux,code = <1>;
-					gpios = <&gpio3 2 0x5>;
+					linux,code = <112>;
+					gpios = <&gpio1 14 0x5>;
 					gpio-key,wakeup;
 				};				
 				switch_x2 {
 					label = "End-stop-X2";
 					debounce_interval = <50>;
-					linux,code = <2>;
-					gpios = <&gpio1 14 0x5>;
+					linux,code = <113>;
+					gpios = <&gpio4 21 0x5>;
 					gpio-key,wakeup;
 				};
 				switch_y1 {
 					label = "End-stop-Y1";
 					debounce_interval = <50>;
-					linux,code = <3>;
-					gpios = <&gpio1 30 0x5>;
+					linux,code = <114>;
+					gpios = <&gpio3 2 0x5>;
 					gpio-key,wakeup;
 				};				
 				switch_y2 {
 					label = "End-stop-Y2";
 					debounce_interval = <50>;
-					linux,code = <4>;
-					gpios = <&gpio4 21 0x5>;
+					linux,code = <115>;
+					gpios = <&gpio1 31 0x5>;
 					gpio-key,wakeup;
 				};				
 				switch_z1 {
 					label = "End-stop-Z1";
 					debounce_interval = <50>;
-					linux,code = <5>;
-					gpios = <&gpio1 31 0x5>;
+					linux,code = <116>;
+					gpios = <&gpio1 30 0x5>;
 					gpio-key,wakeup;
 				};				
 				switch_z2 {
 					label = "End-stop-Z2";
 					debounce_interval = <50>;
-					linux,code = <6>;
+					linux,code = <117>;
 					gpios = <&gpio1 4 0x5>;
 					gpio-key,wakeup;
 				};				
 				fault_x {
 					label = "Fault-X";
 					debounce_interval = <50>;
-					linux,code = <7>;
+					linux,code = <118>;
 					gpios = <&gpio3 4 0x5>;
 					gpio-key,wakeup;	
 				};
 				fault_y {
 					label = "Fault-Y";
 					debounce_interval = <50>;
-					linux,code = <8>;
+					linux,code = <119>;
 					gpios = <&gpio3 5 0x5>;
 					gpio-key,wakeup;	
 				};
 				fault_z {
 					label = "Fault-Z";
 					debounce_interval = <50>;
-					linux,code = <9>;
+					linux,code = <120>;
 					gpios = <&gpio1 15 0x5>;
 					gpio-key,wakeup;	
 				};
 				fault_ext_1 {
 					label = "Fault-Ext-1";
 					debounce_interval = <50>;
-					linux,code = <10>;
+					linux,code = <121>;
 					gpios = <&gpio3 1 0x5>;
 					gpio-key,wakeup;	
 				};
 				fault_ext_2 {
 					label = "Fault-Ext-2";
 					debounce_interval = <50>;
-					linux,code = <11>;
+					linux,code = <121>;
 					gpios = <&gpio3 3 0x5>;
 					gpio-key,wakeup;	
 				};

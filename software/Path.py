@@ -74,6 +74,8 @@ class Path:
         self.prev = prev
 
     def set_homing_feedrate(self):
+        self.feed_rate = Path.max_speed_x
+
         if "X" in self.axes:
             self.feed_rate = min(self.feed_rate, Path.home_speed_x)
         if "Y" in self.axes:

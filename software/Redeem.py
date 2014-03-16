@@ -81,6 +81,7 @@ class Redeem:
         EndStop.inputdev = inputdev
 
         self.end_stops = {}
+
         # We should use key codes that are not used on a keyboard etc.         
         if self.revision == "A4":
             self.end_stops["X1"] = EndStop("GPIO3_21", 112, "X1", self.config.getboolean("Endstops", "invert_X1"))
@@ -90,12 +91,12 @@ class Redeem:
             self.end_stops["Z1"] = EndStop("GPIO0_31", 116, "Z1", self.config.getboolean("Endstops", "invert_Z1"))
             self.end_stops["Z2"] = EndStop("GPIO0_4" , 117, "Z2", self.config.getboolean("Endstops", "invert_Z2"))
         else:
-            self.end_stops["X1"] = EndStop("GPIO0_31", 116, "X1", self.config.getboolean("Endstops", "invert_X2"))
-            self.end_stops["Y1"] = EndStop("GPIO3_21", 112, "Y1", self.config.getboolean("Endstops", "invert_Y2"))
-            self.end_stops["Z1"] = EndStop("GPIO0_30", 113, "Z1", self.config.getboolean("Endstops", "invert_Z1"))
-            #self.end_stops["Y2"] = EndStop("GPIO3_21", self.steppers, 4, "Y2")
-            #self.end_stops["X2"] = EndStop("GPIO0_31", self.steppers, 5, "X2")
-            #self.end_stops["Z2"] = EndStop("GPIO0_4", self.steppers, 6, "Z2")
+            self.end_stops["X1"] = EndStop("GPIO0_14", 112, "X1", self.config.getboolean("Endstops", "invert_X1"))
+            self.end_stops["X2"] = EndStop("GPIO3_21", 113, "X2", self.config.getboolean("Endstops", "invert_X2"))
+            self.end_stops["Y1"] = EndStop("GPIO2_2",  114, "Y1", self.config.getboolean("Endstops", "invert_Y1"))
+            self.end_stops["Y2"] = EndStop("GPIO0_31", 115, "Y2", self.config.getboolean("Endstops", "invert_Y2"))
+            self.end_stops["Z1"] = EndStop("GPIO0_30", 116, "Z1", self.config.getboolean("Endstops", "invert_Z1"))
+            self.end_stops["Z2"] = EndStop("GPIO0_4",  117, "Z2", self.config.getboolean("Endstops", "invert_Z2"))
             
         EndStop.callback = self.end_stop_hit
         EndStop.inputdev = self.config.get("Endstops","inputdev");
@@ -216,10 +217,19 @@ class Redeem:
         dirname = os.path.dirname(os.path.realpath(__file__))
 
         # Create the firmware compiler
-        self.pru_firmware = PruFirmware(dirname+"/../firmware/firmware.p",dirname+"/../firmware/firmware_runtime.bin",self.revision,self.config_filename,self.config,"/usr/bin/pasm")
+        self.pru_firmware = PruFirmware(dirname+"/../firmware/firmware_runtime.p",dirname+"/../firmware/firmware_runtime.bin",dirname+"/../firmware/firmware_endstops.p",dirname+"/../firmware/firmware_endstops.bin",self.revision,self.config_filename,self.config,"/usr/bin/pasm")
 
         self.path_planner = PathPlanner(self.steppers, self.pru_firmware)
         self.path_planner.set_acceleration(float(self.config.get('Steppers', 'acceleration'))) 
+
+        travel={}
+        offset={}
+        for axis in ['X','Y','Z']:
+            travel[axis] = self.config.getfloat('Geometry', 'travel_'+axis.lower())
+            offset[axis] = self.config.getfloat('Geometry', 'offset_'+axis.lower())
+
+        self.path_planner.set_travel_length(travel)
+        self.path_planner.set_center_offset(offset)
 
         # After the firmwares are loaded, the endstop states can be updated.
         for k, endstop in self.end_stops.iteritems():
@@ -278,16 +288,7 @@ class Redeem:
             for i in range(g.num_tokens()): # Run through all tokens
                 axis = g.token_letter(i)                         
                 if self.config.getboolean('Endstops', 'has_'+axis.lower()):
-                    #self.path_planner.home(axis)
-                    logging.debug("homing "+axis)
-                    travel = self.config.getfloat('Geometry', 'travel_'+axis.lower())*1000.0 # Convert to mm
-                    feed_rate = self.config.getfloat('Steppers', 'home_speed_'+axis.lower())*60000.0 # Convert to mm/min 
-                    offset = self.config.getfloat('Geometry', 'offset_'+axis.lower())*1000.0 # Convert to mm
-                    self._execute(Gcode({"message": "G91"})) # Relative coords               
-                    self._execute(Gcode({"message": "G1 "+axis+str(-travel)+" F"+str(feed_rate)}))    
-                    self._execute(Gcode({"message": "G92 "+axis+str(-offset)}))
-                    self._execute(Gcode({"message": "G90"})) # Abolsute coords               
-                    self._execute(Gcode({"message": "G1 "+axis+"0"}))       
+                    self.path_planner.home(axis)     
             logging.info("Homing complete")
         elif g.code() == "G90":                                     # Absolute positioning
             self.movement = "ABSOLUTE"

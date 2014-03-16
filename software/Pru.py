@@ -42,8 +42,9 @@ class Pru:
         pru_hz 			    = 200*1000*1000             # The PRU has a speed of 200 MHz
         self.s_pr_inst      = (1.0/pru_hz)          # I take it every instruction is a single cycle instruction
         self.inst_pr_loop 	= 0                        # This is the minimum number of instructions needed to step.  It is already substracted into the PRU
-        self.inst_pr_delay 	= 1                         # Every loop adds two instructions: i-- and i != 0            
+        self.inst_pr_delay 	= 2                         # Every loop adds two instructions: i-- and i != 0            
         self.sec_to_inst_dev = (self.s_pr_inst*2)
+        self.max_delay_cycles = 4/self.inst_pr_delay*pru_hz     #Maximum delay to avoid bugs
         self.pru_data       = []      	    	        # This holds all data for one move (x,y,z,e1,e2)
         self.ddr_used       = Queue.Queue()             # List of data lengths currently in DDR for execution
         self.ddr_reserved   = 0      
@@ -107,9 +108,8 @@ class Pru:
     def add_data(self, data):
         """ Add some data to one of the PRUs """
         (pins, dirs, options, delays) = data                       	    # Get the data
-        delays = np.clip(0.5*((np.array(delays)/self.s_pr_inst)-self.inst_pr_loop), 1, 4294967296L)
+        delays = np.clip(((np.array(delays)/self.s_pr_inst)-self.inst_pr_loop), 1, self.max_delay_cycles)
         data = np.array([pins,dirs,options, delays.astype(int)])		        	    # Make a 2D matrix combining the ticks and delays
-        #data = list(.flatten())     	    # Braid the data so every other item is a pin and delay
         self.pru_data = data.transpose()   
 
     def has_capacity_for(self, data_len):
