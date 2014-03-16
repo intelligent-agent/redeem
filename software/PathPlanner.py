@@ -37,17 +37,6 @@ class PathPlanner:
         self.current_pos = {"X":0.0, "Y":0.0, "Z":0.0, "E":0.0,"H":0.0}
         self.running     = True                                 # Yes, we are running
         self.pru_data    = []
-
-        #Assign end stop initial values
-        for stepper in self.steppers.items():
-            if stepper[1].get_endstop() == None: continue
-
-            (bank, pin) = stepper[1].get_endstop().get_gpio_bank_and_pin()
-
-            pinValue = (self.pru.read_gpio_state(bank) >> pin) & 0x1
-            stepper[1].get_endstop().set_initial_value_from_gpio(pinValue)
-
-
         self.t           = Thread(target=self._do_work)         # Make the thread
         self.t.daemon    = True
         if __name__ != '__main__':
