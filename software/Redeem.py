@@ -217,7 +217,7 @@ class Redeem:
         dirname = os.path.dirname(os.path.realpath(__file__))
 
         # Create the firmware compiler
-        self.pru_firmware = PruFirmware(dirname+"/../firmware/firmware.p",dirname+"/../firmware/firmware_runtime.bin",self.revision,self.config_filename,self.config,"/usr/bin/pasm",self.end_stops)
+        self.pru_firmware = PruFirmware(dirname+"/../firmware/firmware_runtime.p",dirname+"/../firmware/firmware_runtime.bin",dirname+"/../firmware/firmware_endstops.p",dirname+"/../firmware/firmware_endstops.bin",self.revision,self.config_filename,self.config,"/usr/bin/pasm")
 
         self.path_planner = PathPlanner(self.steppers, self.pru_firmware)
         self.path_planner.set_acceleration(float(self.config.get('Steppers', 'acceleration'))) 

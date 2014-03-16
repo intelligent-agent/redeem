@@ -15,7 +15,7 @@ import subprocess
 
 class PruFirmware:
 
-    def __init__(self, firmware_source_file0, binary_filename0, revision, config_filename, config_parser,compiler):
+    def __init__(self, firmware_source_file0, binary_filename0, firmware_source_file1, binary_filename1, revision, config_filename, config_parser,compiler):
         """Create and initialize a PruFirmware
 
         Parameters
@@ -33,14 +33,8 @@ class PruFirmware:
             The config parser with the config file already loaded
         compiler : string
             Path to the pasm compiler
-        end_stops : Dictionary of EndStop
-            Dictionary of all end stops
                
         """
-
-        
-        firmware_source_file1 = "/usr/src/redeem/firmware/firmware_endstops.p"
-        binary_filename1 = "/usr/src/redeem/firmware/firmware_endstops.bin"
     
         self.firmware_source_file0 = os.path.realpath(firmware_source_file0)
         self.firmware_source_file1 = os.path.realpath(firmware_source_file1)
@@ -50,7 +44,6 @@ class PruFirmware:
         self.config_filename = os.path.realpath(config_filename)
         self.config = config_parser
         self.compiler = os.path.realpath(compiler)
-        self.end_stops = end_stops
 
         #Remove the bin extension of the firmware output filename
         if os.path.splitext(self.binary_filename0)[1]!='.bin':
