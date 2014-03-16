@@ -66,21 +66,25 @@ class PruFirmware:
     def is_needing_firmware_compilation(self):
         config_mtime  = os.path.getmtime(self.config_filename) #modif time of config file
 
+        ret0 = True
+        ret1 = True
+
         if os.path.exists(self.binary_filename0):
             #Check if we need to rebuild the firmware
             fw_mtime      = os.path.getmtime(self.binary_filename0) #modif time of firmware file
             fw_src_mtime  = os.path.getmtime(self.firmware_source_file0) #modif time of firmware source file
             if fw_mtime  >= config_mtime and fw_mtime>=fw_src_mtime: #already up to date
-                return False
+                ret0 = False
 
         if os.path.exists(self.binary_filename1):
             #Check if we need to rebuild the firmware
             fw_mtime      = os.path.getmtime(self.binary_filename1) #modif time of firmware file
             fw_src_mtime  = os.path.getmtime(self.firmware_source_file1) #modif time of firmware source file
             if fw_mtime  >= config_mtime and fw_mtime>=fw_src_mtime: #already up to date
-                return False
+                ret1 = False
 
-        return True
+
+        return ret0 or ret1
 
     def produce_firmware(self):
         if not self.is_needing_firmware_compilation():
@@ -168,14 +172,12 @@ class PruFirmware:
 
     ''' Return the path to the firmware bin file, None if the firmware cannot be produced. '''
     def get_firmware(self, prunum = 0):
+        if self.is_needing_firmware_compilation():
+            if not self.produce_firmware():
+                return None
+
         if prunum == 0:
-            if not os.path.exists(self.binary_filename0) or self.is_needing_firmware_compilation():
-                if not self.produce_firmware():
-                    return None
             return self.binary_filename0
         else:
-            if not os.path.exists(self.binary_filename1) or self.is_needing_firmware_compilation():
-                if not self.produce_firmware():
-                    return None
             return self.binary_filename1
     
