@@ -222,6 +222,15 @@ class Redeem:
         self.path_planner = PathPlanner(self.steppers, self.pru_firmware)
         self.path_planner.set_acceleration(float(self.config.get('Steppers', 'acceleration'))) 
 
+        travel={}
+        offset={}
+        for axis in ['X','Y','Z']:
+            travel[axis] = self.config.getfloat('Geometry', 'travel_'+axis.lower())
+            offset[axis] = self.config.getfloat('Geometry', 'offset_'+axis.lower())
+
+        self.path_planner.set_travel_length(travel)
+        self.path_planner.set_center_offset(offset)
+
         # After the firmwares are loaded, the endstop states can be updated.
         for k, endstop in self.end_stops.iteritems():
             logging.debug("Endstop "+endstop.name+" hit? : "+ str(endstop.read_value()))
@@ -279,16 +288,7 @@ class Redeem:
             for i in range(g.num_tokens()): # Run through all tokens
                 axis = g.token_letter(i)                         
                 if self.config.getboolean('Endstops', 'has_'+axis.lower()):
-                    #self.path_planner.home(axis)
-                    logging.debug("homing "+axis)
-                    travel = self.config.getfloat('Geometry', 'travel_'+axis.lower())*1000.0 # Convert to mm
-                    feed_rate = self.config.getfloat('Steppers', 'home_speed_'+axis.lower())*60000.0 # Convert to mm/min 
-                    offset = self.config.getfloat('Geometry', 'offset_'+axis.lower())*1000.0 # Convert to mm
-                    self._execute(Gcode({"message": "G91"})) # Relative coords               
-                    self._execute(Gcode({"message": "G1 "+axis+str(-travel)+" F"+str(feed_rate)}))    
-                    self._execute(Gcode({"message": "G92 "+axis+str(-offset)}))
-                    self._execute(Gcode({"message": "G90"})) # Abolsute coords               
-                    self._execute(Gcode({"message": "G1 "+axis+"0"}))       
+                    self.path_planner.home(axis)     
             logging.info("Homing complete")
         elif g.code() == "G90":                                     # Absolute positioning
             self.movement = "ABSOLUTE"

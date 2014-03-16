@@ -157,39 +157,42 @@ NEXT_COMMAND:
     //First load the direction pins
 
     //Store the pins of GPIO0 into r7 and GPIO1 into r8
-                          
+
     MOV r7, 0
     MOV r8, 0
     
+    XOR r21,pinCommand.direction,DIRECTION_MASK          // Inverse the stepper direction mask
+    AND r21,r21,0x1F
+
     //Stepper X
-    AND  r9,  pinCommand.direction, 0x01
+    AND  r9,  r21, 0x01
     LSL  r9, r9, STEPPER_X_DIR_PIN    
     OR  STEPPER_X_DIR_BANK, STEPPER_X_DIR_BANK, r9          // Put a 1/0 into the pin register for the stepper direction
     
     //Stepper Y     
-    LSR  r9, pinCommand.direction, 0x01     
+    LSR  r9, r21, 0x01     
     AND  r9, r9, 0x01   
     LSL  r9, r9, STEPPER_Y_DIR_PIN      
     OR  STEPPER_Y_DIR_BANK, STEPPER_Y_DIR_BANK, r9          // Put a 1/0 into the pin register for the stepper direction
     
     //Stepper Z     
-    LSR  r9, pinCommand.direction, 0x02     
+    LSR  r9, r21, 0x02     
     AND  r9, r9, 0x01   
     LSL  r9, r9, STEPPER_Z_DIR_PIN      
     OR  STEPPER_Z_DIR_BANK, STEPPER_Z_DIR_BANK, r9          // Put a 1/0 into the pin register for the stepper direction
     
     //Stepper E     
-    LSR  r9, pinCommand.direction, 0x03     
+    LSR  r9, r21, 0x03     
     AND  r9, r9, 0x01   
     LSL  r9, r9, STEPPER_E_DIR_PIN      
     OR  STEPPER_E_DIR_BANK, STEPPER_E_DIR_BANK, r9          // Put a 1/0 into the pin register for the stepper direction
     
     //Stepper H     
-    LSR  r9, pinCommand.direction, 0x04     
+    LSR  r9, r21, 0x04     
     AND  r9, r9, 0x01   
     LSL  r9, r9, STEPPER_H_DIR_PIN      
     OR  STEPPER_H_DIR_BANK, STEPPER_H_DIR_BANK, r9          // Put a 1/0 into the pin register for the stepper direction
-    
+
     //Setup direction pin   
     LBBO r9, r11, 0,   4                                    // Load pin data into r7 which is 4 bytes
     LBBO r10, r17, 0,   4                                   // Load pin data into r8 which is 4 bytes
@@ -216,15 +219,12 @@ NEXT_COMMAND:
     
     // After this, r7.b0 will have the positive mask for the step pins. 
     // If all steppers can move, the value of r7.b0 will be 0b00011111
-    AND r7.b2, pinCommand.direction, r7.b0  // Build the mask for positive direction
+    AND r7.b2, pinCommand.direction, r7.b1  // Build the mask for positive direction
     
     NOT r7.b3, pinCommand.direction         
-    AND r7.b3, r7.b3, r7.b1                 // r7.b3 &= r7.b1  Build a mask for the negative direction
+    AND r7.b3, r7.b3, r7.b0                 // r7.b3 &= r7.b1  Build a mask for the negative direction
 
     OR  r7.b0, r7.b3, r7.b2                 // r7.b0 = r7.b3 | r7.b2
-    
-    //AND r7, r7, 0x000000FF 
-    //SBCO r7, C28, 8, 4
 
     //Check if this is a cancellable move
     QBNE notcancel, pinCommand.options, 0x01

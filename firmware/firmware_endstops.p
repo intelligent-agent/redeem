@@ -34,17 +34,7 @@
 
 
 #ifndef FIRMWARE_CONFIG
-#warning You must define the REV_A3 or REV_A4 preprocessor flag. Using default values.
-
-#define STEPPER_MASK_X1  0x0003 // If X_MIN is hit, stop X- and Y-
-#define STEPPER_MASK_Y1  0x0201 // If Y_MIN is hit, stop X- and Y+
-#define STEPPER_MASK_Z1  0x0004 // If Z_MIN is hit, stop Z-
-#define STEPPER_MASK_X2  0x0300 // If X_MAX is hit, stop X+ and Y+
-#define STEPPER_MASK_Y2  0x0102 // If Y_MAX is hit, stop X+ and Y-
-#define STEPPER_MASK_Z2  0x0400 // If Z_MAX is hit, stop Z+
-
-#define INVERSION_MASK   0b00111111 // Which endstops to invert
-
+#error You must define the REV_A3 or REV_A4 preprocessor flag.
 #endif
 
 
@@ -73,12 +63,12 @@ INIT:
     // Load lookup table
     //Config file syntax is  0b00<Z+><Y+><X+><Z-><Y-><X->
     //We need to produce 0x<DIRMAX><DIRMIN>
-    MOV r10, ((STEPPER_MASK_X1 >> 3) << 8) | (STEPPER_MASK_X1 & 0x03)
-    MOV r11, ((STEPPER_MASK_Y1 >> 3) << 8) | (STEPPER_MASK_Y1 & 0x03)
-    MOV r12, ((STEPPER_MASK_Z1 >> 3) << 8) | (STEPPER_MASK_Z1 & 0x03)
-    MOV r13, ((STEPPER_MASK_X2 >> 3) << 8) | (STEPPER_MASK_X2 & 0x03)
-    MOV r14, ((STEPPER_MASK_Y2 >> 3) << 8) | (STEPPER_MASK_Y2 & 0x03)
-    MOV r15, ((STEPPER_MASK_Z2 >> 3) << 8) | (STEPPER_MASK_Z2 & 0x03)
+    MOV r10, ((STEPPER_MASK_X1 >> 3) << 8) | (STEPPER_MASK_X1 & 0x07)
+    MOV r11, ((STEPPER_MASK_Y1 >> 3) << 8) | (STEPPER_MASK_Y1 & 0x07)
+    MOV r12, ((STEPPER_MASK_Z1 >> 3) << 8) | (STEPPER_MASK_Z1 & 0x07)
+    MOV r13, ((STEPPER_MASK_X2 >> 3) << 8) | (STEPPER_MASK_X2 & 0x07)
+    MOV r14, ((STEPPER_MASK_Y2 >> 3) << 8) | (STEPPER_MASK_Y2 & 0x07)
+    MOV r15, ((STEPPER_MASK_Z2 >> 3) << 8) | (STEPPER_MASK_Z2 & 0x07)
 
     //Load GPIO0,1,2,3 read register content to the DDR
     MOV  r2, GPIO0 | GPIO_DATAIN

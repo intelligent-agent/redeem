@@ -63,6 +63,14 @@ class EndStop:
                 else:
                     self.hit = False
 
+    ''' Read the current direction mask value using PRU1. For debugging. '''
+    def read_direction_mask_value(self):
+        with open("/dev/mem", "r+b") as f:         
+            ddr_mem = mmap.mmap(f.fileno(), self.PRU_ICSS_LEN, offset=self.PRU_ICSS) 
+            state = struct.unpack('LL', ddr_mem[self.RAM2_START:self.RAM2_START+8])
+            
+            return state[1]
+
     ''' Read the current ensdstop value from GPIO using PRU1 '''
     def read_value(self):
         with open("/dev/mem", "r+b") as f:	       
