@@ -90,6 +90,9 @@ class Heater(object):
                 power = self.P*(error + self.D*derivative + self.I*integral)  # The formula for the PID				
                 power = max(min(power, 1.0), 0.0)                             # Normalize to 0,1
 
+            # If the Thermistor is disconnected or running away or something
+            if self.current_temp <= 5 or self.current_temp > 250:
+                power = 0
             self.mosfet.set_power(power)            		 
             time.sleep(1)
         self.disabled = True
