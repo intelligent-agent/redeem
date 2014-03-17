@@ -19,8 +19,8 @@ pypruss.exec_program(1, "../firmware/firmware_endstops.bin")	# Load firmware "me
 with open("/dev/mem", "r+b") as f:	       
     ddr_mem = mmap.mmap(f.fileno(), PRU_ICSS_LEN, offset=PRU_ICSS) 
     while True: 
-        shared = struct.unpack('LLLL', ddr_mem[RAM2_START:RAM2_START+16])
-        print "Endstops: "+bin(shared[0])+" Mask: "+bin(shared[1])+" directions: "+bin(shared[2])+" masked: "+bin(shared[3])+(" "*30)+"\r", 
+        shared = struct.unpack('LLL', ddr_mem[RAM2_START:RAM2_START+12])
+        print "Raw: "+bin(shared[0])+" Masked: "+bin(shared[1])+" Allowed: "+bin(shared[2])+(" "*30)+"\r", 
 
 pypruss.exit()								# Exit
 

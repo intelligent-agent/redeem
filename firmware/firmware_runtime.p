@@ -13,8 +13,8 @@
 #define GPIO1               0x4804C000          // The adress of the GPIO1 bank
 #define GPIO2               0x481AC000          // The adress of the GPIO2 bank
 #define GPIO3               0x481AE000          // The adress of the GPIO3 bank
-#define PRU1_CONTROL_REGISTER_BASE      0x00024000                              //The base address for all the PRU1 control registers
-#define CTPPR0_REGISTER                 PRU1_CONTROL_REGISTER_BASE + 0x28       //The CTPPR0 register for programming C28 and C29 entries
+#define PRU0_CONTROL_REGISTER_BASE      0x00022000                              //The base address for all the PRU1 control registers
+#define CTPPR0_REGISTER                 PRU0_CONTROL_REGISTER_BASE + 0x28       //The CTPPR0 register for programming C28 and C29 entries
 #define SHARED_RAM_ENDSTOPS_ADDR        0x0120
 
 //* Magic number set by the host for DDR reset */
@@ -230,8 +230,7 @@ NEXT_COMMAND:
     QBNE notcancel, pinCommand.options, 0x01
 
     //Check if we need to cancel the move, we have to if the step is 1 and the endstop is 0
-    AND r7.b1,pinCommand.step,r7.b0
-
+    AND r7.b1,pinCommand.step,r7.b0    
 
     QBEQ notcancel, r7.b1,pinCommand.step
 
@@ -246,6 +245,8 @@ start_loop_remove:
     QBA CANCEL_COMMAND_AFTER
 
 notcancel:
+    AND r7, r7, 0x000000FF
+    SBCO r7, C28, 8, 4
     AND pinCommand.step, pinCommand.step, r7.b0               // Mask the step pins with the end stop mask
  
     //Build the step pins GPIOs values 
