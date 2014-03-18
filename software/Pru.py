@@ -161,7 +161,9 @@ class Pru:
 
     ''' Commit the data to the DDR memory '''
     def commit_data(self):
-        
+
+        assert len(self.pru_data)/8<self.ddr_size-20
+
         data = struct.pack('L', len(self.pru_data))	    	# Pack the number of toggles. 
         #Then we have one byte, one byte, one 16 bit (dummy), and one 32 bits
         data += ''.join([struct.pack('BBHL', instr[0],instr[1],instr[2],instr[3]) for instr in self.pru_data])
@@ -175,12 +177,15 @@ class Pru:
             if cut == 4: 
                 logging.error("Cut was 4, setting it to 12")
                 cut = 12                
-            logging.debug("Data len is "+hex(len(data))+", Cutting the data at "+hex(cut))
+            logging.debug("Data len is "+hex(len(data))+", Cutting the data at "+hex(cut)+" ("+str(cut)+")")
 
             first = struct.pack('L', len(data[4:cut])/8)+data[4:cut]    # Update the loop count
             first += struct.pack('L', DDR_MAGIC)                        # Add the magic number to force a reset of DDR memory counter
             #logging.debug("First batch starts from "+hex(self.ddr_start)+" to "+hex(self.ddr_start+len(first)))
-            self.ddr_mem[self.ddr_start:self.ddr_start+len(first)] = first  # Write the first part of the data to the DDR memory.
+            
+
+            self.ddr_mem[self.ddr_start+4:self.ddr_start+len(first)] = first[4:]  # Write the first part of the data to the DDR memory.
+            self.ddr_mem[self.ddr_start:self.ddr_start+4] = first[0:4]  # Write the first part of the data to the DDR memory.
 
             with Pru.ddr_lock: 
                 self.ddr_mem_used += len(first)
@@ -190,7 +195,11 @@ class Pru:
                 second = struct.pack('L', (len(data[cut:-4])/8))+data[cut:]     # Add the number of steps in this iteration
                 self.ddr_end = self.DDR_START+len(second)           # Update the end counter
                 #logging.debug("Second batch starts from "+hex(self.DDR_START)+" to "+hex(self.ddr_end))
-                self.ddr_mem[self.DDR_START:self.ddr_end] = second  # Write the second half of data to the DDR memory.
+                self.ddr_mem[self.DDR_START+4:self.ddr_end] = second[4:]  # Write the second half of data to the DDR memory.
+                self.ddr_mem[self.DDR_START:self.DDR_START+4] = second[0:4] # Write the second half of data to the DDR memory.
+                
+
+
                 with Pru.ddr_lock: 
                     self.ddr_mem_used += len(second)
                 self.ddr_used.put(len(second))
@@ -202,7 +211,10 @@ class Pru:
             #logging.warning("")
         else:
 
-            self.ddr_mem[self.ddr_start:self.ddr_end] = data    # Write the data to the DDR memory.
+            self.ddr_mem[self.ddr_start+4:self.ddr_end] = data[4:]    # Write the data to the DDR memory.
+            self.ddr_mem[self.ddr_start:self.ddr_start+4] = data[0:4]    # Write the data to the DDR memory.
+            
+
             data_len = len(data)
             with Pru.ddr_lock: 
                 self.ddr_mem_used += data_len               
