@@ -37,21 +37,22 @@ class PathPlanner:
         self.current_pos = {"X":0.0, "Y":0.0, "Z":0.0, "E":0.0,"H":0.0}
         self.running     = True                                 # Yes, we are running
         self.pru_data    = []
-
-        #Assign end stop initial values
-        for stepper in self.steppers.items():
-            if stepper[1].get_endstop() == None: continue
-
-            (bank, pin) = stepper[1].get_endstop().get_gpio_bank_and_pin()
-
-            pinValue = (self.pru.read_gpio_state(bank) >> pin) & 0x1
-            stepper[1].get_endstop().set_initial_value_from_gpio(pinValue)
-
-
         self.t           = Thread(target=self._do_work)         # Make the thread
         self.t.daemon    = True
+        self.travel_length = {"X":0.0, "Y":0.0, "Z":0.0}
+        self.center_offset = {"X":0.0, "Y":0.0, "Z":0.0}
+
         if __name__ != '__main__':
             self.t.start()		 
+
+
+    ''' Set travel length (printer size) for all axis '''  
+    def set_travel_length(self, travel):
+        self.travel_length = travel
+
+    ''' Set offset of printer center for all axis '''  
+    def set_center_offset(self, offset):
+        self.center_offset = offset
 
     ''' Set the acceleration used '''                           # Fix me, move this to path
     def set_acceleration(self, acceleration):
@@ -59,37 +60,25 @@ class PathPlanner:
 
     ''' Home the given axis using endstops (min) '''
     def home(self,axis):
-        # Check what is the direction of the first move
-        is_hit = self.steppers[axis].get_endstop().hit        
-        if not is_hit:
-            logging.debug("if "+axis+ " not hit")
-            if self.current_pos[axis]>0:
-                p = Path({axis:0}, 0.1, "ABSOLUTE", True, True)
-                p.set_homing_feedrate()
-                self.add_path(p)    
-                self.wait_until_done()
 
-            while not self.steppers[axis].get_endstop().hit:
-                logging.debug("while "+axis+ " not hit")
-                p = Path({axis:-0.01}, 0.1, "RELATIVE", True, True)
-                p.set_homing_feedrate()
-                self.add_path(p)    
-                self.wait_until_done()
+        if axis=="E" or axis=="H":
+            return
 
-        #schedule a move of 10mm
-        p = Path({axis:0.003}, 0.01, "RELATIVE", False, True)
+        logging.debug("homing "+axis)
+        
+        p = Path({axis:-self.travel_length[axis]}, 0.01, "RELATIVE", False, True)
         p.set_homing_feedrate()
-        p.set_max_speed(p.get_max_speed()*0.2)
-        self.add_path(p)     
-        self.wait_until_done()
 
-        p = Path({axis:-0.003}, 0.1, "RELATIVE", False, True)
+        #p.set_max_speed(p.get_max_speed()*0.2)
+        self.add_path(p)
+        path = Path({axis:-self.center_offset[axis]}, 0.01, "G92")
+        self.add_path(path)  
+        p = Path({axis:0}, 0.01, "ABSOLUTE")
         p.set_homing_feedrate()
-        p.set_max_speed(p.get_max_speed()*0.2)
-        self.add_path(p)     
+        #p.set_max_speed(p.get_max_speed()*0.2)
+        self.add_path(p)
         self.wait_until_done()
-
-
+        logging.debug("homing done for "+axis)
 
     ''' Add a path segment to the path planner '''        
     def add_path(self, new):   
@@ -138,8 +127,8 @@ class PathPlanner:
                     self._braid_data1(self.pru_data, zip(*data))
                     #self.pru_data = self._braid_data(self.pru_data, zip(*data))
         while len(self.pru_data) > 0:  
-            data = self.pru_data[0:0x20000/8]
-            del self.pru_data[0:0x20000/8]
+            data = self.pru_data[0:0x10000/8]
+            del self.pru_data[0:0x10000/8]
             if len(self.pru_data) > 0:
                 logging.debug("Long path segment is cut. remaining: "+str(len(self.pru_data)))       
             while not self.pru.has_capacity_for(len(data)*8):          
@@ -230,10 +219,10 @@ class PathPlanner:
             return ([], [])
         step_pin    = stepper.get_step_pin()                            # Get the step pin
         dir_pin     = stepper.get_dir_pin()                             # Get the direction pin
-        if stepper.get_direction() > 0:
-            dir_pin     = 0 if vec < 0 else dir_pin                         # Disable the dir-pin if we are going backwards  
-        else:
-            dir_pin     = 0 if vec >= 0 else dir_pin
+        #if stepper.get_direction() > 0:
+        dir_pin     = 0 if vec < 0 else dir_pin                         # Disable the dir-pin if we are going backwards  
+        #else:
+        #    dir_pin     = 0 if vec >= 0 else dir_pin
         step_pins       = [step_pin]*num_steps           # Make the pin states
         dir_pins        = [dir_pin]*num_steps 
         option_pins     = [1 if path.is_cancellable() else 0]*num_steps 

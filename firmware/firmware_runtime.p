@@ -13,9 +13,16 @@
 #define GPIO1               0x4804C000          // The adress of the GPIO1 bank
 #define GPIO2               0x481AC000          // The adress of the GPIO2 bank
 #define GPIO3               0x481AE000          // The adress of the GPIO3 bank
+#define PRU0_CONTROL_REGISTER_BASE      0x00022000                              //The base address for all the PRU1 control registers
+#define CTPPR0_REGISTER                 PRU0_CONTROL_REGISTER_BASE + 0x28       //The CTPPR0 register for programming C28 and C29 entries
+#define SHARED_RAM_ENDSTOPS_ADDR        0x0120
 
 //* Magic number set by the host for DDR reset */
 #define DDR_MAGIC           0xbabe7175          // Magic number used to reset the DDR counter 
+
+#ifdef HAS_CONFIG_H
+#include "config.h"
+#endif
 
 #ifdef REV_A3
 #include "config_00A3.h"
@@ -24,6 +31,7 @@
 #ifdef REV_A4
 #include "config_00A4.h"
 #endif
+
 
 #ifndef FIRMWARE_CONFIG
 #error You must define the REV_A3 or REV_A4 preprocessor flag
@@ -76,6 +84,10 @@ INIT:
     CLR  r0, r0, 4                                          // Clear bit 4 in reg 0 (copy of SYSCFG). This enables OCP master ports needed to access all OMAP peripherals
     SBCO r0, C4, 4, 4                                       // Load back the modified SYSCFG register
     
+    MOV  r0, SHARED_RAM_ENDSTOPS_ADDR                       // Set the C28 address for shared ram, C29 is set to 0
+    MOV  r1, CTPPR0_REGISTER
+    SBBO r0, r1, 0, 4
+
     MOV  r17, GPIO1 | GPIO_DATAOUT                          // Load address for GPIO 1
     MOV  r16, 0xFFFFFFFF ^ (GPIO1_MASK)                     // Invert the mask for GPIO 1
     MOV  r11, GPIO0 | GPIO_DATAOUT                          // Load address for GPIO 0
@@ -145,39 +157,42 @@ NEXT_COMMAND:
     //First load the direction pins
 
     //Store the pins of GPIO0 into r7 and GPIO1 into r8
-                          
+
     MOV r7, 0
     MOV r8, 0
     
+    XOR r21,pinCommand.direction,DIRECTION_MASK          // Inverse the stepper direction mask
+    AND r21,r21,0x1F
+
     //Stepper X
-    AND  r9,  pinCommand.direction, 0x01
+    AND  r9,  r21, 0x01
     LSL  r9, r9, STEPPER_X_DIR_PIN    
     OR  STEPPER_X_DIR_BANK, STEPPER_X_DIR_BANK, r9          // Put a 1/0 into the pin register for the stepper direction
     
     //Stepper Y     
-    LSR  r9, pinCommand.direction, 0x01     
+    LSR  r9, r21, 0x01     
     AND  r9, r9, 0x01   
     LSL  r9, r9, STEPPER_Y_DIR_PIN      
     OR  STEPPER_Y_DIR_BANK, STEPPER_Y_DIR_BANK, r9          // Put a 1/0 into the pin register for the stepper direction
     
     //Stepper Z     
-    LSR  r9, pinCommand.direction, 0x02     
+    LSR  r9, r21, 0x02     
     AND  r9, r9, 0x01   
     LSL  r9, r9, STEPPER_Z_DIR_PIN      
     OR  STEPPER_Z_DIR_BANK, STEPPER_Z_DIR_BANK, r9          // Put a 1/0 into the pin register for the stepper direction
     
     //Stepper E     
-    LSR  r9, pinCommand.direction, 0x03     
+    LSR  r9, r21, 0x03     
     AND  r9, r9, 0x01   
     LSL  r9, r9, STEPPER_E_DIR_PIN      
     OR  STEPPER_E_DIR_BANK, STEPPER_E_DIR_BANK, r9          // Put a 1/0 into the pin register for the stepper direction
     
     //Stepper H     
-    LSR  r9, pinCommand.direction, 0x04     
+    LSR  r9, r21, 0x04     
     AND  r9, r9, 0x01   
     LSL  r9, r9, STEPPER_H_DIR_PIN      
     OR  STEPPER_H_DIR_BANK, STEPPER_H_DIR_BANK, r9          // Put a 1/0 into the pin register for the stepper direction
-    
+
     //Setup direction pin   
     LBBO r9, r11, 0,   4                                    // Load pin data into r7 which is 4 bytes
     LBBO r10, r17, 0,   4                                   // Load pin data into r8 which is 4 bytes
@@ -197,47 +212,25 @@ NEXT_COMMAND:
 
     //32 INSTRUCTIONS UNTIL HERE SINCE THE START OF THE STEP COMMAND
 
-    //Build GPIOs for step pins
+    // Get the direction mask posted by PRU1. 
+    // r7.b0 contains the mask for positive direction, (dir = 1)
+    // and r7.b1 the mask for negative direction (dir = 0)
+    LBCO r7, C28, 4, 4
+    
+    // After this, r7.b0 will have the positive mask for the step pins. 
+    // If all steppers can move, the value of r7.b0 will be 0b00011111
+    AND r7.b2, pinCommand.direction, r7.b1  // Build the mask for positive direction
+    
+    NOT r7.b3, pinCommand.direction         
+    AND r7.b3, r7.b3, r7.b0                 // r7.b3 &= r7.b1  Build a mask for the negative direction
 
-    // We first read the endstop state and mask step pin with it so that we don't step if we are hitting an endstop
-    // Endstop X.
-    MOV  r9, GPIO3 | GPIO_DATAIN
-    LBBO r0, r9, 0, 4                   // Read the GPIO bank
-    LSR r0, r0, STEPPER_X_END_MIN_PIN                       // Right shift pin to bit 0
-    AND r7.b0,r0,0x01                                       // Endstop Xmin - Build a mask into r7.b0 that contains the end stop state. This will be used to mask the command.step field.
-
-    // Endstop Y
-    LBBO r0, STEPPER_Y_END_MIN_BANK, 0, 4                   // Read the GPIO bank
-    LSR r0,r0,STEPPER_Y_END_MIN_PIN                         // Right shift the end stop pin to bit 0
-    AND r0,r0,0x01                                          // Clear the other bits 
-    LSL r0,r0,0x01                                          // Shift pin one left since it is Y
-    OR r7.b0,r7.b0,r0                                      // Mask away the step pin if the end stop is set
-
-    // Endstop Z
-    LBBO r0, STEPPER_Z_END_MIN_BANK, 0, 4                   // Read the GPIO
-    LSR r0,r0,STEPPER_Z_END_MIN_PIN
-    AND r0,r0,0x01
-    LSL r0,r0,0x02
-    OR  r7.b0,r7.b0,r0                                      // Endstop Zmin - Build a mask into r7.b0 that contains the end stop state. This will be used to mask the command.step field.
-
-    //Invert the endstops if they are inverted
-#ifndef ENDSTOP_INVERSED
-    XOR r7.b0,r7.b0,0xFF
-#endif
-
-    XOR r7.b1,pinCommand.direction,DIRECTION_MASK          // Inverse the stepper direction mask to compare it with the end stop state (we support only endstop min for now)
-
-    OR r7.b0,r7.b1,r7.b0 
-
-    //Only for axis X,Y,Z, the other are untouched
-    OR r7.b0,r7.b0,0xF8
+    OR  r7.b0, r7.b3, r7.b2                 // r7.b0 = r7.b3 | r7.b2
 
     //Check if this is a cancellable move
     QBNE notcancel, pinCommand.options, 0x01
 
     //Check if we need to cancel the move, we have to if the step is 1 and the endstop is 0
-    AND r7.b1,pinCommand.step,r7.b0
-
+    AND r7.b1,pinCommand.step,r7.b0    
 
     QBEQ notcancel, r7.b1,pinCommand.step
 
@@ -252,10 +245,11 @@ start_loop_remove:
     QBA CANCEL_COMMAND_AFTER
 
 notcancel:
-    AND pinCommand.step,pinCommand.step,r7.b0               // Mask the step pins with the end stop mask
+    AND r7, r7, 0x000000FF
+    SBCO r7, C28, 8, 4
+    AND pinCommand.step, pinCommand.step, r7.b0               // Mask the step pins with the end stop mask
  
     //Build the step pins GPIOs values 
- 
     MOV r7, 0 
     MOV r8, 0 
  

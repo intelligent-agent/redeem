@@ -11,10 +11,16 @@ License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 
 from threading import Thread
 import logging
+import mmap
+import struct
 import re
 from Stepper import Stepper
 
 class EndStop:
+
+    PRU_ICSS = 0x4A300000 
+    PRU_ICSS_LEN = 512*1024
+    RAM2_START = 0x00012000
 
     callback = None                 # Override this to get events
     inputdev = "/dev/input/event0"  # File to listen to events
@@ -29,10 +35,6 @@ class EndStop:
         self.hit = False
         self.t.start()
 	   
-    def set_initial_value_from_gpio(self,v):
-        self.hit=True if (v==1 and not self.invert) or (v==0 and self.invert) else False
-        logging.debug("Startup value for Endstop "+self.name+" is "+( "hit" if self.hit else "not hit"))
-
     def get_gpio_bank_and_pin(self):
         matches=re.compile('GPIO([0-9])_([0-9]+)').search(self.pin)
         tup =  matches.group(1,2)
@@ -60,3 +62,34 @@ class EndStop:
                         EndStop.callback(self)
                 else:
                     self.hit = False
+
+    ''' Read the current direction mask value using PRU1. For debugging. '''
+    def read_direction_mask_value(self):
+        with open("/dev/mem", "r+b") as f:         
+            ddr_mem = mmap.mmap(f.fileno(), self.PRU_ICSS_LEN, offset=self.PRU_ICSS) 
+            state = struct.unpack('LL', ddr_mem[self.RAM2_START:self.RAM2_START+8])
+            
+            return state[1]
+
+    ''' Read the current ensdstop value from GPIO using PRU1 '''
+    def read_value(self):
+        with open("/dev/mem", "r+b") as f:	       
+            ddr_mem = mmap.mmap(f.fileno(), self.PRU_ICSS_LEN, offset=self.PRU_ICSS) 
+            state = struct.unpack('LL', ddr_mem[self.RAM2_START:self.RAM2_START+8])
+            if self.name == "X1":
+                self.hit = bool(state[0] & (1<<0))
+            elif self.name == "Y1":
+                self.hit = bool(state[0] & (1<<1))
+            elif self.name == "Z1":
+                self.hit = bool(state[0] & (1<<2))
+            elif self.name == "X2":
+                self.hit = bool(state[0] & (1<<3))
+            elif self.name == "Y2":
+                self.hit = bool(state[0] & (1<<4))
+            elif self.name == "Z2":
+                self.hit = bool(state[0] & (1<<5))
+            else:
+                raise RuntimeError('Invalid endstop name')
+        return self.hit
+
+

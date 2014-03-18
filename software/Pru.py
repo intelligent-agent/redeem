@@ -11,6 +11,12 @@ PRU1_ARM_INTERRUPT     = 20
 ARM_PRU0_INTERRUPT     = 21
 ARM_PRU1_INTERRUPT     = 22
 
+PRUSS0_PRU0_DATARAM    = 0
+PRUSS0_PRU1_DATARAM    = 1
+PRUSS0_PRU0_IRAM       = 2
+PRUSS0_PRU1_IRAM       = 3
+PRUSS0_SHARED_DATARAM  = 4
+
 PRU0                   = 0
 PRU1                   = 1
 
@@ -36,8 +42,9 @@ class Pru:
         pru_hz 			    = 200*1000*1000             # The PRU has a speed of 200 MHz
         self.s_pr_inst      = (1.0/pru_hz)          # I take it every instruction is a single cycle instruction
         self.inst_pr_loop 	= 0                        # This is the minimum number of instructions needed to step.  It is already substracted into the PRU
-        self.inst_pr_delay 	= 1                         # Every loop adds two instructions: i-- and i != 0            
+        self.inst_pr_delay 	= 2                         # Every loop adds two instructions: i-- and i != 0            
         self.sec_to_inst_dev = (self.s_pr_inst*2)
+        self.max_delay_cycles = 4/self.inst_pr_delay*pru_hz     #Maximum delay to avoid bugs
         self.pru_data       = []      	    	        # This holds all data for one move (x,y,z,e1,e2)
         self.ddr_used       = Queue.Queue()             # List of data lengths currently in DDR for execution
         self.ddr_reserved   = 0      
@@ -61,7 +68,7 @@ class Pru:
             self.ddr_mem[self.ddr_start:self.ddr_start+4] = struct.pack('L', 0)  # Add a zero to the first reg to make it wait
        
         self.init_pru();
-        
+       
         #Wait until we get the GPIO output in the DDR
         self.dev = os.open("/dev/uio0", os.O_RDONLY)
 
@@ -87,10 +94,12 @@ class Pru:
     def init_pru(self):
         self.ddr_mem[self.ddr_start:self.ddr_start+4] = struct.pack('L', 0)  # Add a zero to the first reg to make it wait
         pypruss.init()                                  # Init the PRU
-        pypruss.open(PRU0)                              # Open PRU event 0 which is PRU0_ARM_INTERRUPT
+        pypruss.open(0)                                 # Open PRU event 0 which is PRU0_ARM_INTERRUPT
+        pypruss.open(1)                                 # Open PRU event 1 which is PRU1_ARM_INTERRUPT
         pypruss.pruintc_init()                          # Init the interrupt controller
         pypruss.pru_write_memory(0, 0, [self.ddr_addr, self.ddr_nr_events, 0])      # Put the ddr address in the first region         
-        pypruss.exec_program(0, self.firmware.get_firmware())   # Load firmware "ddr_write.bin" on PRU 0
+        pypruss.exec_program(0, self.firmware.get_firmware(0))                      # Load firmware on PRU 0
+        pypruss.exec_program(1, self.firmware.get_firmware(1))                      # Load firmware on PRU 1
 
     def read_gpio_state(self, gpio_bank):
         """ Return the initial state of a GPIO bank when the PRU was initialized """
@@ -99,9 +108,8 @@ class Pru:
     def add_data(self, data):
         """ Add some data to one of the PRUs """
         (pins, dirs, options, delays) = data                       	    # Get the data
-        delays = np.clip(0.5*((np.array(delays)/self.s_pr_inst)-self.inst_pr_loop), 1, 4294967296L)
+        delays = np.clip(((np.array(delays)/self.s_pr_inst)-self.inst_pr_loop), 1, self.max_delay_cycles)
         data = np.array([pins,dirs,options, delays.astype(int)])		        	    # Make a 2D matrix combining the ticks and delays
-        #data = list(.flatten())     	    # Braid the data so every other item is a pin and delay
         self.pru_data = data.transpose()   
 
     def has_capacity_for(self, data_len):
@@ -199,7 +207,7 @@ class Pru:
             with Pru.ddr_lock: 
                 self.ddr_mem_used += data_len               
             self.ddr_used.put(data_len)                         # update the amount of memory used 
-            #logging.debug("Pushed "+str(data_len)+" from "+hex(self.ddr_start)+" to "+hex(self.ddr_end))
+            logging.debug("Pushed "+str(data_len)+" from "+hex(self.ddr_start)+" to "+hex(self.ddr_end))
             
         self.ddr_start  = self.ddr_end-4    # Update the start of ddr for next time 
         self.pru_data   = []                # Reset the pru_data list since it has been commited         

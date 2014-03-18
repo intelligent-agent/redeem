@@ -42,22 +42,30 @@
 //#define STEPPER_H_DIRECTION     	1   //Set to 1 so that the motor direction is inversed
 
 //* End stops pins
-#define STEPPER_X_END_MIN_PIN       2
-#define STEPPER_X_END_MIN_BANK      GPIO_2_IN
+#define STEPPER_X_END_MIN_PIN       14
+#define STEPPER_X_END_MIN_BANK      GPIO_0_IN
 
-#define STEPPER_Y_END_MIN_PIN       14
-#define STEPPER_Y_END_MIN_BANK      GPIO_0_IN
+#define STEPPER_Y_END_MIN_PIN       2
+#define STEPPER_Y_END_MIN_BANK      GPIO_2_IN
 
 #define STEPPER_Z_END_MIN_PIN       30
 #define STEPPER_Z_END_MIN_BANK      GPIO_0_IN
 
-//* Uncomment it if the end stop are inversed
-//#define ENDSTOP_INVERSED    		1
+#define STEPPER_X_END_MAX_PIN       21
+#define STEPPER_X_END_MAX_BANK      GPIO_3_IN
+
+#define STEPPER_Y_END_MAX_PIN       31
+#define STEPPER_Y_END_MAX_BANK      GPIO_0_IN
+
+#define STEPPER_Z_END_MAX_PIN       4
+#define STEPPER_Z_END_MAX_BANK      GPIO_0_IN
 
 //* Please put each dir and step pin in the proper buck if they are for GPIO0 or GPIO1 bank. This is a restriction due to the limited capabilities of the pasm preprocessor.
 #define GPIO0_MASK          		((1<<STEPPER_Y_DIR_PIN)|(1<<STEPPER_Z_STEP_PIN)|(1<<STEPPER_Z_DIR_PIN)|(1<<STEPPER_X_STEP_PIN))
 #define GPIO1_MASK          		((1<<STEPPER_Y_STEP_PIN)|(1<<STEPPER_H_STEP_PIN)|(1<<STEPPER_H_DIR_PIN)|(1<<STEPPER_E_DIR_PIN)|(1<<STEPPER_E_STEP_PIN)|(1<<STEPPER_X_DIR_PIN))
 
-
+#ifndef INVERSION_MASK
+#define INVERSION_MASK 0
+#endif
 
 #endif //endif FIRMWARE_CONFIG
