@@ -184,8 +184,8 @@ class Pru:
             #logging.debug("First batch starts from "+hex(self.ddr_start)+" to "+hex(self.ddr_start+len(first)))
             
 
-            self.ddr_mem[self.ddr_start+4:self.ddr_start+len(first)] = first[4:]  # Write the first part of the data to the DDR memory.
-            self.ddr_mem[self.ddr_start:self.ddr_start+4] = first[0:4]  # Write the first part of the data to the DDR memory.
+            self.ddr_mem[self.ddr_start+4:self.ddr_start+len(first)] = first[4:]  # First write the commands
+            self.ddr_mem[self.ddr_start:self.ddr_start+4] = first[0:4]  # Then the commands length (to avoid race condition)
 
             with Pru.ddr_lock: 
                 self.ddr_mem_used += len(first)
@@ -195,8 +195,8 @@ class Pru:
                 second = struct.pack('L', (len(data[cut:-4])/8))+data[cut:]     # Add the number of steps in this iteration
                 self.ddr_end = self.DDR_START+len(second)           # Update the end counter
                 #logging.debug("Second batch starts from "+hex(self.DDR_START)+" to "+hex(self.ddr_end))
-                self.ddr_mem[self.DDR_START+4:self.ddr_end] = second[4:]  # Write the second half of data to the DDR memory.
-                self.ddr_mem[self.DDR_START:self.DDR_START+4] = second[0:4] # Write the second half of data to the DDR memory.
+                self.ddr_mem[self.DDR_START+4:self.ddr_end] = second[4:]  # First write the commands
+                self.ddr_mem[self.DDR_START:self.DDR_START+4] = second[0:4] # Then the commands length (to avoid race condition)
                 
 
 
@@ -211,8 +211,8 @@ class Pru:
             #logging.warning("")
         else:
 
-            self.ddr_mem[self.ddr_start+4:self.ddr_end] = data[4:]    # Write the data to the DDR memory.
-            self.ddr_mem[self.ddr_start:self.ddr_start+4] = data[0:4]    # Write the data to the DDR memory.
+            self.ddr_mem[self.ddr_start+4:self.ddr_end] = data[4:]    # First write the commands
+            self.ddr_mem[self.ddr_start:self.ddr_start+4] = data[0:4]    # Then the commands length (to avoid race condition)
             
 
             data_len = len(data)
