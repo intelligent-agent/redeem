@@ -39,12 +39,9 @@ class Pru:
     ddr_lock = Lock()
 
     def __init__(self, firmware):
-        pru_hz 			    = 200*1000*1000             # The PRU has a speed of 200 MHz
-        self.s_pr_inst      = (1.0/pru_hz)          # I take it every instruction is a single cycle instruction
-        self.inst_pr_loop 	= 0                        # This is the minimum number of instructions needed to step.  It is already substracted into the PRU
-        self.inst_pr_delay 	= 2                         # Every loop adds two instructions: i-- and i != 0            
-        self.sec_to_inst_dev = (self.s_pr_inst*2)
-        self.max_delay_cycles = 4/self.inst_pr_delay*pru_hz     #Maximum delay to avoid bugs
+        self.pru_hz		    = 200*1000*1000             # The PRU has a speed of 200 MHz
+        self.s_pr_inst      = (1.0/self.pru_hz)          # I take it every instruction is a single cycle instruction
+        self.max_delay_cycles = self.pru_hz*4           #Maximum delay to avoid bugs (4 seconds)
         self.pru_data       = []      	    	        # This holds all data for one move (x,y,z,e1,e2)
         self.ddr_used       = Queue.Queue()             # List of data lengths currently in DDR for execution
         self.ddr_reserved   = 0      
@@ -108,8 +105,10 @@ class Pru:
     def add_data(self, data):
         """ Add some data to one of the PRUs """
         (pins, dirs, options, delays) = data                       	    # Get the data
-        delays = np.clip(((np.array(delays)/self.s_pr_inst)-self.inst_pr_loop), 1, self.max_delay_cycles)
+        delays = np.clip(np.array(delays)/self.s_pr_inst, 1, self.max_delay_cycles)
         data = np.array([pins,dirs,options, delays.astype(int)])		        	    # Make a 2D matrix combining the ticks and delays
+
+
         self.pru_data = data.transpose()   
 
     def has_capacity_for(self, data_len):
@@ -161,7 +160,9 @@ class Pru:
 
     ''' Commit the data to the DDR memory '''
     def commit_data(self):
-        
+
+        assert len(self.pru_data)/8<self.ddr_size-20
+
         data = struct.pack('L', len(self.pru_data))	    	# Pack the number of toggles. 
         #Then we have one byte, one byte, one 16 bit (dummy), and one 32 bits
         data += ''.join([struct.pack('BBHL', instr[0],instr[1],instr[2],instr[3]) for instr in self.pru_data])
@@ -175,12 +176,15 @@ class Pru:
             if cut == 4: 
                 logging.error("Cut was 4, setting it to 12")
                 cut = 12                
-            logging.debug("Data len is "+hex(len(data))+", Cutting the data at "+hex(cut))
+            logging.debug("Data len is "+hex(len(data))+", Cutting the data at "+hex(cut)+" ("+str(cut)+")")
 
             first = struct.pack('L', len(data[4:cut])/8)+data[4:cut]    # Update the loop count
             first += struct.pack('L', DDR_MAGIC)                        # Add the magic number to force a reset of DDR memory counter
             #logging.debug("First batch starts from "+hex(self.ddr_start)+" to "+hex(self.ddr_start+len(first)))
-            self.ddr_mem[self.ddr_start:self.ddr_start+len(first)] = first  # Write the first part of the data to the DDR memory.
+            
+
+            self.ddr_mem[self.ddr_start+4:self.ddr_start+len(first)] = first[4:]  # First write the commands
+            self.ddr_mem[self.ddr_start:self.ddr_start+4] = first[0:4]  # Then the commands length (to avoid race condition)
 
             with Pru.ddr_lock: 
                 self.ddr_mem_used += len(first)
@@ -190,7 +194,11 @@ class Pru:
                 second = struct.pack('L', (len(data[cut:-4])/8))+data[cut:]     # Add the number of steps in this iteration
                 self.ddr_end = self.DDR_START+len(second)           # Update the end counter
                 #logging.debug("Second batch starts from "+hex(self.DDR_START)+" to "+hex(self.ddr_end))
-                self.ddr_mem[self.DDR_START:self.ddr_end] = second  # Write the second half of data to the DDR memory.
+                self.ddr_mem[self.DDR_START+4:self.ddr_end] = second[4:]  # First write the commands
+                self.ddr_mem[self.DDR_START:self.DDR_START+4] = second[0:4] # Then the commands length (to avoid race condition)
+                
+
+
                 with Pru.ddr_lock: 
                     self.ddr_mem_used += len(second)
                 self.ddr_used.put(len(second))
@@ -202,7 +210,10 @@ class Pru:
             #logging.warning("")
         else:
 
-            self.ddr_mem[self.ddr_start:self.ddr_end] = data    # Write the data to the DDR memory.
+            self.ddr_mem[self.ddr_start+4:self.ddr_end] = data[4:]    # First write the commands
+            self.ddr_mem[self.ddr_start:self.ddr_start+4] = data[0:4]    # Then the commands length (to avoid race condition)
+            
+
             data_len = len(data)
             with Pru.ddr_lock: 
                 self.ddr_mem_used += data_len               
