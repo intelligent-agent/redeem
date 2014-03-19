@@ -118,7 +118,10 @@ class Redeem:
         # Enable the steppers and set the current, steps pr mm and microstepping  
         for name, stepper in self.steppers.iteritems():
             stepper.set_current_value(self.config.getfloat('Steppers', 'current_'+name)) 
-            stepper.set_enabled(self.config.getboolean('Steppers', 'enabled_'+name)) 
+            if self.config.getboolean('Steppers', 'enabled_'+name):
+                stepper.set_enabled()
+            else:
+                stepper.set_disabled()
             stepper.set_steps_pr_mm(self.config.getfloat('Steppers', 'steps_pr_mm_'+name))         
             stepper.set_microstepping(self.config.getint('Steppers', 'microstepping_'+name)) 
             stepper.direction = self.config.getint('Steppers', 'direction_'+name)
@@ -311,7 +314,8 @@ class Redeem:
         elif g.code() == "M17":                                         # Enable all steppers
             self.path_planner.wait_until_done()
             for name, stepper in self.steppers.iteritems():
-                stepper.set_enabled() 
+                if self.config.getboolean('Steppers', 'enabled_'+name):
+                    stepper.set_enabled()
             Stepper.commit()           
         elif g.code() == "M19":                                         # Reset all steppers
             self.path_planner.wait_until_done()

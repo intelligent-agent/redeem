@@ -73,7 +73,7 @@ class Stepper:
         self.dirPin          = dirPin
         self.faultPin        = faultPin
         self.name            = name
-        self.state           = (1<<Stepper.SLEEP)|(1<<Stepper.RESET)# The initial state of the inputs
+        self.state           = (1<<Stepper.SLEEP)|(1<<Stepper.RESET)| (1<<Stepper.ENABLED) # The initial state of the inputs
         self.dacvalue 	     = 0x00   	    # The voltage value on the VREF		
         self.enabled 	     = False	      # Start disabled
         self.seconds_pr_step = 0.001        # Delay between each step (will be set by feed rate)
@@ -90,10 +90,10 @@ class Stepper:
         return self.endstop
 
     ''' Sets the Stepper enabled '''
-    def set_enabled(self, value=1, force_update=False):
+    def set_enabled(self, force_update=False):
         if not self.enabled:
-            self.state &= ~(value<<Stepper.ENABLED)
-            self.enabled = value
+            self.state &= ~(1<<Stepper.ENABLED)
+            self.enabled = True
         if force_update: 
             self.update()
             	
