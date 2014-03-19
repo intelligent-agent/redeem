@@ -6,6 +6,9 @@
 
 //* PRU Register and constants */
 #define PRU_SPEED           200000000           //PRU clock speed in Hz - Should be 200'000'000 - IF YOU CHANGE IT YOU NEED TO RECOMPUTE ALL THE DELAYS.
+#define CYCLE_TO_NS         1000000000/PRU_SPEED      //Number of cycles in 1 ns
+#define NS_TO_CYCLE         PRU_SPEED/1000000000      //Number of ns in one cycle
+
 #define PRU0_ARM_INTERRUPT  19
 #define GPIO_DATAOUT        0x13c               // This is the register for setting data 
 #define GPIO_DATAIN         0x138               // This is the register for reading data 
@@ -210,7 +213,7 @@ NEXT_COMMAND:
     SBBO r9, r11, 0, 4                                      // Trigger the change of the steppers direction pins (GPIO 0)
     SBBO r10, r17, 0, 4                                     // Trigger the change of the steppers direction pins (GPIO 1)
 
-    //32 INSTRUCTIONS UNTIL HERE SINCE THE START OF THE STEP COMMAND
+    //33 INSTRUCTIONS UNTIL HERE SINCE THE START OF THE STEP COMMAND
 
     // Get the direction mask posted by PRU1. 
     // r7.b0 contains the mask for positive direction, (dir = 1)
@@ -287,16 +290,19 @@ notcancel:
     OR r7,r7,r18                                            // Add directions for GPIO 0 that we saved before
     OR r8,r8,r19                                            // Add directions for GPIO 1 that we saved before
 
-    //73 INSTRUCTIONS UNTIL HERE SINCE THE START OF THE STEP COMMAND
-    //41 instructions since the direction command
+    //55 INSTRUCTIONS UNTIL HERE SINCE THE START OF THE STEP COMMAND
+    //22 instructions since the direction command
+ 
+    //We have to wait 660 ns between the direction pin setup and the step pin setup
+    //PASM is super buggy so it cannot evaluate it. Hardcoding the value here.
 
-    //We have to wait 650 ns between the direction pin setup and the step pin setup => 130 instructions - 41 instructions, we wait a bit more to be sure.
-    MOV r0,45
+    MOV r0,  55 //(660 - 22*CYCLE_TO_NS)*NS_TO_CYCLE/2
+
 DELAY3:
     SUB r0, r0, 1
     QBNE DELAY3, r0, 0
 
-    //164 INSTRUCTIONS UNTIL HERE SINCE THE START OF THE STEP COMMAND
+    //165 INSTRUCTIONS UNTIL HERE SINCE THE START OF THE STEP COMMAND
 
     //Setup step pin
     LBBO r9, r11, 0,   4                                    // Load pin data into r7 which is 4 bytes
@@ -312,17 +318,17 @@ DELAY3:
     SBBO r9, r11, 0, 4
     SBBO r10, r17, 0, 4
 
-    //176 INSTRUCTIONS UNTIL HERE
-
     AND r9, r9, r15                                         // Prepare the step pins to 0 to store it just after the delay
     AND r10, r10, r16                                       // Prepare the step pins to 0 to store it just after the delay
 
     //Increment reading address
     ADD  r4, r4, SIZE(SteppersCommand)
 
-    //We have to wait 650ns again, minus the already spent time, it is 189 cycles
+    //176 INSTRUCTIONS UNTIL HERE
 
-    MOV r0,189
+    //We have to wait 1.9us, minus the already spent time since the step is set up
+
+    MOV r0, 190 //(1900 - 4*CYCLE_TO_NS)*NS_TO_CYCLE/2
 DELAY2:
     SUB r0, r0, 1
     QBNE DELAY2, r0, 0
@@ -331,18 +337,23 @@ DELAY2:
     SBBO r9, r11, 0, 4
     SBBO r10, r17, 0, 4
 
-    //We need to have a min delay of 1.9us until the next steps =>  380 instructions
+    //We need to have a min delay of 1.9us until the next steps
 
     MOV  r0, pinCommand.delay
 
-    //561 INSTRUCTIONS UNTIL HERE
+    //559 INSTRUCTIONS UNTIL HERE, we have to wait 1.9us more before the next step
 
     //We substract the time to setup a step to the delay we need to wait as it is not counted by the host side
-    MOV r9,576
+    MOV r9,559
     MAX r0,r0,r9
     SUB r0,r0,r9
 
-    MAX  r0,r0,190 //We need to have a minimum delay of 190 to avoid any problem - anyway the stepper cannot step faster than 250kHz but we don't limit it here.
+    MOV r9,380 //(1900 - 3*CYCLE_TO_NS)*NS_TO_CYCLE 
+
+    MAX  r0,r0, r9 
+
+    //The delay is computed using two instructions ,we have to divide it by 2
+    LSR r0,r0,1
 
     //Now execute the delay, with the proper substraction
     .leave CommandScope
