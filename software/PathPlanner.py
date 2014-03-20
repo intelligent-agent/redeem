@@ -66,7 +66,7 @@ class PathPlanner:
 
         logging.debug("homing "+axis)
         
-        p = Path({axis:-self.travel_length[axis]}, 0.01, "RELATIVE", False, True)
+        p = Path({axis:-self.travel_length[axis]}, 0.01, "RELATIVE", False, False)
         p.set_homing_feedrate()
 
         #p.set_max_speed(p.get_max_speed()*0.2)
