@@ -28,15 +28,19 @@ class Thermistor:
     def getTemperature(self):	
         """ Return the temperature in degrees celcius """
         Thermistor.mutex.acquire()
+        voltage = 0
+        aquisitions = 0
         for i in xrange(10):           
             with open(self.pin, "r") as file:
                 try:
-                    voltage = (float(file.read().rstrip())/4096)*1.8
-                    break
+                    voltage += (float(file.read().rstrip())/4096)*1.8
+                    aquisitions += 1
                 except IOError as e:
-                    logging.error("Unable to get ADC value for the {2}. time ({0}): {1}".format(e.errno, e.strerror, i))
-                    voltage = 0                                                    
+                    logging.error("Unable to get ADC value for the {2}. time ({0}): {1}".format(e.errno, e.strerror, i))                                                  
         Thermistor.mutex.release()
+        if aquisitions == 0:
+            return -1.0
+        voltage /= aquisitions
         res_val = self.voltage_to_resistance(voltage)     # Convert to resistance  
         temperature = self.resistance_to_degrees(res_val) # Convert to degrees
         #logging.debug(self.name+": voltage: %f"%(voltage))

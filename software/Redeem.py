@@ -10,7 +10,7 @@ License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 Minor verion tag is Arhold Schwartsnegger movies chronologically. 
 '''
 
-version = "0.11.0~Stay Hungry"
+version = "0.11.1~Stay Hungry"
 
 from math import sqrt
 import time
@@ -357,22 +357,13 @@ class Redeem:
             if hasattr(self, "cold_end_1"):
                 answer += " T2:"+str(int(self.cold_end_1.get_temperature()))         
             g.set_answer(answer)
-        elif g.code() == "M106":                                    # Fan on
-            if g.has_letter("P"):
-                fan = self.fans[int(g.get_value_by_letter("P"))]
-                fan.set_value(float(g.get_value_by_letter("S"))/255.0)     # According to reprap wiki, the number is 0..255
-            elif g.num_tokens() == 1:
-                self.fan_1.set_value(float(g.token_value(0))/255.0)
-            else: # if there is no fan-number present, do it for the first fan
-                self.fan_1.set_value(1.0)
-                self.fan_2.set_value(1.0)
-                self.fan_3.set_value(1.0)
-        elif g.code() == "M107":                                    # Fan on
-            if g.has_letter("P"):
-                fan = self.fans[int(g.getValueByLetter("P"))]
-                fan.set_value(0) # According to reprap wiki, the number is 0..255
-            else: # if there is no fan-number present, do it for the first fan
-                self.fan_1.set_value(0)  
+        elif g.code() == "M106": # Fan on
+            fan_no = g.get_int_by_letter("P", 0)               
+            value = float(g.get_int_by_letter("S", 255))/255.0
+            fan = self.fans[fan_no]
+            fan.set_value(value)
+        elif g.code() == "M107":                                    # Fan off, deprecated
+            pass
         elif g.code() == "M108":									# Deprecated
             pass 													
         elif g.code() == "M109":
@@ -423,6 +414,8 @@ class Redeem:
         elif g.code() == "M190":
             self.hbp.set_target_temperature(float(g.get_value_by_letter("S")))
             self._execute(Gcode({"message": "M116", "prot": g.prot}))
+        elif g.code() == "M400":
+            self.path_planner.wait_until_done()
         elif g.code() == "T0":                                      # Select tool 0
             self.current_tool = "E"
         elif g.code() == "T1":                                      # select tool 1
