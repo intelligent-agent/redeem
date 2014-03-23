@@ -20,7 +20,6 @@ import traceback
 import os
 import os.path
 import sys 
-import ConfigParser
 import signal
 import sys
 
@@ -389,10 +388,12 @@ class Redeem:
                 self._execute(m105)
                 print all_ok
                 if not False in all_ok:
+                    self._send_message(g.prot, "Heating done.")
                     self._reply(m105)
                     return 
                 else:
                     answer = m105.get_answer()
+                    answer += " E: "+ ("0" if self.current_tool == "E" else "1")
                     m105.set_answer(answer[2:]) # strip away the "ok"
                     self._reply(m105)
                     time.sleep(1)
@@ -428,12 +429,16 @@ class Redeem:
 
     ''' Send a reply through the proper channel '''
     def _reply(self, gcode):
+        self._send_message(gcode.prot, gcode.get_answer())
+    
+    ''' Send a message back to host '''
+    def _send_message(self, prot, msg):
         if gcode.prot == "USB":
-            self.usb.send_message(gcode.get_answer())
+            self.usb.send_message(msg)
         elif gcode.prot == "PIPE":
-            self.pipe.send_message(gcode.get_answer())
+            self.pipe.send_message(msg)
         elif gcode.prot == "Eth":
-            self.ethernet.send_message(gcode.get_answer())
+            self.ethernet.send_message(msg)
 
     ''' An endStop has been hit '''
     def end_stop_hit(self, endstop):
