@@ -30,7 +30,6 @@ class Ethernet:
                 port += 1    
 
         logging.info("Ethernet bound to port "+str(port))
-        print "Ethernet bound to port "+str(port)
         self.s.listen(backlog)
         self.running = True
         self.debug = 0
@@ -47,7 +46,11 @@ class Ethernet:
             while True:
                 line = ''
                 while not "\n" in line:
-                    chunk = self.client.recv(1)
+                    try: 
+                        chunk = self.client.recv(1)
+                    except socket.error, (value,message): 
+                        logging.error("Ethernet "+ message)
+                        chunk = ''
                     if chunk == '':
                         logging.warning("Ethernet: Connection reset by Per.")
                         self.client.close()             

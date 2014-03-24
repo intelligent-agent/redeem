@@ -10,7 +10,7 @@ License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 Minor verion tag is Arhold Schwartsnegger movies chronologically. 
 '''
 
-version = "0.10.0~Happy Anniversary and Goodbye"
+version = "0.11.1~Stay Hungry"
 
 from math import sqrt
 import time
@@ -20,7 +20,6 @@ import traceback
 import os
 import os.path
 import sys 
-import ConfigParser
 import signal
 import sys
 
@@ -42,18 +41,11 @@ from Path import Path
 from PathPlanner import PathPlanner
 from ColdEnd import ColdEnd
 from PruFirmware import PruFirmware
+from CascadingConfigParser import CascadingConfigParser
 
 logging.basicConfig(level=logging.DEBUG, 
                     format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
                     datefmt='%m-%d %H:%M')
-
-def log_ex(type, value, traceback):
-    logging.error('God damnit, not again!')
-    logging.error('Type:'+str(type))
-    logging.error('Value:'+str(value))
-    logging.error('Traceback:'+str(traceback))
-
-#sys.excepthook = log_ex
 
 print "Redeem v. "+version
 
@@ -61,12 +53,8 @@ class Redeem:
     ''' Init '''
     def __init__(self):
         logging.info("Redeem initializing "+version)
-        self.config = ConfigParser.SafeConfigParser()
-        self.config_filename = '/etc/redeem/default.cfg'
-        if not os.path.isfile(self.config_filename):
-            logging.error("Missing config file. Please add /etc/redeem/default.cfg")
-        self.config.readfp(open(self.config_filename))  
-        logging.info("using config file "+self.config_filename)
+        # Parse the config
+        self.config = CascadingConfigParser(['/etc/redeem/default.cfg', '/etc/redeem/local.cfg'])
 
         # Get the revision from the Config file
         self.revision = self.config.get('System', 'revision', "A4")
@@ -75,14 +63,12 @@ class Redeem:
         # Make a list of steppers
         self.steppers = {}
 
-
         # Init the end stops
-        inputdev = self.config.get("Endstops","inputdev");
-        EndStop.inputdev = inputdev
+        EndStop.callback = self.end_stop_hit
+        EndStop.inputdev = self.config.get("Endstops","inputdev");
 
         self.end_stops = {}
 
-        # We should use key codes that are not used on a keyboard etc.         
         if self.revision == "A4":
             self.end_stops["X1"] = EndStop("GPIO3_21", 112, "X1", self.config.getboolean("Endstops", "invert_X1"))
             self.end_stops["X2"] = EndStop("GPIO0_30", 113, "X2", self.config.getboolean("Endstops", "invert_X2"))
@@ -98,9 +84,6 @@ class Redeem:
             self.end_stops["Z1"] = EndStop("GPIO0_30", 116, "Z1", self.config.getboolean("Endstops", "invert_Z1"))
             self.end_stops["Z2"] = EndStop("GPIO0_4",  117, "Z2", self.config.getboolean("Endstops", "invert_Z2"))
             
-        EndStop.callback = self.end_stop_hit
-        EndStop.inputdev = self.config.get("Endstops","inputdev");
-
         if self.revision == "A3":
             Stepper.revision = "A3"
             Stepper.ENABLED = 6
@@ -157,18 +140,21 @@ class Redeem:
         self.ext1.set_p_value(self.config.getfloat('Heaters', "ext1_pid_p"))
         self.ext1.set_d_value(self.config.getfloat('Heaters', "ext1_pid_d"))
         self.ext1.set_i_value(self.config.getfloat('Heaters', "ext1_pid_i"))
+        self.ext1.ok_range = self.config.getfloat('Heaters', "ext1_ok_range")
 
         # Make Heated Build platform 
         self.hbp = HBP( self.therm_hbp, self.mosfet_hbp, self.config.getboolean('Heaters', 'hbp_onoff_control'))       
         self.hbp.set_p_value(self.config.getfloat('Heaters', "hbp_pid_p"))
         self.hbp.set_d_value(self.config.getfloat('Heaters', "hbp_pid_i"))     
         self.hbp.set_i_value(self.config.getfloat('Heaters', "hbp_pid_d"))
+        self.hbp.ok_range = self.config.getfloat('Heaters', "hbp_ok_range")
 
         # Make extruder 2.
         self.ext2 = Extruder(self.steppers["H"], self.therm_ext2, self.mosfet_ext2, "Ext2", self.config.getboolean('Heaters', 'ext2_onoff_control'))
         self.ext2.set_p_value(self.config.getfloat('Heaters', "ext2_pid_p"))
         self.ext2.set_d_value(self.config.getfloat('Heaters', "ext2_pid_i"))     
         self.ext2.set_i_value(self.config.getfloat('Heaters', "ext2_pid_d"))
+        self.ext2.ok_range = self.config.getfloat('Heaters', "ext2_ok_range")        
 
         self.current_tool = "E" # Use Extruder 0 as default
 
@@ -217,7 +203,7 @@ class Redeem:
         dirname = os.path.dirname(os.path.realpath(__file__))
 
         # Create the firmware compiler
-        self.pru_firmware = PruFirmware(dirname+"/../firmware/firmware_runtime.p",dirname+"/../firmware/firmware_runtime.bin",dirname+"/../firmware/firmware_endstops.p",dirname+"/../firmware/firmware_endstops.bin",self.revision,self.config_filename,self.config,"/usr/bin/pasm")
+        self.pru_firmware = PruFirmware(dirname+"/../firmware/firmware_runtime.p",dirname+"/../firmware/firmware_runtime.bin",dirname+"/../firmware/firmware_endstops.p",dirname+"/../firmware/firmware_endstops.bin",self.revision,self.config,"/usr/bin/pasm")
 
         self.path_planner = PathPlanner(self.steppers, self.pru_firmware)
         self.path_planner.set_acceleration(float(self.config.get('Steppers', 'acceleration'))) 
@@ -289,7 +275,8 @@ class Redeem:
                 axis = g.token_letter(i)                         
                 if self.config.getboolean('Endstops', 'has_'+axis.lower()):
                     self.path_planner.home(axis)     
-            logging.info("Homing complete")
+            self._send_message(g.prot, "Homing done.")
+            logging.info("Homing done.")
         elif g.code() == "G90":                                     # Absolute positioning
             self.movement = "ABSOLUTE"
         elif g.code() == "G91":                                         # Relative positioning 
@@ -370,22 +357,13 @@ class Redeem:
             if hasattr(self, "cold_end_1"):
                 answer += " T2:"+str(int(self.cold_end_1.get_temperature()))         
             g.set_answer(answer)
-        elif g.code() == "M106":                                    # Fan on
-            if g.has_letter("P"):
-                fan = self.fans[int(g.get_value_by_letter("P"))]
-                fan.set_value(float(g.get_value_by_letter("S"))/255.0)     # According to reprap wiki, the number is 0..255
-            elif g.num_tokens() == 1:
-                self.fan_1.set_value(float(g.token_value(0))/255.0)
-            else: # if there is no fan-number present, do it for the first fan
-                self.fan_1.set_value(1.0)
-                self.fan_2.set_value(1.0)
-                self.fan_3.set_value(1.0)
-        elif g.code() == "M107":                                    # Fan on
-            if g.has_letter("P"):
-                fan = self.fans[int(g.getValueByLetter("P"))]
-                fan.set_value(0) # According to reprap wiki, the number is 0..255
-            else: # if there is no fan-number present, do it for the first fan
-                self.fan_1.set_value(0)  
+        elif g.code() == "M106": # Fan on
+            fan_no = g.get_int_by_letter("P", 0)               
+            value = float(g.get_int_by_letter("S", 255))/255.0
+            fan = self.fans[fan_no]
+            fan.set_value(value)
+        elif g.code() == "M107":                                    # Fan off, deprecated
+            pass
         elif g.code() == "M108":									# Deprecated
             pass 													
         elif g.code() == "M109":
@@ -411,10 +389,12 @@ class Redeem:
                 self._execute(m105)
                 print all_ok
                 if not False in all_ok:
+                    self._send_message(g.prot, "Heating done.")
                     self._reply(m105)
                     return 
                 else:
                     answer = m105.get_answer()
+                    answer += " E: "+ ("0" if self.current_tool == "E" else "1")
                     m105.set_answer(answer[2:]) # strip away the "ok"
                     self._reply(m105)
                     time.sleep(1)
@@ -436,6 +416,8 @@ class Redeem:
         elif g.code() == "M190":
             self.hbp.set_target_temperature(float(g.get_value_by_letter("S")))
             self._execute(Gcode({"message": "M116", "prot": g.prot}))
+        elif g.code() == "M400":
+            self.path_planner.wait_until_done()
         elif g.code() == "T0":                                      # Select tool 0
             self.current_tool = "E"
         elif g.code() == "T1":                                      # select tool 1
@@ -448,26 +430,19 @@ class Redeem:
 
     ''' Send a reply through the proper channel '''
     def _reply(self, gcode):
-        if gcode.prot == "USB":
-            self.usb.send_message(gcode.get_answer())
-        elif gcode.prot == "PIPE":
-            self.pipe.send_message(gcode.get_answer())
-        else:
-            self.ethernet.send_message(gcode.get_answer())
+        self._send_message(gcode.prot, gcode.get_answer())
+    
+    ''' Send a message back to host '''
+    def _send_message(self, prot, msg):
+        if prot == "USB":
+            self.usb.send_message(msg)
+        elif prot == "PIPE":
+            self.pipe.send_message(msg)
+        elif prot == "Eth":
+            self.ethernet.send_message(msg)
 
     ''' An endStop has been hit '''
     def end_stop_hit(self, endstop):
-        #axis = endstop.name[:1]
-        #if Path.axis_config == Path.AXIS_CONFIG_XY: 
-        #    self.steppers[axis].set_disabled(True)
-        #elif Path.axis_config == Path.AXIS_CONFIG_H_BELT:
-        #    if axis == "X" or axis == "Y":                  # X and Y are connected, must disable both
-        #        self.steppers["X"].set_disabled()
-        #        self.steppers["Y"].set_disabled(True)
-        #    else:
-        #        self.steppers[axis].set_disabled(True)           # Z-axis
-        #else:
-        #    logging.error("Unknown axis config")    
         logging.warning("End Stop " + endstop.name +" hit!")
 
 def signal_handler(signal, frame):

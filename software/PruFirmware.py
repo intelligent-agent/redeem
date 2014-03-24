@@ -16,7 +16,7 @@ import shutil
 
 class PruFirmware:
 
-    def __init__(self, firmware_source_file0, binary_filename0, firmware_source_file1, binary_filename1, revision, config_filename, config_parser,compiler):
+    def __init__(self, firmware_source_file0, binary_filename0, firmware_source_file1, binary_filename1, revision, config_parser,compiler):
         """Create and initialize a PruFirmware
 
         Parameters
@@ -28,8 +28,6 @@ class PruFirmware:
             Full path to the file where to store the final firmware file without the extension (without .bin)
         revision : string
             The revision of the board (A3 or A4)
-        config_filename : string
-            The full path to the configuration file
         config_parser : ConfigParser
             The config parser with the config file already loaded
         compiler : string
@@ -42,7 +40,6 @@ class PruFirmware:
         self.binary_filename0 = os.path.realpath(binary_filename0)
         self.binary_filename1 = os.path.realpath(binary_filename1)
         self.revision = revision
-        self.config_filename = os.path.realpath(config_filename)
         self.config = config_parser
         self.compiler = os.path.realpath(compiler)
 
@@ -64,7 +61,7 @@ class PruFirmware:
 
     ''' Returns True if the firmware needs recompilation '''
     def is_needing_firmware_compilation(self):
-        config_mtime  = os.path.getmtime(self.config_filename) #modif time of config file
+        config_mtime  = self.config.timestamp() #modif time of config file
 
         ret0 = True
         ret1 = True

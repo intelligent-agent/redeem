@@ -30,6 +30,7 @@ class Heater(object):
         self.I = 0.0                      # Integral 
         self.D = 0.0                      # Derivative
         self.onoff_control = onoff_control #If we use PID or ON/OFF control
+        self.ok_range = 4.0
 
     ''' Set the desired temperature of the extruder '''
     def set_target_temperature(self, temp):
@@ -43,7 +44,8 @@ class Heater(object):
     def is_target_temperature_reached(self):
         if self.target_temp  == 0:
           return True
-        return (self.current_temp >= self.target_temp)
+        err = abs(self.current_temp - self.target_temp)
+        return (err < self.ok_range)
 
     ''' Stops the heater and the PID controller '''
     def disable(self):
