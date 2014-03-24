@@ -15,4 +15,5 @@ class AbstractGcode:
 
 
 
-
+    def execute(self,gcode):
+   		pass

@@ -16,21 +16,24 @@ class GCodeProcessor:
     def __init__(self, printer):
         self.printer=printer
 
-        self.gcodes=[]
+        self.gcodes={}
 
         module = __import__("gcodes",locals(),globals())
 
         for name, obj in inspect.getmembers(module):
             if inspect.ismodule(obj):
                 for name2, obj2 in inspect.getmembers(obj):
-                    if inspect.isclass(obj2) and issubclass(obj2,AbstractGcode.AbstractGcode):
+                    if inspect.isclass(obj2) and issubclass(obj2,AbstractGcode.AbstractGcode) and name2!='AbstractGcode':
                         logging.debug("Loading GCode handler "+name2+"...")
-                        self.gcodes = obj2(self.printer)
+                        self.gcodes[name2]=obj2(self.printer)
 
 
-if __name__ == '__main__':
-    logging.basicConfig(level=logging.DEBUG, 
-                    format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
-                    datefmt='%m-%d %H:%M')
+    def process(self, gcode):
+        val = gcode.code()
+        print val
+        if not val in self.gcodes:
+            logging.error("No GCode processor for "+gcode.code())
+            return None
 
-    proc = GCodeProcessor({})
+        return self.gcodes[gcode.code()].execute(gcode)
+

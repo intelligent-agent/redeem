@@ -15,8 +15,12 @@ class M106(AbstractGcode):
 
     def __init__(self, printer):
         self.printer=printer
-        print "Init M106"
 
 
+    def execute(self,gcode):
+        fan_no = gcode.get_int_by_letter("P", 0)               
+        value = float(gcode.get_int_by_letter("S", 255))/255.0
+        fan = self.printer.fans[fan_no]
+        fan.set_value(value)
 
-
+        return "OK"
