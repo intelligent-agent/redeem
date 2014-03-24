@@ -433,11 +433,11 @@ class Redeem:
     
     ''' Send a message back to host '''
     def _send_message(self, prot, msg):
-        if gcode.prot == "USB":
+        if prot == "USB":
             self.usb.send_message(msg)
-        elif gcode.prot == "PIPE":
+        elif prot == "PIPE":
             self.pipe.send_message(msg)
-        elif gcode.prot == "Eth":
+        elif prot == "Eth":
             self.ethernet.send_message(msg)
 
     ''' An endStop has been hit '''
