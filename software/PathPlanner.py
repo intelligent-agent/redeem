@@ -69,13 +69,11 @@ class PathPlanner:
         p = Path({axis:-self.travel_length[axis]}, 0.01, "RELATIVE", False, False)
         p.set_homing_feedrate()
 
-        #p.set_max_speed(p.get_max_speed()*0.2)
         self.add_path(p)
-        path = Path({axis:-self.center_offset[axis]}, 0.01, "G92")
+        path = Path({axis:-self.center_offset[axis]}, 0.01, Path.G92)
         self.add_path(path)  
         p = Path({axis:0}, 0.01, "ABSOLUTE")
         p.set_homing_feedrate()
-        #p.set_max_speed(p.get_max_speed()*0.2)
         self.add_path(p)
         self.wait_until_done()
         logging.debug("homing done for "+axis)
@@ -211,40 +209,31 @@ class PathPlanner:
 
     ''' Make the data for the PRU or steppers '''
     def _make_data(self, path, axis):  
+        axis_nr         = Path.axis_to_index(axis)                    
         stepper         = self.steppers[axis]
         steps_pr_meter  = stepper.get_steps_pr_meter()
-        vec             = path.get_axis_length(axis)                        # Total travel distance
-        num_steps       = int(abs(vec) * steps_pr_meter)                    # Number of steps to tick
+        num_steps       = int(abs(path.vec[axis_nr]) * steps_pr_meter)      # Number of steps to tick
         if num_steps == 0:
             return ([], [])
-        step_pin    = stepper.get_step_pin()                            # Get the step pin
-        dir_pin     = stepper.get_dir_pin()                             # Get the direction pin
-        #if stepper.get_direction() > 0:
-        dir_pin     = 0 if vec < 0 else dir_pin                         # Disable the dir-pin if we are going backwards  
-        #else:
-        #    dir_pin     = 0 if vec >= 0 else dir_pin
-        step_pins       = [step_pin]*num_steps           # Make the pin states
+        step_pin        = stepper.get_step_pin()                            # Get the step pin
+        dir_pin         = stepper.get_dir_pin()                             # Get the direction pin
+        dir_pin         = 0 if vec < 0 else dir_pin                         # Disable the dir-pin if we are going backwards  
+        step_pins       = [step_pin]*num_steps                              # Make the pin states
         dir_pins        = [dir_pin]*num_steps 
-        option_pins     = [1 if path.is_cancellable() else 0]*num_steps 
+        option_pins     = [path.cancellable]*num_steps                  
 
-        s           = abs(path.get_axis_length(axis))                   # Get the length of the vector
-        ratio       = path.get_axis_ratio(axis)                         # Ratio is the length of this axis to the total length
+        s           = abs(path.vec[axis_nr])                    
+        ratio       = path.get_axis_ratio(axis_nr)                      # Ratio is the length of this axis to the total length
 
-        Vm       = path.get_max_speed()*ratio				            # The travelling speed in m/s
-        a        = self.acceleration*ratio    		                    # Accelleration in m/s/s
+        Vm       = path.speed*ratio				                        # The travelling speed in m/s
+        a        = path.acceleration*ratio    		                    # Accelleration in m/s/s
         ds       = 1.0/steps_pr_meter                                   # Delta S, distance in meters travelled pr step.         
         
-        #logging.debug('Start speed '+str(path.get_start_speed()))
-        #logging.debug('End speed '+str(path.get_end_speed()))
+        u_start  = ratio*path.get_start_speed()                 	    # The end speed, depends on the angle to the next
+        u_end    = ratio*path.get_end_speed()                 	        # The start speed. Depends on the angle to the prev.
 
-        if path.is_type_print_segment():                                # If there is currently a segment being processed, 
-            u_start  = ratio*path.get_start_speed()                 	    # The end speed, depends on the angle to the next
-        else:
-            u_start = 0
-        if path.is_type_print_segment():     # If there are paths in queue, we might not have to slow down
-            u_end    = ratio*path.get_end_speed()                 	    # The start speed. Depends on the angle to the prev.
-        else:
-            u_end = 0
+        logging.debug('Start speed '+str(path.get_start_speed()))
+        logging.debug('End speed '+str(path.get_end_speed()))
 
         tm_start = (Vm-u_start)/a					                    # Calculate the time for when max speed is met. 
         tm_end   = (Vm-u_end)/a					                        # Calculate the time for when max speed is met. 
