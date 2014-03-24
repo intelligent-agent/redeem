@@ -107,8 +107,6 @@ class Pru:
         (pins, dirs, options, delays) = data                       	    # Get the data
         delays = np.clip(np.array(delays)/self.s_pr_inst, 1, self.max_delay_cycles)
         data = np.array([pins,dirs,options, delays.astype(int)])		        	    # Make a 2D matrix combining the ticks and delays
-
-
         self.pru_data = data.transpose()   
 
     def has_capacity_for(self, data_len):
@@ -180,7 +178,7 @@ class Pru:
 
             first = struct.pack('L', len(data[4:cut])/8)+data[4:cut]    # Update the loop count
             first += struct.pack('L', DDR_MAGIC)                        # Add the magic number to force a reset of DDR memory counter
-            #logging.debug("First batch starts from "+hex(self.ddr_start)+" to "+hex(self.ddr_start+len(first)))
+            logging.debug("First batch starts from "+hex(self.ddr_start)+" to "+hex(self.ddr_start+len(first)))
             
 
             self.ddr_mem[self.ddr_start+4:self.ddr_start+len(first)] = first[4:]  # First write the commands
@@ -193,7 +191,7 @@ class Pru:
             if len(data[cut:-4]) > 0:                                 # If len(data) == 4, only the terminating zero is present..
                 second = struct.pack('L', (len(data[cut:-4])/8))+data[cut:]     # Add the number of steps in this iteration
                 self.ddr_end = self.DDR_START+len(second)           # Update the end counter
-                #logging.debug("Second batch starts from "+hex(self.DDR_START)+" to "+hex(self.ddr_end))
+                logging.debug("Second batch starts from "+hex(self.DDR_START)+" to "+hex(self.ddr_end))
                 self.ddr_mem[self.DDR_START+4:self.ddr_end] = second[4:]  # First write the commands
                 self.ddr_mem[self.DDR_START:self.DDR_START+4] = second[0:4] # Then the commands length (to avoid race condition)
                 
@@ -206,7 +204,7 @@ class Pru:
             else:
                 self.ddr_end = self.DDR_START+4
                 self.ddr_mem[self.DDR_START:self.ddr_end] = struct.pack('L', 0) # Terminate the first word
-                #logging.debug("Second batch skipped, 0 length")
+                logging.debug("Second batch skipped, 0 length")
             #logging.warning("")
         else:
 

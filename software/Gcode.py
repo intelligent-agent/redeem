@@ -84,6 +84,12 @@ class Gcode:
                 return token[1::]
         return None
 
+    ''' Get an int or return a default value '''    
+    def get_int_by_letter(self, letter, default):
+        if self.has_letter(letter):
+            return int(self.get_value_by_letter(letter))
+        return int(default)
+
     def remove_token_by_letter(self, letter):
          for i, token in enumerate(self.tokens):
             if token[0] == letter:
