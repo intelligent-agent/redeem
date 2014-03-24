@@ -275,7 +275,8 @@ class Redeem:
                 axis = g.token_letter(i)                         
                 if self.config.getboolean('Endstops', 'has_'+axis.lower()):
                     self.path_planner.home(axis)     
-            logging.info("Homing complete")
+            self._send_message(g.prot, "Homing done.")
+            logging.info("Homing done.")
         elif g.code() == "G90":                                     # Absolute positioning
             self.movement = "ABSOLUTE"
         elif g.code() == "G91":                                         # Relative positioning 
