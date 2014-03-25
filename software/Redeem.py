@@ -43,6 +43,7 @@ from ColdEnd import ColdEnd
 from PruFirmware import PruFirmware
 from CascadingConfigParser import CascadingConfigParser
 from Printer import Printer
+from GCodeProcessor import GCodeProcessor
 
 logging.basicConfig(level=logging.DEBUG, 
                     format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
@@ -213,6 +214,8 @@ class Redeem:
         self.printer.path_planner.set_travel_length(travel)
         self.printer.path_planner.set_center_offset(offset)
 
+        self.processor = GCodeProcessor(self.printer);
+
         # After the firmwares are loaded, the endstop states can be updated.
         for k, endstop in self.printer.end_stops.iteritems():
             logging.debug("Endstop "+endstop.name+" hit? : "+ str(endstop.read_value()))
@@ -246,57 +249,15 @@ class Redeem:
         Stepper.commit()
 
     ''' Execute a G-code '''
-    def _execute(self, g):
-        if g.code() == "G1" or g.code() == "G0":                                        # Move (G1 X0.1 Y40.2 F3000)                        
-            if g.has_letter("F"):                                    # Get the feed rate                 
-                self.printer.feed_rate = float(g.get_value_by_letter("F"))/60000.0 # Convert from mm/min to SI unit m/s
-                g.remove_token_by_letter("F")
-            smds = {}                                               
-            for i in range(g.num_tokens()):                          
-                axis = g.token_letter(i)                             
-                smds[axis] = float(g.token_value(i))/1000.0          # Get the value, new position or vector             
-            if g.has_letter("E") and self.printer.current_tool != "E":       # We are using a different tool, switch..
-                smds[self.printer.current_tool] = smds["E"]
-                del smds["E"]
-            path = Path(smds, self.printer.feed_rate, self.printer.movement, g.is_crc())
-            self.printer.path_planner.add_path(path)                        # Add the path. This blocks until the path planner has capacity
-        elif g.code() == "G21":                                      # Set units to mm
-            self.factor = 1.0
-        elif g.code() == "G28":                                     # Home the steppers
-            if g.num_tokens() == 0:                                  # If no token is given, home all
-                g.set_tokens(["X0", "Y0", "Z0"])                
-            self.printer.path_planner.wait_until_done()                                               # All steppers 
-            for i in range(g.num_tokens()): # Run through all tokens
-                axis = g.token_letter(i)                         
-                if self.config.getboolean('Endstops', 'has_'+axis.lower()):
-                    self.printer.path_planner.home(axis)     
-            self._send_message(g.prot, "Homing done.")
-            logging.info("Homing done.")
-        elif g.code() == "G90":                                     # Absolute positioning
-            self.printer.movement = "ABSOLUTE"
-        elif g.code() == "G91":                                         # Relative positioning 
-            self.printer.movement = "RELATIVE"		
-        elif g.code() == "G92":                                         # Set the current position of the following steppers
-            if g.num_tokens() == 0:
-                logging.debug("Adding all to G92")
-                g.set_tokens(["X0", "Y0", "Z0", "E0", "H0"])            # If no token is present, do this for all
-            pos = {}                                                    # All steppers 
-            for i in range(g.num_tokens()):                             # Run through all tokens
-                axis = g.token_letter(i)                                # Get the axis, X, Y, Z or E
-                pos[axis] = float(g.token_value(i))/1000.0              # Get the value, new position or vector             
-            if self.printer.current_tool == "H" and "E" in pos: 
-                logging.debug("Adding H to G92")
-                pos["H"] = pos["E"];
-                del pos["E"]
-            path = Path(pos, self.printer.feed_rate, "G92")                     # Make a path segment from the axes
-            self.printer.path_planner.add_path(path)  
-        elif g.code() == "M17":                                         # Enable all steppers
-            self.printer.path_planner.wait_until_done()
-            for name, stepper in self.printer.steppers.iteritems():
-                if self.config.getboolean('Steppers', 'enabled_'+name):
-                    stepper.set_enabled()
-            Stepper.commit()           
-        elif g.code() == "M19":                                         # Reset all steppers
+    def _execute(self, g):  
+
+        ret = self.processor.execute(g)
+
+        #FIXME: Remote it once all commands moved to their per file counterpart.
+        if ret != None:
+            return
+
+        if g.code() == "M19":                                         # Reset all steppers
             self.printer.path_planner.wait_until_done()
             for name, stepper in self.printer.steppers.iteritems():
                 stepper.reset() 
@@ -353,13 +314,6 @@ class Redeem:
             if hasattr(self, "cold_end_1"):
                 answer += " T2:"+str(int(self.cold_end_1.get_temperature()))         
             g.set_answer(answer)
-        elif g.code() == "M106": # Fan on
-            fan_no = g.get_int_by_letter("P", 0)               
-            value = float(g.get_int_by_letter("S", 255))/255.0
-            fan = self.printer.fans[fan_no]
-            fan.set_value(value)
-        elif g.code() == "M107":                                    # Fan off, deprecated
-            pass
         elif g.code() == "M108":									# Deprecated
             pass 													
         elif g.code() == "M109":

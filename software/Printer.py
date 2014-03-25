@@ -16,7 +16,7 @@ class Printer:
         self.end_stops=end_stops
         self.fans=fans
         self.cold_ends=cold_ends
-
+        self.factor = 1.0
         self.path_planner=path_planner
 
         self.movement = "RELATIVE"

@@ -9,7 +9,7 @@ License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 
 import inspect
 import logging
-from gcodes import AbstractGcode
+from gcodes import GCodeCommand
 
 class GCodeProcessor:
 
@@ -20,20 +20,61 @@ class GCodeProcessor:
 
         module = __import__("gcodes",locals(),globals())
 
+        self.load_classes_in_module(module)
+
+
+    def load_classes_in_module(self,module):
         for name, obj in inspect.getmembers(module):
-            if inspect.ismodule(obj):
-                for name2, obj2 in inspect.getmembers(obj):
-                    if inspect.isclass(obj2) and issubclass(obj2,AbstractGcode.AbstractGcode) and name2!='AbstractGcode':
-                        logging.debug("Loading GCode handler "+name2+"...")
-                        self.gcodes[name2]=obj2(self.printer)
+            if inspect.ismodule(obj) and obj.__name__.startswith('gcodes'):
+                self.load_classes_in_module(obj)
+            elif inspect.isclass(obj) and issubclass(obj,GCodeCommand.GCodeCommand) and name!='GCodeCommand':
+                logging.debug("Loading GCode handler "+name+"...")
+                self.gcodes[name]=obj(self.printer)
 
+    def get_supported_commands(self):
+        ret = []
+        for name in self.gcodes:
+            ret.append(name)
 
-    def process(self, gcode):
+        return ret
+
+    def get_supported_commands_and_description(self):
+        ret = {}
+        for name in self.gcodes:
+            ret[name] = self.gcodes[name].get_description()
+
+        return ret
+
+    def execute(self, gcode):
         val = gcode.code()
-        print val
         if not val in self.gcodes:
             logging.error("No GCode processor for "+gcode.code())
             return None
 
-        return self.gcodes[gcode.code()].execute(gcode)
+        self.gcodes[gcode.code()].execute(gcode)
 
+        return gcode
+
+
+
+
+
+
+
+
+
+if __name__ == '__main__':
+    logging.basicConfig(level=logging.DEBUG, 
+                    format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
+                    datefmt='%m-%d %H:%M')
+
+    proc = GCodeProcessor({})
+
+    #print proc.get_supported_commands()
+
+    print "\nCommands:"
+
+    descrs = proc.get_supported_commands_and_description()
+
+    for name in descrs:
+        print name+"\t\t"+descrs[name]
