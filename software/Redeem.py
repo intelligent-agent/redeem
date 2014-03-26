@@ -214,7 +214,7 @@ class Redeem:
         self.printer.path_planner.set_travel_length(travel)
         self.printer.path_planner.set_center_offset(offset)
 
-        self.processor = GCodeProcessor(self.printer);
+        self.printer.processor = GCodeProcessor(self.printer);
 
         # After the firmwares are loaded, the endstop states can be updated.
         for k, endstop in self.printer.end_stops.iteritems():
@@ -251,128 +251,12 @@ class Redeem:
     ''' Execute a G-code '''
     def _execute(self, g):  
 
-        ret = self.processor.execute(g)
+        ret = self.printer.processor.execute(g)
 
-        #FIXME: Remote it once all commands moved to their per file counterpart.
         if ret != None:
             return
 
-        if g.code() == "M19":                                         # Reset all steppers
-            self.printer.path_planner.wait_until_done()
-            for name, stepper in self.printer.steppers.iteritems():
-                stepper.reset() 
-        elif g.code() == "M30":                                         # Set microstepping (Propietary to Replicape)
-            for i in range(g.num_tokens()):
-                self.printer.steppers[g.token_letter(i)].set_microstepping(int(g.token_value(i)))            
-            Stepper.commit() 
-        elif g.code() == "M31":                                     # Set stepper current limit (Propietery to Replicape)
-            for i in range(g.num_tokens()):                         
-                self.printer.steppers[g.token_letter(i)].set_current_value(float(g.token_value(i)))            
-            Stepper.commit() 
-        elif g.code() == "M81": 
-            os.system("shutdown now")
-        elif g.code() == "M84" or g.code() == "M18":                # Disable all steppers           
-            self.printer.path_planner.wait_until_done()
-            if g.num_tokens() == 0:
-                g.set_tokens(["X", "Y", "Z", "E", "H"])         # If no token is present, do this for all
-                                             # All steppers 
-            for i in range(g.num_tokens()):                          # Run through all tokens
-                axis = g.token_letter(i)                             # Get the axis, X, Y, Z or E
-                self.printer.steppers[axis].set_disabled()
-
-            Stepper.commit()           
-        elif g.code() == "M92":                                     # M92: Set axis_steps_per_unit
-            for i in range(g.num_tokens()):                          # Run through all tokens
-                axis = g.tokenLetter(i)                             # Get the axis, X, Y, Z or E
-                self.printer.steppers[axis].set_steps_pr_mm(float(g.token_value(i)))        
-            Stepper.commit() 
-        elif g.code() == "M101":									# Deprecated 
-            pass 													
-        elif g.code() == "M103":									# Deprecated
-            pass 													
-        elif g.code() == "M104":                                    # Set extruder temperature
-            if g.has_letter("P"): # Set hotend temp based on the P-param
-                if int(g.get_value_by_letter("P")) == 0:
-                    logging.debug("setting ext 0 temp to "+str(g.get_value_by_letter("S")))
-                    self.printer.heaters['E'].set_target_temperature(float(g.get_value_by_letter("S")))
-                elif int(g.get_value_by_letter("P")) == 1:
-                    logging.debug("setting ext 1 temp to "+str(g.get_value_by_letter("S")))
-                    self.printer.heaters['H'].set_target_temperature(float(g.get_value_by_letter("S")))
-            else: # Change hotend temperature based on the chosen tool
-                if self.printer.current_tool == "E":
-                    logging.debug("setting ext 0 temp to "+str(g.token_value(0)))
-                    self.printer.heaters['E'].set_target_temperature(float(g.token_value(0)))
-                elif self.printer.current_tool == "H":
-                    logging.debug("setting ext 1 temp to "+str(g.token_value(0)))
-                    self.printer.heaters['H'].set_target_temperature(float(g.token_value(0)))                    
-        elif g.code() == "M105":                                    # Get Temperature
-            answer = "ok T:"+str(self.printer.heaters['E'].get_temperature())
-            if hasattr(self, "hbp"):
-                answer += " B:"+str(int(self.printer.heaters['HBP'].get_temperature()))
-            if hasattr(self, "ext2"):
-                answer += " T1:"+str(int(self.printer.heaters['H'].get_temperature()))
-            if hasattr(self, "cold_end_1"):
-                answer += " T2:"+str(int(self.cold_end_1.get_temperature()))         
-            g.set_answer(answer)
-        elif g.code() == "M108":									# Deprecated
-            pass 													
-        elif g.code() == "M109":
-            logging.debug("M109 tokens is '"+" ".join(g.get_tokens())+"'")
-            m104 = Gcode({"message": "M104 "+" ".join(g.get_tokens()), "prot": g.prot})
-            self._execute(m104)
-            m116 = Gcode({"message": "M116", "prot": g.prot})
-            self._execute(m116)
-        elif g.code() == "M110":                                    # Reset the line number counter 
-            Gcode.line_number = 0      
-        elif g.code() == "M112":                                    # Emergency stop
-            #Reset PRU
-            self.printer.path_planner.emergency_interrupt()          
-        elif g.code() == "M114": 
-            g.set_answer("ok C: "+' '.join('%s:%s' % i for i in self.printer.path_planner.current_pos.iteritems()))
-        elif g.code() == "M116":  # Wait for all temperatures and other slowly-changing variables to arrive at their set values.
-            all_ok = [False, False, False]
-            while True:
-                all_ok[0] |= self.printer.heaters['E'].is_target_temperature_reached()
-                all_ok[1] |= self.printer.heaters['H'].is_target_temperature_reached()
-                all_ok[2] |= self.printer.heaters['HBP'].is_target_temperature_reached()
-                m105 = Gcode({"message": "M105", "prot": g.prot})
-                self._execute(m105)
-                print all_ok
-                if not False in all_ok:
-                    self._send_message(g.prot, "Heating done.")
-                    self._reply(m105)
-                    return 
-                else:
-                    answer = m105.get_answer()
-                    answer += " E: "+ ("0" if self.printer.current_tool == "E" else "1")
-                    m105.set_answer(answer[2:]) # strip away the "ok"
-                    self._reply(m105)
-                    time.sleep(1)
-        elif g.code() == "M119": 
-            g.set_answer("ok "+", ".join([v.name+": "+str(int(v.hit)) for k,v in self.printer.end_stops.iteritems()]))
-        elif g.code() == "M130":                                    # Set PID P-value, Format (M130 P0 S8.0)
-            pass
-        elif g.code() == "M131":                                    # Set PID I-value, Format (M131 P0 S8.0) 
-            pass
-        elif g.code() == "M132":                                    # Set PID D-value, Format (M132 P0 S8.0)
-            pass
-        elif g.code() == "M140":                                    # Set bed temperature
-            logging.debug("Setting bed temperature to "+str(float(g.token_value(0))))
-            self.printer.heaters['HBP'].set_target_temperature(float(g.token_value(0)))
-        elif g.code() == "M141":
-            fan = self.printer.fans[int(g.get_value_by_letter("P"))]
-            fan.set_PWM_frequency(int(g.get_value_by_letter("F")))
-            fan.set_value(float(g.get_value_by_letter("S")))	           
-        elif g.code() == "M190":
-            self.printer.heaters['HBP'].set_target_temperature(float(g.get_value_by_letter("S")))
-            self._execute(Gcode({"message": "M116", "prot": g.prot}))
-        elif g.code() == "M400":
-            self.printer.path_planner.wait_until_done()
-        elif g.code() == "T0":                                      # Select tool 0
-            self.printer.current_tool = "E"
-        elif g.code() == "T1":                                      # select tool 1
-            self.printer.current_tool = "H"
-        elif g.message == "ok":
+        if g.message == "ok":
             pass
         else:
             logging.warning("Unknown command: "+g.message)
