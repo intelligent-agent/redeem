@@ -33,19 +33,22 @@ D6 = nENABLE = 0
 D7 = -   		 = X
 '''
 
-from spi import SPI
 from threading import Thread
 import time
 import logging
 
-# init the SPI for the DAC
-spi2_0 = SPI(1, 0)	
-spi2_0.bpw = 8
-spi2_0.mode = 1
-# Init the SPI for the serial to parallel
-spi2_1 = SPI(1, 1)	
-spi2_1.bpw = 8
-spi2_1.mode = 0
+try:
+    from spi import SPI
+    # init the SPI for the DAC
+    spi2_0 = SPI(1, 0)	
+    spi2_0.bpw = 8
+    spi2_0.mode = 1
+    # Init the SPI for the serial to parallel
+    spi2_1 = SPI(1, 1)	
+    spi2_1.bpw = 8
+    spi2_1.mode = 0
+except ImportError:
+    pass
 
 class Stepper:
 
@@ -199,7 +202,7 @@ class Stepper:
         self.max_feed_rate = max_feed_rate
 
     ''' Get the number of steps pr meter '''
-    def get_steps_pr_meter(self):        
+    def get_steps_pr_meter(self):
         return self.steps_pr_mm*self.microsteps*1000.0
 
     ''' The pin that steps, it looks like GPIO1_31 aso '''

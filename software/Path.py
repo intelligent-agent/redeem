@@ -6,6 +6,9 @@ Author: Elias Bakken
 email: elias(dot)bakken(at)gmail(dot)com
 Website: http://www.thing-printer.com
 License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
+
+
+
 """
 
 import numpy as np                                                          # Needed for sqrt
@@ -15,7 +18,7 @@ import logging
 
 class Path: 	
     AXES                = "XYZEHABC"
-    NUM_AXES            = len(AXES)
+    NUM_AXES            = 5#len(AXES)
 
     AXIS_CONFIG_XY      = 0
     AXIS_CONFIG_H_BELT  = 1
@@ -34,11 +37,11 @@ class Path:
     Ainv = np.linalg.inv(A)                 
 
     axis_config = AXIS_CONFIG_XY # Default config is normal cartesian XY
-    max_speed   = np.ones(Path.NUM_AXES)
-    home_speed  = np.ones(Path.NUM_AXES)
+    max_speed   = np.ones(NUM_AXES)
+    home_speed  = np.ones(NUM_AXES)
 
     """ The axes of evil, the feed rate in m/s and ABS or REL """
-    def __init__(self, axes, speed, movement, cancellable=False, acceleration=0.5):
+    def __init__(self, axes, speed, movement,  acceleration=0.5, cancellable=False):
         self.axes               = axes
         self.speed              = speed
         self.acceleration       = acceleration
@@ -47,6 +50,7 @@ class Path:
         self.start_speed        = 0.0
         self.end_speed          = 0.0
         self.mag                = None
+        self.next               = None
 
     """ Set the previous path element """
     def set_prev(self, prev):
@@ -69,27 +73,38 @@ class Path:
             if prev:
                 self.angle_to_prev = self._angle_between(prev.vec, self.vec)
                 self.prev.angle_to_next = self.angle_to_prev  # Direction is not important (or is it...?)
-                if self.angle_to_prev <= np.pi/2.0 or self.angle_to_prev >= 3.0*np.pi/2.0:
+                if self.angle_to_prev > np.pi/2.0:
                     # We have discovered a segment with too steep angle. The end speed of the 
                     # Previous segments until a start sement is discovered must be updated. 
                     self.is_start_segment    = True 
                     self.is_end_segment      = False
-                    self.prev.is_end_segment = True
                     self.start_speed         = 0.0
-                    self.end_speed           = np.sqrt(2.0*self.acceleration*self.get_magnitude())
-                    self.prev.update_speeds()
+                    self.angle_speed         = 0.0
+                    self.accel_speed         = np.sqrt(2.0*self.acceleration*self.get_magnitude())
+                    self.decel_speed         = 0.0
+                    # We assume that max speed is not reached, 
+                    self.end_speed           = min(self.accel_speed, self.speed)
+                    # We now have a section with start speed and end speed of zero 
+                    # so a accelleration profile can be generated. 
+                    self.prev.is_end_segment = True
+                    self.prev.end_speed      = 0.0
+                    self.prev.calculate_deceleration()
                 else:
                      # We have an angle that can be cornered at > 0 speed. 
                     self.is_start_segment = False
                     self.is_end_segment   = False
-                    self.start_speed = self.prev.end_speed
-                    self.end_speed = np.sqrt(self.start_speed**2, + 2.0*self.acceleration*self.get_magnitude())
+                    self.angle_speed      = self.speed * self.angle_to_ratio(self.angle_to_prev)
+                    self.accel_speed      = np.sqrt(np.square(self.prev.accel_speed) + 2.0*self.acceleration*self.get_magnitude())
+                    self.start_speed      = min(self.angle_speed, self.prev.end_speed)
+                    self.prev.end_speed   = self.start_speed
+                    self.end_speed        = np.sqrt(np.square(self.start_speed) + 2.0*self.acceleration*self.get_magnitude())
             else:
                 # This is the first known segment in the print. 
-                self.is_start_segment = True
-                self.start_speed    = 0.0
-                # Calculate a preliminary end speed for this segment
-                self.end_speed      = np.sqrt(2.0*self.acceleration*self.get_magnitude())
+                self.is_start_segment   = True
+                self.is_end_segment     = False
+                self.start_speed        = 0.0
+                self.angle_speed        = 0.0
+                self.accel_speed        = np.sqrt(2.0*self.acceleration*self.get_magnitude())
             
         elif self.movement == Path.RELATIVE:
             self.vec = np.zeros(Path.NUM_AXES, dtype=Path.DTYPE)
@@ -103,9 +118,16 @@ class Path:
             self.is_end_segment     = True
             self.start_speed        = 0.0
             self.end_speed          = 0.0
-    
-    
 
+    ''' This path segment is the last in the print or whatever '''
+    def finalize(self):
+        self.is_end_segment = True
+        self.end_speed = 0
+        self.calculate_deceleration()
+
+    ''' Given an angle in radians, return the speed ratio '''
+    def angle_to_ratio(self, angle):
+        return (1-angle/np.pi)
     
     """ Special path, only set the global position on this """
     def is_G92(self):
@@ -115,6 +137,28 @@ class Path:
     def set_homing_feedrate(self):
         self.speed = min(self.speed, self.home_speed[np.argmax(vec)])
 
+    ''' Return the maximum increase in speed on this segment '''
+    def speed_increase(self):
+        return np.sqrt(2.0*self.acceleration*self.get_magnitude())
+
+    ''' Recursively recalculate the decelleration profile '''
+    def calculate_deceleration(self):
+        if self.next: 
+            self.decel_speed = np.sqrt(np.square(self.next.decel_speed)+2.0*self.acceleration*self.get_magnitude())
+        else:
+            self.decel_speed = np.sqrt(2.0*self.acceleration*self.get_magnitude())
+        self.start_speed = min(self.start_speed, self.decel_speed)    
+        if not self.is_start_segment:
+            self.prev.calculate_deceleration()
+        
+    @staticmethod
+    def speed_from_distance(s, a, V0=0):
+        if V0:
+            return np.sqrt(np.square(V0)+2.0*a*s)
+        return np.sqrt(2.0*a*s)
+
+    def end_speed_from_distance(self, s):
+        return np.sqrt(2.0*self.acceleration*s)
 
     """ Set the global position for the printer """
     def set_global_pos(self, global_pos, update_next = True):
@@ -142,7 +186,7 @@ class Path:
     def get_magnitude(self):   
         if self.mag: 
             return self.mag
-        self.mag = np.sqrt(x.dot(self.vec[:3]))
+        self.mag = np.sqrt(self.vec[:3].dot(self.vec[:3]))
         return self.mag
 
     """ Get the ratio for this axis """
@@ -150,33 +194,19 @@ class Path:
         hyp     = self.get_magnitude()    	                               
         if hyp == 0.0: # Single axis
             return 1.0
-        return abs(self.get_axis_length(axis_nr))/hyp
+        return abs(self.vec[axis_nr])/hyp
 
-
-        self.start_speed = (1-self.angle_to_prev/np.pi)*self.prev.get_end_speed()
-
-    def get_start_speed(self):
-        if prev and self.movement == Path.ABSOLUTE:
-            return 
-        return 0.0
-        
-    def get_end_speed(self):
-        if next and self.movement == Path.ABSOLUTE:
-        if self.movement == Path.RELATIVE:
-            return 0
-        
-        return (1-self.angle_to_next()/np.pi)*self.get_max_speed()
-
-    def get_axes(self):
-        """ Return the list of axes """
-        return { k : v for k,v in self.vector.iteritems() if v != 0 }
+    ''' unlink this from the chain. '''
+    def unlink(self):
+        self.next = None
+        self.prev = None
 
     def unit_vector(self, vector):
-        """ Returns the unit vector of the vector.  """
         return vector / np.linalg.norm(vector)        
 
     """ Returns the angle in radians between vectors 'v1' and 'v2':: Creds to David Wolever for this """
     def _angle_between(self, v1, v2):
+        #print v1, v2
         v1_u = self.unit_vector(v1)
         v2_u = self.unit_vector(v2)
         angle = np.arccos(np.dot(v1_u, v2_u))
@@ -237,8 +267,9 @@ class Path:
         """ Returns true if this is a print segment and not a relative move """
         return self.is_print_segment
 
+    @staticmethod
     def axis_to_index(axis):
-        Path.AXES.index(axis)
+        return Path.AXES.index(axis)
 
     ''' The vector representation of this path segment '''
     def __str__(self):

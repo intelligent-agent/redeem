@@ -23,17 +23,22 @@ try:
 except ImportError:
     pass
 
-
+try:
+    import braid
+except ImportError:
+    pass
 import Queue
 from collections import defaultdict
-import braid
+
 
 class PathPlanner:
     ''' Init the planner '''
     def __init__(self, steppers, pru_firmware):
         self.steppers    = steppers
-        self.pru         = Pru(pru_firmware)                 # Make the PRU
-        self.paths       = Queue.Queue(10)                      # Make a queue of paths
+        if pru_firmware:
+            self.pru         = Pru(pru_firmware)                 # Make the PRU
+        self.paths       = Queue.Queue(100)                      # Make a queue of paths
+        self.cpaths      = Queue.Queue()
         self.current_pos = {"X":0.0, "Y":0.0, "Z":0.0, "E":0.0,"H":0.0}
         self.running     = True                                 # Yes, we are running
         self.pru_data    = []
@@ -41,9 +46,11 @@ class PathPlanner:
         self.t.daemon    = True
         self.travel_length = {"X":0.0, "Y":0.0, "Z":0.0}
         self.center_offset = {"X":0.0, "Y":0.0, "Z":0.0}
+        self.prev          = None
+        self.segments       = []
 
-        if __name__ != '__main__':
-            self.t.start()		 
+        #if __name__ != '__main__':
+        #    self.t.start()		 
 
 
     ''' Set travel length (printer size) for all axis '''  
@@ -80,12 +87,29 @@ class PathPlanner:
 
     ''' Add a path segment to the path planner '''        
     def add_path(self, new):   
-        if not new.is_G92():     
-            if hasattr(self, 'prev'):
-                self.prev.set_next(new)
-                new.set_prev(self.prev)
-            self.prev = new        
-        self.paths.put(new)
+        if new.is_G92():
+            self.paths.put(new)
+        else:
+            # Link to the previous segment in the chain
+            new.set_prev(self.prev)
+
+            if self.prev:
+                self.segments.append(self.prev)
+                # If we find an end segment, add all path segments to the queue for execution           
+                if self.prev.is_end_segment:
+                    [self.paths.put(path) for path in self.segments]
+                    self.segments = []
+            else:
+                self.segments = []
+            self.prev = new
+
+    ''' Add the last path to the queue for processing '''
+    def finalize_paths(self):
+        if self.prev:
+            self.prev.finalize()
+            self.segments.append(self.prev)
+            [self.paths.put(path) for path in self.segments]
+            self.prev = None
 
     ''' Return the number of paths currently on queue '''
     def nr_of_paths(self):
@@ -95,20 +119,19 @@ class PathPlanner:
     def _set_pos(self, axis, val):
         self.current_pos[axis] = val
 
+    '''Wait until planner is done'''
     def wait_until_done(self):
-        '''Wait until planner is done'''
         self.paths.join()
         self.pru.wait_until_done()		 
 
+    """ This loop pops a path, sends it to the PRU and waits for an event """
     def _do_work(self):
-        """ This loop pops a path, sends it to the PRU and waits for an event """
         while self.running:       
            self.do_work()
     
+    ''' This is just a separate function so the test at the bottom will pass '''
     def do_work(self):
-        """ This is just a separate function so the test at the bottom will pass """		
         path = self.paths.get()                            # Get the last path added
-        path.set_global_pos(self.current_pos.copy())       # Set the global position of the printer
 
         if path.is_G92():                                   # Only set the position of the axes
             for axis, pos in path.get_pos().iteritems():                       # Run through all the axes in the path    
@@ -116,7 +139,7 @@ class PathPlanner:
             self.paths.task_done()            
             return                
         
-        for axis in path.get_axes():                       # Run through all the axes in the path                   
+        for axis, val in path.axes.items():                       # Run through all the axes in the path                   
             data = self._make_data(path, axis)        
             if len(data[0]) > 0:
                 if len(self.pru_data) == 0:
@@ -129,11 +152,10 @@ class PathPlanner:
             del self.pru_data[0:0x10000/8]
             if len(self.pru_data) > 0:
                 logging.debug("Long path segment is cut. remaining: "+str(len(self.pru_data)))       
-            while not self.pru.has_capacity_for(len(data)*8):          
-                #logging.debug("Pru full")              
-                time.sleep(0.5)               
-            self.pru.add_data(zip(*data))
-            self.pru.commit_data()                            # Commit data to ddr
+            #while not self.pru.has_capacity_for(len(data)*8):          
+            #    time.sleep(0.5)               
+            #self.pru.add_data(zip(*data))
+            #self.pru.commit_data()                            # Commit data to ddr
         
         self.pru_data = []
         
@@ -209,7 +231,7 @@ class PathPlanner:
 
     ''' Make the data for the PRU or steppers '''
     def _make_data(self, path, axis):  
-        axis_nr         = Path.axis_to_index(axis)                    
+        axis_nr         = Path.axis_to_index(axis)                            
         stepper         = self.steppers[axis]
         steps_pr_meter  = stepper.get_steps_pr_meter()
         num_steps       = int(abs(path.vec[axis_nr]) * steps_pr_meter)      # Number of steps to tick
@@ -217,7 +239,7 @@ class PathPlanner:
             return ([], [])
         step_pin        = stepper.get_step_pin()                            # Get the step pin
         dir_pin         = stepper.get_dir_pin()                             # Get the direction pin
-        dir_pin         = 0 if vec < 0 else dir_pin                         # Disable the dir-pin if we are going backwards  
+        dir_pin         = 0 if path.vec[axis_nr] < 0 else dir_pin                         # Disable the dir-pin if we are going backwards  
         step_pins       = [step_pin]*num_steps                              # Make the pin states
         dir_pins        = [dir_pin]*num_steps 
         option_pins     = [path.cancellable]*num_steps                  
@@ -229,11 +251,11 @@ class PathPlanner:
         a        = path.acceleration*ratio    		                    # Accelleration in m/s/s
         ds       = 1.0/steps_pr_meter                                   # Delta S, distance in meters travelled pr step.         
         
-        u_start  = ratio*path.get_start_speed()                 	    # The end speed, depends on the angle to the next
-        u_end    = ratio*path.get_end_speed()                 	        # The start speed. Depends on the angle to the prev.
+        u_start  = ratio*path.start_speed                 	    # The end speed, depends on the angle to the next
+        u_end    = ratio*path.end_speed                 	        # The start speed. Depends on the angle to the prev.
 
-        logging.debug('Start speed '+str(path.get_start_speed()))
-        logging.debug('End speed '+str(path.get_end_speed()))
+        print 'Start speed '+str(path.start_speed)
+        print 'End speed '+str(path.end_speed)
 
         tm_start = (Vm-u_start)/a					                    # Calculate the time for when max speed is met. 
         tm_end   = (Vm-u_end)/a					                        # Calculate the time for when max speed is met. 
@@ -248,14 +270,12 @@ class PathPlanner:
 
         delays_start     = np.diff(timestamps_start)/2.0			    # We are more interested in the delays pr second. 
         delays_end       = np.diff(timestamps_end)/2.0			        # We are more interested in the delays pr second.         
-        #delays_start     = np.array([delays_start, delays_start]).transpose().flatten()
-        #delays_end       = np.array([delays_end, delays_end]).transpose().flatten()
 
         i_steps     = num_steps-len(delays_start)-len(delays_end)     # Find out how many delays are missing
         i_delays    = [(ds/Vm)/2.0]*i_steps  		                    # Make the intermediate steps
         delays      = np.concatenate([delays_start, i_delays, np.flipud(delays_end)])# Add the missing delays. 
         td          = num_steps/steps_pr_meter                          # Calculate the actual travelled distance        
-        if vec < 0:                                                     # If the vector is negative, negate it.      
+        if path.vec[axis_nr] < 0:                                       # If the vector is negative, negate it.      
             td     *= -1.0
 
         # If the axes are X or Y, we need to transform back in case of 
