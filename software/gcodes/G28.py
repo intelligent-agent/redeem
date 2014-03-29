@@ -19,9 +19,9 @@ class G28(GCodeCommand):
         self.printer.path_planner.wait_until_done()                                               # All steppers 
         for i in range(g.num_tokens()): # Run through all tokens
             axis = g.token_letter(i)                         
-            if self.config.getboolean('Endstops', 'has_'+axis.lower()):
+            if self.printer.config.getboolean('Endstops', 'has_'+axis.lower()):
                 self.printer.path_planner.home(axis)     
-        self._send_message(g.prot, "Homing done.")
+
         logging.info("Homing done.")
 
 

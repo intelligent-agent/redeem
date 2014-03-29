@@ -24,7 +24,6 @@ class M116(GCodeCommand):
             self.printer.processor.execute(m105)
             print all_ok
             if not False in all_ok:
-                self._send_message(g.prot, "Heating done.")
                 self._reply(m105)
                 return 
             else:
