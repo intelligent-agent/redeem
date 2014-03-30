@@ -185,7 +185,7 @@ class Redeem:
         self.ethernet = Ethernet(self.commands)
         
         # Init the path planner
-        self.movement = "RELATIVE"
+        self.movement = Path.RELATIVE
         self.feed_rate = 3000.0        
         Path.axis_config = int(self.config.get('Geometry', 'axis_config'))
         Path.max_speed_x = float(self.config.get('Steppers', 'max_speed_x'))
@@ -263,7 +263,7 @@ class Redeem:
             if g.has_letter("E") and self.current_tool != "E":       # We are using a different tool, switch..
                 smds[self.current_tool] = smds["E"]
                 del smds["E"]
-            path = Path(smds, self.feed_rate, self.movement, g.is_crc())
+            path = Path(smds, self.feed_rate, self.movement, self.path_planner.acceleration)
             self.path_planner.add_path(path)                        # Add the path. This blocks until the path planner has capacity
         elif g.code() == "G21":                                      # Set units to mm
             self.factor = 1.0
@@ -278,9 +278,9 @@ class Redeem:
             self._send_message(g.prot, "Homing done.")
             logging.info("Homing done.")
         elif g.code() == "G90":                                     # Absolute positioning
-            self.movement = "ABSOLUTE"
+            self.movement = Path.ABSOLUTE
         elif g.code() == "G91":                                         # Relative positioning 
-            self.movement = "RELATIVE"		
+            self.movement = Path.RELATIVE		
         elif g.code() == "G92":                                         # Set the current position of the following steppers
             if g.num_tokens() == 0:
                 logging.debug("Adding all to G92")

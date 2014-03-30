@@ -20,7 +20,7 @@ steppers["H"] = Stepper("GPIO1_13", "GPIO1_14", "GPIO2_3",  4, "Ext2",None,4,4)
 path_planner = PathPlanner(steppers, None)
 
 radius = 1.0
-speed = 0.5
+speed = 0.3
 acceleration = 0.1
 rand = 0.0
 
@@ -31,52 +31,93 @@ rand_y = rand*np.random.uniform(-1, 1, size=len(t))
 for i in t:
     path_planner.add_path(Path({"X": radius*np.sin(i)+rand_x[i], "Y": radius*np.cos(i)+rand_y[i]}, speed, Path.ABSOLUTE, acceleration))
 path_planner.add_path(Path({"X": 0.0, "Y": 0.0}, speed, Path.ABSOLUTE))
+path_planner.add_path(Path({"X": -1.0, "Y": -1.0}, speed, Path.RELATIVE))
+path_planner.add_path(Path({"X": 1.0, "Y": 1.0}, speed, Path.RELATIVE))
 path_planner.finalize_paths()
 
 
 #fig = plt.figure(figsize=(14, 9))
-ax0 = plt.subplot(2, 2, 1)
+ax0 = plt.subplot(2, 3, 1)
 plt.ylim([-1.5*radius, 1.5*radius])
 plt.xlim([-1.5*radius, 1.5*radius])
 plt.title('Trajectory')
-speed = []
+start_speeds = []
+end_speeds = []
+speeds = []
 segment_max_speed = []
 magnitudes = []
 accel_speeds = []
 decel_speeds = []
 angle_speeds = []
 
+mag = 0
+mag_x = 0
+mag_y = 0  
 
 for path in list(path_planner.paths.queue):
     ax0.arrow(path.start_pos[0], path.start_pos[1], path.vec[0], path.vec[1], 
         head_width=0.05, head_length=0.1, fc='k', ec='k',  length_includes_head=True)
-    speed.append(path.start_speed)    
     magnitudes.append(path.get_magnitude())
-    accel_speeds.append(path.accel_speed)
-    decel_speeds.append(path.decel_speed)
-    angle_speeds.append(path.angle_speed)    
+    start_speeds.append(np.linalg.norm(path.start_speeds[0:1]))
+    end_speeds.append(np.linalg.norm(path.end_speeds[0:1]))
+    accel_speeds.append(np.linalg.norm(path.accel_speeds[0:1]))
+    decel_speeds.append(np.linalg.norm(path.decel_speeds[0:1]))
+    angle_speeds.append(np.linalg.norm(path.angle_speeds[0:1]))
+    
+
+positions = np.insert(np.cumsum(magnitudes), 0, 0)
+positions = np.cumsum(magnitudes)
+
+ax1 = plt.subplot(2, 3, 2)
+#plt.plot(positions, accel_speeds, "b")
+plt.plot(positions, decel_speeds, "b")
+plt.plot(positions, end_speeds, "g")
+plt.plot(positions, start_speeds, "r")
+#plt.plot(positions, angle_speeds, "r")
+plt.title('Velocity X')
 
 
-positions = np.insert(np.cumsum(magnitudes[1:-1]), 0, 0)
-speed = speed[1:]
-accel_speeds = np.insert(accel_speeds[1:-1], 0, 0)
-decel_speeds = np.append(decel_speeds[1:-1], 0)
-angle_speeds = np.append(angle_speeds[1:-1], 0)
+# Acceleration
+ax2 = plt.subplot(2, 3, 3)
 
-ax1 = plt.subplot(2, 2, 2)
-plt.plot(positions, accel_speeds, 'r.-')
-plt.plot(positions, decel_speeds, 'b.-')
-plt.plot(positions, angle_speeds, 'y.-')
-plt.plot(positions, speed, 'g.-')
-plt.title('Velocity')
-
-for path in list(path_planner.paths.queue):
+for idx, path in enumerate(list(path_planner.paths.queue)):
     path_planner.do_work()
+    plt.arrow(mag_x, path.start_speeds[0], path.abs_vec[0], path.end_speeds[0]-path.start_speeds[0], fc='g', ec='g')
+    #plt.arrow(mag_y, 0.5+path.start_speeds[1], path.abs_vec[1], path.end_speeds[1]-path.start_speeds[1], fc='r', ec='r')
+    
+    # Plot the acceleration profile and deceleration profile
+    vec_x = abs(path.vec[0])
+    
+    print "length: "+str(path.abs_vec[0])
+    print "Switch: "+str(path.switch[0])
+    s_x = np.arange(0, path.switch[0]*1.01, path.switch[0]*0.01)
+    s_xd = np.arange(0, (vec_x-path.switch[0])*1.01, (vec_x-path.switch[0])*0.01)
+    plt.plot(mag_x+s_x,  np.sqrt(np.square(path.start_speeds[0])+ 2*path.accelerations[0]*s_x), 'b')
+    plt.plot(mag_x+s_xd+path.switch[0], 
+        np.sqrt(np.square(path.start_speeds[0])+ 2*path.accelerations[0]*path.switch[0]) -
+        2*path.accelerations[0]*s_xd, 'r')
 
-ax2 = plt.subplot(2, 2, 3)
+    mag += abs(path.get_magnitude())
+    mag_x += path.abs_vec[0]
+    mag_y += abs(path.vec[1])
+
+s = 1
+u_start = 0
+u_end = 0
+s1 = (2*acceleration-np.square(u_start)+np.square(u_end))/(4*acceleration)
+
+ss = np.arange(0, s1, 0.01)
+sd = np.arange(s1, s, 0.01)
+#plt.plot([0, s], [u_start, u_end])
+#plt.plot(ss, np.sqrt(np.square(u_start)+2*acceleration*ss))
+V12 = np.square(u_end)+2*acceleration*s
+#plt.plot(sd, np.sqrt(V12-2*acceleration*sd))
+plt.xlim([-0.1, mag_x*1.1])
+plt.ylim([-0.1, 1])
 plt.title('Acceleration')
 
-ax2 = plt.subplot(2, 2, 4)
+# Heart
+ax2 = plt.subplot(2, 3, 4)
 t = np.arange(0, 10, 0.01)
 x = []
 y = []
@@ -86,8 +127,23 @@ for i in t:
 plt.plot(x, y, 'r')
 plt.ylim([-30, 30])
 plt.xlim([-30, 30])
-
 plt.title('How my 3D-printer feels')
 
 plt.show()
+
+
+
+
+'''
+# Plot the decelleration
+if path.u_ends[0] == 0:
+    Vo = np.sqrt(2.0*path.As[0]*vec_x)
+    plt.plot(mag_x+s_x, np.sqrt(np.square(Vo)-2.0*path.As[0]*s_x), 'r')
+elif np.square(path.u_ends[0]) > 2.0*path.As[0]*vec_x:        
+    Vo = path.u_ends[0]
+    diff = np.sqrt(np.square(Vo))-np.sqrt(np.square(Vo)-2.0*path.As[0]*vec_x)
+    plt.plot(mag_x+s_x, diff+np.sqrt(np.square(Vo)-2.0*path.As[0]*s_x), 'r')
+else:
+    print ""
+'''
 
