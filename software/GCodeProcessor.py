@@ -48,10 +48,10 @@ class GCodeProcessor:
     def execute(self, gcode):
         val = gcode.code()
         if not val in self.gcodes:
-            logging.error("No GCode processor for "+gcode.code())
+            logging.error("No GCode processor for "+gcode.code()+". Message: "+gcode.message)
             return None
 
-        self.gcodes[gcode.code()].execute(gcode)
+        self.gcodes[val].execute(gcode)
 
         return gcode
 

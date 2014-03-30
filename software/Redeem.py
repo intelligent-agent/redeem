@@ -110,7 +110,7 @@ class Redeem:
             stepper.set_steps_pr_mm(self.printer.config.getfloat('Steppers', 'steps_pr_mm_'+name))         
             stepper.set_microstepping(self.printer.config.getint('Steppers', 'microstepping_'+name)) 
             stepper.direction = self.printer.config.getint('Steppers', 'direction_'+name)
-            stepper.set_decay(1)
+            stepper.set_decay(self.printer.config.getboolean("Steppers", "slow_decay_"+name))
 
 		# Commit changes for the Steppers
         Stepper.commit()
@@ -255,18 +255,17 @@ class Redeem:
     ''' Execute a G-code '''
     def _execute(self, g):  
 
-        if g.message == "ok" or g.code()=="ok":
+        if g.message == "ok" or g.code()=="ok" or g.code()=="No-Gcode":
+            g.set_answer(None)
             return
 
-        ret = self.printer.processor.execute(g)
-
-        if ret != None:
-            return
+        self.printer.processor.execute(g)
    
 
     ''' Send a reply through the proper channel '''
     def _reply(self, gcode):
-        self._send_message(gcode.prot, gcode.get_answer())
+        if(gcode.get_answer()!=None):
+            self._send_message(gcode.prot, gcode.get_answer())
     
     ''' Send a message back to host '''
     def _send_message(self, prot, msg):
