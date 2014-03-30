@@ -40,6 +40,7 @@ PyObject* _braid_data_c(PyObject* data1, PyObject* data2)
     dir1 = (int)PyInt_AsLong(PyTuple_GetItem(tmp_tuple1,1));
     o1 = (int)PyInt_AsLong(PyTuple_GetItem(tmp_tuple1,2));
     dly1 = (float)PyFloat_AsDouble(PyTuple_GetItem(tmp_tuple1,3));
+
     tmp_tuple2 = PyList_GetItem(data2,idx2);
     pin2 = (int)PyInt_AsLong(PyTuple_GetItem(tmp_tuple2,0));
     dir2 = (int)PyInt_AsLong(PyTuple_GetItem(tmp_tuple2,1));
@@ -54,11 +55,6 @@ PyObject* _braid_data_c(PyObject* data1, PyObject* data2)
             options[line] = o1 | o2;
             //Create resulting delay
             delay[line] = dly1;
-        
-            //DEBUG:
-            //printf("Added (%d, %.1f) - dly1=dly2\n", pins[line], delay[line]);
-            //printf("dly1=%.1f\n",dly1);
-            //printf("dly2=%.1f\n",dly2);
             
             //Update line
             line++; 
@@ -67,6 +63,8 @@ PyObject* _braid_data_c(PyObject* data1, PyObject* data2)
             idx1++;
             idx2++;
             
+            dly2 = dly1 = 0;
+
             //Check that there are still items left in both arrays
             if (idx1 >= PyList_Size(data1) || idx2 >= PyList_Size(data2))
                 break;
@@ -77,6 +75,7 @@ PyObject* _braid_data_c(PyObject* data1, PyObject* data2)
             dir1 = (int)PyInt_AsLong(PyTuple_GetItem(tmp_tuple1,1));
             o1 = (int)PyInt_AsLong(PyTuple_GetItem(tmp_tuple1,2));
             dly1 = (float)PyFloat_AsDouble(PyTuple_GetItem(tmp_tuple1,3));
+
             tmp_tuple2 = PyList_GetItem(data2,idx2);
             pin2 = (int)PyInt_AsLong(PyTuple_GetItem(tmp_tuple2,0));
             dir2 = (int)PyInt_AsLong(PyTuple_GetItem(tmp_tuple2,1));
@@ -86,9 +85,9 @@ PyObject* _braid_data_c(PyObject* data1, PyObject* data2)
         
         else if (dly1 > dly2) {
             //Create resulting pin number
-            pins[line] = pin1 | pin2;
-            dirs[line] = dir1 | dir2;
-            options[line] = o1 | o2;
+            pins[line] =  pin2;
+            dirs[line] =  dir2;
+            options[line] =  o2;
             //Create resulting delay
             delay[line] = dly2;
             
@@ -104,7 +103,7 @@ PyObject* _braid_data_c(PyObject* data1, PyObject* data2)
             
             //Subtract dly2 from dly1 to get the delay from the last tuple we added
             dly1 -= dly2;
-            
+            dly2 = 0;
             //Increase idx2
             idx2++;
             
@@ -122,9 +121,9 @@ PyObject* _braid_data_c(PyObject* data1, PyObject* data2)
         
         else if (dly1 < dly2) {
             //Create resulting pin number
-            pins[line] = pin1 | pin2;
-            dirs[line] = dir1 | dir2;
-            options[line] = o1 | o2;
+            pins[line] = pin1;
+            dirs[line] = dir1;
+            options[line] = o1;
             //Create resulting delay
             delay[line] = dly1;
             
@@ -140,7 +139,8 @@ PyObject* _braid_data_c(PyObject* data1, PyObject* data2)
             
             //Subtract dly1 from dly2 to get the delay from the last tuple we added
             dly2 -= dly1;
-            
+            dly1 = 0;
+
             //Increase idx1
             idx1++;
             
@@ -156,6 +156,22 @@ PyObject* _braid_data_c(PyObject* data1, PyObject* data2)
             dly1 = (float)PyFloat_AsDouble(PyTuple_GetItem(tmp_tuple1,3));
         }
     }    
+
+    /*if(dly2>0) {
+        pins[line] = pin2;
+        dirs[line] = dir2;
+        options[line] = o2;
+        delay[line] = dly2;
+        line++;
+    } else if (dly1>0) {
+        pins[line] = pin1;
+        dirs[line] = dir1;
+        options[line] = o1;
+        delay[line] = dly1;
+        line++;
+    }
+
+    dly2 = dly1 = 0;*/
 
     //If we are here, then we have gone through at least one of the arrays.
     //Need to check if there are items left in the other array
@@ -234,7 +250,7 @@ PyObject* _braid_data_c(PyObject* data1, PyObject* data2)
     PyObject *pylist = PyList_New(line);
     int i;
     for (i=0; i<line; i++){
-		PyList_SetItem(pylist, i, Py_BuildValue("(iiid)", pins[i],dirs[i],options[i], delay[i]));
+		PyList_SetItem(pylist, i, Py_BuildValue("(iiif)", pins[i],dirs[i],options[i], delay[i]));
     }
 
     //Free allocated memory
