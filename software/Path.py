@@ -17,8 +17,8 @@ import ConfigParser
 import logging
 
 class Path: 	
-    AXES                = "XYZEHABC"
-    NUM_AXES            = 5#len(AXES)
+    AXES                = "XYZEH"#ABC
+    NUM_AXES            = len(AXES)
 
     AXIS_CONFIG_XY      = 0
     AXIS_CONFIG_H_BELT  = 1
@@ -51,6 +51,7 @@ class Path:
         self.end_speed          = 0.0
         self.mag                = None
         self.next               = None
+        self.is_added           = False
 
     """ Set the previous path element """
 
@@ -74,8 +75,10 @@ class Path:
             self.vec = self.end_pos - self.start_pos            
             self.abs_vec = np.abs(self.vec)
             self.hyp     = self.get_magnitude()
+            if not self.hyp:
+                self.hyp = 1.0    
             self.ratios  = self.abs_vec/self.hyp
-            self.speeds  = self.speed*self.ratios
+            self.speeds  = np.minimum(self.speed*self.ratios, Path.max_speed)
             self.accelerations = self.acceleration*self.ratios
 
             # Calculate the angle to prev
@@ -98,7 +101,8 @@ class Path:
                     # so a accelleration profile can be generated. 
                     self.prev.is_end_segment = True
                     self.prev.end_speeds     = np.zeros(Path.NUM_AXES)
-                    self.prev.calculate_deceleration()
+                    if self.prev.movement != Path.G92:
+                        self.prev.calculate_deceleration()
                 else:
                      # We have an angle that can be cornered at > 0 speed. 
                     self.is_start_segment = False
@@ -126,7 +130,7 @@ class Path:
             self.abs_vec = np.abs(self.vec)
             self.hyp     = self.get_magnitude()
             self.ratios  = self.abs_vec/self.hyp
-            self.speeds  = self.speed*self.ratios
+            self.speeds  = np.minimum(self.speed*self.ratios, Path.max_speed)
             self.accelerations = self.acceleration*self.ratios
 
             # Start and stop speeds are set to zero 
@@ -134,6 +138,18 @@ class Path:
             self.is_end_segment     = True
             self.start_speeds       = np.zeros(Path.NUM_AXES)
             self.end_speeds         = np.zeros(Path.NUM_AXES)
+        
+        elif self.movement == Path.G92:
+            logging.debug("G92")
+            self.end_pos = np.copy(self.start_pos)
+            for index, axis in enumerate(Path.AXES):
+                if axis in self.axes:
+                    self.end_pos[index] = self.axes[axis]
+            #self.prev = None
+            self.vec = np.zeros(Path.NUM_AXES)
+            self.is_end_segment     = True
+            self.is_start_segment   = True
+            
 
     ''' This path segment is the last in the print or whatever '''
     def finalize(self):
@@ -151,7 +167,7 @@ class Path:
 
     ''' The feed rate is set to the lowest axis in the set '''
     def set_homing_feedrate(self):
-        self.speed = min(self.speed, self.home_speed[np.argmax(vec)])
+        self.speeds = np.minimum(self.speeds, self.home_speed[np.argmax(vec)])
 
     ''' Recursively recalculate the decelleration profile '''
     def calculate_deceleration(self):
@@ -188,6 +204,11 @@ class Path:
             return self.mag
         self.mag = np.sqrt(self.vec[:3].dot(self.vec[:3]))
         return self.mag
+
+    def get_hyp(self):
+        hyp     = self.get_magnitude()    	                               
+        if hyp == 0.0: # Single axis
+            return 1.0
 
     """ Get the ratio for this axis """
     def get_axis_ratio(self, axis_nr):
@@ -239,7 +260,7 @@ class Path:
 
     ''' Make the acceleration profiles '''
     def split_into_axes(self):
-        logging.debug("Split into axies")
+        #logging.debug("Split into axies")
         # Find the length of the acceleration segment       
         tm_start = (self.speeds-self.start_speeds)/self.accelerations
         self.max_speed_starts = self.start_speeds*tm_start + 0.5*self.accelerations*tm_start**2

@@ -188,17 +188,17 @@ class Redeem:
         self.movement = Path.RELATIVE
         self.feed_rate = 3000.0        
         Path.axis_config = int(self.config.get('Geometry', 'axis_config'))
-        Path.max_speed_x = float(self.config.get('Steppers', 'max_speed_x'))
-        Path.max_speed_y = float(self.config.get('Steppers', 'max_speed_y'))
-        Path.max_speed_z = float(self.config.get('Steppers', 'max_speed_z'))
-        Path.max_speed_e = float(self.config.get('Steppers', 'max_speed_e'))
-        Path.max_speed_h = float(self.config.get('Steppers', 'max_speed_h'))
+        Path.max_speed[0] = float(self.config.get('Steppers', 'max_speed_x'))
+        Path.max_speed[1] = float(self.config.get('Steppers', 'max_speed_y'))
+        Path.max_speed[2] = float(self.config.get('Steppers', 'max_speed_z'))
+        Path.max_speed[3] = float(self.config.get('Steppers', 'max_speed_e'))
+        Path.max_speed[4] = float(self.config.get('Steppers', 'max_speed_h'))
 
-        Path.home_speed_x = float(self.config.get('Steppers', 'home_speed_x'))
-        Path.home_speed_y = float(self.config.get('Steppers', 'home_speed_y'))
-        Path.home_speed_z = float(self.config.get('Steppers', 'home_speed_z'))
-        Path.home_speed_e = float(self.config.get('Steppers', 'home_speed_e'))
-        Path.home_speed_h = float(self.config.get('Steppers', 'home_speed_h'))
+        Path.home_speed[0] = float(self.config.get('Steppers', 'home_speed_x'))
+        Path.home_speed[1] = float(self.config.get('Steppers', 'home_speed_y'))
+        Path.home_speed[2] = float(self.config.get('Steppers', 'home_speed_z'))
+        Path.home_speed[3] = float(self.config.get('Steppers', 'home_speed_e'))
+        Path.home_speed[4] = float(self.config.get('Steppers', 'home_speed_h'))
 
         dirname = os.path.dirname(os.path.realpath(__file__))
 
@@ -293,7 +293,7 @@ class Redeem:
                 logging.debug("Adding H to G92")
                 pos["H"] = pos["E"];
                 del pos["E"]
-            path = Path(pos, self.feed_rate, "G92")                     # Make a path segment from the axes
+            path = Path(pos, self.feed_rate, Path.G92)                     # Make a path segment from the axes
             self.path_planner.add_path(path)  
         elif g.code() == "M17":                                         # Enable all steppers
             self.path_planner.wait_until_done()
@@ -378,7 +378,7 @@ class Redeem:
             #Reset PRU
             self.path_planner.emergency_interrupt()          
         elif g.code() == "M114": 
-            g.set_answer("ok C: "+' '.join('%s:%s' % i for i in self.path_planner.current_pos.iteritems()))
+            g.set_answer("ok C: "+' '.join('%s:%s' % i for i in self.path_planner.get_current_pos().iteritems()))
         elif g.code() == "M116":  # Wait for all temperatures and other slowly-changing variables to arrive at their set values.
             all_ok = [False, False, False]
             while True:
