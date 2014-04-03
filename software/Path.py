@@ -74,12 +74,14 @@ class Path:
                     self.end_pos[index] = self.axes[axis] 
             self.vec = self.end_pos - self.start_pos            
             self.abs_vec = np.abs(self.vec)
-            self.hyp     = self.get_magnitude()
-            if not self.hyp:
-                self.hyp = 1.0    
-            self.ratios  = self.abs_vec/self.hyp
+            self.hyp     = self.get_hyp()
+            if self.hyp != 1.0:
+                self.ratios  = self.abs_vec/self.hyp
+            else:
+                self.ratios = np.ones(Path.NUM_AXES)
             self.speeds  = np.minimum(self.speed*self.ratios, Path.max_speed)
             self.accelerations = self.acceleration*self.ratios
+            self.accelerations = np.where(self.accelerations != 0.0, self.accelerations, 1.0)
 
             # Calculate the angle to prev
             if prev:
@@ -132,6 +134,7 @@ class Path:
             self.ratios  = self.abs_vec/self.hyp
             self.speeds  = np.minimum(self.speed*self.ratios, Path.max_speed)
             self.accelerations = self.acceleration*self.ratios
+            self.accelerations = np.where(self.accelerations != 0.0, self.accelerations, 1.0)
 
             # Start and stop speeds are set to zero 
             self.is_start_segment   = True
@@ -169,13 +172,16 @@ class Path:
     def set_homing_feedrate(self):
         self.speeds = np.minimum(self.speeds, self.home_speed[np.argmax(vec)])
 
+
     ''' Recursively recalculate the decelleration profile '''
     def calculate_deceleration(self):
         if self.next: 
-            self.decel_speeds = np.sqrt(np.square(self.next.end_speeds)+2.0*self.accelerations*self.abs_vec)
+            self.decel_speeds = np.sqrt(np.square(self.next.start_speeds)+2.0*self.accelerations*self.abs_vec)                        
         else:
             self.decel_speeds = np.sqrt(2.0*self.accelerations*self.abs_vec)
-        #self.start_speeds = np.minimum(self.start_speeds, self.decel_speeds)                
+        self.start_speeds = np.minimum(self.start_speeds, self.decel_speeds)
+        if self.next:
+            self.end_speeds = np.minimum(self.end_speeds, self.next.start_speeds)
         if not self.is_start_segment:
             self.prev.calculate_deceleration()
         
@@ -209,6 +215,7 @@ class Path:
         hyp     = self.get_magnitude()    	                               
         if hyp == 0.0: # Single axis
             return 1.0
+        return hyp
 
     """ Get the ratio for this axis """
     def get_axis_ratio(self, axis_nr):
@@ -223,7 +230,7 @@ class Path:
         self.prev = None
 
     def unit_vector(self, vector):
-        return vector / np.linalg.norm(vector)        
+        return vector / np.linalg.norm(vector)
 
     """ Returns the angle in radians between vectors 'v1' and 'v2':: Creds to David Wolever for this """
     def _angle_between(self, v1, v2):
@@ -260,7 +267,6 @@ class Path:
 
     ''' Make the acceleration profiles '''
     def split_into_axes(self):
-        #logging.debug("Split into axies")
         # Find the length of the acceleration segment       
         tm_start = (self.speeds-self.start_speeds)/self.accelerations
         self.max_speed_starts = self.start_speeds*tm_start + 0.5*self.accelerations*tm_start**2
@@ -271,7 +277,7 @@ class Path:
 
         # Find the point of switch  
         self.switch = (2*self.accelerations*self.abs_vec-np.square(self.start_speeds)+np.square(self.end_speeds))/(4*self.accelerations)
-
+        self.switch = np.clip(self.switch, np.zeros(Path.NUM_AXES), self.abs_vec)
 
     @staticmethod
     def axis_to_index(axis):

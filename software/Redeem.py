@@ -207,6 +207,7 @@ class Redeem:
 
         self.path_planner = PathPlanner(self.steppers, self.pru_firmware)
         self.path_planner.set_acceleration(float(self.config.get('Steppers', 'acceleration'))) 
+        self.path_planner.load_acceleration_tables()
 
         travel={}
         offset={}
