@@ -114,8 +114,8 @@ class Redeem:
         path = "/sys/bus/iio/devices/iio:device0/in_voltage"
 
         # init the 3 thermistors
-        self.therm_ext1 = Thermistor(path+"4_raw", "MOSFET Ext 1", self.config.get('Heaters', "ext1_temp_chart"))
-        self.therm_hbp  = Thermistor(path+"6_raw", "MOSFET HBP",   self.config.get('Heaters', "hbp_temp_chart"))
+        self.therm_ext1 = Thermistor(path+"6_raw", "MOSFET Ext 1", self.config.get('Heaters', "ext1_temp_chart"))
+        self.therm_hbp  = Thermistor(path+"4_raw", "MOSFET HBP",   self.config.get('Heaters', "hbp_temp_chart"))
         self.therm_ext2 = Thermistor(path+"5_raw", "MOSFET Ext 2", self.config.get('Heaters', "ext2_temp_chart"))
 
         path = self.config.get('Cold-ends', 'path', 0)
@@ -199,6 +199,14 @@ class Redeem:
         Path.home_speed[2] = float(self.config.get('Steppers', 'home_speed_z'))
         Path.home_speed[3] = float(self.config.get('Steppers', 'home_speed_e'))
         Path.home_speed[4] = float(self.config.get('Steppers', 'home_speed_h'))
+    
+        Path.steps_pr_meter[0] = self.steppers["X"].get_steps_pr_meter()
+        Path.steps_pr_meter[1] = self.steppers["Y"].get_steps_pr_meter()
+        Path.steps_pr_meter[2] = self.steppers["Z"].get_steps_pr_meter()
+        Path.steps_pr_meter[3] = self.steppers["E"].get_steps_pr_meter()
+        Path.steps_pr_meter[4] = self.steppers["H"].get_steps_pr_meter()
+        
+        logging.debug(Path.steps_pr_meter)
 
         dirname = os.path.dirname(os.path.realpath(__file__))
 
@@ -207,6 +215,8 @@ class Redeem:
 
         self.path_planner = PathPlanner(self.steppers, self.pru_firmware)
         self.path_planner.set_acceleration(float(self.config.get('Steppers', 'acceleration'))) 
+        self.path_planner.make_acceleration_tables()
+        self.path_planner.save_acceleration_tables()
         self.path_planner.load_acceleration_tables()
 
         travel={}
