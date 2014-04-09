@@ -44,11 +44,10 @@ class Path:
     
 
     """ The axes of evil, the feed rate in m/s and ABS or REL """
-    def __init__(self, axes, speed, movement,  acceleration=0.5, cancellable=False):
+    def __init__(self, axes, speed, acceleration=0.5, cancellable=False):
         self.axes               = axes
         self.speed              = speed
         self.acceleration       = acceleration
-        self.movement           = movement
         self.cancellable        = int(cancellable)
         self.start_speed        = 0.0
         self.end_speed          = 0.0
@@ -57,115 +56,6 @@ class Path:
         self.is_added           = False
         self.is_start_segment   = False
         self.is_end_segment     = False
-
-
-    """ Set the previous path element """
-
-    # TODO: Must calculate the speed for each of the axes individually. 
-    # Start speed must match end speed
-    # Find the controlling axis and use that for calculating the other axes. 
-    def set_prev(self, prev):
-        self.prev = prev
-        if prev != None:
-            self.start_pos = prev.end_pos
-            prev.next = self
-        else:
-            self.start_pos = np.zeros(Path.NUM_AXES, dtype=Path.DTYPE)
-        
-        if self.movement == Path.ABSOLUTE:
-            # Make the start, end and path vectors. 
-            self.end_pos = np.copy(self.start_pos)
-            for index, axis in enumerate(Path.AXES):
-                if axis in self.axes:
-                    self.end_pos[index] = self.axes[axis] 
-            self.vec = self.end_pos - self.start_pos    
-            # Convert to actual traveled distance by the steppers
-            self.vec = self.vector_to_stepper_translation(self.vec)
-            self.end_pos = self.start_pos + self.vec
-            self.abs_vec = np.abs(self.vec)
-            self.c_axis = self.find_controlling_axis(self.vec)
-            self.ratios = self.get_ratios()
-            self.speeds = self.speed*self.ratios
-
-            # Calculate the angle to prev
-            if prev:
-                self.angle_to_prev = self._angle_between(prev.vec, self.vec)
-                self.prev.angle_to_next = self.angle_to_prev  # Direction is not important (or is it...?)
-
-                if self.angle_to_prev > np.pi/2.0:
-                    # We have discovered a segment with too steep angle. The end speed of the 
-                    # Previous segments until a start sement is discovered must be updated. 
-                    self.is_start_segment    = True 
-                    self.start_speeds        = Path.min_speed*self.ratios
-
-                    # We now have a section with start speed and end speed of zero 
-                    # so a accelleration profile can be generated. 
-                    self.prev.is_end_segment = True
-                    self.prev.end_speeds     = Path.min_speed*self.prev.ratios
-                    if self.prev.movement != Path.G92:
-                        self.prev.calculate_deceleration()
-                else:
-                     # We have an angle that can be cornered at > 0 speed. 
-                    self.start_speeds     = self.prev.end_speeds
-            else:
-                # This is the first known segment in the print. 
-                self.is_start_segment   = True
-                self.start_speeds       = Path.min_speed*self.ratios
-
-            # Calculate the end speed based on the previous segment
-            self.start_speed = np.linalg.norm(self.start_speeds[:3])
-            self.accel_speed = Path.speed_from_distance(self.mag, self.acceleration, self.start_speed)
-
-            # Clip the end speed             
-            if self.accel_speed > self.speed:
-                self.end_speed = self.speed
-            else:
-                self.end_speed = self.accel_speed
-                
-            self.end_speeds = self.ratios*self.end_speed
-            
-            #self.max_speed_starts = Path.distance_from_acceleration(self.accelerations, self.start_speeds, self.end_speeds)
-            #self.max_speed_ends = Path.distance_from_acceleration(self.accelerations, self.start_speeds, self.end_speeds)
-            print "vec = "+str(self.vec[:2])
-            print "Start speeds = "+str(self.start_speeds[:2])
-            print "End speeds   = "+str(self.end_speeds[:2])
-
-        elif self.movement == Path.RELATIVE:
-            self.vec = np.zeros(Path.NUM_AXES, dtype=Path.DTYPE)
-            for index, axis in enumerate(Path.AXES):
-                if axis in self.axes:
-                    self.vec[index] = self.axes[axis] 
-            # Convert to actual traveled distance by the steppers
-            self.vec        = self.vector_to_stepper_translation(self.vec)
-            self.end_pos    = self.start_pos + self.vec
-            self.abs_vec    = np.abs(self.vec)
-            self.c_axis     = self.find_controlling_axis(self.vec)
-            self.ratios     = self.get_ratios()
-            self.speeds     = self.speed*self.ratios
-
-            # Start and stop speeds are set to zero 
-            self.is_start_segment   = True
-            self.is_end_segment     = True
-            self.start_speeds       = Path.min_speed*self.ratios
-            self.end_speeds         = Path.min_speed*self.ratios
-            self.accelerations      = Path.acceleration_from_distance(self.abs_vec, self.start_speeds, self.end_speeds)
-        
-        elif self.movement == Path.G92:
-            logging.debug("G92")
-            self.end_pos = np.copy(self.start_pos)
-            for index, axis in enumerate(Path.AXES):
-                if axis in self.axes:
-                    self.end_pos[index] = self.axes[axis]
-            self.vec = np.zeros(Path.NUM_AXES)
-            self.is_end_segment     = True
-            self.is_start_segment   = True
-            
-
-    ''' This path segment is the last in the print or whatever '''
-    def finalize(self):
-        self.is_end_segment = True
-        self.end_speeds = np.zeros(Path.NUM_AXES)
-        self.calculate_deceleration()
 
     ''' Transform vector to whatever coordinate system is used '''
     def transform_vector(self, vec):
@@ -207,38 +97,6 @@ class Path:
     ''' The feed rate is set to the lowest axis in the set '''
     def set_homing_feedrate(self):
         self.speeds = np.minimum(self.speeds, self.home_speed[np.argmax(vec)])
-
-    ''' Recursively recalculate the decelleration profile '''
-    def calculate_deceleration(self):
-        if self.next:
-            self.end_speed = self.next.start_speed
-            self.end_speeds = self.next.start_speeds
-        
-        self.decel_speed = Path.speed_from_distance(self.mag, self.acceleration, self.end_speed)
-            
-        # If the start speed is too high, adjust it
-        if self.decel_speed < self.start_speed:
-            self.start_speed = self.decel_speed
-        
-        self.start_speeds = self.start_speed*self.ratios   
-
-        # Calculate the acceleration constants              
-        self.accelerations = np.abs(Path.acceleration_from_distance(self.abs_vec, self.start_speeds, self.end_speeds))
-
-        if not self.is_start_segment:
-            self.prev.calculate_deceleration()
-        
-    @staticmethod
-    def speed_from_distance(s, a, V0):
-        return np.sqrt(np.square(V0)+2.0*a*s)
-    
-    @staticmethod
-    def acceleration_from_distance(s, V0, V1):
-        return (np.square(V1)-np.square(V0))/(2.0*s)
-
-    @staticmethod
-    def distance_from_acceleration(a, V0, V1):
-         return (np.square(V1)-np.square(V0))/(2.0*a)
 
     """ Get the length of the XYZ dimentison this path segment """
     def get_magnitude(self):   
@@ -284,28 +142,257 @@ class Path:
                 return np.pi
         return angle
 
-    ''' Make the acceleration profiles '''
-    def split_into_axes(self):
-        # Find the length of the acceleration segment       
-        #tm_start = (self.speeds-self.start_speeds)/self.accelerations
-        #self.max_speed_starts = self.start_speeds*tm_start + 0.5*self.accelerations*tm_start**2
-        
-        # Calculate the time for when max speed is met. 
-        #tm_end   = (self.speeds-self.start_speeds)/self.accelerations
-        #self.max_speed_ends = self.end_speeds*tm_end + 0.5*self.accelerations*tm_end**2
-
-        # Find the point of switch  
-        self.switch = (2*self.accelerations*self.abs_vec-np.square(self.start_speeds)+np.square(self.end_speeds))/(4*self.accelerations)
-        self.switch = np.clip(self.switch, np.zeros(Path.NUM_AXES), self.abs_vec)
-
     @staticmethod
     def axis_to_index(axis):
         return Path.AXES.index(axis)
+
+    @staticmethod
+    def speed_from_distance(s, a, V0):
+        return np.sqrt(np.square(V0)+2.0*a*s)
+    
+    @staticmethod
+    def acceleration_from_distance(s, V0, V1):
+        return (np.square(V1)-np.square(V0))/(2.0*s)
+
+    @staticmethod
+    def distance_from_acceleration(a, V0, V1):
+         return (np.square(V1)-np.square(V0))/(2.0*a)
+    
+    @staticmethod
+    def distance_from_speed(a, V0, V1):
+         return (np.square(V1)-np.square(V0))/(2.0*a)
 
     ''' The vector representation of this path segment '''
     def __str__(self):
         return "Vec. "+str(self.vec)
 
+
+''' A path segment with absolute movement '''
+class AbsolutePath(Path):
+
+    def __init__(self, axes, speed, acceleration, cancellable=False):
+        Path.__init__(self, axes, speed, acceleration, cancellable)
+        self.movement = Path.ABSOLUTE
+
+    ''' Set the previous path element '''
+    # TODO: Must calculate the speed for each of the axes individually. 
+    # Start speed must match end speed
+    # Find the controlling axis and use that for calculating the other axes. 
+    def set_prev(self, prev):
+        self.prev = prev
+        if prev != None:
+            self.start_pos = prev.end_pos
+            prev.next = self
+        else:
+            self.start_pos = np.zeros(Path.NUM_AXES, dtype=Path.DTYPE)
+              
+        # Make the start, end and path vectors. 
+        self.end_pos = np.copy(self.start_pos)
+        for index, axis in enumerate(Path.AXES):
+            if axis in self.axes:
+                self.end_pos[index] = self.axes[axis] 
+        self.vec = self.end_pos - self.start_pos    
+        # Convert to actual traveled distance by the steppers
+        self.vec = self.vector_to_stepper_translation(self.vec)
+        self.end_pos = self.start_pos + self.vec
+        self.abs_vec = np.abs(self.vec)
+        self.c_axis = self.find_controlling_axis(self.vec)
+        self.ratios = self.get_ratios()
+        self.speeds = self.speed*self.ratios
+
+        # Calculate the angle to prev
+        if prev:
+            self.angle_to_prev = self._angle_between(prev.vec, self.vec)
+            self.prev.angle_to_next = self.angle_to_prev  # Direction is not important (or is it...?)
+
+            if self.angle_to_prev > np.pi/2.0:
+                # We have discovered a segment with too steep angle. The end speed of the 
+                # Previous segments until a start sement is discovered must be updated. 
+                self.is_start_segment    = True 
+                self.start_speeds        = Path.min_speed*self.ratios
+
+                # We now have a section with start speed and end speed of zero 
+                # so a accelleration profile can be generated. 
+                self.prev.is_end_segment = True
+                self.prev.end_speeds     = Path.min_speed*self.prev.ratios
+                self.prev.calculate_deceleration()
+            else:
+                 # We have an angle that can be cornered at > 0 speed. 
+                self.start_speeds     = self.prev.end_speeds
+        else:
+            # This is the first known segment in the print. 
+            self.is_start_segment   = True
+            self.start_speeds       = Path.min_speed*self.ratios
+
+        # Calculate the end speed based on the previous segment
+        self.start_speed = np.linalg.norm(self.start_speeds[:3])
+        self.accel_speed = Path.speed_from_distance(self.mag, self.acceleration, self.start_speed)
+
+        # Clip the end speed             
+        if self.accel_speed > self.speed:
+            self.end_speed = self.speed
+        else:
+            self.end_speed = self.accel_speed
+            
+        self.end_speeds = self.ratios*self.end_speed
+        #self.max_speed_ends = Path.distance_from_acceleration(self.accelerations, self.start_speeds, self.end_speeds)
+        #print "vec = "+str(self.vec[:2])
+        #print "Start speeds = "+str(self.start_speeds[:2])
+        #print "End speeds   = "+str(self.end_speeds[:2])        
+
+    ''' This path segment is the last in the print or whatever '''
+    def finalize(self):
+        print "Finalize"
+        self.is_end_segment = True
+        self.end_speeds = Path.min_speed*self.ratios
+        self.end_speed = np.linalg.norm(self.end_speeds[:3])
+        self.calculate_deceleration()
+
+    ''' Recursively recalculate the decelleration profile '''
+    def calculate_deceleration(self):
+        if self.next:
+            #print "setting endspeed to next"
+            self.end_speed = self.next.start_speed
+            self.end_speeds = self.next.start_speeds
+        
+        self.decel_speed = Path.speed_from_distance(self.mag, self.acceleration, self.end_speed)
+            
+        #print "making vec "+str(self.vec)
+        # If the start speed is too high, adjust it
+        if self.decel_speed < self.start_speed:
+            print "Pure decel"
+            self.profile        = "pure-decel"
+            self.start_speed     = self.decel_speed
+            self.start_speeds   = self.start_speed*self.ratios
+            self.max_speeds     = np.maximum(self.start_speeds, self.end_speeds)
+            acc = Path.acceleration_from_distance(self.abs_vec, self.end_speeds, self.start_speeds)
+            #print "acc = "+str(acc)
+            self.decelerations  = np.where(acc > 0, acc, 0)
+            self.accelerations  = np.where(acc < 0, acc, 0)
+            #print "Decel = "+str(self.decelerations)
+            #print "Accel = "+str(self.accelerations)
+        elif abs(self.end_speed-self.accel_speed) < 0.00001:                 
+            print "Pure accel"
+            self.profile        = "pure-accel"
+            self.start_speeds   = self.start_speed*self.ratios
+            self.max_speeds     = np.maximum(self.start_speeds, self.end_speeds)
+            #print self.abs_vec
+            #print self.start_speeds
+            #print self.end_speeds
+            acc = Path.acceleration_from_distance(self.abs_vec, self.start_speeds, self.end_speeds)
+            self.decelerations  = np.where(acc < 0, acc, 0)
+            self.accelerations  = np.where(acc > 0, acc, 0)
+            #print "Decel = "+str(self.decelerations)
+            #print "Accel = "+str(self.accelerations)
+            #self.accelerations  = Path.acceleration_from_distance(self.abs_vec, self.start_speeds, self.end_speeds)
+            #self.decelerations  = np.zeros(Path.NUM_AXES)
+        else:
+            # If we accelerate to a certain point, then decellerate, fint out where. 
+            switch = (2*self.acceleration*self.mag-np.square(self.start_speed)+np.square(self.end_speed))/(4*self.acceleration)
+            #switch = min(max(0, switch), self.mag)
+            print "switch = "+str(switch)+" of "+str(self.mag)
+            max_speed = Path.speed_from_distance(switch, self.acceleration, self.start_speed)
+            if max_speed < self.speed:
+                # We accelerate to a certain point, then decellerate, never hitting the speed limit
+                print "accel-decel"
+                self.profile        = "accel-decel"
+                self.max_speeds     = max_speed*self.ratios
+                # Find out where the switch occurs 
+                max_dists           = self.ratios*Path.distance_from_speed(self.acceleration, self.start_speeds, self.max_speeds)            
+                self.accelerations  = Path.acceleration_from_distance(max_dists, self.start_speeds, self.max_speeds)                
+                self.decelerations  = Path.acceleration_from_distance(self.abs_vec-max_dists, self.end_speeds, self.max_speeds)
+                #print self.decelerations
+            else:
+                # We hit the speed limit.
+                print "cruise"
+                self.profile = "cruise"
+                # Find out where max speed is hit
+                max_dists           = self.ratios*Path.distance_from_speed(self.acceleration, self.start_speed, self.speed)            
+                self.max_speeds     = self.speeds                
+                if (max_dists == 0).all():
+                    self.accelerations = np.zeros(5)
+                else:
+                    self.accelerations  = Path.acceleration_from_distance(max_dists, self.start_speeds, self.max_speeds)
+                # Find out where decelleration starts
+                print "End speed = "+str(self.end_speed)
+                end_dists           = self.ratios*Path.distance_from_speed(self.acceleration, self.end_speed, self.speed)                            
+                print "end dists = "+str(end_dists)
+                if (end_dists == 0).all():
+                    self.decelerations = np.zeros(5)
+                else:
+                    self.decelerations  = Path.acceleration_from_distance(end_dists, self.end_speeds, self.max_speeds)
+                
+        if not self.is_start_segment:
+            self.prev.calculate_deceleration()
+
+''' A path segment with Relative movement '''
+class RelativePath(Path):
+
+    def __init__(self, axes, speed, acceleration=0.5, cancellable=False):
+        Path.__init__(self, axes, speed, acceleration, cancellable)
+        self.movement = Path.RELATIVE
+
+    ''' Link to previous segment '''
+    def set_prev(self, prev):
+        self.prev = prev
+        if prev != None:
+            self.start_pos = prev.end_pos
+            prev.next = self
+        else:
+            self.start_pos = np.zeros(Path.NUM_AXES, dtype=Path.DTYPE)
+               
+        # Generate the vector 
+        self.vec = np.zeros(Path.NUM_AXES, dtype=Path.DTYPE)
+        for index, axis in enumerate(Path.AXES):
+            if axis in self.axes:
+                self.vec[index] = self.axes[axis] 
+        # Convert to actual traveled distance by the steppers
+        self.vec        = self.vector_to_stepper_translation(self.vec)
+        self.end_pos    = self.start_pos + self.vec
+        self.abs_vec    = np.abs(self.vec)
+        self.c_axis     = self.find_controlling_axis(self.vec)
+        self.ratios     = self.get_ratios()
+        self.speeds     = self.speed*self.ratios
+        # Since speed, v_start and v_end are all in proportion to the segment length, a is also
+        self.accelerations = self.acceleration*self.ratios
+
+        # Start and stop speeds are set to min
+        self.is_start_segment   = True
+        self.is_end_segment     = True
+        self.start_speeds       = Path.min_speed*self.ratios
+        self.end_speeds         = Path.min_speed*self.ratios
+        self.start_speed        = np.linalg.norm(self.start_speeds[:3])
+        # Calculate the speed reached half way
+        self.accel_speed        = Path.speed_from_distance(self.mag/2, self.acceleration, self.start_speed)
+        self.max_speed          = min(self.accel_speed, self.speed) 
+        self.max_speeds         = self.max_speed*self.ratios
+
+        self.profile = "relative"
+
+
+''' A reset axes path segment. No movement occurs, only global position setting '''
+class G92Path(Path):
+    
+    def __init__(self, axes, speed, acceleration=0.5, cancellable=False):
+        Path.__init__(self, axes, speed, acceleration, cancellable)
+        self.movement = Path.G92
+
+    ''' Set the previous segment '''
+    def set_prev(self, prev):
+        self.prev = prev
+        if prev != None:
+            self.start_pos = prev.end_pos
+            prev.next = self
+        else:
+            self.start_pos = np.zeros(Path.NUM_AXES, dtype=Path.DTYPE)
+
+        self.end_pos = np.copy(self.start_pos)
+        for index, axis in enumerate(Path.AXES):
+            if axis in self.axes:
+                self.end_pos[index] = self.axes[axis]
+        self.vec = np.zeros(Path.NUM_AXES)
+        self.is_end_segment     = True
+        self.is_start_segment   = True
 
 if __name__ == '__main__':
     global_pos = np.array([0, 0, 0, 0, 0])

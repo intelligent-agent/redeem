@@ -6,7 +6,7 @@ lib_path = os.path.abspath('../software')
 sys.path.append(lib_path)
 
 from PathPlanner import PathPlanner
-from Path import Path
+from Path import Path, AbsolutePath, RelativePath
 from Stepper import Stepper
 
 print "Making steppers"
@@ -18,6 +18,7 @@ steppers["E"] = Stepper("GPIO1_28", "GPIO1_15", "GPIO2_1",  3, "Ext1",None,3,3)
 steppers["H"] = Stepper("GPIO1_13", "GPIO1_14", "GPIO2_3",  4, "Ext2",None,4,4)
 
 path_planner = PathPlanner(steppers, None)
+path_planner.make_acceleration_tables()
 
 radius = 1.0
 speed = 0.3
@@ -28,12 +29,14 @@ t = np.arange(0, 3*np.pi/2+(np.pi/10), np.pi/10)
 rand_x = rand*np.random.uniform(-1, 1, size=len(t))
 rand_y = rand*np.random.uniform(-1, 1, size=len(t))
 
-for i in t:
-    path_planner.add_path(Path({"X": radius*np.sin(i)+rand_x[i], "Y": radius*np.cos(i)+rand_y[i]}, speed, Path.ABSOLUTE, acceleration))
-path_planner.add_path(Path({"X": 0.0, "Y": 0.0}, speed, Path.ABSOLUTE))
-path_planner.add_path(Path({"X": -1.0, "Y": -1.0}, speed, Path.RELATIVE))
-path_planner.add_path(Path({"X": 1.0, "Y": 1.0}, speed, Path.RELATIVE))
+#t = np.arange(-np.pi/4, np.pi/4, 0.1)
+#for i in t:
+#    path_planner.add_path(AbsolutePath({"X": radius*np.sin(i)+rand_x[i], "Y": radius*np.cos(i)+rand_y[i]}, speed, acceleration))
+    #path_planner.add_path(Path({"X": radius*(16*np.power(np.sin(i), 3)), "Y": radius*(13*np.cos(i)-5*np.cos(2*i)-2*np.cos(3*i)-np.cos(4*i))}, speed, Path.ABSOLUTE, acceleration))
+    
+path_planner.add_path(AbsolutePath({"X": 1.0, "Y": 0.3333}, speed, acceleration))
 path_planner.finalize_paths()
+#path_planner.add_path(RelativePath({"X": -radius, "Y": -radius}, speed, acceleration))
 
 
 #fig = plt.figure(figsize=(14, 9))
@@ -55,6 +58,7 @@ mag_x = 0
 mag_y = 0  
 
 for path in list(path_planner.paths.queue):
+    print "arrow"
     ax0.arrow(path.start_pos[0], path.start_pos[1], path.vec[0], path.vec[1], 
         head_width=0.05, head_length=0.1, fc='k', ec='k',  length_includes_head=True)
     magnitudes.append(path.get_magnitude())
@@ -130,20 +134,4 @@ plt.xlim([-30, 30])
 plt.title('How my 3D-printer feels')
 
 plt.show()
-
-
-
-
-'''
-# Plot the decelleration
-if path.u_ends[0] == 0:
-    Vo = np.sqrt(2.0*path.As[0]*vec_x)
-    plt.plot(mag_x+s_x, np.sqrt(np.square(Vo)-2.0*path.As[0]*s_x), 'r')
-elif np.square(path.u_ends[0]) > 2.0*path.As[0]*vec_x:        
-    Vo = path.u_ends[0]
-    diff = np.sqrt(np.square(Vo))-np.sqrt(np.square(Vo)-2.0*path.As[0]*vec_x)
-    plt.plot(mag_x+s_x, diff+np.sqrt(np.square(Vo)-2.0*path.As[0]*s_x), 'r')
-else:
-    print ""
-'''
 
