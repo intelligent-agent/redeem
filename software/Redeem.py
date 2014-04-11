@@ -37,7 +37,7 @@ from Gcode import Gcode
 import sys
 from Extruder import Extruder, HBP
 from Pru import Pru
-from Path import Path
+from Path import Path, RelativePath, AbsolutePath, G92Path
 from PathPlanner import PathPlanner
 from ColdEnd import ColdEnd
 from PruFirmware import PruFirmware
@@ -215,8 +215,8 @@ class Redeem:
 
         self.path_planner = PathPlanner(self.steppers, self.pru_firmware)
         self.path_planner.set_acceleration(float(self.config.get('Steppers', 'acceleration'))) 
-        self.path_planner.make_acceleration_tables()
-        self.path_planner.save_acceleration_tables()
+        #self.path_planner.make_acceleration_tables()
+        #self.path_planner.save_acceleration_tables()
         self.path_planner.load_acceleration_tables()
 
         travel={}
@@ -274,7 +274,10 @@ class Redeem:
             if g.has_letter("E") and self.current_tool != "E":       # We are using a different tool, switch..
                 smds[self.current_tool] = smds["E"]
                 del smds["E"]
-            path = Path(smds, self.feed_rate, self.movement, self.path_planner.acceleration)
+            if self.movement == Path.ABSOLUTE:
+                path = AbsolutePath(smds, self.feed_rate, self.path_planner.acceleration)
+            elif self.movement == Path.RELATIVE:
+                path = RelativePath(smds, self.feed_rate, self.path_planner.acceleration)
             self.path_planner.add_path(path)                        # Add the path. This blocks until the path planner has capacity
         elif g.code() == "G21":                                      # Set units to mm
             self.factor = 1.0
@@ -304,7 +307,7 @@ class Redeem:
                 logging.debug("Adding H to G92")
                 pos["H"] = pos["E"];
                 del pos["E"]
-            path = Path(pos, self.feed_rate, Path.G92)                     # Make a path segment from the axes
+            path = G92Path(pos, self.feed_rate)                     # Make a path segment from the axes
             self.path_planner.add_path(path)  
         elif g.code() == "M17":                                         # Enable all steppers
             self.path_planner.wait_until_done()
