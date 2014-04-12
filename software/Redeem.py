@@ -133,8 +133,8 @@ class Redeem:
         # Init the 3 heaters. Argument is channel number
         if self.revision == "A3":
           mosfet_ext1 = Mosfet(3)
-          mosfet_ext2 = Mosfet(5)
-          mosfet_hbp  = Mosfet(4)
+          mosfet_ext2 = Mosfet(4)
+          mosfet_hbp  = Mosfet(5)
         else:
           mosfet_ext1 = Mosfet(5)
           mosfet_ext2 = Mosfet(3)
@@ -164,9 +164,9 @@ class Redeem:
         # Init the three fans. Argument is PWM channel number
         self.printer.fans=[]
         if self.revision == "A3":
-            self.printer.fans.append(Fan(0))
             self.printer.fans.append(Fan(1))
             self.printer.fans.append(Fan(2))
+            self.printer.fans.append(Fan(0))
         else:
             self.printer.fans.append(Fan(8))
             self.printer.fans.append(Fan(9))
