@@ -47,8 +47,6 @@ logging.basicConfig(level=logging.DEBUG,
                     format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
                     datefmt='%m-%d %H:%M')
 
-print "Redeem v. "+version
-
 class Redeem:
     ''' Init '''
     def __init__(self):
@@ -214,7 +212,7 @@ class Redeem:
         self.pru_firmware = PruFirmware(dirname+"/../firmware/firmware_runtime.p",dirname+"/../firmware/firmware_runtime.bin",dirname+"/../firmware/firmware_endstops.p",dirname+"/../firmware/firmware_endstops.bin",self.revision,self.config,"/usr/bin/pasm")
 
         self.path_planner = PathPlanner(self.steppers, self.pru_firmware)
-        self.path_planner.set_acceleration(float(self.config.get('Steppers', 'acceleration'))) 
+        self.path_planner.acceleration = float(self.config.get('Steppers', 'acceleration'))
         #self.path_planner.make_acceleration_tables()
         #self.path_planner.save_acceleration_tables()
         self.path_planner.load_acceleration_tables()
@@ -225,18 +223,17 @@ class Redeem:
             travel[axis] = self.config.getfloat('Geometry', 'travel_'+axis.lower())
             offset[axis] = self.config.getfloat('Geometry', 'offset_'+axis.lower())
 
-        self.path_planner.set_travel_length(travel)
-        self.path_planner.set_center_offset(offset)
+        self.path_planner.travel_length = travel
+        self.path_planner.center_offset = offset
 
         # After the firmwares are loaded, the endstop states can be updated.
-        for k, endstop in self.end_stops.iteritems():
-            logging.debug("Endstop "+endstop.name+" hit? : "+ str(endstop.read_value()))
+        #for k, endstop in self.end_stops.iteritems():
+        #    logging.debug("Endstop "+endstop.name+" hit? : "+ str(endstop.read_value()))
 
         self.running = True
 
         # Signal everything ready
         logging.info("Redeem ready")
-        print "Redeem ready" 
 	
     ''' When a new gcode comes in, excute it '''
     def loop(self):

@@ -36,35 +36,23 @@ class PathPlanner:
     def __init__(self, steppers, pru_firmware):
         self.steppers    = steppers
         if pru_firmware:
-            self.pru         = Pru(pru_firmware)                 # Make the PRU
-        self.paths       = Queue.Queue(100000)                      # Make a queue of paths
-        self.cpaths      = Queue.Queue()
-        self.current_pos = {"X":0.0, "Y":0.0, "Z":0.0, "E":0.0,"H":0.0}
-        self.running     = True                                 # Yes, we are running
-        self.pru_data    = []
-        self.t           = Thread(target=self._do_work)         # Make the thread
-        self.t.daemon    = True
-        self.travel_length = {"X":0.0, "Y":0.0, "Z":0.0}
-        self.center_offset = {"X":0.0, "Y":0.0, "Z":0.0}
-        self.prev          = None
+            self.pru        = Pru(pru_firmware)                 # Make the PRU
+        self.paths          = Queue.Queue(100000)                      # Make a queue of paths
+        self.cpaths         = Queue.Queue()
+        self.current_pos    = {"X":0.0, "Y":0.0, "Z":0.0, "E":0.0,"H":0.0}
+        self.running        = True                                 # Yes, we are running
+        self.pru_data       = []
+        self.t              = Thread(target=self._do_work)         # Make the thread
+        self.t.daemon       = True
+        self.travel_length  = {"X":0.0, "Y":0.0, "Z":0.0}
+        self.center_offset  = {"X":0.0, "Y":0.0, "Z":0.0}
+        self.acceleration   = 0.1
+        self.prev           =  G92Path({"X":0.0, "Y":0.0, "Z":0.0, "E":0.0,"H":0.0}, 0)
+        self.prev.set_prev(None)
         self.segments       = []
 
         if __name__ != '__main__':
             self.t.start()		 
-
-    ''' Set travel length (printer size) for all axis '''  
-    def set_travel_length(self, travel):
-        self.travel_length = travel
-
-    ''' Set offset of printer center for all axis '''  
-    def set_center_offset(self, offset):
-        self.center_offset = offset
-
-    ''' Set the acceleration used '''                           # Fix me, move this to path
-    def set_acceleration(self, acceleration):
-        self.acceleration = acceleration
-        meters_pr_steps = np.ones(Path.NUM_AXES)
-        distances = np.cumsum([meters_pr_steps]*10000)
 
     ''' Get the current pos as a dict '''
     def get_current_pos(self):
@@ -77,11 +65,6 @@ class PathPlanner:
 
         return pos2
             
-
-    @staticmethod
-    def velocity_by_distance(V0, a, s):
-        return np.square(np.square(V0)+2.0*a*s)
-
     ''' Home the given axis using endstops (min) '''
     def home(self,axis):
         if axis=="E" or axis=="H":
@@ -90,15 +73,15 @@ class PathPlanner:
         logging.debug("homing "+axis)
         speed = Path.home_speed[Path.axis_to_index(axis)]
         # Move until endstop is hit
-        p = Path({axis:-self.travel_length[axis]}, speed, Path.RELATIVE)
+        p = RelativePath({axis:-self.travel_length[axis]}, speed)
         self.add_path(p)
 
         # Reset position to offset
-        path = Path({axis:-self.center_offset[axis]}, speed, Path.G92)
-        self.add_path(path)  
+        p = G92Path({axis:-self.center_offset[axis]}, speed)
+        self.add_path(p)
         
         # Move to offset
-        p = Path({axis:0}, speed, Path.ABSOLUTE)
+        p = AbsolutePath({axis:0}, speed)
         self.add_path(p)
         self.finalize_paths()
         self.wait_until_done()
@@ -106,10 +89,12 @@ class PathPlanner:
 
     ''' Add a path segment to the path planner '''        
     def add_path(self, new):   
+        if not self.prev:
+            logging.error("Prev is none")
         # Link to the previous segment in the chain
         new.set_prev(self.prev)
 
-        if self.prev and not self.prev.is_added:
+        if not self.prev.is_added:
             self.segments.append(self.prev)
             self.prev.is_added = True
             # If we find an end segment, add all path segments to the queue for execution           
@@ -127,19 +112,13 @@ class PathPlanner:
 
     ''' Add the last path to the queue for processing '''
     def finalize_paths(self):
-        if self.prev and self.prev.movement == Path.ABSOLUTE:
+        logging.debug("Finalize_paths")
+        if self.prev.movement == Path.ABSOLUTE:
             self.prev.finalize()
             self.segments.append(self.prev)
+            self.prev.is_added = True
             [self.paths.put(path) for path in self.segments]
-    
-    ''' Adjust the steepness of the speed in this segment '''
-    def adjust_acceleration(self, mat, idx, axis):
-        path = segment[idx]
-        speed_diff = path.end_speed[axis]-path.start_speed[axis]
-        dist = path.abs_vec[axis]
-        v0 = path.start_speed[axis]
-        max_speed = np.sqrt(np.square(v0)+2.0*path.acceleration[axis]*dist)
-
+            self.segments = []
     
     ''' Return the number of paths currently on queue '''
     def nr_of_paths(self):
@@ -355,12 +334,16 @@ if __name__ == '__main__':
     import cProfile
     import numpy as np
 
+    import sys
+
     logging.basicConfig(level=logging.DEBUG, 
                     format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
                     datefmt='%m-%d %H:%M')
 
 
     from Stepper import Stepper
+    from Gcode import Gcode
+
 
     Path.steps_pr_meter = np.array([24000, 24000, 64000, 20000, 20000])
         
@@ -390,9 +373,9 @@ if __name__ == '__main__':
     #Path.axis_config = Path.AXIS_CONFIG_H_BELT
 
 
-    radius = 0.1
+    radius = 0.01
     speed = 0.09
-    acceleration = 0.1
+    acceleration = 0.01
     rand = 0.0
     plotfac = 1.5
 
@@ -400,16 +383,34 @@ if __name__ == '__main__':
     t = np.arange(-np.pi/4, np.pi/4+ds, ds)
     rand_x = rand*np.random.uniform(-1, 1, size=len(t))
     rand_y = rand*np.random.uniform(-1, 1, size=len(t))
-    for i in t:
-        path_planner.add_path(AbsolutePath({"X": radius*np.sin(i)+rand_x[i], "Y": radius*np.cos(i)+rand_y[i]}, speed, acceleration))
-        #path_planner.add_path(Path({"X": radius*(16*np.power(np.sin(i), 3)), "Y": radius*(13*np.cos(i)-5*np.cos(2*i)-2*np.cos(3*i)-np.cos(4*i))}, speed, Path.ABSOLUTE, acceleration))
-        
-    #path_planner.add_path(AbsolutePath({"X": -0.1, "Y": 0.1}, speed, acceleration))
-    #path_planner.add_path(AbsolutePath({"X": 0.0, "Y": 0.2}, speed, acceleration))
-    #path_planner.add_path(AbsolutePath({"X": 0.1, "Y": 0.1}, speed, acceleration))
-    #path_planner.add_path(AbsolutePath({"X": 0.0, "Y": 0.0}, speed, acceleration))
-    path_planner.finalize_paths()
-    #path_planner.add_path(RelativePath({"X": -radius, "Y": -radius}, speed, acceleration))
+    if len(sys.argv) > 1:
+        with open(sys.argv[1]) as infile:         
+            for line in infile:
+                g = Gcode({"message": line, "prot": None})
+                if g.code() == "G1":
+                    if g.has_letter("F"):                                    # Get the feed rate                 
+                        speed = float(g.get_value_by_letter("F"))/60000.0 # Convert from mm/min to SI unit m/s
+                        g.remove_token_by_letter("F")
+                    smds = {}
+                    for i in range(g.num_tokens()):                          
+                        axis = g.token_letter(i)                             
+                        smds[axis] = float(g.token_value(i))/1000.0          # Get the value, new position or vector   
+                    path_planner.add_path(AbsolutePath(smds, speed, acceleration))
+        path_planner.finalize_paths()
+    else:
+        for idx, i in enumerate(t):
+            path_planner.add_path(AbsolutePath(
+                {"X": radius*np.sin(i)+rand_x[i], "Y": radius*np.cos(i)+rand_y[i], 
+                 "E": 0.01*(idx+1)
+                }, speed, acceleration))
+            #path_planner.add_path(Path({"X": radius*(16*np.power(np.sin(i), 3)), "Y": radius*(13*np.cos(i)-5*np.cos(2*i)-2*np.cos(3*i)-np.cos(4*i))}, speed, Path.ABSOLUTE, acceleration))
+            
+        #path_planner.add_path(AbsolutePath({"X": -0.1, "Y": 0.1}, speed, acceleration))
+        #path_planner.add_path(AbsolutePath({"X": 0.0, "Y": 0.2}, speed, acceleration))
+        #path_planner.add_path(AbsolutePath({"X": 0.1, "Y": 0.1}, speed, acceleration))
+        #path_planner.add_path(AbsolutePath({"X": 0.0, "Y": 0.0}, speed, acceleration))
+        path_planner.finalize_paths()
+        #path_planner.add_path(RelativePath({"X": -radius, "Y": -radius}, speed, acceleration))
 
 
     try:
@@ -426,64 +427,82 @@ if __name__ == '__main__':
     print "Trajectory done"
     speeds_x = []
     speeds_y = []
+    speeds_e = []
     speeds = []
     magnitudes = []
 
     for path in list(path_planner.paths.queue):
         if not path.movement == Path.G92:
-            ax0.arrow(path.start_pos[0], path.start_pos[1], path.vec[0], path.vec[1], 
-                head_width=0.005, head_length=0.01, fc='k', ec='k',  length_includes_head=True)
+            if (path.vec[:3] != 0).any():
+                ax0.arrow(path.start_pos[0], path.start_pos[1], path.vec[0], path.vec[1], 
+                    width=0.00001, head_width=0.0005, head_length=0.001, fc='k', ec='k',  length_includes_head=True)
             magnitudes.append(path.get_magnitude())
             speeds_x.append(path.start_speeds[0])
             speeds_y.append(path.start_speeds[1])
             speeds.append(np.linalg.norm(path.start_speeds[0:2]))
+            speeds_e.append(path.start_speeds[3])
 
     positions = np.insert(np.cumsum(magnitudes), 0, 0)
     speeds_x = np.append(speeds_x, path.end_speeds[0])
     speeds_y = np.append(speeds_y, path.end_speeds[1])
     speeds = np.append(speeds, np.linalg.norm(path.end_speeds[0:2]))
+    speeds_e = np.append(speeds_e, path.end_speeds[3])
 
     ax1 = plt.subplot(2, 3, 5)
     plt.plot(positions, speeds_x, "r")
     plt.plot(positions, speeds_y, "b")
     plt.plot(positions, speeds, "g")
+    plt.plot(positions, speeds_e, "y")
     plt.ylim([0, np.max(speeds)*1.5])
-    plt.xlim([0, positions[-1]])
+    plt.xlim([0, positions[-1]*1.1])
     plt.title('Velocity')
 
     # Acceleration
     ax2 = plt.subplot(2, 3, 6)
     delays = np.array([])
     delays2 = np.array([])
+    delays3 = np.array([])
     mag = 0
     mag_x = 0
     mag_y = 0  
+    mag_e = 0  
     for idx, path in enumerate(list(path_planner.paths.queue)):
         path_planner.do_work()
         if not path.movement == Path.G92:
-            plt.arrow(mag_x, speed+path.start_speeds[0], path.abs_vec[0], path.end_speeds[0]-path.start_speeds[0], fc='r', ec='r', width=0.00001)
+            plt.arrow(mag_x, path.start_speeds[0], path.abs_vec[0], path.end_speeds[0]-path.start_speeds[0], fc='r', ec='r', width=0.00001)
             plt.arrow(mag_y, path.start_speeds[1], path.abs_vec[1], path.end_speeds[1]-path.start_speeds[1], fc='b', ec='b', width=0.00001)
+            plt.arrow(mag_e, path.start_speeds[3], path.abs_vec[3], path.end_speeds[3]-path.start_speeds[3], fc='y', ec='y', width=0.00001)
             
             # Plot the acceleration profile and deceleration profile
             vec_x = abs(path.vec[0])
             mag += abs(path.get_magnitude())
             mag_x += path.abs_vec[0]
             mag_y += abs(path.vec[1])
-            delays = np.append(delays, path.delays[0])
-            if idx > 0:
+            mag_e += abs(path.vec[3])
+            if hasattr(path, 'delays'):
+                delays = np.append(delays, path.delays[0])
                 delays2 = np.append(delays2, path.delays[1])
+                delays3 = np.append(delays3, path.delays[3])
 
 
     plt.xlim([0, max(mag_x, mag_y)])
-    plt.ylim([0, 2*speed])
+    plt.ylim([0, speed])
     plt.title('Also velocity')
 
     # Plot the delays 
     ax2 = plt.subplot(2, 1, 1)
     plt.plot(delays, 'r')
     plt.plot(delays2, 'b')
-    plt.ylim([0, 0.1])
+    plt.plot(delays3, 'y')
+    #plt.ylim([0, 0.1])
     plt.title('Delays')
+
+    print "total distance X = "+str(mag_x)
+    print "total distance Y = "+str(mag_y)
+    print "total distance E = "+str(mag_e)
+    print "total time X = "+str(np.sum(delays))
+    print "total time Y = "+str(np.sum(delays2))
+    print "total time E = "+str(np.sum(delays3))
 
     plt.show()
     exit(0)

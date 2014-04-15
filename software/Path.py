@@ -112,6 +112,7 @@ class Path:
             return 1.0
         return hyp
 
+    ''' Get the ratios of the '''
     def get_ratios(self):
         self.hyp     = self.get_hyp()
                         
@@ -127,13 +128,23 @@ class Path:
         self.next = None
         self.prev = None
 
-    def unit_vector(self, vector):
-        return vector / np.linalg.norm(vector)
+
+
+    ''' G92 and Relative does not need to calculate decelleration '''
+    def calculate_deceleration(self):
+        logging.debug("Skipping decel-calc on G92 or Relative")
+        pass
+
+    @staticmethod
+    def unit_vector(vector):
+        norm = np.linalg.norm(vector)
+        return vector / norm if norm > 0 else vector*0.0
 
     """ Returns the angle in radians between vectors 'v1' and 'v2':: Creds to David Wolever for this """
-    def _angle_between(self, v1, v2):
-        v1_u = self.unit_vector(v1)
-        v2_u = self.unit_vector(v2)
+    @staticmethod 
+    def angle_between(v1, v2):
+        v1_u = Path.unit_vector(v1)
+        v2_u = Path.unit_vector(v2)
         angle = np.arccos(np.dot(v1_u, v2_u))
         if np.isnan(angle):
             if (v1_u == v2_u).all():
@@ -141,12 +152,6 @@ class Path:
             else:
                 return np.pi
         return angle
-
-    ''' G92 and Relative does not need to calculate decelleration '''
-    def calculate_deceleration(self):
-        logging.debug("Skipping decel-calc on G92 or Relative")
-        pass
-
 
     @staticmethod
     def axis_to_index(axis):
@@ -167,6 +172,10 @@ class Path:
     @staticmethod
     def distance_from_speed(a, V0, V1):
          return (np.square(V1)-np.square(V0))/(2.0*a)
+    
+    @staticmethod
+    def ratio_from_angle(angle):
+        return (1.0-angle/np.pi)
 
     ''' The vector representation of this path segment '''
     def __str__(self):
@@ -176,7 +185,7 @@ class Path:
 ''' A path segment with absolute movement '''
 class AbsolutePath(Path):
 
-    def __init__(self, axes, speed, acceleration, cancellable=False):
+    def __init__(self, axes, speed, acceleration=0.1, cancellable=False):
         Path.__init__(self, axes, speed, acceleration, cancellable)
         self.movement = Path.ABSOLUTE
 
@@ -185,12 +194,11 @@ class AbsolutePath(Path):
     # Start speed must match end speed
     # Find the controlling axis and use that for calculating the other axes. 
     def set_prev(self, prev):
+        if not prev:
+            logging.debug("None has been supplied!")
         self.prev = prev
-        if prev != None:
-            self.start_pos = prev.end_pos
-            prev.next = self
-        else:
-            self.start_pos = np.zeros(Path.NUM_AXES, dtype=Path.DTYPE)
+        self.start_pos = prev.end_pos
+        prev.next = self
               
         # Make the start, end and path vectors. 
         self.end_pos = np.copy(self.start_pos)
@@ -207,29 +215,34 @@ class AbsolutePath(Path):
         self.speeds = self.speed*self.ratios
 
         # Calculate the angle to prev
-        if prev:
-            self.angle_to_prev = self._angle_between(prev.vec, self.vec)
-            self.prev.angle_to_next = self.angle_to_prev  # Direction is not important (or is it...?)
+        self.angle_to_prev = Path.angle_between(prev.vec[:3], self.vec[:3])
+        self.prev.angle_to_next = self.angle_to_prev  # Direction is not important (or is it...?)
 
-            if self.angle_to_prev > np.pi/2.0:
-                # We have discovered a segment with too steep angle. The end speed of the 
-                # Previous segments until a start sement is discovered must be updated. 
-                self.is_start_segment    = True 
-                self.start_speeds        = Path.min_speed*self.ratios
-                self.start_speed         = np.linalg.norm(self.start_speeds[:3])
+        logging.debug("Angle: "+str(self.angle_to_prev))
 
-                # We now have a section with start speed and end speed of zero 
-                # so a accelleration profile can be generated. 
-                self.prev.is_end_segment = True
-                self.prev.end_speeds     = Path.min_speed*self.prev.ratios
-                self.prev.calculate_deceleration()
-            else:
-                 # We have an angle that can be cornered at > 0 speed. 
-                self.start_speeds     = self.prev.end_speeds
+        if self.angle_to_prev > np.pi/2.0:
+           
+            # We have discovered a segment with too steep angle. The end speed of the 
+            # Previous segments until a start sement is discovered must be updated. 
+            self.is_start_segment    = True 
+            self.start_speeds        = Path.min_speed*self.ratios
+            self.start_speed         = np.linalg.norm(self.start_speeds[:3])
+
+            # We now have a section with start speed and end speed of zero 
+            # so a accelleration profile can be generated. 
+            self.prev.is_end_segment = True
+            self.prev.end_speeds     = Path.min_speed*self.prev.ratios
+            self.prev.calculate_deceleration()
         else:
-            # This is the first known segment in the print. 
-            self.is_start_segment   = True
-            self.start_speeds       = Path.min_speed*self.ratios
+            # We have an angle that can be cornered at > 0 speed.                 
+            angle_ratio = self.ratio_from_angle(self.angle_to_prev)
+            # The newly discovered angle will cause a speed decrease. 
+            # If the new speed is below the old, update it. 
+            if self.prev.end_speed > self.prev.speed*angle_ratio:
+                logging.debug("Applying angle speed "+str(angle_ratio))
+                self.prev.end_speed  = self.prev.speed*angle_ratio
+                self.prev.end_speeds = self.prev.ratios*self.prev.end_speed
+            self.start_speeds       = self.prev.end_speeds
 
         # Calculate the end speed based on the previous segment
         self.start_speed = np.linalg.norm(self.start_speeds[:3])
@@ -249,7 +262,6 @@ class AbsolutePath(Path):
 
     ''' This path segment is the last in the print or whatever '''
     def finalize(self):
-        print "Finalize"
         self.is_end_segment = True
         self.end_speeds = Path.min_speed*self.ratios
         self.end_speed = np.linalg.norm(self.end_speeds[:3])
@@ -263,16 +275,23 @@ class AbsolutePath(Path):
         
         self.decel_speed = Path.speed_from_distance(self.mag, self.acceleration, self.end_speed)
             
-        logging.debug("making vec "+str(self.vec))
+        logging.debug("Calculate decel for vec "+str(self.vec))
+        logging.debug("start = "+str(self.start_speed))
+        logging.debug("end = "+str(self.end_speed))
+        logging.debug("decel = "+str(self.decel_speed))
+        logging.debug("acceleration = "+str(self.acceleration))
+        
         # If the start speed is too high, adjust it
         if self.decel_speed < self.start_speed:
+            logging.debug("pure-decel")
             self.profile        = "pure-decel"
             self.start_speed    = self.decel_speed
             self.start_speeds   = self.start_speed*self.ratios
             self.max_speeds     = self.start_speeds
             self.accelerations  = np.zeros(Path.NUM_AXES)
             self.decelerations  = Path.acceleration_from_distance(self.abs_vec, self.start_speeds, self.end_speeds)
-        elif abs(self.end_speed-self.accel_speed) < 0.00001:                 
+        elif abs(self.end_speed-self.accel_speed) < 0.00001: # Eliminate rounding error
+            logging.debug("pure-accel")
             self.profile        = "pure-accel"
             self.start_speeds   = self.start_speed*self.ratios
             self.max_speeds     = self.end_speeds
@@ -299,9 +318,9 @@ class AbsolutePath(Path):
                 logging.debug("cruise")
                 self.profile = "cruise"
                 self.max_speeds     = self.speeds
-                logging.debug("Start speeds = "+str(self.start_speed))
-                logging.debug("Max   speeds = "+str(self.speed))
-                logging.debug("End   speeds = "+str(self.end_speed))
+                #logging.debug("Start speeds = "+str(self.start_speed))
+                #logging.debug("Max   speeds = "+str(self.speed))
+                #logging.debug("End   speeds = "+str(self.end_speed))
                 # If all speeds are equal, accelerate through the segment
                 if abs(self.start_speed - self.speed) < 0.0001 or abs(self.speed - self.end_speed) < 0.0001:
                     self.accelerations  = Path.acceleration_from_distance(self.abs_vec, self.start_speeds, self.end_speeds)
@@ -313,10 +332,10 @@ class AbsolutePath(Path):
                     # Find out where decelleration starts
                     end_dists           = self.ratios*Path.distance_from_speed(self.acceleration, self.end_speed, self.speed)                            
                     self.decelerations  = Path.acceleration_from_distance(end_dists, self.end_speeds, self.max_speeds)
-                    logging.debug("max dists = "+str(max_dists))
-                    logging.debug("end dists = "+str(end_dists))
-
-        if not self.is_start_segment:
+                    #logging.debug("max dists = "+str(max_dists))
+                    #logging.debug("end dists = "+str(end_dists))
+        
+        if not self.is_start_segment and self.prev:
             self.prev.calculate_deceleration()
 
 ''' A path segment with Relative movement '''
@@ -325,15 +344,14 @@ class RelativePath(Path):
     def __init__(self, axes, speed, acceleration=0.5, cancellable=False):
         Path.__init__(self, axes, speed, acceleration, cancellable)
         self.movement = Path.RELATIVE
+        self.is_start_segment   = True
+        self.is_end_segment     = True
 
     ''' Link to previous segment '''
     def set_prev(self, prev):
         self.prev = prev
-        if prev != None:
-            self.start_pos = prev.end_pos
-            prev.next = self
-        else:
-            self.start_pos = np.zeros(Path.NUM_AXES, dtype=Path.DTYPE)
+        self.start_pos = prev.end_pos
+        prev.next = self
                
         # Generate the vector 
         self.vec = np.zeros(Path.NUM_AXES, dtype=Path.DTYPE)
@@ -352,8 +370,6 @@ class RelativePath(Path):
         self.decelerations = self.accelerations
 
         # Start and stop speeds are set to min
-        self.is_start_segment   = True
-        self.is_end_segment     = True
         self.start_speeds       = Path.min_speed*self.ratios
         self.end_speeds         = Path.min_speed*self.ratios
         self.start_speed        = np.linalg.norm(self.start_speeds[:3])
@@ -372,6 +388,8 @@ class G92Path(Path):
         Path.__init__(self, axes, speed, acceleration, cancellable)
         self.movement = Path.G92
         self.ratios = np.ones(Path.NUM_AXES)
+        self.is_start_segment   = True
+        self.is_end_segment     = True
 
     ''' Set the previous segment '''
     def set_prev(self, prev):
@@ -393,6 +411,7 @@ class G92Path(Path):
         self.end_speeds         = Path.min_speed
 
         # End the previous segments path
+        # FIXME: Must check if the previous segment is already calculated
         if self.prev != None:
             self.prev.calculate_deceleration()
         
@@ -404,33 +423,37 @@ class G92Path(Path):
 if __name__ == '__main__':
     global_pos = np.array([0, 0, 0, 0, 0])
 
+    # Allways start by adding a G92 path to reset all axes
+    prev = G92Path({"X":0.0, "Y":0.0, "Z":0.0, "E":0.0,"H":0.0}, 0)
+    prev.set_prev(None)
+
     # Add path segment A. None before, none after
-    a = Path({"X": 0.1, "Y": 0.0}, 0.3, Path.ABSOLUTE)
-    a.set_prev(None)
+    a = AbsolutePath({"X": 0.1, "Y": 0.0}, 0.1, 0.3)
+    a.set_prev(prev)
     print "A: "+str(a)
 
     # Add path segment B. Make prev point to A. Make next of A point to B. 
-    b = Path({"X": 0.1, "Y": 0.1}, 0.3, Path.ABSOLUTE)
+    b = AbsolutePath({"X": 0.1, "Y": 0.1}, 0.1, 0.3)
     b.set_prev(a)
     print "B: "+str(b)
 
     # Add path segment C. Make pre of C point to B and next of B point to C. 
-    c = Path({"X": 0.0, "Y": 0.1}, 0.3, Path.ABSOLUTE)
+    c = AbsolutePath({"X": 0.0, "Y": 0.1}, 0.1, 0.3)
     c.set_prev(b)
     print "C: "+str(c)
 
     # Add path segment C. Make pre of C point to B and next of B point to C. 
-    d = Path({"Y": -0.1}, 0.3, Path.RELATIVE)
+    d = RelativePath({"Y": -0.1}, 0.1, 0.3)
     d.set_prev(c)
     print "D: "+str(d)
 
     # Now we want to know the stuff. 
-    print "b.angle_to_next is "+str(b.angle_to_next())+" it should be pi/2 "
-    print "b.angle_to_prev is "+str(b.angle_to_prev())+" is should be pi/2 "
+    print "b.angle_to_next is "+str(b.angle_to_next)+" it should be pi/2 "
+    print "b.angle_to_prev is "+str(b.angle_to_prev)+" is should be pi/2 "
 
-    print "Max speed "+str(b.get_max_speed())
-    print "Start speed "+str(b.get_start_speed())
-    print "End speed "+str(b.get_end_speed())
+    print "Max speed "+str(b.speed)
+    print "Start speed "+str(b.start_speed)
+    print "End speed "+str(b.end_speed)
 
 
 
