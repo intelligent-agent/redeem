@@ -36,20 +36,18 @@ class PathPlanner:
     def __init__(self, steppers, pru_firmware):
         self.steppers    = steppers
         if pru_firmware:
-            self.pru        = Pru(pru_firmware)                 # Make the PRU
-        self.paths          = Queue.Queue(100000)                      # Make a queue of paths
-        self.cpaths         = Queue.Queue()
-        self.current_pos    = {"X":0.0, "Y":0.0, "Z":0.0, "E":0.0,"H":0.0}
-        self.running        = True                                 # Yes, we are running
+            self.pru        = Pru(pru_firmware)
+        self.paths          = Queue.Queue(1000)
+        self.segments       = []
+        self.running        = True
         self.pru_data       = []
-        self.t              = Thread(target=self._do_work)         # Make the thread
+        self.t              = Thread(target=self._do_work)
         self.t.daemon       = True
         self.travel_length  = {"X":0.0, "Y":0.0, "Z":0.0}
         self.center_offset  = {"X":0.0, "Y":0.0, "Z":0.0}
         self.acceleration   = 0.1
         self.prev           =  G92Path({"X":0.0, "Y":0.0, "Z":0.0, "E":0.0,"H":0.0}, 0)
         self.prev.set_prev(None)
-        self.segments       = []
 
         if __name__ != '__main__':
             self.t.start()		 
@@ -89,8 +87,6 @@ class PathPlanner:
 
     ''' Add a path segment to the path planner '''        
     def add_path(self, new):   
-        if not self.prev:
-            logging.error("Prev is none")
         # Link to the previous segment in the chain
         new.set_prev(self.prev)
 
@@ -102,18 +98,20 @@ class PathPlanner:
                 logging.debug("Processing all segments on queue!")
                 [self.paths.put(path) for path in self.segments]
                 self.segments = []
-        self.prev = new
-        
+
         # If this is a relative move or G92, add it right away
         if new.is_end_segment:
+            self.finalize_paths()
             self.paths.put(new)
             new.is_added = True
             self.segments = []
 
+        self.prev = new
+
     ''' Add the last path to the queue for processing '''
     def finalize_paths(self):
-        logging.debug("Finalize_paths")
-        if self.prev.movement == Path.ABSOLUTE:
+        logging.debug("Finalize paths")
+        if self.prev.movement == Path.ABSOLUTE and not self.prev.is_added:
             self.prev.finalize()
             self.segments.append(self.prev)
             self.prev.is_added = True
@@ -241,7 +239,7 @@ class PathPlanner:
         num_steps       = path.num_steps[axis_nr]      # Number of steps to tick
         if num_steps == 0:
             return None
-        logging.debug("Processing "+axis+" of len "+str(path.stepper_vec[axis_nr]))
+        #logging.debug("Processing "+axis+" of len "+str(path.stepper_vec[axis_nr]))
         step_pin        = stepper.get_step_pin()                            # Get the step pin
         dir_pin         = stepper.get_dir_pin()                             # Get the direction pin
         dir_pin         = 0 if path.stepper_vec[axis_nr] < 0 else dir_pin           # Disable the dir-pin if we are going backwards  
@@ -249,7 +247,7 @@ class PathPlanner:
         dir_pins        = [dir_pin]*num_steps 
         option_pins     = [path.cancellable]*num_steps                  
 
-        logging.debug(path.profile)
+        #logging.debug(path.profile)
 
         # Calculate the distance traveled when max speed is met       
         s = path.abs_vec[axis_nr]
@@ -304,7 +302,7 @@ class PathPlanner:
         # Generate cruising profile
         nr_delays_inter = total_steps - len(delays_start) - len(delays_end)
         if nr_delays_inter > 0:
-            logging.debug("Cruising "+str(nr_delays_inter))
+            #logging.debug("Cruising "+str(nr_delays_inter))
             delays_inter = np.ones(nr_delays_inter)*(meters_pr_step/v_max)
         else:
             delays_inter = np.array([])
@@ -373,9 +371,9 @@ if __name__ == '__main__':
     #Path.axis_config = Path.AXIS_CONFIG_H_BELT
 
 
-    radius = 0.01
+    radius = 0.05
     speed = 0.09
-    acceleration = 0.01
+    acceleration = 0.001
     rand = 0.0
     plotfac = 1.5
 
@@ -433,7 +431,8 @@ if __name__ == '__main__':
 
     for path in list(path_planner.paths.queue):
         if not path.movement == Path.G92:
-            if (path.vec[:3] != 0).any():
+            print path.vec[:2]
+            if (path.vec[:2] != 0).any():
                 ax0.arrow(path.start_pos[0], path.start_pos[1], path.vec[0], path.vec[1], 
                     width=0.00001, head_width=0.0005, head_length=0.001, fc='k', ec='k',  length_includes_head=True)
             magnitudes.append(path.get_magnitude())
