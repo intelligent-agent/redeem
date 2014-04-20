@@ -14,8 +14,17 @@ import ConfigParser
 import logging
 
 class Path: 	
-    AXIS_CONFIG_XY     = 0
-    AXIS_CONFIG_H_BELT = 1
+    AXES                = "XYZEH"#ABC
+    NUM_AXES            = len(AXES)
+
+    AXIS_CONFIG_XY      = 0
+    AXIS_CONFIG_H_BELT  = 1
+    AXIS_CONFIG_CORE_XY = 2
+    AXIS_CONFIG_DELTA   = 3
+
+    ABSOLUTE            = 0
+    RELATIVE            = 1
+    G92                 = 2
 
     A = np.matrix('-0.5 0.5; -0.5 -0.5')
     Ainv = np.linalg.inv(A)
@@ -92,7 +101,7 @@ class Path:
         self.global_pos = global_pos 
         if "X" in self.axes:
             x = self.axes["X"]
-            if self.movement == "ABSOLUTE":
+            if self.movement == Pat :
                 x -= self.global_pos["X"]
 
             self.feed_rate = min(self.feed_rate, Path.max_speed_x)
@@ -100,21 +109,21 @@ class Path:
             x = 0
         if "Y" in self.axes:
             y = self.axes["Y"]
-            if self.movement == "ABSOLUTE":        
+            if self.movement == Path.ABSOLUTE:        
                 y -= self.global_pos["Y"]
             self.feed_rate = min(self.feed_rate, Path.max_speed_y) # Clamp the speed
         else:
             y = 0
         if "Z" in self.axes:
             z = self.axes["Z"]
-            if self.movement == "ABSOLUTE":           
+            if self.movement == Path.ABSOLUTE:           
                 z -= self.global_pos["Z"]            
             self.feed_rate = min(self.feed_rate, Path.max_speed_z)
         else:
             z = 0
         if "E" in self.axes:
             e = self.axes["E"]
-            if self.movement == "ABSOLUTE":  
+            if self.movement == Path.ABSOLUTE:  
                 e -= self.global_pos["E"]
             self.feed_rate = min(self.feed_rate, Path.max_speed_e)
         else:
@@ -122,7 +131,7 @@ class Path:
 
         if "H" in self.axes:
             h = self.axes["H"]
-            if self.movement == "ABSOLUTE":  
+            if self.movement == Path.ABSOLUTE:  
                 h -= self.global_pos["H"]
             self.feed_rate = min(self.feed_rate, Path.max_speed_h)
         else:
@@ -258,15 +267,15 @@ class Path:
 
 if __name__ == '__main__':
     # Add path segment A. None before, none after
-    a = Path({"X": 0.1, "Y": 0}, 0.3, "ABSOLUTE")
+    a = Path({"X": 0.1, "Y": 0}, 0.3, Path.ABSOLUTE)
 
     # Add path segment B. Make prev point to A. Make next of A point to B. 
-    b = Path({"X": 0.1, "Y": 0.1}, 0.3, "ABSOLUTE")
+    b = Path({"X": 0.1, "Y": 0.1}, 0.3, Path.ABSOLUTE)
     b.set_prev(a)
     a.set_next(b)
 
     # Add path segment C. Make pre of C point to B and next of B point to C. 
-    c = Path({"X": 0.0, "Y": 0.1}, 0.3, "ABSOLUTE")
+    c = Path({"X": 0.0, "Y": 0.1}, 0.3, Path.ABSOLUTE)
     c.set_prev(b)
     b.set_next(c)
 

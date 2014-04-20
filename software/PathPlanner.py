@@ -16,6 +16,7 @@ import logging
 from Path import Path
 import numpy as np  
 from threading import Thread
+from CascadingConfigParser import CascadingConfigParser
 import os 
 
 try:
@@ -26,13 +27,22 @@ except ImportError:
 
 import Queue
 from collections import defaultdict
-import braid
+
+try:
+    import braid
+except ImportError:
+    pass
+
+
 
 class PathPlanner:
     ''' Init the planner '''
     def __init__(self, steppers, pru_firmware):
         self.steppers    = steppers
-        self.pru         = Pru(pru_firmware)                 # Make the PRU
+        
+        if pru_firmware:
+            self.pru         = Pru(pru_firmware)                 # Make the PRU
+
         self.paths       = Queue.Queue(10)                      # Make a queue of paths
         self.current_pos = {"X":0.0, "Y":0.0, "Z":0.0, "E":0.0,"H":0.0}
         self.running     = True                                 # Yes, we are running
@@ -66,14 +76,14 @@ class PathPlanner:
 
         logging.debug("homing "+axis)
         
-        p = Path({axis:-self.travel_length[axis]}, 0.01, "RELATIVE", False, False)
+        p = Path({axis:-self.travel_length[axis]}, 0.01, Path.RELATIVE, False, False)
         p.set_homing_feedrate()
 
         #p.set_max_speed(p.get_max_speed()*0.2)
         self.add_path(p)
-        path = Path({axis:-self.center_offset[axis]}, 0.01, "G92")
+        path = Path({axis:-self.center_offset[axis]}, 0.01, Path.G92)
         self.add_path(path)  
-        p = Path({axis:0}, 0.01, "ABSOLUTE")
+        p = Path({axis:0}, 0.01, Path.ABSOLUTE)
         p.set_homing_feedrate()
         #p.set_max_speed(p.get_max_speed()*0.2)
         self.add_path(p)
@@ -292,23 +302,29 @@ if __name__ == '__main__':
 
     print "Making steppers"
     steppers = {}
-    steppers["X"] = Stepper("GPIO0_27", "GPIO1_29", "GPIO2_4",  0, "X",-1,None,0,0) 
-    steppers["Y"] = Stepper("GPIO1_12", "GPIO0_22", "GPIO2_5",  1, "Y",1,None,1,1)  
-    steppers["Z"] = Stepper("GPIO0_23", "GPIO0_26", "GPIO0_15", 2, "Z",1,None,2,2)  
-    steppers["E"] = Stepper("GPIO1_28", "GPIO1_15", "GPIO2_1",  3, "Ext1",-1,None,3,3)
-    steppers["H"] = Stepper("GPIO1_13", "GPIO1_14", "GPIO2_3",  4, "Ext2",-1,None,4,4)
+    steppers["X"] = Stepper("GPIO0_27", "GPIO1_29", "GPIO2_4",  0, "X",None,0,0) 
+    steppers["Y"] = Stepper("GPIO1_12", "GPIO0_22", "GPIO2_5",  1, "Y",None,1,1)  
+    steppers["Z"] = Stepper("GPIO0_23", "GPIO0_26", "GPIO0_15", 2, "Z",None,2,2)  
+    steppers["E"] = Stepper("GPIO1_28", "GPIO1_15", "GPIO2_1",  3, "Ext1",None,3,3)
+    steppers["H"] = Stepper("GPIO1_13", "GPIO1_14", "GPIO2_3",  4, "Ext2",None,4,4)
+    
     config = ConfigParser.ConfigParser()
     config.readfp(open('config/default.cfg'))
+    config = CascadingConfigParser(['config/default.cfg', 'config/MendelMaxPerso.cfg'])
 
     for name, stepper in steppers.iteritems():
-            stepper.setCurrentValue(config.getfloat('Steppers', 'current_'+name)) 
-            stepper.setEnabled(config.getboolean('Steppers', 'enabled_'+name)) 
+            #stepper.set_current_value(config.getfloat('Steppers', 'current_'+name)) 
+            if config.getboolean('Steppers', 'enabled_'+name):
+                stepper.set_enabled()
+            else:
+                stepper.set_disabled()
             stepper.set_steps_pr_mm(config.getfloat('Steppers', 'steps_pr_mm_'+name))         
             stepper.set_microstepping(config.getint('Steppers', 'microstepping_'+name)) 
-            stepper.set_decay(1) 
+            stepper.direction = config.getint('Steppers', 'direction_'+name)
+            stepper.set_decay(config.getboolean("Steppers", "slow_decay_"+name))
 
     # Commit changes for the Steppers
-    Stepper.commit()
+    #Stepper.commit()
 
     Path.axis_config = int(config.get('Geometry', 'axis_config'))
     Path.max_speed_x = float(config.get('Steppers', 'max_speed_x'))
@@ -319,7 +335,8 @@ if __name__ == '__main__':
 
 
     current_pos = {"X":0.0, "Y":0.0, "Z":0.0, "E":0.0} 
-    pp = Path_planner(steppers, current_pos)
+    pp = PathPlanner(steppers, None)
+
     pp.set_acceleration(0.3)
 
     nb = 10
@@ -327,10 +344,15 @@ if __name__ == '__main__':
     print "Making paths"
     
     for x in range(nb):
-        next_pos = {"Z":x*0.001} 
-        path = Path(next_pos, 0.1, "ABSOLUTE", True)
+        next_pos = {"X":x*0.001} 
+        path = Path(next_pos, 0.1, Path.ABSOLUTE)
 
         pp.add_path(path)
+
+
+
+    exit(0)
+
 
     print "Doing work"
     
@@ -339,7 +361,7 @@ if __name__ == '__main__':
     print "Going back"
 
     next_pos = {"Z":0} 
-    path = Path(next_pos, 0.1, "ABSOLUTE", False)
+    path = Path(next_pos, 0.1, Path.ABSOLUTE, False)
     pp.add_path(path)
 
     cProfile.run('pp.do_work()')

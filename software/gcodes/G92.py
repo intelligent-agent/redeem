@@ -26,7 +26,7 @@ class G92(GCodeCommand):
             logging.debug("Adding H to G92")
             pos["H"] = pos["E"];
             del pos["E"]
-        path = Path(pos, self.printer.feed_rate, "G92")                     # Make a path segment from the axes
+        path = Path(pos, self.printer.feed_rate, Path.G92)                     # Make a path segment from the axes
         self.printer.path_planner.add_path(path)  
 
 
