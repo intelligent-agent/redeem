@@ -101,7 +101,7 @@ class Path:
         self.global_pos = global_pos 
         if "X" in self.axes:
             x = self.axes["X"]
-            if self.movement == Pat :
+            if self.movement == Path.ABSOLUTE :
                 x -= self.global_pos["X"]
 
             self.feed_rate = min(self.feed_rate, Path.max_speed_x)
