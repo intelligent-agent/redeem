@@ -56,7 +56,7 @@ class Path:
 
     def is_G92(self):
         """ Special path, only set the global position on this """
-        return (self.movement == "G92")
+        return (self.movement == Path.G92)
   
     def is_cancellable(self):
         return self.cancellable
