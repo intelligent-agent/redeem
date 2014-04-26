@@ -26,7 +26,7 @@ class Gcode:
             #print packet
             if len(self.message) == 0:
                 #print packet
-                logging.debug("Empty message")
+                #logging.debug("Empty message")
                 self.gcode = "No-Gcode"
                 return 
             self.tokens = self.message.split(" ")

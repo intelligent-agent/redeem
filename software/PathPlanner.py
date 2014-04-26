@@ -87,6 +87,7 @@ class PathPlanner:
 
     ''' Add a path segment to the path planner '''        
     def add_path(self, new):   
+        #logging.debug("Adding path "+str(new.movement))
         # Link to the previous segment in the chain
         new.set_prev(self.prev)
 
@@ -95,7 +96,7 @@ class PathPlanner:
             self.prev.is_added = True
             # If we find an end segment, add all path segments to the queue for execution           
             if self.prev.is_end_segment:
-                logging.debug("Processing all segments on queue!")
+                logging.debug("Processing all ("+str(len(self.segments))+") segments on queue!")
                 [self.paths.put(path) for path in self.segments]
                 self.segments = []
 
@@ -110,8 +111,9 @@ class PathPlanner:
 
     ''' Add the last path to the queue for processing '''
     def finalize_paths(self):
-        logging.debug("Finalize paths")
+        #logging.debug("Finalize paths")
         if self.prev.movement == Path.ABSOLUTE and not self.prev.is_added:
+            logging.debug("Finalizing")
             self.prev.finalize()
             self.segments.append(self.prev)
             self.prev.is_added = True
@@ -134,21 +136,23 @@ class PathPlanner:
     
     ''' This is just a separate function so the test at the bottom will pass '''
     def do_work(self):
-        path = self.paths.get()                            # Get the last path added
+        path = self.paths.get()                            # Get the last path added            
+        #logging.debug("Doing path = "+str(path.movement))
 
         if path.is_G92():                                   # Only set the position of the axes
             self.paths.task_done()            
             return                
         
-        for axis, val in path.axes.items():                       # Run through all the axes in the path                   
-            data = self._make_data(path, axis)        
-            if data:
-                if len(self.pru_data) == 0:
-                    self.pru_data = zip(*data)
-                else:
-                    #pass
-                    self._braid_data1(self.pru_data, zip(*data))
-                    #self.pru_data = self._braid_data(self.pru_data, zip(*data))
+        for axis_nr, val in enumerate(path.vec):                       # Run through all the axes in the path                   
+            if val != 0:
+                data = self._make_data(path, axis_nr)        
+                if data:
+                    if len(self.pru_data) == 0:
+                        self.pru_data = zip(*data)
+                    else:
+                        #pass
+                        self._braid_data1(self.pru_data, zip(*data))
+                        #self.pru_data = self._braid_data(self.pru_data, zip(*data))
         while len(self.pru_data) > 0:  
             data = self.pru_data[0:0x20000/8]
             del self.pru_data[0:0x20000/8]
@@ -233,8 +237,8 @@ class PathPlanner:
         self.pru.force_exit()
 
     ''' Make the data for the PRU or steppers '''
-    def _make_data(self, path, axis):  
-        axis_nr         = Path.axis_to_index(axis)                            
+    def _make_data(self, path, axis_nr):  
+        axis            = Path.index_to_axis(axis_nr)                            
         stepper         = self.steppers[axis]
         num_steps       = path.num_steps[axis_nr]      # Number of steps to tick
         if num_steps == 0:
@@ -242,14 +246,11 @@ class PathPlanner:
         #logging.debug("Processing "+axis+" of len "+str(path.stepper_vec[axis_nr]))
         step_pin        = stepper.get_step_pin()                            # Get the step pin
         dir_pin         = stepper.get_dir_pin()                             # Get the direction pin
-        dir_pin         = 0 if path.stepper_vec[axis_nr] < 0 else dir_pin           # Disable the dir-pin if we are going backwards  
+        dir_pin         = 0 if path.stepper_vec[axis_nr] < 0 else dir_pin   # Dir-pin low if we are going backwards  
         step_pins       = [step_pin]*num_steps                              # Make the pin states
         dir_pins        = [dir_pin]*num_steps 
         option_pins     = [path.cancellable]*num_steps                  
 
-        #logging.debug(path.profile)
-
-        # Calculate the distance traveled when max speed is met       
         s = path.abs_vec[axis_nr]
         a = path.accelerations[axis_nr]
         d = path.decelerations[axis_nr]
@@ -372,28 +373,43 @@ if __name__ == '__main__':
 
 
     radius = 0.05
-    speed = 0.09
-    acceleration = 0.001
+    speed = 0.1
+    acceleration = 0.1
     rand = 0.0
     plotfac = 1.5
+    plotoffset_x = 0.1
+    plotoffset_y = 0.1
 
     ds = np.pi/16
     t = np.arange(-np.pi/4, np.pi/4+ds, ds)
     rand_x = rand*np.random.uniform(-1, 1, size=len(t))
     rand_y = rand*np.random.uniform(-1, 1, size=len(t))
     if len(sys.argv) > 1:
+        line_nr = 0
         with open(sys.argv[1]) as infile:         
             for line in infile:
-                g = Gcode({"message": line, "prot": None})
-                if g.code() == "G1":
-                    if g.has_letter("F"):                                    # Get the feed rate                 
-                        speed = float(g.get_value_by_letter("F"))/60000.0 # Convert from mm/min to SI unit m/s
-                        g.remove_token_by_letter("F")
-                    smds = {}
-                    for i in range(g.num_tokens()):                          
-                        axis = g.token_letter(i)                             
-                        smds[axis] = float(g.token_value(i))/1000.0          # Get the value, new position or vector   
-                    path_planner.add_path(AbsolutePath(smds, speed, acceleration))
+                line_nr += 1
+                if len(sys.argv) > 3 and line_nr >= int(sys.argv[2]) and line_nr < int(sys.argv[3]):
+                    g = Gcode({"message": line, "prot": None})
+                    if g.code() == "G1":
+                        if g.has_letter("F"):                                    # Get the feed rate                 
+                            speed = float(g.get_value_by_letter("F"))/60000.0 # Convert from mm/min to SI unit m/s
+                            g.remove_token_by_letter("F")
+                        smds = {}
+                        for i in range(g.num_tokens()):                          
+                            axis = g.token_letter(i)                             
+                            smds[axis] = float(g.token_value(i))/1000.0          # Get the value, new position or vector   
+                        path_planner.add_path(AbsolutePath(smds, speed, acceleration))
+                    elif g.code() == "G92":
+                        if g.num_tokens() == 0:
+                            logging.debug("Adding all to G92")
+                            g.set_tokens(["X0", "Y0", "Z0", "E0", "H0"])            # If no token is present, do this for all
+                        pos = {}                                                    # All steppers 
+                        for i in range(g.num_tokens()):                             # Run through all tokens
+                            axis = g.token_letter(i)                                # Get the axis, X, Y, Z or E
+                            pos[axis] = float(g.token_value(i))/1000.0              # Get the value, new position or vector             
+                        path = G92Path(pos, speed)                     # Make a path segment from the axes
+                        path_planner.add_path(path)  
         path_planner.finalize_paths()
     else:
         for idx, i in enumerate(t):
@@ -418,8 +434,8 @@ if __name__ == '__main__':
 
 
     ax0 = plt.subplot(2, 3, 4)
-    plt.ylim([-plotfac*radius, plotfac*radius])
-    plt.xlim([-plotfac*radius, plotfac*radius])
+    plt.ylim([-plotfac*radius+plotoffset_y, plotfac*radius+plotoffset_y])
+    plt.xlim([-plotfac*radius+plotoffset_x, plotfac*radius+plotoffset_x])
     plt.title('Trajectory')
 
     print "Trajectory done"
@@ -431,9 +447,9 @@ if __name__ == '__main__':
 
     for path in list(path_planner.paths.queue):
         if not path.movement == Path.G92:
-            print path.vec[:2]
+            #print path.vec[:2]
             if (path.vec[:2] != 0).any():
-                ax0.arrow(path.start_pos[0], path.start_pos[1], path.vec[0], path.vec[1], 
+                ax0.arrow(path.start_pos[0], path.start_pos[1], path.true_vec[0], path.true_vec[1], 
                     width=0.00001, head_width=0.0005, head_length=0.001, fc='k', ec='k',  length_includes_head=True)
             magnitudes.append(path.get_magnitude())
             speeds_x.append(path.start_speeds[0])
@@ -455,6 +471,8 @@ if __name__ == '__main__':
     plt.ylim([0, np.max(speeds)*1.5])
     plt.xlim([0, positions[-1]*1.1])
     plt.title('Velocity')
+
+    print speeds
 
     # Acceleration
     ax2 = plt.subplot(2, 3, 6)

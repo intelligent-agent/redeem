@@ -10,7 +10,7 @@ License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 Minor verion tag is Arhold Schwartsnegger movies chronologically. 
 '''
 
-version = "0.11.1~Stay Hungry"
+version = "0.12.0~The Villain"
 
 from math import sqrt
 import time
@@ -112,8 +112,8 @@ class Redeem:
         path = "/sys/bus/iio/devices/iio:device0/in_voltage"
 
         # init the 3 thermistors
-        self.therm_ext1 = Thermistor(path+"6_raw", "MOSFET Ext 1", self.config.get('Heaters', "ext1_temp_chart"))
-        self.therm_hbp  = Thermistor(path+"4_raw", "MOSFET HBP",   self.config.get('Heaters', "hbp_temp_chart"))
+        self.therm_ext1 = Thermistor(path+"4_raw", "MOSFET Ext 1", self.config.get('Heaters', "ext1_temp_chart"))
+        self.therm_hbp  = Thermistor(path+"6_raw", "MOSFET HBP",   self.config.get('Heaters', "hbp_temp_chart"))
         self.therm_ext2 = Thermistor(path+"5_raw", "MOSFET Ext 2", self.config.get('Heaters', "ext2_temp_chart"))
 
         path = self.config.get('Cold-ends', 'path', 0)
@@ -186,6 +186,7 @@ class Redeem:
         self.movement = Path.RELATIVE
         self.feed_rate = 3000.0        
         Path.axis_config = int(self.config.get('Geometry', 'axis_config'))
+        logging.debug("Axis config is "+str(Path.axis_config))
         Path.max_speed[0] = float(self.config.get('Steppers', 'max_speed_x'))
         Path.max_speed[1] = float(self.config.get('Steppers', 'max_speed_y'))
         Path.max_speed[2] = float(self.config.get('Steppers', 'max_speed_z'))
