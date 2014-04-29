@@ -279,7 +279,7 @@ class PathPlanner:
             idx_se       = int(np.round(se_accel/meters_pr_step))
             if idx_se < idx_ss:
                 idx_se, idx_ss = idx_ss, idx_se
-            delays_start = np.diff(np.sqrt(2.0*abs_a*stepper.distances[idx_ss:idx_se+1])/abs_a)
+            delays_start = np.diff(np.sqrt(2.0*abs_a*stepper.distances[idx_ss-1:idx_se])/abs_a)
             if a < 0:
                 delays_start = np.flipud(delays_start)
         else:
@@ -294,7 +294,8 @@ class PathPlanner:
             idx_ee       = int(np.round(ee_accel/meters_pr_step))
             if idx_ee < idx_es:
                 idx_ee, idx_es = idx_es, idx_ee
-            delays_end   = np.diff(np.sqrt(2.0*abs_d*stepper.distances[idx_es:idx_ee+1])/abs_d)                     
+            distances = 
+            delays_end   = np.diff(np.sqrt(2.0*abs_d*stepper.distances[idx_es-1:idx_ee])/abs_d)                     
             if v_max > v_end:
                 delays_end = np.flipud(delays_end)
         else:
@@ -374,7 +375,7 @@ if __name__ == '__main__':
 
     radius = 0.05
     speed = 0.1
-    acceleration = 0.1
+    acceleration = 0.05
     rand = 0.0
     plotfac = 1.5
     plotoffset_x = 0.1
@@ -472,7 +473,9 @@ if __name__ == '__main__':
     plt.xlim([0, positions[-1]*1.1])
     plt.title('Velocity')
 
+    print np.array(magnitudes)
     print speeds
+    print speeds_e
 
     # Acceleration
     ax2 = plt.subplot(2, 3, 6)
@@ -511,7 +514,7 @@ if __name__ == '__main__':
     plt.plot(delays, 'r')
     plt.plot(delays2, 'b')
     plt.plot(delays3, 'y')
-    #plt.ylim([0, 0.1])
+    plt.ylim([0, 0.001])
     plt.title('Delays')
 
     print "total distance X = "+str(mag_x)
