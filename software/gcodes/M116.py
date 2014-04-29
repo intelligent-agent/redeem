@@ -22,15 +22,16 @@ class M116(GCodeCommand):
             all_ok[2] |= self.printer.heaters['HBP'].is_target_temperature_reached()
             m105 = Gcode({"message": "M105", "prot": g.prot})
             self.printer.processor.execute(m105)
-            print all_ok
             if not False in all_ok:
-                self._reply(m105)
+                logging.info("Homing done.")
+                self.printer.send_message(g.prot, "Heating done.")
+                self.printer.reply(m105)
                 return 
             else:
                 answer = m105.get_answer()
                 answer += " E: "+ ("0" if self.printer.current_tool == "E" else "1")
                 m105.set_answer(answer[2:]) # strip away the "ok"
-                self._reply(m105)
+                self.printer.reply(m105)
                 time.sleep(1)
 
     def get_description(self):

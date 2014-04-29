@@ -9,7 +9,8 @@ License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 '''
 
 from GCodeCommand import GCodeCommand
-from Path import Path
+from Path import Path, RelativePath, AbsolutePath
+import logging
 
 class G0(GCodeCommand):
 
@@ -24,9 +25,13 @@ class G0(GCodeCommand):
         if g.has_letter("E") and self.printer.current_tool != "E":       # We are using a different tool, switch..
             smds[self.printer.current_tool] = smds["E"]
             del smds["E"]
-        path = Path(smds, self.printer.feed_rate, self.printer.movement, g.is_crc())
+        if self.printer.movement == Path.ABSOLUTE:
+            path = AbsolutePath(smds, self.printer.feed_rate, self.printer.acceleration)
+        elif self.printer.movement == Path.RELATIVE:
+            path = RelativePath(smds, self.printer.feed_rate, self.printer.acceleration)
+        else:
+            logging.error("wrong movement "+str(self.printer.movement))
         self.printer.path_planner.add_path(path)                        # Add the path. This blocks until the path planner has capacity
-
 
     def get_description(self):
         return "Control the printer head position as well as the currently selected tool."

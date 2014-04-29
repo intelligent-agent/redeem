@@ -10,7 +10,7 @@ License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 
 from GCodeCommand import GCodeCommand
 import logging
-from Path import Path
+from Path import Path, G92Path
 
 class G92(GCodeCommand):
 
@@ -26,9 +26,8 @@ class G92(GCodeCommand):
             logging.debug("Adding H to G92")
             pos["H"] = pos["E"];
             del pos["E"]
-        path = Path(pos, self.printer.feed_rate, "G92")                     # Make a path segment from the axes
+        path = G92Path(pos, self.printer.feed_rate)                 # Make a path segment from the axes
         self.printer.path_planner.add_path(path)  
-
 
     def get_description(self):
         return "Set the current position of steppers without moving them"

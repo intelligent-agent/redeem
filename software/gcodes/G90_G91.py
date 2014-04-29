@@ -9,11 +9,12 @@ License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 '''
 
 from GCodeCommand import GCodeCommand
+from Path import Path
 
 class G90(GCodeCommand):
 
     def execute(self,g):
-        self.printer.movement = "ABSOLUTE"
+        self.printer.movement = Path.ABSOLUTE
 
 
     def get_description(self):
@@ -22,7 +23,7 @@ class G90(GCodeCommand):
 class G91(GCodeCommand):
 
     def execute(self,g):
-        self.printer.movement = "RELATIVE"
+        self.printer.movement = Path.RELATIVE
 
 
     def get_description(self):

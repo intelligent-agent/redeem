@@ -294,7 +294,6 @@ class PathPlanner:
             idx_ee       = int(np.round(ee_accel/meters_pr_step))
             if idx_ee < idx_es:
                 idx_ee, idx_es = idx_es, idx_ee
-            distances = 
             delays_end   = np.diff(np.sqrt(2.0*abs_d*stepper.distances[idx_es-1:idx_ee])/abs_d)                     
             if v_max > v_end:
                 delays_end = np.flipud(delays_end)
@@ -314,7 +313,7 @@ class PathPlanner:
 
     ''' Make the acceleration tables for each of the steppers '''
     def make_acceleration_tables(self):
-        s = {"X": 1.0, "Y": 1.0, "Z": 0.2, "E": 0.3, "H": 0.3}
+        s = {"X": 0.5, "Y": 0.5, "Z": 0.2, "E": 0.3, "H": 0.3}
         for name, stepper in self.steppers.iteritems():
             meters_pr_step = 1.0/stepper.get_steps_pr_meter()
             num_steps = int(s[name]/meters_pr_step)
@@ -322,13 +321,14 @@ class PathPlanner:
 
 
     def save_acceleration_tables(self):
+        dirname = os.path.dirname(os.path.realpath(__file__))
         for name, stepper in self.steppers.iteritems():
-            np.savetxt('distances_'+name+'.npy', stepper.distances)
+            np.save(dirname+'/distances_'+name+'.npy', stepper.distances)
 
     def load_acceleration_tables(self):
         dirname = os.path.dirname(os.path.realpath(__file__))
         for name, stepper in self.steppers.iteritems():
-            stepper.distances = np.loadtxt(dirname+'/distances_'+name+'.npy')
+            stepper.distances = np.load(dirname+'/distances_'+name+'.npy')
 
 if __name__ == '__main__':
     import cProfile
