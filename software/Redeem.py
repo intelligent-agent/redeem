@@ -10,7 +10,7 @@ License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 Minor verion tag is Arhold Schwartsnegger movies chronologically. 
 '''
 
-version = "0.11.1~Stay Hungry"
+version = "0.12.0~The Villain"
 
 from math import sqrt
 import time
@@ -37,7 +37,7 @@ from Gcode import Gcode
 import sys
 from Extruder import Extruder, HBP
 from Pru import Pru
-from Path import Path
+from Path import Path, RelativePath, AbsolutePath, G92Path
 from PathPlanner import PathPlanner
 from ColdEnd import ColdEnd
 from PruFirmware import PruFirmware
@@ -48,8 +48,6 @@ from GCodeProcessor import GCodeProcessor
 logging.basicConfig(level=logging.DEBUG, 
                     format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
                     datefmt='%m-%d %H:%M')
-
-print "Redeem v. "+version
 
 class Redeem:
     ''' Init '''
@@ -187,27 +185,40 @@ class Redeem:
         #self.pipe.set_send_reponse(False)
         self.ethernet = Ethernet(self.commands)
         
-        # Init the path planner     
-        Path.axis_config = int(self.printer.config.get('Geometry', 'axis_config'))
-        Path.max_speed_x = float(self.printer.config.get('Steppers', 'max_speed_x'))
-        Path.max_speed_y = float(self.printer.config.get('Steppers', 'max_speed_y'))
-        Path.max_speed_z = float(self.printer.config.get('Steppers', 'max_speed_z'))
-        Path.max_speed_e = float(self.printer.config.get('Steppers', 'max_speed_e'))
-        Path.max_speed_h = float(self.printer.config.get('Steppers', 'max_speed_h'))
+        # Init the path planner
+        self.movement = Path.RELATIVE
+        self.feed_rate = 3000.0        
+        Path.axis_config = int(self.config.get('Geometry', 'axis_config'))
+        logging.debug("Axis config is "+str(Path.axis_config))
+        Path.max_speed[0] = float(self.config.get('Steppers', 'max_speed_x'))
+        Path.max_speed[1] = float(self.config.get('Steppers', 'max_speed_y'))
+        Path.max_speed[2] = float(self.config.get('Steppers', 'max_speed_z'))
+        Path.max_speed[3] = float(self.config.get('Steppers', 'max_speed_e'))
+        Path.max_speed[4] = float(self.config.get('Steppers', 'max_speed_h'))
 
-        Path.home_speed_x = float(self.printer.config.get('Steppers', 'home_speed_x'))
-        Path.home_speed_y = float(self.printer.config.get('Steppers', 'home_speed_y'))
-        Path.home_speed_z = float(self.printer.config.get('Steppers', 'home_speed_z'))
-        Path.home_speed_e = float(self.printer.config.get('Steppers', 'home_speed_e'))
-        Path.home_speed_h = float(self.printer.config.get('Steppers', 'home_speed_h'))
+        Path.home_speed[0] = float(self.printer.config.get('Steppers', 'home_speed_x'))
+        Path.home_speed[1] = float(self.printer.config.get('Steppers', 'home_speed_y'))
+        Path.home_speed[2] = float(self.printer.config.get('Steppers', 'home_speed_z'))
+        Path.home_speed[3] = float(self.printer.config.get('Steppers', 'home_speed_e'))
+        Path.home_speed[4] = float(self.printer.config.get('Steppers', 'home_speed_h'))
+
+        Path.steps_pr_meter[0] = self.steppers["X"].get_steps_pr_meter()
+        Path.steps_pr_meter[1] = self.steppers["Y"].get_steps_pr_meter()
+        Path.steps_pr_meter[2] = self.steppers["Z"].get_steps_pr_meter()
+        Path.steps_pr_meter[3] = self.steppers["E"].get_steps_pr_meter()
+        Path.steps_pr_meter[4] = self.steppers["H"].get_steps_pr_meter()
+ 
 
         dirname = os.path.dirname(os.path.realpath(__file__))
 
         # Create the firmware compiler
         pru_firmware = PruFirmware(dirname+"/../firmware/firmware_runtime.p",dirname+"/../firmware/firmware_runtime.bin",dirname+"/../firmware/firmware_endstops.p",dirname+"/../firmware/firmware_endstops.bin",self.revision,self.printer.config,"/usr/bin/pasm")
 
-        self.printer.path_planner = PathPlanner(self.printer.steppers, pru_firmware)
-        self.printer.path_planner.set_acceleration(float(self.printer.config.get('Steppers', 'acceleration'))) 
+        self.printer.path_planner = PathPlanner(self.steppers, self.pru_firmware)
+        self.printer.path_planner.acceleration = float(self.config.get('Steppers', 'acceleration'))
+        #self.printer.path_planner.make_acceleration_tables()
+        #self.printer.path_planner.save_acceleration_tables()
+        self.printer.path_planner.load_acceleration_tables()
 
         travel={}
         offset={}
@@ -221,8 +232,8 @@ class Redeem:
         self.printer.processor = GCodeProcessor(self.printer);
 
         # After the firmwares are loaded, the endstop states can be updated.
-        for k, endstop in self.printer.end_stops.iteritems():
-            logging.debug("Endstop "+endstop.name+" hit? : "+ str(endstop.read_value()))
+        #for k, endstop in self.end_stops.iteritems():
+        #    logging.debug("Endstop "+endstop.name+" hit? : "+ str(endstop.read_value()))
 
         self.running = True
 
