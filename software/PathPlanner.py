@@ -45,7 +45,6 @@ class PathPlanner:
         self.t.daemon       = True
         self.travel_length  = {"X":0.0, "Y":0.0, "Z":0.0}
         self.center_offset  = {"X":0.0, "Y":0.0, "Z":0.0}
-        self.acceleration   = 0.1
         self.prev           =  G92Path({"X":0.0, "Y":0.0, "Z":0.0, "E":0.0,"H":0.0}, 0)
         self.prev.set_prev(None)
 
@@ -375,7 +374,7 @@ if __name__ == '__main__':
 
     radius = 0.05
     speed = 0.1
-    acceleration = 0.05
+    acceleration = 0.3
     rand = 0.0
     plotfac = 1.5
     plotoffset_x = 0.1

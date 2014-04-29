@@ -46,7 +46,7 @@ class Path:
     
 
     """ The axes of evil, the feed rate in m/s and ABS or REL """
-    def __init__(self, axes, speed, acceleration=0.5, cancellable=False):
+    def __init__(self, axes, speed, acceleration, cancellable=False):
         self.axes               = axes
         self.speed              = speed
         self.acceleration       = acceleration
@@ -179,7 +179,7 @@ class Path:
 ''' A path segment with absolute movement '''
 class AbsolutePath(Path):
 
-    def __init__(self, axes, speed, acceleration=0.1, cancellable=False):
+    def __init__(self, axes, speed, acceleration, cancellable=False):
         Path.__init__(self, axes, speed, acceleration, cancellable)
         self.movement = Path.ABSOLUTE
 

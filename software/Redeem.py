@@ -222,9 +222,12 @@ class Redeem:
         self.printer.processor = GCodeProcessor(self.printer);
 
         # Set up communication channels
-        self.printer.comms["USB"]   = USB(self.commands)
-        self.printer.comms["PIPE"]  = Pipe(self.commands)
-        self.printer.comms["Eth"]   = Ethernet(self.commands)
+        self.printer.comms["USB"]    = USB(self.commands)
+        self.printer.comms["Eth"]    = Ethernet(self.commands)
+        self.printer.comms["Pipe_0"] = Pipe(self.commands, "Pipe_0")     # Pipe for Octoprint
+        self.printer.comms["Pipe_1"] = Pipe(self.commands, "Pipe_1")     # Pipe for Toggle
+        self.printer.comms["Pipe_2"] = Pipe(self.commands, "Pipe_2")     # Pipe for testing
+        self.printer.comms["Pipe_2"].send_response = False     
 
         self.running = True
 
