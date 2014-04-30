@@ -23,7 +23,7 @@ class M116(GCodeCommand):
             m105 = Gcode({"message": "M105", "prot": g.prot})
             self.printer.processor.execute(m105)
             if not False in all_ok:
-                logging.info("Homing done.")
+                logging.info("Heating done.")
                 self.printer.send_message(g.prot, "Heating done.")
                 self.printer.reply(m105)
                 return 

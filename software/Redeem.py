@@ -180,11 +180,11 @@ class Redeem:
         
         # Init the path planner
         Path.axis_config = int(self.printer.config.get('Geometry', 'axis_config'))
-        Path.max_speed[0] = float(self.printer.config.get('Steppers', 'max_speed_x'))
-        Path.max_speed[1] = float(self.printer.config.get('Steppers', 'max_speed_y'))
-        Path.max_speed[2] = float(self.printer.config.get('Steppers', 'max_speed_z'))
-        Path.max_speed[3] = float(self.printer.config.get('Steppers', 'max_speed_e'))
-        Path.max_speed[4] = float(self.printer.config.get('Steppers', 'max_speed_h'))
+        Path.max_speeds[0] = float(self.printer.config.get('Steppers', 'max_speed_x'))
+        Path.max_speeds[1] = float(self.printer.config.get('Steppers', 'max_speed_y'))
+        Path.max_speeds[2] = float(self.printer.config.get('Steppers', 'max_speed_z'))
+        Path.max_speeds[3] = float(self.printer.config.get('Steppers', 'max_speed_e'))
+        Path.max_speeds[4] = float(self.printer.config.get('Steppers', 'max_speed_h'))
 
         Path.home_speed[0] = float(self.printer.config.get('Steppers', 'home_speed_x'))
         Path.home_speed[1] = float(self.printer.config.get('Steppers', 'home_speed_y'))
@@ -204,7 +204,7 @@ class Redeem:
         # Create the firmware compiler
         pru_firmware = PruFirmware(dirname+"/../firmware/firmware_runtime.p",dirname+"/../firmware/firmware_runtime.bin",dirname+"/../firmware/firmware_endstops.p",dirname+"/../firmware/firmware_endstops.bin",self.revision,self.printer.config,"/usr/bin/pasm")
 
-        self.printer.path_planner = PathPlanner(self.printer.steppers, pru_firmware)
+        self.printer.path_planner = PathPlanner(self.printer, pru_firmware)
         self.printer.path_planner.acceleration = float(self.printer.config.get('Steppers', 'acceleration'))
         self.printer.acceleration = float(self.printer.config.get('Steppers', 'acceleration'))
         self.printer.path_planner.make_acceleration_tables()

@@ -33,8 +33,9 @@ from collections import defaultdict
 
 class PathPlanner:
     ''' Init the planner '''
-    def __init__(self, steppers, pru_firmware):
-        self.steppers    = steppers
+    def __init__(self, printer, pru_firmware):
+        self.printer        = printer
+        self.steppers       = printer.steppers
         if pru_firmware:
             self.pru        = Pru(pru_firmware)
         self.paths          = Queue.Queue(1000)
@@ -70,7 +71,7 @@ class PathPlanner:
         logging.debug("homing "+axis)
         speed = Path.home_speed[Path.axis_to_index(axis)]
         # Move until endstop is hit
-        p = RelativePath({axis:-self.travel_length[axis]}, speed)
+        p = RelativePath({axis:-self.travel_length[axis]}, speed, self.printer.acceleration)
         self.add_path(p)
 
         # Reset position to offset
@@ -78,7 +79,7 @@ class PathPlanner:
         self.add_path(p)
         
         # Move to offset
-        p = AbsolutePath({axis:0}, speed)
+        p = AbsolutePath({axis:0}, speed, self.printer.acceleration)
         self.add_path(p)
         self.finalize_paths()
         self.wait_until_done()
