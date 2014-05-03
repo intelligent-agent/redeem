@@ -23,9 +23,10 @@ class Gcode:
             self.prot = packet["prot"] if "prot" in packet else "None"
             self.has_crc = False
             self.answer = "ok"
+            #print packet
             if len(self.message) == 0:
-                print packet
-                logging.debug("Empty message")
+                #print packet
+                #logging.debug("Empty message")
                 self.gcode = "No-Gcode"
                 return 
             self.tokens = self.message.split(" ")

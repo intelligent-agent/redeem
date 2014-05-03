@@ -8,6 +8,7 @@ License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 '''
 
 from abc import ABCMeta, abstractmethod
+import logging
 
 class GCodeCommand(object):
     __metaclass__ = ABCMeta
@@ -23,3 +24,4 @@ class GCodeCommand(object):
     @abstractmethod
     def get_description(self):
         pass
+    

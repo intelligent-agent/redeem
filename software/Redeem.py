@@ -10,7 +10,7 @@ License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 Minor verion tag is Arhold Schwartsnegger movies chronologically. 
 '''
 
-version = "0.11.1~Stay Hungry"
+version = "0.12.0~The Villain"
 
 from math import sqrt
 import time
@@ -37,7 +37,7 @@ from Gcode import Gcode
 import sys
 from Extruder import Extruder, HBP
 from Pru import Pru
-from Path import Path
+from Path import Path, RelativePath, AbsolutePath, G92Path
 from PathPlanner import PathPlanner
 from ColdEnd import ColdEnd
 from PruFirmware import PruFirmware
@@ -48,8 +48,6 @@ from GCodeProcessor import GCodeProcessor
 logging.basicConfig(level=logging.DEBUG, 
                     format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
                     datefmt='%m-%d %H:%M')
-
-print "Redeem v. "+version
 
 class Redeem:
     ''' Init '''
@@ -179,35 +177,39 @@ class Redeem:
 
         # Make a queue of commands
         self.commands = Queue.Queue(10)
-
-        # Set up USB, this receives messages and pushes them on the queue
-        self.usb = USB(self.commands)		
-        # Virtual TTY 
-        self.pipe = Pipe(self.commands)
-        #self.pipe.set_send_reponse(False)
-        self.ethernet = Ethernet(self.commands)
         
-        # Init the path planner     
+        # Init the path planner
         Path.axis_config = int(self.printer.config.get('Geometry', 'axis_config'))
-        Path.max_speed_x = float(self.printer.config.get('Steppers', 'max_speed_x'))
-        Path.max_speed_y = float(self.printer.config.get('Steppers', 'max_speed_y'))
-        Path.max_speed_z = float(self.printer.config.get('Steppers', 'max_speed_z'))
-        Path.max_speed_e = float(self.printer.config.get('Steppers', 'max_speed_e'))
-        Path.max_speed_h = float(self.printer.config.get('Steppers', 'max_speed_h'))
+        Path.max_speeds[0] = float(self.printer.config.get('Steppers', 'max_speed_x'))
+        Path.max_speeds[1] = float(self.printer.config.get('Steppers', 'max_speed_y'))
+        Path.max_speeds[2] = float(self.printer.config.get('Steppers', 'max_speed_z'))
+        Path.max_speeds[3] = float(self.printer.config.get('Steppers', 'max_speed_e'))
+        Path.max_speeds[4] = float(self.printer.config.get('Steppers', 'max_speed_h'))
 
-        Path.home_speed_x = float(self.printer.config.get('Steppers', 'home_speed_x'))
-        Path.home_speed_y = float(self.printer.config.get('Steppers', 'home_speed_y'))
-        Path.home_speed_z = float(self.printer.config.get('Steppers', 'home_speed_z'))
-        Path.home_speed_e = float(self.printer.config.get('Steppers', 'home_speed_e'))
-        Path.home_speed_h = float(self.printer.config.get('Steppers', 'home_speed_h'))
+        Path.home_speed[0] = float(self.printer.config.get('Steppers', 'home_speed_x'))
+        Path.home_speed[1] = float(self.printer.config.get('Steppers', 'home_speed_y'))
+        Path.home_speed[2] = float(self.printer.config.get('Steppers', 'home_speed_z'))
+        Path.home_speed[3] = float(self.printer.config.get('Steppers', 'home_speed_e'))
+        Path.home_speed[4] = float(self.printer.config.get('Steppers', 'home_speed_h'))
+
+        Path.steps_pr_meter[0] = self.printer.steppers["X"].get_steps_pr_meter()
+        Path.steps_pr_meter[1] = self.printer.steppers["Y"].get_steps_pr_meter()
+        Path.steps_pr_meter[2] = self.printer.steppers["Z"].get_steps_pr_meter()
+        Path.steps_pr_meter[3] = self.printer.steppers["E"].get_steps_pr_meter()
+        Path.steps_pr_meter[4] = self.printer.steppers["H"].get_steps_pr_meter()
+ 
 
         dirname = os.path.dirname(os.path.realpath(__file__))
 
         # Create the firmware compiler
         pru_firmware = PruFirmware(dirname+"/../firmware/firmware_runtime.p",dirname+"/../firmware/firmware_runtime.bin",dirname+"/../firmware/firmware_endstops.p",dirname+"/../firmware/firmware_endstops.bin",self.revision,self.printer.config,"/usr/bin/pasm")
 
-        self.printer.path_planner = PathPlanner(self.printer.steppers, pru_firmware)
-        self.printer.path_planner.set_acceleration(float(self.printer.config.get('Steppers', 'acceleration'))) 
+        self.printer.path_planner = PathPlanner(self.printer, pru_firmware)
+        self.printer.path_planner.acceleration = float(self.printer.config.get('Steppers', 'acceleration'))
+        self.printer.acceleration = float(self.printer.config.get('Steppers', 'acceleration'))
+        self.printer.path_planner.make_acceleration_tables()
+        self.printer.path_planner.save_acceleration_tables()
+        #self.printer.path_planner.load_acceleration_tables()
 
         travel={}
         offset={}
@@ -215,14 +217,17 @@ class Redeem:
             travel[axis] = self.printer.config.getfloat('Geometry', 'travel_'+axis.lower())
             offset[axis] = self.printer.config.getfloat('Geometry', 'offset_'+axis.lower())
 
-        self.printer.path_planner.set_travel_length(travel)
-        self.printer.path_planner.set_center_offset(offset)
-
+        self.printer.path_planner.travel_length = travel
+        self.printer.path_planner.center_offset = offset
         self.printer.processor = GCodeProcessor(self.printer);
 
-        # After the firmwares are loaded, the endstop states can be updated.
-        for k, endstop in self.printer.end_stops.iteritems():
-            logging.debug("Endstop "+endstop.name+" hit? : "+ str(endstop.read_value()))
+        # Set up communication channels
+        self.printer.comms["USB"]    = USB(self.commands)
+        self.printer.comms["Eth"]    = Ethernet(self.commands)
+        self.printer.comms["Pipe_0"] = Pipe(self.commands, "Pipe_0")     # Pipe for Octoprint
+        self.printer.comms["Pipe_1"] = Pipe(self.commands, "Pipe_1")     # Pipe for Toggle
+        self.printer.comms["Pipe_2"] = Pipe(self.commands, "Pipe_2")     # Pipe for testing
+        self.printer.comms["Pipe_2"].send_response = False     
 
         self.running = True
 
@@ -238,7 +243,7 @@ class Redeem:
                 except Queue.Empty as e:
                     continue
                 self._execute(gcode)
-                self._reply(gcode)                
+                self.printer.reply(gcode)                
                 self.commands.task_done()
         except Exception as e:
             logging.exception("Ooops: ")
@@ -261,21 +266,6 @@ class Redeem:
 
         self.printer.processor.execute(g)
    
-
-    ''' Send a reply through the proper channel '''
-    def _reply(self, gcode):
-        if(gcode.get_answer()!=None):
-            self._send_message(gcode.prot, gcode.get_answer())
-    
-    ''' Send a message back to host '''
-    def _send_message(self, prot, msg):
-        if prot == "USB":
-            self.usb.send_message(msg)
-        elif prot == "PIPE":
-            self.pipe.send_message(msg)
-        elif prot == "Eth":
-            self.ethernet.send_message(msg)
-
     ''' An endStop has been hit '''
     def end_stop_hit(self, endstop):
         logging.warning("End Stop " + endstop.name +" hit!")
