@@ -16,8 +16,8 @@ from numpy import linalg as la
 import ConfigParser
 import logging
 
-class Path: 	
-    AXES                = "XYZEH"#ABC
+class Path:     
+    AXES                = "XYZEH"
     NUM_AXES            = len(AXES)
 
     AXIS_CONFIG_XY      = 0
@@ -75,7 +75,7 @@ class Path:
         # TODO: Implement CoreXY and Delta 
         return ret_vec
 
-    ''' Use the steps pr meter to conver tto actual travelled distance '''
+    ''' Use the steps pr meter to conver to actual travelled distance '''
     def vector_to_stepper_translation(self, vec):
         vec = self.transform_vector(vec)
         self.num_steps       = np.round(np.abs(vec) * Path.steps_pr_meter)        
@@ -93,17 +93,18 @@ class Path:
 
     ''' The feed rate is set to the lowest axis in the set '''
     def set_homing_feedrate(self):
-        self.speeds = np.minimum(self.speeds, self.home_speed[np.argmax(vec)])
+        self.speeds = np.minimum(self.speeds, self.home_speed[np.argmax(self.vec)])
+        self.speed = np.linalg.norm(self.speeds[:3])
 
     """ Get the length of the XYZ dimension this path segment """
     def get_magnitude(self):   
         if self.mag == None: # Cache the calculation
-            self.mag = np.sqrt(self.true_vec[:3].dot(self.true_vec[:3]))
+            self.mag = np.sqrt(np.dot(self.true_vec[:3],self.true_vec[:3]))
         return self.mag
 
     ''' Get the ratios for each axis '''
     def get_ratios(self):
-        self.hyp     = self.get_magnitude()    	                               
+        self.hyp     = self.get_magnitude()                                    
         if self.hyp == 0.0: # Extrusion only 
             ratios = np.ones(Path.NUM_AXES)
             ratios[:3] = np.ones(3)*(1.0/np.sqrt(3))
@@ -147,18 +148,17 @@ class Path:
     def index_to_axis(axis_nr):
         return Path.AXES[axis_nr]
 
+    """ Return the end speedof the path of length stored in s, an acceleration of a and a start speed of V0 """
     @staticmethod
     def speed_from_distance(s, a, V0):
         return np.sqrt(np.square(V0)+2.0*a*s)
     
+    """ Return the acceleration for the path contained in s where the start speed is defined in V0 and end speed is defined in V1. S is actually the vector holding the number of steps for each axis.  """
     @staticmethod
     def acceleration_from_distance(s, V0, V1):
         return np.divide((np.square(V1)-np.square(V0)), (2*s))
 
-    @staticmethod
-    def distance_from_acceleration(a, V0, V1):
-         return (np.square(V1)-np.square(V0))/(2.0*a)
-    
+    """  Return the length of the segement on each axis where a is the acceleration, V0 is the start speed and V1 the end speed of the segment """
     @staticmethod
     def distance_from_speed(a, V0, V1):
          return (np.square(V1)-np.square(V0))/(2.0*a)
@@ -218,17 +218,20 @@ class AbsolutePath(Path):
             self.start_speed        = np.linalg.norm(self.start_speeds[:3])
             self.is_start_segment   = True
         else:
-            if self.angle_to_prev >= np.pi/2.0 or (hasattr(self.prev, 'hyp') and self.prev.hyp == 0.0):           
+            # FIXME: We shouldn't check only the angle here. It should be a mix between the angle and the 
+            #        acceleration/deceleration changes from the previous to the next path. Indeed 90deg at 
+            #        min_speed is possible.       
+            if self.angle_to_prev >= np.pi/2.0 or (hasattr(self.prev, 'hyp') and self.prev.hyp == 0.0):
                 #logging.debug("Sharp angle")
                 # We have discovered a segment with too steep angle. The end speed of the 
-                # Previous segments until a start sement is discovered must be updated. 
+                # Previous segments until a start segment is discovered must be updated. 
                 self.is_start_segment   = True 
                 self.start_speeds       = Path.min_speed*self.ratios
                 self.start_speed        = np.linalg.norm(self.start_speeds[:3])
                 #logging.debug("Start speed = "+str(self.start_speed))
 
                 # We now have a section with start speed and end speed of zero 
-                # so a accelleration profile can be generated. 
+                # so an accelleration profile can be generated. 
                 self.prev.is_end_segment = True
                 self.prev.end_speeds     = Path.min_speed*self.prev.ratios
                 self.prev.end_speed      = np.linalg.norm(self.prev.end_speeds[:3])
@@ -272,6 +275,7 @@ class AbsolutePath(Path):
             self.end_speed = self.next.start_speed
             self.end_speeds = self.next.start_speeds
 
+        # Compute the start speed based on the end speed and acceleration in backward manner.
         self.decel_speed = Path.speed_from_distance(self.mag, self.acceleration, self.end_speed)
 
         # If the start speed is too high, adjust it
@@ -289,8 +293,9 @@ class AbsolutePath(Path):
             self.accelerations  = Path.acceleration_from_distance(self.abs_vec, self.start_speeds, self.end_speeds)
             self.decelerations  = np.zeros(Path.NUM_AXES)
         else:
-            # If we accelerate to a certain point, then decellerate, fint out where. 
+            # If we accelerate to a certain point, then decellerate, find out where the center of the plateau of the trapezoid is. 
             switch = (2*self.acceleration*self.mag-np.square(self.start_speed)+np.square(self.end_speed))/(4*self.acceleration)
+
             max_speed = Path.speed_from_distance(switch, self.acceleration, self.start_speed)
             if max_speed < self.speed:
                 # We accelerate to a certain point, then decellerate, never hitting the speed limit
@@ -410,6 +415,11 @@ class G92Path(Path):
             self.prev.calculate_deceleration()
 
 if __name__ == '__main__':
+
+    logging.basicConfig(level=logging.DEBUG, 
+                    format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
+                    datefmt='%m-%d %H:%M')
+
     global_pos = np.array([0, 0, 0, 0, 0])
 
     # Allways start by adding a G92 path to reset all axes
@@ -437,8 +447,8 @@ if __name__ == '__main__':
     print "D: "+str(d)
 
     # Now we want to know the stuff. 
-    print "b.angle_to_next is "+str(b.angle_to_next)+" it should be pi/2 "
-    print "b.angle_to_prev is "+str(a.angle_to_next)+" is should be pi/2 "
+    print "b.angle_to_prev is "+str(b.angle_to_prev)+" it should be pi/2 "
+    print "a.angle_to_prev is "+str(a.angle_to_prev)+" is should be pi/2 "
 
     print "Max speed "+str(b.speed)
     print "Start speed "+str(b.start_speed)
