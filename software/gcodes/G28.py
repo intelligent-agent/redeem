@@ -23,6 +23,7 @@ class G28(GCodeCommand):
                 self.printer.path_planner.home(axis)     
 
         logging.info("Homing done.")
+        self.printer.send_message(g.prot, "Homing done.")
 
 
     def get_description(self):

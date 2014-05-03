@@ -49,7 +49,7 @@ try:
     spi2_1.mode = 0
 except ImportError:
     pass
-    
+
 class Stepper:
 
     all_steppers = list()
@@ -202,7 +202,7 @@ class Stepper:
         self.max_feed_rate = max_feed_rate
 
     ''' Get the number of steps pr meter '''
-    def get_steps_pr_meter(self):        
+    def get_steps_pr_meter(self):
         return self.steps_pr_mm*self.microsteps*1000.0
 
     ''' The pin that steps, it looks like GPIO1_31 aso '''
