@@ -25,7 +25,7 @@ class Printer:
         self.factor         = 1.0
         self.movement       = Path.RELATIVE
         self.feed_rate      = 0.5
-        self.acceleration   = 0.3
+        self.acceleration   = 0.5
         self.current_tool   = "E"
 
     ''' Send a reply through the proper channel '''

@@ -16,6 +16,7 @@ import logging
 from Path import Path, AbsolutePath, RelativePath, G92Path
 import numpy as np  
 from threading import Thread
+from Printer import Printer
 import os 
 
 try:
@@ -160,7 +161,8 @@ class PathPlanner:
                 logging.debug("Long path segment is cut. remaining: "+str(len(self.pru_data)))       
             if hasattr(self, 'pru'):
                 while not self.pru.has_capacity_for(len(data)*8):          
-                    time.sleep(0.5)               
+                    time.sleep(0.5)   
+                logging.debug("Comitting long data...")             
                 self.pru.add_data(zip(*data))
                 self.pru.commit_data()                            # Commit data to ddr
         
@@ -257,11 +259,79 @@ class PathPlanner:
         v_start = path.start_speeds[axis_nr]
         v_end = path.end_speeds[axis_nr]
         v_max = path.max_speeds[axis_nr]
-        delays = self.acceleration_profile(stepper, s, a, d, v_start, v_end, v_max)
 
-        if not hasattr(path, 'delays'):
-            path.delays = [[], [], [], [], []]
-        path.delays[axis_nr] = delays
+        delays = np.array([])
+
+        meters_pr_step = 1.0/stepper.get_steps_pr_meter()
+        step_per_meter = stepper.get_steps_pr_meter()
+        total_steps = int(np.round(s/meters_pr_step))
+
+        #print "total_steps = "+str(total_steps)
+
+        if a > 0.00001 and not np.isnan(a):
+            #We need to accelerate
+            #How much time we need to accelerate
+            t = abs((v_max-v_start) / abs(a))
+            #print "Time at end accel "+str(t)
+            #Generate delays for that time
+            #Where are we at max speed?
+            #logging.debug("a="+str(a)+" "+str(v_max-v_start))
+
+            pos = v_start * t + 0.5*abs(a)*t**2
+            nb_step_accel = int(np.round(pos * step_per_meter))
+            logging.debug("Nb step accel "+str(nb_step_accel))
+
+
+            delays_accel = np.ones(nb_step_accel)
+            delays_accel = np.cumsum(delays_accel)
+            delays_accel =  (-v_start+np.sqrt(v_start**2+2*abs(a)*meters_pr_step*delays_accel)) / abs(a)
+
+
+            delays_accel = np.diff(np.append(np.array([0]),delays_accel))
+
+        else:
+            delays_accel = np.array([])
+
+        if d > 0.00001 and not np.isnan(d):
+            #We need to accelerate
+            #How much time we need to accelerate
+            t = abs((v_max-v_end) / abs(d))
+            #print "Time at start decel "+str(t)
+            #Generate delays for that time
+            #Where are we at max speed?
+            pos = v_end * t + 0.5*abs(d)*t**2
+            nb_step_decel = int(np.round(pos * step_per_meter))
+            #print "Nb step decel "+str(nb_step_decel)
+            delays_decel = np.ones(nb_step_decel)
+            delays_decel = np.cumsum(delays_decel)
+            delays_decel =  (-v_end+np.sqrt(v_end**2+2*abs(d)*meters_pr_step*delays_decel)) / abs(d)
+
+
+            delays_decel = np.diff(np.append(np.array([0]),delays_decel))
+
+            delays_decel = np.flipud(delays_decel)
+        else:
+            delays_decel = np.array([])
+
+        # Generate cruising profile
+        nr_delays_inter = total_steps - len(delays_accel) - len(delays_decel)
+        #print "Plateau # steps = "+str(nr_delays_inter)+" len a = "+str(len(delays_accel) )+", len d = " +str(len(delays_decel))
+        if nr_delays_inter > 0:
+            delays_inter = np.ones(nr_delays_inter)*(meters_pr_step/v_max)
+        else:
+            delays_inter = np.array([])
+
+        delays = np.append(np.append(delays_accel, delays_inter), delays_decel)
+
+        #delays = self.acceleration_profile(stepper, s, a, d, v_start, v_end, v_max)
+
+        #if not hasattr(path, 'delays'):
+        #    path.delays = [[], [], [], [], []]
+        #path.delays[axis_nr] = delays
+
+        #logging.debug("Processing "+axis+" of len "+str(path.stepper_vec[axis_nr])+" nb step "+str(num_steps)+", total delay = "+str(np.sum(delays)))
+
+        #pprint(getmembers(path))
 
         return (step_pins,dir_pins,option_pins, delays)                                           # return the pin states and the data
 
@@ -273,13 +343,22 @@ class PathPlanner:
         # Generate acceleraion profile 
         if a != 0 and not np.isnan(a):
             abs_a = abs(a)
+
+            #speed at start of portion
             ss_accel     = (v_start**2)/(2.0*abs_a)
+
+            #speed at end
             se_accel     = (v_max**2)/(2.0*abs_a)
+
+
+
             idx_ss       = int(np.round(ss_accel/meters_pr_step))
             idx_se       = int(np.round(se_accel/meters_pr_step))
             if idx_se < idx_ss:
                 idx_se, idx_ss = idx_ss, idx_se
             delays_start = np.diff(np.sqrt(2.0*abs_a*stepper.distances[idx_ss-1:idx_se])/abs_a)
+            
+
             if a < 0:
                 delays_start = np.flipud(delays_start)
         else:
@@ -307,6 +386,8 @@ class PathPlanner:
             delays_inter = np.ones(nr_delays_inter)*(meters_pr_step/v_max)
         else:
             delays_inter = np.array([])
+
+        
 
         # Return the table of delays
         return np.append(np.append(delays_start, delays_inter), delays_end)
@@ -366,10 +447,14 @@ if __name__ == '__main__':
     steppers["H"].set_microstepping(2)
     steppers["H"].set_steps_pr_mm(5.0)
 
-    path_planner = PathPlanner(steppers, None)
+    printer = Printer()
+
+    printer.steppers = steppers
+
+    path_planner = PathPlanner(printer, None)
     path_planner.make_acceleration_tables()
-    path_planner.save_acceleration_tables()
-    path_planner.load_acceleration_tables()
+    #path_planner.save_acceleration_tables()
+    #path_planner.load_acceleration_tables()
     #Path.axis_config = Path.AXIS_CONFIG_H_BELT
 
 
@@ -426,7 +511,6 @@ if __name__ == '__main__':
         #path_planner.add_path(AbsolutePath({"X": 0.0, "Y": 0.0}, speed, acceleration))
         path_planner.finalize_paths()
         #path_planner.add_path(RelativePath({"X": -radius, "Y": -radius}, speed, acceleration))
-
 
     try:
         import matplotlib.pyplot as plt
@@ -486,9 +570,15 @@ if __name__ == '__main__':
     mag_x = 0
     mag_y = 0  
     mag_e = 0  
+    
+    delaysarrow=[]
+
     for idx, path in enumerate(list(path_planner.paths.queue)):
         path_planner.do_work()
         if not path.movement == Path.G92:
+            if hasattr(path, 'delays_pru'):
+                delaysarrow.append(np.sum(path.delays_pru))
+
             plt.arrow(mag_x, path.start_speeds[0], path.abs_vec[0], path.end_speeds[0]-path.start_speeds[0], fc='r', ec='r', width=0.00001)
             plt.arrow(mag_y, path.start_speeds[1], path.abs_vec[1], path.end_speeds[1]-path.start_speeds[1], fc='b', ec='b', width=0.00001)
             plt.arrow(mag_e, path.start_speeds[3], path.abs_vec[3], path.end_speeds[3]-path.start_speeds[3], fc='y', ec='y', width=0.00001)
@@ -511,11 +601,22 @@ if __name__ == '__main__':
 
     # Plot the delays 
     ax2 = plt.subplot(2, 1, 1)
-    plt.plot(delays, 'r')
-    plt.plot(delays2, 'b')
-    plt.plot(delays3, 'y')
-    plt.ylim([0, 0.001])
-    plt.title('Delays')
+    # plt.plot(np.cumsum(delays),delays, 'r')
+    # plt.plot(np.cumsum(delays2),delays2, 'b')
+    # plt.plot(np.cumsum(delays3),delays3, 'y')
+    # plt.ylim([0, 0.08])
+
+    plt.plot(np.cumsum(path_planner.debug),path_planner.debug, '-r+')
+    plt.plot(np.cumsum(path_planner.debug_axis[0]),path_planner.debug_axis[0], '-g+')
+    plt.plot(np.cumsum(path_planner.debug_axis[1]),path_planner.debug_axis[1], '-b+')
+    deb = 0
+    scale=20e5
+    for d in delaysarrow:
+        plt.arrow(deb,scale, d,0,  width=0.00001*scale, head_width=0.05*scale, head_length=0.1*scale, fc='k', ec='k',  length_includes_head=True)
+        deb+=d
+
+ 
+    plt.title('Delays for X and Y sent to PRU. Black are the path segments.')
 
     print "total distance X = "+str(mag_x)
     print "total distance Y = "+str(mag_y)
