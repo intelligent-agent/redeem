@@ -62,7 +62,7 @@ class PruFirmware:
     ''' Returns True if the firmware needs recompilation '''
     def is_needing_firmware_compilation(self):
         config_mtime  = self.config.timestamp() #modif time of config file
-
+    
         ret0 = True
         ret1 = True
 
@@ -70,7 +70,7 @@ class PruFirmware:
             #Check if we need to rebuild the firmware
             fw_mtime      = os.path.getmtime(self.binary_filename0) #modif time of firmware file
             fw_src_mtime  = os.path.getmtime(self.firmware_source_file0) #modif time of firmware source file
-            if fw_mtime  >= config_mtime and fw_mtime>=fw_src_mtime: #already up to date
+            if fw_mtime  >= config_mtime and fw_mtime >= fw_src_mtime: #already up to date
                 ret0 = False
 
         if os.path.exists(self.binary_filename1):

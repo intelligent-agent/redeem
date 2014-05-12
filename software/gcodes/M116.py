@@ -11,6 +11,7 @@ License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 from GCodeCommand import GCodeCommand
 from Gcode import Gcode
 import time
+import logging
 
 class M116(GCodeCommand):
 

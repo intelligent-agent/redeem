@@ -69,7 +69,7 @@ class Redeem:
         EndStop.callback = self.end_stop_hit
         EndStop.inputdev = self.printer.config.get("Endstops","inputdev");
 
-        if self.revision == "A4":
+        if self.revision == "A4" or self.revision == "A4A":
             self.printer.end_stops["X1"] = EndStop("GPIO3_21", 112, "X1", self.printer.config.getboolean("Endstops", "invert_X1"))
             self.printer.end_stops["X2"] = EndStop("GPIO0_30", 113, "X2", self.printer.config.getboolean("Endstops", "invert_X2"))
             self.printer.end_stops["Y1"] = EndStop("GPIO1_17", 114, "Y1", self.printer.config.getboolean("Endstops", "invert_Y1"))
@@ -208,7 +208,7 @@ class Redeem:
         self.printer.path_planner.acceleration = float(self.printer.config.get('Steppers', 'acceleration'))
         self.printer.acceleration = float(self.printer.config.get('Steppers', 'acceleration'))
         self.printer.path_planner.make_acceleration_tables()
-        self.printer.path_planner.save_acceleration_tables()
+        #self.printer.path_planner.save_acceleration_tables()
         #self.printer.path_planner.load_acceleration_tables()
 
         travel={}
@@ -259,7 +259,6 @@ class Redeem:
 
     ''' Execute a G-code '''
     def _execute(self, g):  
-
         if g.message == "ok" or g.code()=="ok" or g.code()=="No-Gcode":
             g.set_answer(None)
             return
