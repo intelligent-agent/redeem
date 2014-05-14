@@ -138,7 +138,7 @@ class PathPlanner:
     ''' This is just a separate function so the test at the bottom will pass '''
     def do_work(self):
         path = self.paths.get()                            # Get the last path added            
-        #logging.debug("Doing path = "+str(path.movement))
+        logging.debug("Doing path = "+str(path.movement))
 
         if path.is_G92():                                   # Only set the position of the axes
             self.paths.task_done()            
@@ -250,7 +250,7 @@ class PathPlanner:
         num_steps       = path.num_steps[axis_nr]      # Number of steps to tick
         if num_steps == 0:
             return None
-        #logging.debug("Processing "+axis+" of len "+str(path.stepper_vec[axis_nr]))
+        logging.debug("Processing "+axis+" of len "+str(path.stepper_vec[axis_nr])+" with "+str(num_steps)+" steps")
         step_pin        = stepper.get_step_pin()                            # Get the step pin
         dir_pin         = stepper.get_dir_pin()                             # Get the direction pin
         dir_pin         = 0 if path.stepper_vec[axis_nr] < 0 else dir_pin   # Dir-pin low if we are going backwards  
