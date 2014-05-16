@@ -227,7 +227,8 @@ class Redeem:
         self.printer.comms["octoprint"] = Pipe(self.commands, "octoprint")   # Pipe for Octoprint
         self.printer.comms["toggle"] = Pipe(self.commands, "toggle")      # Pipe for Toggle
         self.printer.comms["testing"] = Pipe(self.commands, "testing")     # Pipe for testing
-        self.printer.comms["testing"].send_response = False     
+        self.printer.comms["testing_noret"] = Pipe(self.commands, "testing_noret")     # Pipe for testing
+        self.printer.comms["testing_noret"].send_response = False     
 
         self.running = True
 
