@@ -14,7 +14,7 @@
 		4E6C54B219375D85006610F6 /* PruTimer.h in Sources */ = {isa = PBXBuildFile; fileRef = 4E6C54B019375D85006610F6 /* PruTimer.h */; };
 		4E6C54B719376CCE006610F6 /* __prussdrv.h in Sources */ = {isa = PBXBuildFile; fileRef = 4E6C54B319376CCE006610F6 /* __prussdrv.h */; };
 		4E6C54B819376CCE006610F6 /* pruss_intc_mapping.h in Sources */ = {isa = PBXBuildFile; fileRef = 4E6C54B419376CCE006610F6 /* pruss_intc_mapping.h */; };
-		4E6C54B919376CCE006610F6 /* prussdrv.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4E6C54B519376CCE006610F6 /* prussdrv.cpp */; };
+		4E6C54B919376CCE006610F6 /* prussdrv.c in Sources */ = {isa = PBXBuildFile; fileRef = 4E6C54B519376CCE006610F6 /* prussdrv.c */; };
 		4E6C54BA19376CCE006610F6 /* prussdrv.h in Sources */ = {isa = PBXBuildFile; fileRef = 4E6C54B619376CCE006610F6 /* prussdrv.h */; };
 /* End PBXBuildFile section */
 
@@ -39,7 +39,7 @@
 		4E6C54B019375D85006610F6 /* PruTimer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.objj.h; path = PruTimer.h; sourceTree = "<group>"; };
 		4E6C54B319376CCE006610F6 /* __prussdrv.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.objj.h; path = __prussdrv.h; sourceTree = "<group>"; };
 		4E6C54B419376CCE006610F6 /* pruss_intc_mapping.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.objj.h; path = pruss_intc_mapping.h; sourceTree = "<group>"; };
-		4E6C54B519376CCE006610F6 /* prussdrv.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = prussdrv.cpp; sourceTree = "<group>"; };
+		4E6C54B519376CCE006610F6 /* prussdrv.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = prussdrv.c; sourceTree = "<group>"; };
 		4E6C54B619376CCE006610F6 /* prussdrv.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.objj.h; path = prussdrv.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -75,7 +75,7 @@
 			children = (
 				4E6C54B319376CCE006610F6 /* __prussdrv.h */,
 				4E6C54B419376CCE006610F6 /* pruss_intc_mapping.h */,
-				4E6C54B519376CCE006610F6 /* prussdrv.cpp */,
+				4E6C54B519376CCE006610F6 /* prussdrv.c */,
 				4E6C54B619376CCE006610F6 /* prussdrv.h */,
 				4E6C549A19370F2E006610F6 /* main.cpp */,
 				4E6C54A719370F5B006610F6 /* PathPlanner.cpp */,
@@ -141,7 +141,7 @@
 				4E6C54B219375D85006610F6 /* PruTimer.h in Sources */,
 				4E6C54AA19370F5B006610F6 /* PathPlanner.h in Sources */,
 				4E6C54B119375D85006610F6 /* PruTimer.cpp in Sources */,
-				4E6C54B919376CCE006610F6 /* prussdrv.cpp in Sources */,
+				4E6C54B919376CCE006610F6 /* prussdrv.c in Sources */,
 				4E6C54B719376CCE006610F6 /* __prussdrv.h in Sources */,
 				4E6C54A919370F5B006610F6 /* PathPlanner.cpp in Sources */,
 				4E6C549B19370F2E006610F6 /* main.cpp in Sources */,
@@ -255,6 +255,7 @@
 				4E6C54A219370F2E006610F6 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};

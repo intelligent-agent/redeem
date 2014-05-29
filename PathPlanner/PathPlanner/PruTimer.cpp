@@ -121,11 +121,11 @@ bool PruTimer::initPRU(const std::string &firmware_stepper, const std::string &f
     printf("\t\tINFO: Executing example on PRU1.\r\n");
     prussdrv_exec_program (PRU_NUM1, firmware_endstops.c_str());
 
-	prussdrv_pru_wait_event (PRU_EVTOUT_0);
+	/*prussdrv_pru_wait_event (PRU_EVTOUT_0);
 	
 	printf("\tINFO: PRU0 completed transfer of endstop.\r\n");
 	
-	prussdrv_pru_clear_event (PRU_EVTOUT_0, PRU0_ARM_INTERRUPT);
+	prussdrv_pru_clear_event (PRU_EVTOUT_0, PRU0_ARM_INTERRUPT);*/
 
 	
 	return true;
