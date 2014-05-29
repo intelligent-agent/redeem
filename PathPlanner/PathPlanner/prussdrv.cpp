@@ -476,8 +476,32 @@ int prussdrv_pru_send_event(unsigned int eventnum)
 
 unsigned int prussdrv_pru_wait_event(unsigned int host_interrupt)
 {
-    unsigned int event_count;
-    read(prussdrv.fd[host_interrupt], &event_count, sizeof(int));
+    unsigned int event_count = 0;
+	
+	fd_set set;
+	
+	struct timeval timeout;
+	
+	timeout.tv_sec = 0;
+	timeout.tv_usec = 50000;
+	
+	/*FD_ZERO(&set);
+	
+	FD_SET(prussdrv.fd[host_interrupt], &set); // add our file descriptor to the set
+	int rv;
+	do {
+		rv = select(prussdrv.fd[host_interrupt] + 1, &set, NULL, NULL, &timeout);
+		if(rv == -1){
+			return 0;
+		} else if(rv == 0){
+			// a timeout occured
+		}else{
+			printf("Reading...\n");*/
+			read(prussdrv.fd[host_interrupt], &event_count, sizeof(unsigned int)); // there was data to read
+	/*		break;
+		}
+	} while(rv==0 && prussdrv.fd[host_interrupt]>=0);*/
+    
     return event_count;
 }
 
@@ -655,8 +679,10 @@ int prussdrv_exit()
     munmap(prussdrv.l3ram_base, prussdrv.l3ram_map_size);
     munmap(prussdrv.extram_base, prussdrv.extram_map_size);
     for (i = 0; i < NUM_PRU_HOSTIRQS; i++) {
-        if (prussdrv.fd[i])
+        if (prussdrv.fd[i]) {
             close(prussdrv.fd[i]);
+			prussdrv.fd[i] = -1;
+		}
     }
     return 0;
 }
@@ -665,7 +691,7 @@ int prussdrv_exec_program(int prunum, const char *filename)
 {
     FILE *fPtr;
     unsigned char fileDataArray[PRUSS_MAX_IRAM_SIZE];
-    int fileSize = 0;
+    long fileSize = 0;
 
     // Open an File from the hard drive
     fPtr = fopen(filename, "rb");

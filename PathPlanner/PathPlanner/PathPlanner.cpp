@@ -133,12 +133,13 @@ void PathPlanner::queueMove(float startPos[NUM_AXIS],float endPos[NUM_AXIS],floa
 		
     }
 	
-    /*if(p->isNoMove())
-	 {
-	 if(newPath)   // need to delete dummy elements, otherwise commands can get locked.
-	 resetPathPlanner();
-	 return; // No steps included
-	 }*/
+    if(p->isNoMove())
+	{
+		std::cout << "Warning: no move path" << std::endl;
+		// if(newPath)   // need to delete dummy elements, otherwise commands can get locked.
+		// resetPathPlanner();
+		return; // No steps included
+	}
 	
 	
     float xydist2;
@@ -831,13 +832,13 @@ void PathPlanner::run() {
 			cmd.delay = interval;
 		} // stepsRemaining
 				
-		std::cout << "Done with " << linesPos << std::endl;
+		std::cout << "Done with " << std::dec << linesPos << std::endl;
 		
-		std::cout << "Sending " << linesPos << std::endl;
+		std::cout << "Sending " << std::dec << linesPos << std::endl;
 		
 		pru.push_block((uint8_t*)cur->commands, sizeof(SteppersCommand)*cur->stepsRemaining, sizeof(SteppersCommand));
 		
-		std::cout << "Done sending with " << linesPos << std::endl;
+		std::cout << "Done sending with " << std::dec << linesPos << std::endl;
 		
 		
 		removeCurrentLineForbidInterrupt();

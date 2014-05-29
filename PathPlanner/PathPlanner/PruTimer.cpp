@@ -50,14 +50,6 @@ bool PruTimer::initPRU(const std::string &firmware_stepper, const std::string &f
         return false;
     }
 	
-    /* Open PRU Interrupt */
-    ret = prussdrv_open(PRU_EVTOUT_1);
-    if (ret)
-    {
-        printf("prussdrv_open open failed\n");
-        return false;
-    }
-	
     /* Get the interrupt initialized */
     prussdrv_pruintc_init(&pruss_intc_initdata);
 	
@@ -86,7 +78,7 @@ bool PruTimer::initPRU(const std::string &firmware_stepper, const std::string &f
 	
 	ddr_size = std::stoul(s, nullptr, 16);
 
-	std::cout << "The DDR memory reserved for the PRU is " << std::hex <<  ddr_size << " and has addr " <<  std::hex <<  ddr_addr << std::endl;
+	std::cout << "The DDR memory reserved for the PRU is 0x" << std::hex <<  ddr_size << " and has addr 0x" <<  std::hex <<  ddr_addr << std::endl;
 
     /* open the device */
     mem_fd = open("/dev/mem", O_RDWR);
@@ -110,11 +102,30 @@ bool PruTimer::initPRU(const std::string &firmware_stepper, const std::string &f
 	ddr_nr_events  = (unsigned int*)((uint8_t*)ddr_mem+ddr_size-4);
 	ddr_mem_end = ddr_mem+ddr_size;
 	
+	*((unsigned int*)ddr_write_location)=0; //So that the PRU waits
+	*ddr_nr_events = 0;
+	
+	//Set DDR location for PRU
+	 //pypruss.pru_write_memory(0, 0, [self.ddr_addr, self.ddr_nr_events, 0])
+	uint32_t ddrstartData[3];
+	ddrstartData[0] = (uint32_t)ddr_addr;
+	ddrstartData[1] = currentNbEvents;
+	ddrstartData[2] = 0;
+	
+	prussdrv_pru_write_memory(PRUSS0_PRU0_DATARAM, 0, ddrstartData, sizeof(ddrstartData));
+
+	
     /* Execute firmwares on PRU */
     printf("\tINFO: Executing example on PRU0.\r\n");
     prussdrv_exec_program (PRU_NUM0, firmware_stepper.c_str());
     printf("\t\tINFO: Executing example on PRU1.\r\n");
     prussdrv_exec_program (PRU_NUM1, firmware_endstops.c_str());
+
+	prussdrv_pru_wait_event (PRU_EVTOUT_0);
+	
+	printf("\tINFO: PRU0 completed transfer of endstop.\r\n");
+	
+	prussdrv_pru_clear_event (PRU_EVTOUT_0, PRU0_ARM_INTERRUPT);
 
 	
 	return true;
@@ -139,6 +150,7 @@ void PruTimer::runThread() {
 }
 
 void PruTimer::stopThread(bool join) {
+	std::cout << "Stopping PruTimer..." << std::endl;
 	stop=true;
 	
 	/* Disable PRU and close memory mapping*/
@@ -153,14 +165,15 @@ void PruTimer::stopThread(bool join) {
 		mem_fd=-1;
 	}
     
-
+	std::cout << "PRU disabled, DDR released, FD closed." << std::endl;
+	
 	
 	blockAvailable.notify_all();
 	if(join && runningThread.joinable()) {
 		runningThread.join();
 	}
 	
-	
+	std::cout << "PruTimer stopped." << std::endl;
 }
 
 void PruTimer::push_block(uint8_t* blockMemory, size_t blockLen, unsigned int unit) {
@@ -188,6 +201,8 @@ void PruTimer::push_block(uint8_t* blockMemory, size_t blockLen, unsigned int un
 			std::unique_lock<std::mutex> lk(m);
 			blockAvailable.wait(lk, [this,currentBlockSize]{return ddr_size-ddr_mem_used-4>=currentBlockSize+4; });
 			
+			if(!ddr_mem) return;
+			
 			assert(getFreeMemory()>=currentBlockSize+4);
 			
 			ddr_used.push(currentBlockSize+4);
@@ -198,18 +213,17 @@ void PruTimer::push_block(uint8_t* blockMemory, size_t blockLen, unsigned int un
 				//TODO
 			} else {
 				//First copy the data
-				memcpy(ddr_write_location, blockStart, currentBlockSize);
+				memcpy(ddr_write_location+4, blockStart, currentBlockSize);
 				
-				ddr_write_location+=currentBlockSize;
 				
 				//Need it?
-				msync(ddr_write_location, currentBlockSize, MS_SYNC);
+				msync(ddr_write_location+4, currentBlockSize, MS_SYNC);
 				
 				//Then signal how much data we have to the PRU
 				uint32_t nb = (uint32_t)currentBlockSize/unit;
-				
+				std::cout << "Written " << std::dec << nb << " stepper commands." << std::endl;
 				memcpy(ddr_write_location, &nb, sizeof(nb));
-				ddr_write_location+=sizeof(nb);
+				ddr_write_location+=currentBlockSize+sizeof(nb);
 			}
 			
 			
@@ -225,12 +239,15 @@ void PruTimer::run() {
 	while(!stop) {
 		prussdrv_pru_wait_event (PRU_EVTOUT_0);
 		
+		if(stop) break;
+		
 		printf("\tINFO: PRU0 completed transfer.\r\n");
 		
 		prussdrv_pru_clear_event (PRU_EVTOUT_0, PRU0_ARM_INTERRUPT);
 
 		uint32_t nb = *ddr_nr_events;
 		
+		std::cout << "NB event " << nb << " / " << currentNbEvents << std::endl;
 		
 		std::unique_lock<std::mutex> lk(m);
 
@@ -246,6 +263,8 @@ void PruTimer::run() {
 		
 		lk.unlock();
 		
+		std::cout << "NB event after " << nb << " / " << currentNbEvents << std::endl;
+		std::cout << ddr_mem_used << " bytes used." << std::endl;
 		
 		blockAvailable.notify_one();
 	}

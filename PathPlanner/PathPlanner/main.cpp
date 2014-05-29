@@ -15,11 +15,13 @@ int main(int argc, const char * argv[])
 	PathPlanner planner;
 	Path *prev=NULL;
 	
-	planner.initPRU("ss", "ss");
+	planner.initPRU("/root/redeem/firmware/firmware_runtime.bin","/root/redeem/firmware/firmware_endstops.bin");
 	
 	planner.runThread();
 	
-	for(int i=0;i<1;i++) {
+	
+	
+	for(int i=0;i<16;i++) {
 		Path * p =new Path();
 		bzero(p,sizeof(*p));
 		
@@ -27,8 +29,8 @@ int main(int argc, const char * argv[])
 			memcpy(p->startPos, prev->endPos, sizeof(p->startPos));
 			delete prev;
 		}
-		p->speed=70;
-		p->endPos[0]=100*(i+1);
+		p->speed=100;
+		p->endPos[0]=10*(i+1);
 		p->endPos[1]=0;
 		p->endPos[2]=0;
 		p->endPos[3]=0;
@@ -42,7 +44,7 @@ int main(int argc, const char * argv[])
 	
 	std::this_thread::sleep_for( std::chrono::milliseconds(2000) );
 	
-	planner.stopThread(true);
+	//planner.stopThread(true);
 	
     return 0;
 }
