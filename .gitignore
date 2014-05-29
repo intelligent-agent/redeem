@@ -12,3 +12,9 @@ images/ubuntu/local-files
 Printrun/
 Slic3r
 Host
+PathPlanner/build
+PathPlanner/PathPlanner.xcodeproj/project.xcworkspace
+PathPlanner/PathPlanner.xcodeproj/xcuserdata
+PathPlanner/PathPlanner/build
+PathPlanner/PathPlanner/*.o
+PathPlanner/PathPlanner/*.dep
