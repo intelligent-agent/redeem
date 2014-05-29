@@ -52,6 +52,7 @@ class Path:
         self.acceleration       = acceleration
         self.cancellable        = int(cancellable)
         self.mag                = None
+        self.pru_data = []
         self.next               = None
         self.is_added           = False
         self.is_start_segment   = False
@@ -193,9 +194,13 @@ class AbsolutePath(Path):
         for index, axis in enumerate(Path.AXES):
             if axis in self.axes:
                 self.end_pos[index] = self.axes[axis] 
+
         self.true_vec = self.end_pos - self.start_pos    
+
         # Convert to actual traveled distance by the steppers
         self.true_vec = self.vector_to_stepper_translation(self.true_vec)
+
+
         self.end_pos = self.start_pos + self.true_vec
         # Start using the stepper vector for further calcs
         self.vec = self.stepper_vec
@@ -302,9 +307,21 @@ class AbsolutePath(Path):
                 self.profile        = "accel-decel"
                 self.max_speeds     = max_speed*self.ratios
                 # Find out where the switch occurs 
-                max_dists           = self.ratios*switch            
+                
+                max_dists           = self.ratios*switch   
+                     
                 self.accelerations  = Path.acceleration_from_distance(max_dists, self.start_speeds, self.max_speeds)                
                 self.decelerations  = Path.acceleration_from_distance(self.abs_vec-max_dists, self.end_speeds, self.max_speeds)
+                # print "Ratios: "+str(self.ratios)
+                # print "Switch at "+str(max_dists)    
+                # print "accel = "+str(self.accelerations)
+                # print "decel = "+str(self.decelerations)
+                # print "start speed = "+str(self.start_speeds)
+                # print "max speed = "+str(self.max_speeds)
+                # print "end speed = "+str(self.end_speeds)
+                # print "abs_vec = " + str(self.abs_vec)
+                # print "true vec = " + str(self.true_vec)
+                # print "hyp = " + str(self.hyp)
             else:
                 # We hit the speed limit.
                 self.profile = "cruise"

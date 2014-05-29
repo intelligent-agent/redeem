@@ -208,7 +208,7 @@ class Redeem:
         self.printer.path_planner.acceleration = float(self.printer.config.get('Steppers', 'acceleration'))
         self.printer.acceleration = float(self.printer.config.get('Steppers', 'acceleration'))
         self.printer.path_planner.make_acceleration_tables()
-        self.printer.path_planner.save_acceleration_tables()
+        #self.printer.path_planner.save_acceleration_tables()
         #self.printer.path_planner.load_acceleration_tables()
 
         travel={}
@@ -222,12 +222,12 @@ class Redeem:
         self.printer.processor = GCodeProcessor(self.printer);
 
         # Set up communication channels
-        self.printer.comms["USB"]    = USB(self.commands)
+        #self.printer.comms["USB"]    = USB(self.commands)
         self.printer.comms["Eth"]    = Ethernet(self.commands)
-        self.printer.comms["Pipe_0"] = Pipe(self.commands, "Pipe_0")     # Pipe for Octoprint
-        self.printer.comms["Pipe_1"] = Pipe(self.commands, "Pipe_1")     # Pipe for Toggle
-        self.printer.comms["Pipe_2"] = Pipe(self.commands, "Pipe_2")     # Pipe for testing
-        self.printer.comms["Pipe_2"].send_response = False     
+        #self.printer.comms["Pipe_0"] = Pipe(self.commands, "Pipe_0")     # Pipe for Octoprint
+        #self.printer.comms["Pipe_1"] = Pipe(self.commands, "Pipe_1")     # Pipe for Toggle
+        #self.printer.comms["Pipe_2"] = Pipe(self.commands, "Pipe_2")     # Pipe for testing
+        #self.printer.comms["Pipe_2"].send_response = False     
 
         self.running = True
 

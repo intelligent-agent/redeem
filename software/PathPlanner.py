@@ -42,7 +42,6 @@ class PathPlanner:
         self.paths          = Queue.Queue(1000)
         self.segments       = []
         self.running        = True
-        self.pru_data       = []
         self.t              = Thread(target=self._do_work)
         self.t.daemon       = True
         self.travel_length  = {"X":0.0, "Y":0.0, "Z":0.0}
@@ -118,6 +117,11 @@ class PathPlanner:
             self.prev.finalize()
             self.segments.append(self.prev)
             self.prev.is_added = True
+
+            #Produce the data for the segments
+            for path in self.segments:
+                self.produce_pru_data(path)
+                
             [self.paths.put(path) for path in self.segments]
             self.segments = []
     
@@ -135,6 +139,20 @@ class PathPlanner:
         while self.running:       
            self.do_work()
     
+    def produce_pru_data(self,path):
+
+        if not hasattr(path,'pru_data') or len(path.pru_data) == 0:
+            for axis_nr, val in enumerate(path.vec):                       # Run through all the axes in the path                   
+                if val != 0:
+                    data = self._make_data(path, axis_nr)        
+                    if data:
+                        if len(path.pru_data) == 0:
+                            path.pru_data = zip(*data)
+                        else:
+                            #pass
+                            self._braid_data1(path.pru_data, zip(*data))
+                            #path.pru_data = self._braid_data(path.pru_data, zip(*data))
+
     ''' This is just a separate function so the test at the bottom will pass '''
     def do_work(self):
         path = self.paths.get()                            # Get the last path added            
@@ -144,21 +162,14 @@ class PathPlanner:
             self.paths.task_done()            
             return                
         
-        for axis_nr, val in enumerate(path.vec):                       # Run through all the axes in the path                   
-            if val != 0:
-                data = self._make_data(path, axis_nr)        
-                if data:
-                    if len(self.pru_data) == 0:
-                        self.pru_data = zip(*data)
-                    else:
-                        #pass
-                        self._braid_data1(self.pru_data, zip(*data))
-                        #self.pru_data = self._braid_data(self.pru_data, zip(*data))
-        while len(self.pru_data) > 0:  
-            data = self.pru_data[0:0x20000/8]
-            del self.pru_data[0:0x20000/8]
-            if len(self.pru_data) > 0:
-                logging.debug("Long path segment is cut. remaining: "+str(len(self.pru_data)))       
+        
+        self.produce_pru_data(path)
+
+        while len(path.pru_data) > 0:  
+            data = path.pru_data[0:0x20000/8]
+            del path.pru_data[0:0x20000/8]
+            if len(path.pru_data) > 0:
+                logging.debug("Long path segment is cut. remaining: "+str(len(path.pru_data)))       
             if hasattr(self, 'pru'):
                 while not self.pru.has_capacity_for(len(data)*8):          
                     time.sleep(0.5)   
@@ -166,7 +177,7 @@ class PathPlanner:
                 self.pru.add_data(zip(*data))
                 self.pru.commit_data()                            # Commit data to ddr
         
-        self.pru_data = []
+        path.pru_data = []
         
         self.paths.task_done()
         path.unlink()                                         # Remove reference to enable garbage collection

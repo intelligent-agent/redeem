@@ -216,7 +216,7 @@ class Pru:
             with Pru.ddr_lock: 
                 self.ddr_mem_used += data_len               
             self.ddr_used.put(data_len)                         # update the amount of memory used 
-            #logging.debug("Pushed "+str(data_len)+" from "+hex(self.ddr_start)+" to "+hex(self.ddr_end))
+            logging.debug("Pushed "+str(data_len)+" from "+hex(self.ddr_start)+" to "+hex(self.ddr_end))
             
         self.ddr_start  = self.ddr_end-4    # Update the start of ddr for next time 
         self.pru_data   = []                # Reset the pru_data list since it has been commited         
@@ -230,7 +230,7 @@ class Pru:
         self.old_events = 0
         nr_interrupts = 0
         while self.running:
-            ret = select.select( [self.dev],[],[], 1.0 )
+            ret = select.select( [self.dev],[],[], 0.01 )
             if ret[0] == [self.dev]:
                 self._wait_for_event()
                 pypruss.clear_event(PRU0_ARM_INTERRUPT)			# Clear the event        
@@ -242,7 +242,7 @@ class Pru:
                 ddr = self.ddr_used.get()                       # Pop the first ddr memory amount           
                 with Pru.ddr_lock: 
                     self.ddr_mem_used -= ddr                    
-                #logging.debug("Popped "+str(ddr)+"\tnow "+hex(self.get_capacity()))
+                logging.debug("Popped "+str(ddr)+"\tnow "+hex(self.get_capacity()))
                 if self.get_capacity() < 0:
                     logging.error("Capacity less than 0!")
                 if self.get_capacity() == 0x40000:
