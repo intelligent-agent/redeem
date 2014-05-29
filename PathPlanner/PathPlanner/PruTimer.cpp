@@ -111,10 +111,11 @@ bool PruTimer::initPRU(const std::string &firmware_stepper, const std::string &f
 	 //pypruss.pru_write_memory(0, 0, [self.ddr_addr, self.ddr_nr_events, 0])
 	uint32_t ddrstartData[3];
 	ddrstartData[0] = (uint32_t)ddr_addr;
-	ddrstartData[1] = (uint32_t)(unsigned long)(ddr_nr_events);
+	ddrstartData[1] = (uint32_t)(ddr_addr+ddr_size-4);
 	ddrstartData[2] = 0;
 	
 	prussdrv_pru_write_memory(PRUSS0_PRU0_DATARAM, 0, ddrstartData, sizeof(ddrstartData));
+	prussdrv_pru_write_memory(PRUSS0_SHARED_DATARAM, 0, ddrstartData, sizeof(ddrstartData));
 
 	
     /* Execute firmwares on PRU */
@@ -222,17 +223,17 @@ void PruTimer::push_block(uint8_t* blockMemory, size_t blockLen, unsigned int un
 				ddr_mem_used+=currentBlockSize+4;
 				
 				//First copy the data
-				std::cout << std::hex << "Writing data to 0x" << ddr_write_location << std::endl;
+				std::cout << std::hex << "Writing data to 0x" << (unsigned long)ddr_write_location << std::endl;
 				memcpy(ddr_write_location+4, blockStart, currentBlockSize);
 				
 				
 				//Need it?
-				//msync(ddr_write_location+4, currentBlockSize, MS_SYNC);
+				msync(ddr_write_location+4, currentBlockSize, MS_SYNC);
 				
 				//Then signal how much data we have to the PRU
 				uint32_t nb = (uint32_t)currentBlockSize/unit;
 				
-				std::cout << std::hex << "Writing nb command to 0x" << ddr_write_location << std::endl;
+				std::cout << std::hex << "Writing nb command to 0x" << (unsigned long)ddr_write_location << std::endl;
 				memcpy(ddr_write_location, &nb, sizeof(nb));
 				
 				std::cout << "Written " << std::dec << nb << " stepper commands." << std::endl;
@@ -256,14 +257,16 @@ void PruTimer::run() {
 	while(!stop) {
 		unsigned int nbEvent = prussdrv_pru_wait_event (PRU_EVTOUT_0);
 		
-		std::cout << "Waited " << std::dec << nbEvent << " events." << std::endl;
+		//std::cout << "Waited " << std::dec << nbEvent << " events." << std::endl;
 		
 		if(stop) break;
 		
 		printf("\tINFO: PRU0 completed transfer.\r\n");
 		
 		prussdrv_pru_clear_event (PRU_EVTOUT_0, PRU0_ARM_INTERRUPT);
-
+		
+		msync(ddr_nr_events, 4, MS_SYNC);
+		
 		uint32_t nb = *ddr_nr_events;
 		
 		std::cout << "NB event " << nb << " / " << currentNbEvents << std::endl;
