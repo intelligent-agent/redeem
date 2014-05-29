@@ -39,7 +39,7 @@ class PathPlanner:
 
             self.native_planner.initPRU( pru_firmware.get_firmware(0), pru_firmware.get_firmware(1))
 
-
+            self.native_planner.runThread()
 
     ''' Get the current pos as a dict '''
     def get_current_pos(self):
@@ -85,21 +85,20 @@ class PathPlanner:
         # Link to the previous segment in the chain
         new.set_prev(self.prev)
 
-        if not self.prev.is_added:
-            self.segments.append(self.prev)
-            self.prev.is_added = True
-            # If we find an end segment, add all path segments to the queue for execution           
-            if self.prev.is_end_segment:
-                logging.debug("Processing all ("+str(len(self.segments))+") segments on queue!")
-                [self.paths.put(path) for path in self.segments]
-                self.segments = []
+        if new.is_G92():
+            pass #FIXME: Flush the path in the planner or tell the planner it's a G92....
 
-        # If this is a relative move or G92, add it right away
-        if new.is_end_segment:
-            self.finalize_paths()
-            self.paths.put(new)
-            new.is_added = True
-            self.segments = []
+        #push this new segment
+        #unit for speed is mm/min
+        #unit for position is in steps
+        #FIXME: CLEAN THAT MESS!
+
+        speed = new.speed*60000.0
+        start = new.start_pos * Path.steps_pr_meter
+        end = new.end_pos * Path.steps_pr_meter
+
+        self.native_planner.queueMove((start[0],start[1],start[2],start[3]),(end[0],end[1],end[2],end[3]),speed)
+
 
         self.prev = new
 

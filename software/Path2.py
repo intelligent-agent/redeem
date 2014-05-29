@@ -89,7 +89,18 @@ class AbsolutePath(Path):
     # Find the controlling axis and use that for calculating the other axes. 
     def set_prev(self, prev):
         self.prev = prev
+
+
         self.start_pos = prev.end_pos
+
+        
+        # Make the start, end and path vectors. 
+        self.end_pos = np.copy(self.start_pos)
+        for index, axis in enumerate(Path.AXES):
+            if axis in self.axes:
+                self.end_pos[index] = self.axes[axis] 
+
+        
         prev.next = self
               
 

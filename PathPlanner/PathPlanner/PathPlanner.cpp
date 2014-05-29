@@ -112,6 +112,9 @@ void PathPlanner::queueMove(float startPos[NUM_AXIS],float endPos[NUM_AXIS],floa
 	memcpy(p->startPos, startPos, sizeof(float)*NUM_AXIS);
 	memcpy(p->endPos, endPos, sizeof(float)*NUM_AXIS);
 	
+	std::cout << std::dec << "Moving from " << startPos[0] << "," << startPos[1] << "," << startPos[2] << " to ";
+	std::cout << endPos[0] << "," << endPos[1] << "," << endPos[2] << std::endl;
+	
 	p->speed = speed;
 	
     p->joinFlags = 0;
