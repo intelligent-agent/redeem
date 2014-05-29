@@ -1,4 +1,4 @@
-%module pathplanner
+%module PathPlannerNative
 
 
 %include "typemaps.i"

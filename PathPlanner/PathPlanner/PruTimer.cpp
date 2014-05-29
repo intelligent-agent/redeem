@@ -255,9 +255,7 @@ void PruTimer::push_block(uint8_t* blockMemory, size_t blockLen, unsigned int un
 
 void PruTimer::run() {
 	while(!stop) {
-		unsigned int nbEvent = prussdrv_pru_wait_event (PRU_EVTOUT_0);
-		
-		//std::cout << "Waited " << std::dec << nbEvent << " events." << std::endl;
+		prussdrv_pru_wait_event (PRU_EVTOUT_0);
 		
 		if(stop) break;
 		

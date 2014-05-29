@@ -18,3 +18,5 @@ PathPlanner/PathPlanner.xcodeproj/xcuserdata
 PathPlanner/PathPlanner/build
 PathPlanner/PathPlanner/*.o
 PathPlanner/PathPlanner/*.dep
+PathPlanner/PathPlanner/PathPlannerNative_wrap.cpp
+PathPlanner/PathPlanner/PathPlannerNative.py

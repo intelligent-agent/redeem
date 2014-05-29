@@ -37,8 +37,8 @@ from Gcode import Gcode
 import sys
 from Extruder import Extruder, HBP
 from Pru import Pru
-from Path import Path, RelativePath, AbsolutePath, G92Path
-from PathPlanner import PathPlanner
+from Path2 import Path, RelativePath, AbsolutePath, G92Path
+from PathPlanner2 import PathPlanner
 from ColdEnd import ColdEnd
 from PruFirmware import PruFirmware
 from CascadingConfigParser import CascadingConfigParser
@@ -207,7 +207,7 @@ class Redeem:
         self.printer.path_planner = PathPlanner(self.printer, pru_firmware)
         self.printer.path_planner.acceleration = float(self.printer.config.get('Steppers', 'acceleration'))
         self.printer.acceleration = float(self.printer.config.get('Steppers', 'acceleration'))
-        self.printer.path_planner.make_acceleration_tables()
+        #self.printer.path_planner.make_acceleration_tables()
         #self.printer.path_planner.save_acceleration_tables()
         #self.printer.path_planner.load_acceleration_tables()
 

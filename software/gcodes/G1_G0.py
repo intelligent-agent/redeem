@@ -9,7 +9,7 @@ License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 '''
 
 from GCodeCommand import GCodeCommand
-from Path import Path, RelativePath, AbsolutePath
+from Path2 import Path, RelativePath, AbsolutePath
 import logging
 
 class G0(GCodeCommand):
