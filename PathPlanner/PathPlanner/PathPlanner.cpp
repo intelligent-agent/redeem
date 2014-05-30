@@ -20,10 +20,12 @@ void PathPlanner::setMaxFeedrates(unsigned long rates[NUM_AXIS]){
 
 void PathPlanner::setPrintAcceleration(unsigned long accel[NUM_AXIS]){
 	memcpy(maxAccelerationMMPerSquareSecond, accel, sizeof(unsigned long)*NUM_AXIS);
+	recomputeParameters();
 }
 
 void PathPlanner::setTravelAcceleration(unsigned long accel[NUM_AXIS]){
 	memcpy(maxTravelAccelerationMMPerSquareSecond, accel, sizeof(unsigned long)*NUM_AXIS);
+	recomputeParameters();
 }
 
 void PathPlanner::setMaxJerk(unsigned long maxJerk, unsigned long maxZJerk){
@@ -31,13 +33,31 @@ void PathPlanner::setMaxJerk(unsigned long maxJerk, unsigned long maxZJerk){
 	this->maxZJerk = maxZJerk;
 }
 
-void PathPlanner::setMinimumSpeed(unsigned long minSpeed, unsigned long minZSpeed){
-	this->minimumSpeed = minSpeed;
-	this->minimumZSpeed = minZSpeed;
-}
-
 void PathPlanner::setMaximumExtruderStartFeedrate(unsigned long maxstartfeedrate) {
 	this->Extruder_maxStartFeedrate = maxstartfeedrate;
+}
+
+void PathPlanner::setAxisStepsPerMM(unsigned long stepPerMM[NUM_AXIS]) {
+	memcpy(axisStepsPerMM, stepPerMM, sizeof(unsigned long)*NUM_AXIS);
+	recomputeParameters();
+}
+
+void PathPlanner::recomputeParameters() {
+	for(uint8_t i=0; i<NUM_AXIS; i++)
+    {
+		invAxisStepsPerMM[i]=1.0/axisStepsPerMM[i];
+        /** Acceleration in steps/s^3 in printing mode.*/
+        maxPrintAccelerationStepsPerSquareSecond[i] =  maxAccelerationMMPerSquareSecond[i] * (axisStepsPerMM[i]);
+        /** Acceleration in steps/s^2 in movement mode.*/
+        maxTravelAccelerationStepsPerSquareSecond[i] = maxTravelAccelerationMMPerSquareSecond[i] * (axisStepsPerMM[i]);
+    }
+	
+	
+	float accel = std::max(maxAccelerationMMPerSquareSecond[X_AXIS],maxTravelAccelerationMMPerSquareSecond[X_AXIS]);
+    minimumSpeed = accel*sqrt(2.0f/(axisStepsPerMM[X_AXIS]*accel));
+    accel = std::max(maxAccelerationMMPerSquareSecond[Z_AXIS],maxTravelAccelerationMMPerSquareSecond[Z_AXIS]);
+    minimumZSpeed = accel*sqrt(2.0f/(axisStepsPerMM[Z_AXIS]*accel));
+
 }
 
 PathPlanner::PathPlanner() {
@@ -68,24 +88,11 @@ PathPlanner::PathPlanner() {
 	maxTravelAccelerationMMPerSquareSecond[3]=2000;
 	//maxTravelAccelerationMMPerSquareSecond[4]=2000;
 	
-	for(uint8_t i=0; i<NUM_AXIS; i++)
-    {
-		invAxisStepsPerMM[i]=1.0/axisStepsPerMM[i];
-        /** Acceleration in steps/s^3 in printing mode.*/
-        maxPrintAccelerationStepsPerSquareSecond[i] =  maxAccelerationMMPerSquareSecond[i] * (axisStepsPerMM[i]);
-        /** Acceleration in steps/s^2 in movement mode.*/
-        maxTravelAccelerationStepsPerSquareSecond[i] = maxTravelAccelerationMMPerSquareSecond[i] * (axisStepsPerMM[i]);
-    }
-	
-	
-	float accel = std::max(maxAccelerationMMPerSquareSecond[X_AXIS],maxTravelAccelerationMMPerSquareSecond[X_AXIS]);
-    minimumSpeed = accel*sqrt(2.0f/(axisStepsPerMM[X_AXIS]*accel));
-    accel = std::max(maxAccelerationMMPerSquareSecond[Z_AXIS],maxTravelAccelerationMMPerSquareSecond[Z_AXIS]);
-    minimumZSpeed = accel*sqrt(2.0f/(axisStepsPerMM[Z_AXIS]*accel));
-	
+		
 	Extruder_maxStartFeedrate=10;
 	maxJerk =20;
 	maxZJerk= 0.3;
+	recomputeParameters();
 	
 	linesCount = 0;
 	

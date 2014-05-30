@@ -36,7 +36,8 @@ class PathPlanner:
  
         if pru_firmware:
             self.native_planner = PathPlannerNative()
-
+            s = (long(Path.steps_pr_meter[0]/1000),long(Path.steps_pr_meter[1]/1000),long(Path.steps_pr_meter[2]/1000),long(Path.steps_pr_meter[3]/1000))
+            self.native_planner.setAxisStepsPerMM(s)
             self.native_planner.initPRU( pru_firmware.get_firmware(0), pru_firmware.get_firmware(1))
 
             self.native_planner.runThread()
@@ -116,7 +117,7 @@ if __name__ == '__main__':
     import os
     import sys
     from CascadingConfigParser import CascadingConfigParser
-    
+
     logging.basicConfig(level=logging.DEBUG, 
                     format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
                     datefmt='%m-%d %H:%M')
@@ -168,17 +169,17 @@ if __name__ == '__main__':
 
     path_planner = PathPlanner(printer, pru_firmware)
 
-    speed=0.01
+    speed=3000/60000.0
     acceleration = 0.5
 
     path_planner.add_path(AbsolutePath(
     {
-        "X": 0.01, "Y": 0, "E": 0
+        "X": 0.01
     }, speed, acceleration))
 
     path_planner.add_path(AbsolutePath(
     {
-        "X": 0.0, "Y": 0, "E": 0
+        "X": 0.0
     }, speed, acceleration))
    
     path_planner.wait_until_done()

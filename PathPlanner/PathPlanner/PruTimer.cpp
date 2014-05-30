@@ -84,7 +84,7 @@ bool PruTimer::initPRU(const std::string &firmware_stepper, const std::string &f
 	logger << "The DDR memory reserved for the PRU is 0x" << std::hex <<  ddr_size << " and has addr 0x" <<  std::hex <<  ddr_addr << std::endl;
 
     /* open the device */
-    mem_fd = open("/dev/mem", O_RDWR);
+    mem_fd = open("/dev/mem", O_RDWR | O_SYNC);
     if (mem_fd < 0) {
         logger << "Failed to open /dev/mem " << strerror(errno) << std::endl;;
         return false;
@@ -276,6 +276,15 @@ void PruTimer::run() {
 		
 		std::unique_lock<std::mutex> lk(m);
 
+		if(currentNbEvents==nb) {
+			logger << "[WARNING] Event triggered but counter not incremented" << std::endl;
+			msync(ddr_nr_events, 4, MS_SYNC);
+			std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
+			
+			
+			nb = *ddr_nr_events;
+		}
+		
 		while(currentNbEvents<nb) {
 			
 			ddr_mem_used-=ddr_used.front();

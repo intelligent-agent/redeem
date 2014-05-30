@@ -60,8 +60,8 @@ public:
   void setMaxFeedrates(unsigned long rates[NUM_AXIS]);
   void setPrintAcceleration(unsigned long accel[NUM_AXIS]);
   void setTravelAcceleration(unsigned long accel[NUM_AXIS]);
+  void setAxisStepsPerMM(unsigned long stepPerMM[NUM_AXIS]);
   void setMaxJerk(unsigned long maxJerk, unsigned long maxZJerk);
-  void setMinimumSpeed(unsigned long minSpeed, unsigned long minZSpeed);
   void setMaximumExtruderStartFeedrate(unsigned long maxstartfeedrate);
   void waitUntilFinished();
   bool initPRU(const std::string& firmware_stepper, const std::string& firmware_endstops);
