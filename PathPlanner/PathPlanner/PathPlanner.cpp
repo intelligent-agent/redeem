@@ -732,10 +732,10 @@ void PathPlanner::run() {
 		
 		
 		
-		directionMask|=cur->isXPositiveMove();
-		directionMask|=((uint8_t)cur->isYPositiveMove() << 1);
-		directionMask|=((uint8_t)cur->isZPositiveMove() << 1);
-		directionMask|=((uint8_t)cur->isEPositiveMove() << 1);
+		directionMask|=((uint8_t)cur->isYPositiveMove() << X_AXIS);
+		directionMask|=((uint8_t)cur->isYPositiveMove() << Y_AXIS);
+		directionMask|=((uint8_t)cur->isZPositiveMove() << Z_AXIS);
+		directionMask|=((uint8_t)cur->isEPositiveMove() << E_AXIS);
 		
 		
 		/*if(Printer::wasLastHalfstepping && cur->isFullstepping())   // Switch halfstepping -> full stepping
