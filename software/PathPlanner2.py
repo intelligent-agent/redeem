@@ -101,12 +101,11 @@ class PathPlanner:
         else:
             #push this new segment
             #unit for speed is mm/s
-            #unit for position is in steps
-            #FIXME: CLEAN THAT MESS!
-
+            #unit for position is in mm
+ 
             speed = new.speed*1000.0
-            start = new.start_pos * Path.steps_pr_meter
-            end = new.end_pos * Path.steps_pr_meter
+            start = new.start_pos * 1000
+            end = new.end_pos * 1000
 
             self.native_planner.queueMove((start[0],start[1],start[2],start[3]),(end[0],end[1],end[2],end[3]),speed)
 

@@ -36,7 +36,7 @@ PruTimer::PruTimer() {
 
 bool PruTimer::initPRU(const std::string &firmware_stepper, const std::string &firmware_endstops) {
 	std::unique_lock<std::mutex> lk(mutex_memory);
-
+	
 #ifdef DEMO_PRU
 	ddr_size=0x40000;
 	
@@ -101,9 +101,9 @@ bool PruTimer::initPRU(const std::string &firmware_stepper, const std::string &f
 	std::getline(fsize, s);
 	
 	ddr_size = std::stoul(s, nullptr, 16);
-
+	
 	logger << "The DDR memory reserved for the PRU is 0x" << std::hex <<  ddr_size << " and has addr 0x" <<  std::hex <<  ddr_addr << std::endl;
-
+	
     /* open the device */
     mem_fd = open("/dev/mem", O_RDWR | O_SYNC);
     if (mem_fd < 0) {
@@ -130,7 +130,7 @@ bool PruTimer::initPRU(const std::string &firmware_stepper, const std::string &f
 	*ddr_nr_events = 0;
 	
 	//Set DDR location for PRU
-	 //pypruss.pru_write_memory(0, 0, [self.ddr_addr, self.ddr_nr_events, 0])
+	//pypruss.pru_write_memory(0, 0, [self.ddr_addr, self.ddr_nr_events, 0])
 	uint32_t ddrstartData[3];
 	ddrstartData[0] = (uint32_t)ddr_addr;
 	ddrstartData[1] = (uint32_t)(ddr_addr+ddr_size-4);
@@ -156,11 +156,11 @@ bool PruTimer::initPRU(const std::string &firmware_stepper, const std::string &f
 	//std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
 	
 	/*prussdrv_pru_wait_event (PRU_EVTOUT_0);
+	 
+	 printf("\tINFO: PRU0 completed transfer of endstop.\r\n");
+	 
+	 prussdrv_pru_clear_event (PRU_EVTOUT_0, PRU0_ARM_INTERRUPT);*/
 	
-	printf("\tINFO: PRU0 completed transfer of endstop.\r\n");
-	
-	prussdrv_pru_clear_event (PRU_EVTOUT_0, PRU0_ARM_INTERRUPT);*/
-
 #endif
 	
 	ddr_mem_used = 0;
@@ -171,7 +171,7 @@ bool PruTimer::initPRU(const std::string &firmware_stepper, const std::string &f
 }
 
 PruTimer::~PruTimer() {
-
+	
 }
 
 
@@ -227,6 +227,13 @@ void PruTimer::push_block(uint8_t* blockMemory, size_t blockLen, unsigned int un
 	//Make sure block size is a multiple of unit
 	blockSize = (blockSize/unit) * unit;
 	
+	if(blockSize*nbBlocks<blockLen)
+		nbBlocks++;
+	
+	assert(blockSize*nbBlocks>=blockLen);
+	
+	size_t nbStepsWritten = 0;
+	
 	for(int i=0;i<nbBlocks;i++) {
 		
 		uint8_t *blockStart = blockMemory + i*blockSize;
@@ -280,6 +287,8 @@ void PruTimer::push_block(uint8_t* blockMemory, size_t blockLen, unsigned int un
 				//Then signal how much data we have to the PRU
 				nb = (uint32_t)maxSize/unit;
 				
+				nbStepsWritten+=nb;
+				
 				logger << std::hex << "Writing nb command to 0x" << (unsigned long)ddr_write_location << std::endl;
 				memcpy(ddr_write_location, &nb, sizeof(nb));
 				
@@ -294,7 +303,11 @@ void PruTimer::push_block(uint8_t* blockMemory, size_t blockLen, unsigned int un
 				
 				size_t remainingSize = currentBlockSize-maxSize;
 				
+				
+				
 				if(remainingSize) {
+					
+					assert(remainingSize == (remainingSize/unit)*unit);
 					
 					ddr_used.push(remainingSize+4);
 					ddr_mem_used+=remainingSize+4;
@@ -305,7 +318,7 @@ void PruTimer::push_block(uint8_t* blockMemory, size_t blockLen, unsigned int un
 					
 					//Then write on the next free area OF DDR MAGIC
 					uint32_t nb = 0;
-
+					
 					assert(ddr_write_location+remainingSize+sizeof(nb)*2<=ddr_mem_end);
 					
 					memcpy(ddr_write_location+remainingSize+sizeof(nb), &nb, sizeof(nb));
@@ -315,7 +328,7 @@ void PruTimer::push_block(uint8_t* blockMemory, size_t blockLen, unsigned int un
 					
 					//Then signal how much data we have to the PRU
 					nb = (uint32_t)remainingSize/unit;
-					
+					nbStepsWritten+=nb;
 					logger << std::hex << "Writing nb command to 0x" << (unsigned long)ddr_write_location << std::endl;
 					memcpy(ddr_write_location, &nb, sizeof(nb));
 					
@@ -327,11 +340,11 @@ void PruTimer::push_block(uint8_t* blockMemory, size_t blockLen, unsigned int un
 					
 					//It is now the begining
 					ddr_write_location+=remainingSize+sizeof(nb);
-
+					
 				}
 				
 				
-
+				
 			} else {
 				
 				ddr_used.push(currentBlockSize+4);
@@ -354,7 +367,7 @@ void PruTimer::push_block(uint8_t* blockMemory, size_t blockLen, unsigned int un
 				
 				//Then signal how much data we have to the PRU
 				nb = (uint32_t)currentBlockSize/unit;
-				
+				nbStepsWritten+=nb;
 				logger << std::hex << "Writing nb command to 0x" << (unsigned long)ddr_write_location << std::endl;
 				memcpy(ddr_write_location, &nb, sizeof(nb));
 				
@@ -372,7 +385,7 @@ void PruTimer::push_block(uint8_t* blockMemory, size_t blockLen, unsigned int un
 		}
 	}
 	
-		
+	assert(nbStepsWritten == blockLen/unit);
 	
 }
 
@@ -421,8 +434,8 @@ void PruTimer::run() {
 		logger << "NB event " << nb << " / " << currentNbEvents << std::endl;
 		
 		
-	
-
+		
+		
 		if(currentNbEvents==nb) {
 			logger << "[WARNING] Event triggered but counter not incremented" << std::endl;
 			msync(ddr_nr_events, 4, MS_SYNC);

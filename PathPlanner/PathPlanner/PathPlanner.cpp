@@ -119,6 +119,7 @@ void PathPlanner::queueMove(float startPos[NUM_AXIS],float endPos[NUM_AXIS],floa
 	memcpy(p->startPos, startPos, sizeof(float)*NUM_AXIS);
 	memcpy(p->endPos, endPos, sizeof(float)*NUM_AXIS);
 	
+	
 	logger << std::dec << "Moving from " << startPos[0] << "," << startPos[1] << "," << startPos[2] << " to "
 	 << endPos[0] << "," << endPos[1] << "," << endPos[2] << std::endl;
 	
@@ -133,6 +134,10 @@ void PathPlanner::queueMove(float startPos[NUM_AXIS],float endPos[NUM_AXIS],floa
     //Find direction
     for(uint8_t axis=0; axis < NUM_AXIS; axis++)
     {
+		
+		p->startPos[axis]=ceil(p->startPos[axis]*axisStepsPerMM[axis]);
+		p->endPos[axis]=ceil(p->endPos[axis]*axisStepsPerMM[axis]);
+		
         if((p->delta[axis]=p->endPos[axis]-p->startPos[axis])>=0)
             p->setPositiveDirectionForAxis(axis);
         else
@@ -145,7 +150,7 @@ void PathPlanner::queueMove(float startPos[NUM_AXIS],float endPos[NUM_AXIS],floa
 	
     if(p->isNoMove())
 	{
-		std::cout << "Warning: no move path" << std::endl;
+		logger << "Warning: no move path" << std::endl;
 		// if(newPath)   // need to delete dummy elements, otherwise commands can get locked.
 		// resetPathPlanner();
 		return; // No steps included
