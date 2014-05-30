@@ -732,7 +732,7 @@ void PathPlanner::run() {
 		
 		
 		
-		directionMask|=((uint8_t)cur->isYPositiveMove() << X_AXIS);
+		directionMask|=((uint8_t)cur->isXPositiveMove() << X_AXIS);
 		directionMask|=((uint8_t)cur->isYPositiveMove() << Y_AXIS);
 		directionMask|=((uint8_t)cur->isZPositiveMove() << Z_AXIS);
 		directionMask|=((uint8_t)cur->isEPositiveMove() << E_AXIS);
