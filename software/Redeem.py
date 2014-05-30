@@ -249,12 +249,16 @@ class Redeem:
 		
     def exit(self):
         self.running = False
-        self.printer.path_planner.force_exit()
+        
         for name, stepper in self.printer.steppers.iteritems():
             stepper.set_disabled() 
 
         # Commit changes for the Steppers
         Stepper.commit()
+
+        self.printer.path_planner.force_exit()
+
+        
 
     ''' Execute a G-code '''
     def _execute(self, g):  
