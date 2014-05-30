@@ -9,14 +9,9 @@ t.initPRU("/root/redeem/firmware/firmware_runtime.bin","/root/redeem/firmware/fi
 t.runThread()
 
 start = (0,0,0,0)
-end = (500,0,0,0)
+end = (0,0,2133*100,0)
 
-t.queueMove(start,end,1000)
-
-start = (500,0,0,0)
-end = (0,0,0,0)
-
-t.queueMove(start,end,1000)
+t.queueMove(start,end,3000)
 
 
 # for i in xrange(1,12):

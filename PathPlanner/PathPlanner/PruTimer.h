@@ -17,6 +17,8 @@
 #include <strings.h>
 #include "Logger.h"
 
+//#define DEMO_PRU
+
 class PruTimer {
 	/* Should be locked when used */
 	std::queue<size_t> ddr_used;
@@ -33,12 +35,16 @@ class PruTimer {
 	
 	uint32_t currentNbEvents;
 	
-	std::mutex m;
+	std::mutex mutex_memory;
 	
 	std::condition_variable blockAvailable;
 	
 	std::thread runningThread;
 	bool stop;
+	
+#ifdef DEMO_PRU
+	uint8_t *currentReadingAddress;
+#endif
 	
 public:
 	PruTimer();
@@ -52,7 +58,7 @@ public:
 	void waitUntilFinished();
 	
 	size_t getFreeMemory() {
-		std::unique_lock<std::mutex> lk(m);
+		std::unique_lock<std::mutex> lk(mutex_memory);
 		return ddr_size-ddr_mem_used-4;
 	}
 	

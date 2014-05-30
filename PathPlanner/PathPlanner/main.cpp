@@ -26,14 +26,14 @@ int main(int argc, const char * argv[])
 	
 	bzero(start,5*4);
 	bzero(end,5*4);
-	end[0] = 500;
+	end[2] = 2133*100;
 	
 	planner.queueMove(start,end,1000);
 	
 	start[0] = 500;
 	end[0] = 0;
 	
-	planner.queueMove(start,end,1000);
+	//planner.queueMove(start,end,1000);
 	
 	/*for(int i=0;i<16;i++) {
 				p->speed=100;
@@ -49,9 +49,10 @@ int main(int argc, const char * argv[])
 	
 	delete prev;
 	
-	std::this_thread::sleep_for( std::chrono::milliseconds(2000) );
+	//std::this_thread::sleep_for( std::chrono::milliseconds(2000) );
+	planner.waitUntilFinished();
 	
-	//planner.stopThread(true);
+	planner.stopThread(true);
 	
     return 0;
 }
