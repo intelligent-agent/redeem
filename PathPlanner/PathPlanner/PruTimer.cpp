@@ -116,15 +116,24 @@ bool PruTimer::initPRU(const std::string &firmware_stepper, const std::string &f
 	ddrstartData[2] = 0;
 	
 	prussdrv_pru_write_memory(PRUSS0_PRU0_DATARAM, 0, ddrstartData, sizeof(ddrstartData));
-	prussdrv_pru_write_memory(PRUSS0_SHARED_DATARAM, 0, ddrstartData, sizeof(ddrstartData));
-
+	
+	//bzero(ddr_mem, ddr_size);
 	
     /* Execute firmwares on PRU */
-    logger << ("\tINFO: Executing example on PRU0.\r\n");
-    prussdrv_exec_program (PRU_NUM0, firmware_stepper.c_str());
-    logger << ("\t\tINFO: Executing example on PRU1.\r\n");
-    prussdrv_exec_program (PRU_NUM1, firmware_endstops.c_str());
-
+    logger << ("\tINFO: Starting stepper firmware on PRU0\r\n");
+	ret = prussdrv_exec_program (PRU_NUM0, firmware_stepper.c_str());
+	if(ret!=0) {
+		logger << "[WARNING] Unable to execute firmware on PRU0" << std::endl;
+	}
+	
+    logger << ("\tINFO: Starting endstop firmware on PRU1\r\n");
+    ret=prussdrv_exec_program (PRU_NUM1, firmware_endstops.c_str());
+	if(ret!=0) {
+		logger << "[WARNING] Unable to execute firmware on PRU1" << std::endl;
+	}
+	
+	//std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
+	
 	/*prussdrv_pru_wait_event (PRU_EVTOUT_0);
 	
 	printf("\tINFO: PRU0 completed transfer of endstop.\r\n");
@@ -206,16 +215,16 @@ void PruTimer::push_block(uint8_t* blockMemory, size_t blockLen, unsigned int un
 		
 		{
 			std::unique_lock<std::mutex> lk(m);
-			blockAvailable.wait(lk, [this,currentBlockSize]{return ddr_size-ddr_mem_used-4>=currentBlockSize+4 || stop; });
+			blockAvailable.wait(lk, [this,currentBlockSize]{return ddr_size-ddr_mem_used-4>=currentBlockSize+8 || stop; });
 			
 			if(!ddr_mem || stop) return;
 			
-			assert(getFreeMemory()>=currentBlockSize+4);
+			assert(getFreeMemory()>=currentBlockSize+8);
 			
 			
 			
 			//Copy at the right location
-			if(ddr_write_location+currentBlockSize+4>ddr_mem_end) {
+			if(ddr_write_location+currentBlockSize+8>ddr_mem_end) {
 				//Split into two blocks
 				//TODO
 			} else {
@@ -227,21 +236,26 @@ void PruTimer::push_block(uint8_t* blockMemory, size_t blockLen, unsigned int un
 				logger << std::hex << "Writing data to 0x" << (unsigned long)ddr_write_location << std::endl;
 				memcpy(ddr_write_location+4, blockStart, currentBlockSize);
 				
+				//Then write on the next free area than there is no command to execute
+				uint32_t nb = 0;
+				memcpy(ddr_write_location+currentBlockSize+sizeof(nb), &nb, sizeof(nb));
 				
 				//Need it?
 				msync(ddr_write_location+4, currentBlockSize, MS_SYNC);
 				
 				//Then signal how much data we have to the PRU
-				uint32_t nb = (uint32_t)currentBlockSize/unit;
+				nb = (uint32_t)currentBlockSize/unit;
 				
 				logger << std::hex << "Writing nb command to 0x" << (unsigned long)ddr_write_location << std::endl;
 				memcpy(ddr_write_location, &nb, sizeof(nb));
 				
 				logger << "Written " << std::dec << nb << " stepper commands." << std::endl;
 				
+				logger << "Remaining free memory: " << std::dec << ddr_size-ddr_mem_used << " bytes." << std::endl;
+				
 				ddr_write_location+=currentBlockSize+sizeof(nb);
 				
-				
+				msync(ddr_write_location, 4, MS_SYNC);
 				
 			}
 			
@@ -259,6 +273,9 @@ void PruTimer::waitUntilFinished() {
 }
 
 void PruTimer::run() {
+	
+	logger << "Starting PruTimer thread..." << std::endl;
+	
 	while(!stop) {
 		prussdrv_pru_wait_event (PRU_EVTOUT_0);
 		
@@ -285,7 +302,7 @@ void PruTimer::run() {
 			nb = *ddr_nr_events;
 		}
 		
-		while(currentNbEvents<nb) {
+		while(currentNbEvents<nb && !ddr_used.empty()) {
 			
 			ddr_mem_used-=ddr_used.front();
 			
@@ -296,6 +313,8 @@ void PruTimer::run() {
 			
 			currentNbEvents++;
 		}
+		
+		currentNbEvents = nb;
 		
 		lk.unlock();
 		

@@ -484,7 +484,7 @@ unsigned int prussdrv_pru_wait_event(unsigned int host_interrupt)
     unsigned int event_count = 0;
 	
 	int fd = prussdrv.fd[host_interrupt];
-	
+#ifdef USE_SELECT
 	fd_set rfds;
 	struct timeval tv;
 	int retval;
@@ -506,13 +506,15 @@ unsigned int prussdrv_pru_wait_event(unsigned int host_interrupt)
 		if (retval == -1)
 			return 0;
 		else if (retval) {
-			read(fd, &event_count, sizeof(int));
+			read(fd, &event_count, sizeof(unsigned int));
 			/* FD_ISSET(0, &rfds) will be true. */
 		}else {
 			//printf("No data within five seconds.\n");
 		}
 	} while(retval==0 && prussdrv.fd[host_interrupt]>0);
-	
+#else
+	read(fd, &event_count, sizeof(unsigned int));
+#endif
     return event_count;
 }
 

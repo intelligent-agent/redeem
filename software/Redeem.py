@@ -36,7 +36,6 @@ from Ethernet import Ethernet
 from Gcode import Gcode
 import sys
 from Extruder import Extruder, HBP
-from Pru import Pru
 from Path2 import Path, RelativePath, AbsolutePath, G92Path
 from PathPlanner2 import PathPlanner
 from ColdEnd import ColdEnd

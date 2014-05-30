@@ -23,7 +23,7 @@ class Printer:
         self.comms = {} # Communication channels
 
         self.factor         = 1.0
-        self.movement       = Path.RELATIVE
+        self.movement       = Path.ABSOLUTE
         self.feed_rate      = 0.5
         self.acceleration   = 0.5
         self.current_tool   = "E"

@@ -12,7 +12,6 @@ License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 """
 
 import numpy as np                                                          # Needed for sqrt
-from numpy import linalg as la
 import ConfigParser
 import logging
 
@@ -73,7 +72,7 @@ class Path:
 
     ''' The vector representation of this path segment '''
     def __str__(self):
-        return "Vec. "+str(self.vec)
+        return "Path from "+str(self.start_pos)+" to "+str(self.end_pos)
 
 
 ''' A path segment with absolute movement '''

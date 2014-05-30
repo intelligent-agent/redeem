@@ -17,7 +17,7 @@ from Path2 import Path, AbsolutePath, RelativePath, G92Path
 import numpy as np
 from Printer import Printer
 from PathPlannerNative import PathPlannerNative
-
+import threading
 import Queue
 
 
@@ -36,9 +36,12 @@ class PathPlanner:
  
         if pru_firmware:
             self.native_planner = PathPlannerNative()
+
+            self.native_planner.initPRU( pru_firmware.get_firmware(0), pru_firmware.get_firmware(1))
+
             s = (long(Path.steps_pr_meter[0]/1000),long(Path.steps_pr_meter[1]/1000),long(Path.steps_pr_meter[2]/1000),long(Path.steps_pr_meter[3]/1000))
             self.native_planner.setAxisStepsPerMM(s)
-            self.native_planner.initPRU( pru_firmware.get_firmware(0), pru_firmware.get_firmware(1))
+            
 
             self.native_planner.runThread()
 
@@ -86,9 +89,12 @@ class PathPlanner:
 
     ''' Add a path segment to the path planner '''        
     def add_path(self, new):   
-        #logging.debug("Adding path "+str(new.movement))
+
         # Link to the previous segment in the chain
         new.set_prev(self.prev)
+        
+        #logging.debug("Adding path "+str(new))
+        #logging.debug("Previous path was "+str(self.prev))
 
         if new.is_G92():
             pass #FIXME: Flush the path in the planner or tell the planner it's a G92.... I dont know actually...
