@@ -29,6 +29,7 @@ except ImportError:
     pass
 import Queue
 from collections import defaultdict
+from Printer import Printer
 
 
 class PathPlanner:
@@ -137,7 +138,7 @@ class PathPlanner:
     ''' This is just a separate function so the test at the bottom will pass '''
     def do_work(self):
         path = self.paths.get()                            # Get the last path added            
-        #logging.debug("Doing path = "+str(path.movement))
+        logging.debug("Doing path = "+str(path.movement))
 
         if path.is_G92():                                   # Only set the position of the axes
             self.paths.task_done()            
@@ -145,14 +146,17 @@ class PathPlanner:
         
         for axis_nr, val in enumerate(path.vec):                       # Run through all the axes in the path                   
             if val != 0:
-                data = self._make_data(path, axis_nr)        
+                data = self._make_data(path, axis_nr)       
                 if data:
                     if len(self.pru_data) == 0:
                         self.pru_data = zip(*data)
                     else:
                         #pass
                         self._braid_data1(self.pru_data, zip(*data))
-                        #self.pru_data = self._braid_data(self.pru_data, zip(*data))
+                        #self.pru_data = self._braid_data(self.pru_data, zip(*data))        
+
+        path.pru_data = self.pru_data[:]
+
         while len(self.pru_data) > 0:  
             data = self.pru_data[0:0x20000/8]
             del self.pru_data[0:0x20000/8]
@@ -163,7 +167,6 @@ class PathPlanner:
                     time.sleep(0.5)               
                 self.pru.add_data(zip(*data))
                 self.pru.commit_data()                            # Commit data to ddr
-        
         self.pru_data = []
         
         self.paths.task_done()
@@ -180,15 +183,16 @@ class PathPlanner:
             except Queue.Empty:
                 break
 
+    ''' Braid/merge together the data from the two data sets '''
     def _braid_data(self, data1, data2):
-        """ Braid/merge together the data from the two data sets"""
         return braid.braid_data_c(data1, data2)               # Use the Optimized C-function for this. 
-    
-    def _braid_data1(self, data1, data2):
-        """ Braid/merge together the data from the two data sets"""
+
+    ''' Braid/merge together the data from the two data sets '''
+    def _braid_data1(self, data1, data2):        
         line = 0
-        (pin1,dir1,o1, dly1) = data1[line]
-        (pin2,dir2,o2, dly2) = data2.pop(0)
+        (pin1, dir1, o1, dly1) = data1[line]
+        (pin2, dir2, o2, dly2) = data2.pop(0)
+        
         while True: 
             dly = min(dly1, dly2)
             dly1 -= dly    
@@ -205,16 +209,19 @@ class PathPlanner:
                     data1.insert(line, (pin2, dir2, o2, dly))
                     (pin2,dir2,o2, dly2) = data2.pop(0)
                 line += 1
-            except IndexError:
+            except IndexError as e :
                 break
 
         if dly2 > 0:   
+            #print "dly2 < 0"
             #data1[line] =  (data1[line][0],data1[line][1],data1[line][2], data1[line][3]+dly2) 
             data1.append((pin2, dir2,o2, dly2)) 
             line += 1      
-        elif dly1 > 0:
-            data1[line] = (data1[line][0], data1[line][1],data1[line][2], data1[line][3]+dly1)  
-            #data1.pop(line+1)
+            
+        #if dly1 > 0:
+        #    print "dly1 > 0"
+        #    data1[line] = (data1[line][0], data1[line][1],data1[line][2], dly1)  
+        #    #data1.pop(line+1)
         
         while len(data2) > 0:
             line += 1
@@ -243,7 +250,7 @@ class PathPlanner:
         num_steps       = path.num_steps[axis_nr]      # Number of steps to tick
         if num_steps == 0:
             return None
-        #logging.debug("Processing "+axis+" of len "+str(path.stepper_vec[axis_nr]))
+        logging.debug("Processing "+axis+" of len "+str(path.stepper_vec[axis_nr])+" with "+str(num_steps)+" steps")
         step_pin        = stepper.get_step_pin()                            # Get the step pin
         dir_pin         = stepper.get_dir_pin()                             # Get the direction pin
         dir_pin         = 0 if path.stepper_vec[axis_nr] < 0 else dir_pin   # Dir-pin low if we are going backwards  
@@ -345,28 +352,30 @@ if __name__ == '__main__':
     from Gcode import Gcode
 
 
-    Path.steps_pr_meter = np.array([24000, 24000, 64000, 20000, 20000])
+    Path.steps_pr_meter = np.array([24000, 24000, 64000, 20000, 20000])*1
         
-    
+    ms = 2
     print "Making steppers"
     steppers = {}
     steppers["X"] = Stepper("GPIO0_27", "GPIO1_29", "GPIO2_4",  0, "X",None,0,0)
-    steppers["X"].set_microstepping(2)
+    steppers["X"].set_microstepping(ms)
     steppers["X"].set_steps_pr_mm(6.0)
     steppers["Y"] = Stepper("GPIO1_12", "GPIO0_22", "GPIO2_5",  1, "Y",None,1,1)  
-    steppers["Y"].set_microstepping(2)
+    steppers["Y"].set_microstepping(ms)
     steppers["Y"].set_steps_pr_mm(6.0)
     steppers["Z"] = Stepper("GPIO0_23", "GPIO0_26", "GPIO0_15", 2, "Z",None,2,2)  
-    steppers["Z"].set_microstepping(2)
+    steppers["Z"].set_microstepping(ms)
     steppers["Z"].set_steps_pr_mm(160.0)
     steppers["E"] = Stepper("GPIO1_28", "GPIO1_15", "GPIO2_1",  3, "Ext1",None,3,3)
-    steppers["E"].set_microstepping(2)
+    steppers["E"].set_microstepping(ms)
     steppers["E"].set_steps_pr_mm(5.0)
     steppers["H"] = Stepper("GPIO1_13", "GPIO1_14", "GPIO2_3",  4, "Ext2",None,4,4)
-    steppers["H"].set_microstepping(2)
+    steppers["H"].set_microstepping(ms)
     steppers["H"].set_steps_pr_mm(5.0)
 
-    path_planner = PathPlanner(steppers, None)
+    printer = Printer()
+    printer.steppers = steppers
+    path_planner = PathPlanner(printer, None)
     path_planner.make_acceleration_tables()
     path_planner.save_acceleration_tables()
     path_planner.load_acceleration_tables()
@@ -375,14 +384,14 @@ if __name__ == '__main__':
 
     radius = 0.05
     speed = 0.1
-    acceleration = 0.3
+    acceleration = 0.03
     rand = 0.0
     plotfac = 1.5
     plotoffset_x = 0.1
     plotoffset_y = 0.1
 
-    ds = np.pi/16
-    t = np.arange(-np.pi/4, np.pi/4+ds, ds)
+    ds = np.pi/4
+    t = np.arange(-np.pi/4, 7*np.pi/4+ds, ds)
     rand_x = rand*np.random.uniform(-1, 1, size=len(t))
     rand_y = rand*np.random.uniform(-1, 1, size=len(t))
     if len(sys.argv) > 1:
@@ -415,15 +424,14 @@ if __name__ == '__main__':
     else:
         for idx, i in enumerate(t):
             path_planner.add_path(AbsolutePath(
-                {"X": radius*np.sin(i)+rand_x[i], "Y": radius*np.cos(i)+rand_y[i], 
-                 "E": 0.01*(idx+1)
-                }, speed, acceleration))
+                {"X": radius*np.sin(i)+rand_x[i], "Y": radius*np.cos(i)+rand_y[i]
+                 }, speed, acceleration)) #
             #path_planner.add_path(Path({"X": radius*(16*np.power(np.sin(i), 3)), "Y": radius*(13*np.cos(i)-5*np.cos(2*i)-2*np.cos(3*i)-np.cos(4*i))}, speed, Path.ABSOLUTE, acceleration))
             
         #path_planner.add_path(AbsolutePath({"X": -0.1, "Y": 0.1}, speed, acceleration))
         #path_planner.add_path(AbsolutePath({"X": 0.0, "Y": 0.2}, speed, acceleration))
         #path_planner.add_path(AbsolutePath({"X": 0.1, "Y": 0.1}, speed, acceleration))
-        #path_planner.add_path(AbsolutePath({"X": 0.0, "Y": 0.0}, speed, acceleration))
+        path_planner.add_path(AbsolutePath({"X": 0.0, "Y": 0.0}, speed, acceleration))
         path_planner.finalize_paths()
         #path_planner.add_path(RelativePath({"X": -radius, "Y": -radius}, speed, acceleration))
 
@@ -473,15 +481,18 @@ if __name__ == '__main__':
     plt.xlim([0, positions[-1]*1.1])
     plt.title('Velocity')
 
-    print np.array(magnitudes)
-    print speeds
-    print speeds_e
+    #print np.array(magnitudes)
+    #print speeds
+    #print speeds_e
 
     # Acceleration
     ax2 = plt.subplot(2, 3, 6)
     delays = np.array([])
     delays2 = np.array([])
     delays3 = np.array([])
+    delays4 = np.array([])
+    delays5 = np.array([])
+    delays6 = np.array([])
     mag = 0
     mag_x = 0
     mag_y = 0  
@@ -503,18 +514,28 @@ if __name__ == '__main__':
                 delays = np.append(delays, path.delays[0])
                 delays2 = np.append(delays2, path.delays[1])
                 delays3 = np.append(delays3, path.delays[3])
-
+            if hasattr(path, 'pru_data'):
+                #print " pru data = "+str(path.pru_data)
+                delays4 = np.append(delays4, path.pru_data)
 
     plt.xlim([0, max(mag_x, mag_y)])
     plt.ylim([0, speed])
     plt.title('Also velocity')
 
+    for i in xrange(len(delays4)/4):
+        if  delays4[i*4] == 1:
+            delays5 = np.append(delays5, delays4[(i*4)+3])
+        elif delays4[i*4] == 2:
+            delays6 = np.append(delays6, delays4[(i*4)+3])
+
     # Plot the delays 
     ax2 = plt.subplot(2, 1, 1)
-    plt.plot(delays, 'r')
+    plt.plot(delays+0.1, 'r')
     plt.plot(delays2, 'b')
-    plt.plot(delays3, 'y')
-    plt.ylim([0, 0.001])
+    #plt.plot(delays3, 'y')
+    plt.plot(delays5+0.1, 'r')
+    plt.plot(delays6, 'b')
+    #plt.ylim([0, 0.001])
     plt.title('Delays')
 
     print "total distance X = "+str(mag_x)
@@ -524,7 +545,22 @@ if __name__ == '__main__':
     print "total time Y = "+str(np.sum(delays2))
     print "total time E = "+str(np.sum(delays3))
 
+    print "merging data"
+    data1 = [(2, 0, 0, 1.0), (4, 0, 0, 3.0), (2, 0, 0, 4.0), (4, 0, 0, 1.0)]
+    data2 = [(8, 0, 0, 1.5), (16, 0, 0, 4), (8, 0, 0, 4), (16, 0, 0, 1.5)]
+    data3 = [(32, 0, 0, 1.5), (64, 0, 0, 4), (32, 0, 0, 4), (64, 0, 0, 1.5)]
+    path_planner._braid_data1(data1, data2)
+
+    compare1 = [(10, 0, 0, 1.0), (12, 0, 0, 0.5), (20, 0, 0, 2.5), (18, 0, 0, 1.5), 
+                (10, 0, 0, 2.5), (12, 0, 0, 1.0), (8, 0, 0, 0.5), (16, 0, 0, 1.5)]
+    print data1
+    print compare1
+    #path_planner._braid_data1(data1, data3)
+    #print data1
+
     plt.show()
+
+
     exit(0)
 
 

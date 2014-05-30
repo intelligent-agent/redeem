@@ -69,7 +69,7 @@ class Redeem:
         EndStop.callback = self.end_stop_hit
         EndStop.inputdev = self.printer.config.get("Endstops","inputdev");
 
-        if self.revision == "A4":
+        if self.revision == "A4" or self.revision == "A4A":
             self.printer.end_stops["X1"] = EndStop("GPIO3_21", 112, "X1", self.printer.config.getboolean("Endstops", "invert_X1"))
             self.printer.end_stops["X2"] = EndStop("GPIO0_30", 113, "X2", self.printer.config.getboolean("Endstops", "invert_X2"))
             self.printer.end_stops["Y1"] = EndStop("GPIO1_17", 114, "Y1", self.printer.config.getboolean("Endstops", "invert_Y1"))
@@ -95,8 +95,8 @@ class Redeem:
         self.printer.steppers["X"] = Stepper("GPIO0_27", "GPIO1_29", "GPIO2_4",  0, "X",  self.printer.end_stops["X1"], 0,0) 
         self.printer.steppers["Y"] = Stepper("GPIO1_12", "GPIO0_22", "GPIO2_5",  1, "Y",  self.printer.end_stops["Y1"], 1,1)  
         self.printer.steppers["Z"] = Stepper("GPIO0_23", "GPIO0_26", "GPIO0_15", 2, "Z",  self.printer.end_stops["Z1"], 2,2)  
-        self.printer.steppers["E"] = Stepper("GPIO1_28", "GPIO1_15", "GPIO2_1",  3, "Ext1", None,3,3)
-        self.printer.steppers["H"] = Stepper("GPIO1_13", "GPIO1_14", "GPIO2_3",  4, "Ext2", None,4,4)
+        self.printer.steppers["E"] = Stepper("GPIO1_28", "GPIO1_15", "GPIO2_1",  3, "E", None,3,3)
+        self.printer.steppers["H"] = Stepper("GPIO1_13", "GPIO1_14", "GPIO2_3",  4, "H", None,4,4)
 
         # Enable the steppers and set the current, steps pr mm and microstepping  
         for name, stepper in self.printer.steppers.iteritems():
@@ -208,7 +208,7 @@ class Redeem:
         self.printer.path_planner.acceleration = float(self.printer.config.get('Steppers', 'acceleration'))
         self.printer.acceleration = float(self.printer.config.get('Steppers', 'acceleration'))
         self.printer.path_planner.make_acceleration_tables()
-        self.printer.path_planner.save_acceleration_tables()
+        #self.printer.path_planner.save_acceleration_tables()
         #self.printer.path_planner.load_acceleration_tables()
 
         travel={}
@@ -224,10 +224,11 @@ class Redeem:
         # Set up communication channels
         self.printer.comms["USB"]    = USB(self.commands)
         self.printer.comms["Eth"]    = Ethernet(self.commands)
-        self.printer.comms["Pipe_0"] = Pipe(self.commands, "Pipe_0")     # Pipe for Octoprint
-        self.printer.comms["Pipe_1"] = Pipe(self.commands, "Pipe_1")     # Pipe for Toggle
-        self.printer.comms["Pipe_2"] = Pipe(self.commands, "Pipe_2")     # Pipe for testing
-        self.printer.comms["Pipe_2"].send_response = False     
+        self.printer.comms["octoprint"] = Pipe(self.commands, "octoprint")   # Pipe for Octoprint
+        self.printer.comms["toggle"] = Pipe(self.commands, "toggle")      # Pipe for Toggle
+        self.printer.comms["testing"] = Pipe(self.commands, "testing")     # Pipe for testing
+        self.printer.comms["testing_noret"] = Pipe(self.commands, "testing_noret")     # Pipe for testing
+        self.printer.comms["testing_noret"].send_response = False     
 
         self.running = True
 
@@ -259,7 +260,6 @@ class Redeem:
 
     ''' Execute a G-code '''
     def _execute(self, g):  
-
         if g.message == "ok" or g.code()=="ok" or g.code()=="No-Gcode":
             g.set_answer(None)
             return
