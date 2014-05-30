@@ -11,6 +11,8 @@
 
 int main(int argc, const char * argv[])
 {
+	logger << "Start test program" << std::endl;
+	
 
 	PathPlanner planner;
 	Path *prev=NULL;
@@ -20,16 +22,21 @@ int main(int argc, const char * argv[])
 	planner.runThread();
 	
 	
+	float start[5],end[5];
 	
-	for(int i=0;i<16;i++) {
-		Path * p =new Path();
-		bzero(p,sizeof(*p));
-		
-		if(prev) {
-			memcpy(p->startPos, prev->endPos, sizeof(p->startPos));
-			delete prev;
-		}
-		p->speed=100;
+	bzero(start,5*4);
+	bzero(end,5*4);
+	end[0] = 500;
+	
+	planner.queueMove(start,end,1000);
+	
+	start[0] = 500;
+	end[0] = 0;
+	
+	planner.queueMove(start,end,1000);
+	
+	/*for(int i=0;i<16;i++) {
+				p->speed=100;
 		p->endPos[0]=10*(i+1);
 		p->endPos[1]=0;
 		p->endPos[2]=0;
@@ -38,7 +45,7 @@ int main(int argc, const char * argv[])
 		prev=p;
 		
 		
-	}
+	}*/
 	
 	delete prev;
 	

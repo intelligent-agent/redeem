@@ -112,8 +112,8 @@ void PathPlanner::queueMove(float startPos[NUM_AXIS],float endPos[NUM_AXIS],floa
 	memcpy(p->startPos, startPos, sizeof(float)*NUM_AXIS);
 	memcpy(p->endPos, endPos, sizeof(float)*NUM_AXIS);
 	
-	std::cout << std::dec << "Moving from " << startPos[0] << "," << startPos[1] << "," << startPos[2] << " to ";
-	std::cout << endPos[0] << "," << endPos[1] << "," << endPos[2] << std::endl;
+	logger << std::dec << "Moving from " << startPos[0] << "," << startPos[1] << "," << startPos[2] << " to "
+	 << endPos[0] << "," << endPos[1] << "," << endPos[2] << std::endl;
 	
 	p->speed = speed;
 	
@@ -835,13 +835,13 @@ void PathPlanner::run() {
 			cmd.delay = interval;
 		} // stepsRemaining
 				
-		std::cout << "Done with " << std::dec << linesPos << std::endl;
+		logger << "Done with " << std::dec << linesPos << std::endl;
 		
-		std::cout << "Sending " << std::dec << linesPos << std::endl;
+		logger << "Sending " << std::dec << linesPos << std::endl;
 		
 		pru.push_block((uint8_t*)cur->commands, sizeof(SteppersCommand)*cur->stepsRemaining, sizeof(SteppersCommand));
 		
-		std::cout << "Done sending with " << std::dec << linesPos << std::endl;
+		logger << "Done sending with " << std::dec << linesPos << std::endl;
 		
 		
 		removeCurrentLineForbidInterrupt();

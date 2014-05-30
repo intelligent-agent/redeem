@@ -15,6 +15,7 @@
 #include <mutex>
 #include <string.h>
 #include <strings.h>
+#include "Logger.h"
 
 class PruTimer {
 	/* Should be locked when used */

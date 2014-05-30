@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		4E1C313D193890B100AC9306 /* Logger.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4E1C313C193890B100AC9306 /* Logger.cpp */; };
 		4E6C549B19370F2E006610F6 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4E6C549A19370F2E006610F6 /* main.cpp */; };
 		4E6C54A919370F5B006610F6 /* PathPlanner.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4E6C54A719370F5B006610F6 /* PathPlanner.cpp */; };
 		4E6C54AA19370F5B006610F6 /* PathPlanner.h in Sources */ = {isa = PBXBuildFile; fileRef = 4E6C54A819370F5B006610F6 /* PathPlanner.h */; };
@@ -31,6 +32,8 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		4E1C313A1938888C00AC9306 /* Logger.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Logger.h; sourceTree = "<group>"; };
+		4E1C313C193890B100AC9306 /* Logger.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Logger.cpp; sourceTree = "<group>"; };
 		4E6C549719370F2E006610F6 /* PathPlanner */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = PathPlanner; sourceTree = BUILT_PRODUCTS_DIR; };
 		4E6C549A19370F2E006610F6 /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
 		4E6C54A719370F5B006610F6 /* PathPlanner.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PathPlanner.cpp; sourceTree = "<group>"; };
@@ -82,6 +85,8 @@
 				4E6C54A819370F5B006610F6 /* PathPlanner.h */,
 				4E6C54AF19375D85006610F6 /* PruTimer.cpp */,
 				4E6C54B019375D85006610F6 /* PruTimer.h */,
+				4E1C313A1938888C00AC9306 /* Logger.h */,
+				4E1C313C193890B100AC9306 /* Logger.cpp */,
 			);
 			path = PathPlanner;
 			sourceTree = "<group>";
@@ -138,6 +143,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				4E6C54B819376CCE006610F6 /* pruss_intc_mapping.h in Sources */,
+				4E1C313D193890B100AC9306 /* Logger.cpp in Sources */,
 				4E6C54B219375D85006610F6 /* PruTimer.h in Sources */,
 				4E6C54AA19370F5B006610F6 /* PathPlanner.h in Sources */,
 				4E6C54B119375D85006610F6 /* PruTimer.cpp in Sources */,

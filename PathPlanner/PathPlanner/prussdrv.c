@@ -300,6 +300,9 @@ int prussdrv_pru_enable(unsigned int prunum)
     else
         return -1;
 
+	if(!prucontrolregs)
+		return -1;
+	
     *prucontrolregs = 2;
     return 0;
 
@@ -314,6 +317,10 @@ int prussdrv_pru_disable(unsigned int prunum)
         prucontrolregs = (unsigned int *) prussdrv.pru1_control_base;
     else
         return -1;
+	
+	if(!prucontrolregs)
+		return -1;
+	
     *prucontrolregs = 1;
     return 0;
 

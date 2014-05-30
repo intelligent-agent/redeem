@@ -40,7 +40,8 @@ bool PruTimer::initPRU(const std::string &firmware_stepper, const std::string &f
 	unsigned int ret;
     tpruss_intc_initdata pruss_intc_initdata = PRUSS_INTC_INITDATA;
 	
-    printf("\nINFO: Starting %s example.\r\n","PRU_PRUtoPRU_Interrupt");
+    logger << "Initializing PRU..." << std::endl;
+	
     /* Initialize the PRU */
     prussdrv_init ();
 	
@@ -48,7 +49,7 @@ bool PruTimer::initPRU(const std::string &firmware_stepper, const std::string &f
     ret = prussdrv_open(PRU_EVTOUT_0);
     if (ret)
     {
-        printf("prussdrv_open open failed\n");
+        logger << "prussdrv_open failed" << std::endl;
         return false;
     }
 	
@@ -59,14 +60,14 @@ bool PruTimer::initPRU(const std::string &firmware_stepper, const std::string &f
 	std::ifstream faddr("/sys/class/uio/uio0/maps/map1/addr");
 	
 	if(!faddr.good()) {
-		printf("Failed to read /sys/class/uio/uio0/maps/map1/addr\n");
+		logger << ("Failed to read /sys/class/uio/uio0/maps/map1/addr\n");
         return false;
 	}
 	
 	std::ifstream fsize("/sys/class/uio/uio0/maps/map1/size");
 	
 	if(!faddr.good()) {
-		printf("Failed to read /sys/class/uio/uio0/maps/map1/size\n");
+		logger << ("Failed to read /sys/class/uio/uio0/maps/map1/size\n");
         return false;
 	}
 	
@@ -80,12 +81,12 @@ bool PruTimer::initPRU(const std::string &firmware_stepper, const std::string &f
 	
 	ddr_size = std::stoul(s, nullptr, 16);
 
-	std::cout << "The DDR memory reserved for the PRU is 0x" << std::hex <<  ddr_size << " and has addr 0x" <<  std::hex <<  ddr_addr << std::endl;
+	logger << "The DDR memory reserved for the PRU is 0x" << std::hex <<  ddr_size << " and has addr 0x" <<  std::hex <<  ddr_addr << std::endl;
 
     /* open the device */
     mem_fd = open("/dev/mem", O_RDWR);
     if (mem_fd < 0) {
-        printf("Failed to open /dev/mem (%s)\n", strerror(errno));
+        logger << "Failed to open /dev/mem " << strerror(errno) << std::endl;;
         return false;
     }
 	
@@ -93,7 +94,7 @@ bool PruTimer::initPRU(const std::string &firmware_stepper, const std::string &f
     ddr_mem = (uint8_t*)mmap(0, ddr_size, PROT_WRITE | PROT_READ, MAP_SHARED, mem_fd, ddr_addr);
     
 	if (ddr_mem == NULL) {
-        printf("Failed to map the device (%s)\n", strerror(errno));
+        logger << "Failed to map the device "<< strerror(errno) << std::endl;
         close(mem_fd);
         return false;
     }
@@ -119,9 +120,9 @@ bool PruTimer::initPRU(const std::string &firmware_stepper, const std::string &f
 
 	
     /* Execute firmwares on PRU */
-    printf("\tINFO: Executing example on PRU0.\r\n");
+    logger << ("\tINFO: Executing example on PRU0.\r\n");
     prussdrv_exec_program (PRU_NUM0, firmware_stepper.c_str());
-    printf("\t\tINFO: Executing example on PRU1.\r\n");
+    logger << ("\t\tINFO: Executing example on PRU1.\r\n");
     prussdrv_exec_program (PRU_NUM1, firmware_endstops.c_str());
 
 	/*prussdrv_pru_wait_event (PRU_EVTOUT_0);
@@ -146,7 +147,7 @@ void PruTimer::runThread() {
 	stop=false;
 	
 	if(!ddr_nr_events || !ddr_mem) {
-		std::cerr << "Cannot run PruTimer when not initialized" << std::endl;
+		logger << "Cannot run PruTimer when not initialized" << std::endl;
 		return;
 	}
 	
@@ -156,7 +157,7 @@ void PruTimer::runThread() {
 }
 
 void PruTimer::stopThread(bool join) {
-	std::cout << "Stopping PruTimer..." << std::endl;
+	logger << "Stopping PruTimer..." << std::endl;
 	stop=true;
 	
 	/* Disable PRU and close memory mapping*/
@@ -171,7 +172,7 @@ void PruTimer::stopThread(bool join) {
 		mem_fd=-1;
 	}
     
-	std::cout << "PRU disabled, DDR released, FD closed." << std::endl;
+	logger << "PRU disabled, DDR released, FD closed." << std::endl;
 	
 	
 	blockAvailable.notify_all();
@@ -179,7 +180,7 @@ void PruTimer::stopThread(bool join) {
 		runningThread.join();
 	}
 	
-	std::cout << "PruTimer stopped." << std::endl;
+	logger << "PruTimer stopped." << std::endl;
 }
 
 void PruTimer::push_block(uint8_t* blockMemory, size_t blockLen, unsigned int unit) {
@@ -223,7 +224,7 @@ void PruTimer::push_block(uint8_t* blockMemory, size_t blockLen, unsigned int un
 				ddr_mem_used+=currentBlockSize+4;
 				
 				//First copy the data
-				std::cout << std::hex << "Writing data to 0x" << (unsigned long)ddr_write_location << std::endl;
+				logger << std::hex << "Writing data to 0x" << (unsigned long)ddr_write_location << std::endl;
 				memcpy(ddr_write_location+4, blockStart, currentBlockSize);
 				
 				
@@ -233,10 +234,10 @@ void PruTimer::push_block(uint8_t* blockMemory, size_t blockLen, unsigned int un
 				//Then signal how much data we have to the PRU
 				uint32_t nb = (uint32_t)currentBlockSize/unit;
 				
-				std::cout << std::hex << "Writing nb command to 0x" << (unsigned long)ddr_write_location << std::endl;
+				logger << std::hex << "Writing nb command to 0x" << (unsigned long)ddr_write_location << std::endl;
 				memcpy(ddr_write_location, &nb, sizeof(nb));
 				
-				std::cout << "Written " << std::dec << nb << " stepper commands." << std::endl;
+				logger << "Written " << std::dec << nb << " stepper commands." << std::endl;
 				
 				ddr_write_location+=currentBlockSize+sizeof(nb);
 				
@@ -259,7 +260,7 @@ void PruTimer::run() {
 		
 		if(stop) break;
 		
-		printf("\tINFO: PRU0 completed transfer.\r\n");
+		logger << ("\tINFO: PRU0 completed transfer.\r\n");
 		
 		prussdrv_pru_clear_event (PRU_EVTOUT_0, PRU0_ARM_INTERRUPT);
 		
@@ -267,7 +268,7 @@ void PruTimer::run() {
 		
 		uint32_t nb = *ddr_nr_events;
 		
-		std::cout << "NB event " << nb << " / " << currentNbEvents << std::endl;
+		logger << "NB event " << nb << " / " << currentNbEvents << std::endl;
 		
 		std::unique_lock<std::mutex> lk(m);
 
@@ -285,8 +286,8 @@ void PruTimer::run() {
 		
 		lk.unlock();
 		
-		std::cout << "NB event after " << nb << " / " << currentNbEvents << std::endl;
-		std::cout << ddr_mem_used << " bytes used." << std::endl;
+		logger << "NB event after " << nb << " / " << currentNbEvents << std::endl;
+		logger << ddr_mem_used << " bytes used." << std::endl;
 		
 		blockAvailable.notify_one();
 	}
