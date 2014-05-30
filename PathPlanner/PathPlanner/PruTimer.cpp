@@ -245,7 +245,7 @@ void PruTimer::push_block(uint8_t* blockMemory, size_t blockLen, unsigned int un
 			logger << "Waiting for " << std::dec << currentBlockSize+12 << " bytes available. Currently: " << getFreeMemory() << std::endl;
 			
 			std::unique_lock<std::mutex> lk(mutex_memory);
-			blockAvailable.wait(lk, [this,currentBlockSize]{ logger << "Condition is " << (ddr_size-ddr_mem_used-4>=currentBlockSize+12 || stop) << std::endl; return ddr_size-ddr_mem_used-4>=currentBlockSize+12 || stop; });
+			blockAvailable.wait(lk, [this,currentBlockSize]{ return ddr_size-ddr_mem_used-4>=currentBlockSize+12 || stop; });
 			
 			if(!ddr_mem || stop) return;
 			
