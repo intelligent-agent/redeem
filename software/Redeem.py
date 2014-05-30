@@ -73,14 +73,14 @@ class Redeem:
             self.printer.end_stops["X2"] = EndStop("GPIO0_30", 113, "X2", self.printer.config.getboolean("Endstops", "invert_X2"))
             self.printer.end_stops["Y1"] = EndStop("GPIO1_17", 114, "Y1", self.printer.config.getboolean("Endstops", "invert_Y1"))
             self.printer.end_stops["Y2"] = EndStop("GPIO1_19", 115, "Y2", self.printer.config.getboolean("Endstops", "invert_Y2"))
-            self.printer.end_stops["Z1"] = EndStop("GPIO0_31", 116, "Z1", self.printer.config.getboolean("Endstops", "invert_Z1"))
+            self.printer.end_stops["Z1"] = EndStop("GPIO0_31", 123, "Z1", self.printer.config.getboolean("Endstops", "invert_Z1"))
             self.printer.end_stops["Z2"] = EndStop("GPIO0_4" , 117, "Z2", self.printer.config.getboolean("Endstops", "invert_Z2"))
         else:
             self.printer.end_stops["X1"] = EndStop("GPIO0_14", 112, "X1", self.printer.config.getboolean("Endstops", "invert_X1"))
             self.printer.end_stops["X2"] = EndStop("GPIO3_21", 113, "X2", self.printer.config.getboolean("Endstops", "invert_X2"))
             self.printer.end_stops["Y1"] = EndStop("GPIO2_2",  114, "Y1", self.printer.config.getboolean("Endstops", "invert_Y1"))
             self.printer.end_stops["Y2"] = EndStop("GPIO0_31", 115, "Y2", self.printer.config.getboolean("Endstops", "invert_Y2"))
-            self.printer.end_stops["Z1"] = EndStop("GPIO0_30", 116, "Z1", self.printer.config.getboolean("Endstops", "invert_Z1"))
+            self.printer.end_stops["Z1"] = EndStop("GPIO0_30", 123, "Z1", self.printer.config.getboolean("Endstops", "invert_Z1"))
             self.printer.end_stops["Z2"] = EndStop("GPIO0_4",  117, "Z2", self.printer.config.getboolean("Endstops", "invert_Z2"))
             
         if self.revision == "A3":

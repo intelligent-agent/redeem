@@ -229,7 +229,7 @@
 				switch_z1 {
 					label = "End-stop-Z1";
 					debounce_interval = <50>;
-					linux,code = <116>;
+					linux,code = <123>;
 					gpios = <&gpio1 31 0x5>;
 					gpio-key,wakeup;
 				};				

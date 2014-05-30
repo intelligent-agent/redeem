@@ -232,7 +232,7 @@
 				switch_z1 {
 					label = "End-stop-Z1";
 					debounce_interval = <50>;
-					linux,code = <116>;
+					linux,code = <123>;
 					gpios = <&gpio1 30 0x5>;
 					gpio-key,wakeup;
 				};				
@@ -274,7 +274,7 @@
 				fault_ext_2 {
 					label = "Fault-Ext-2";
 					debounce_interval = <50>;
-					linux,code = <121>;
+					linux,code = <122>;
 					gpios = <&gpio3 3 0x5>;
 					gpio-key,wakeup;	
 				};
