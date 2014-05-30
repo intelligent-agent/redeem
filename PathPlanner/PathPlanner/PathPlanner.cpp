@@ -178,7 +178,7 @@ void PathPlanner::queueMove(float startPos[NUM_AXIS],float endPos[NUM_AXIS],floa
         std::lock_guard<std::mutex> lk(m);
         linesCount++;
     }
-    lineAvailable.notify_one();
+    lineAvailable.notify_all();
 	
 	// END_INTERRUPT_PROTECTED
 }
@@ -616,6 +616,16 @@ PathPlanner::~PathPlanner() {
 	}
 }
 
+void PathPlanner::waitUntilFinished() {
+	std::unique_lock<std::mutex> lk(m);
+	lineAvailable.wait(lk, [this]{return linesCount==0 || stop;});
+	
+	//Wait for PruTimer then
+	if(!stop) {
+		pru.waitUntilFinished();
+	}
+}
+
 void PathPlanner::run() {
 	while(!stop) {
 		
@@ -810,7 +820,7 @@ void PathPlanner::run() {
 				interval = F_CPU/(v);
 				timer+=interval;
 			}
-			else if (cur->moveDecelerating())     // time to slow down
+			else if (cur->moveDecelerating(stepNumber))     // time to slow down
 			{
 				unsigned int v = ComputeV(timer,cur->fAcceleration);
 				if (v > vMaxReached)   // if deceleration goes too far it can become too large
@@ -846,6 +856,6 @@ void PathPlanner::run() {
 		
 		removeCurrentLineForbidInterrupt();
 		
-		lineAvailable.notify_one();
+		lineAvailable.notify_all();
 	}
 }

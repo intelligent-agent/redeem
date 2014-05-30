@@ -24,7 +24,7 @@ private:
 public:
 	
 	Logger()  {
-		auto timestamp = std::chrono::steady_clock::now();
+		std::chrono::time_point<std::chrono::system_clock> timestamp = std::chrono::system_clock::now();
 		
 		internalStream << "[ " <<  std::chrono::duration_cast<std::chrono::milliseconds>(timestamp.time_since_epoch()).count()
 		<< " ]\t";

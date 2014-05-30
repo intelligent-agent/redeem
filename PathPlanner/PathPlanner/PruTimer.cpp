@@ -206,9 +206,9 @@ void PruTimer::push_block(uint8_t* blockMemory, size_t blockLen, unsigned int un
 		
 		{
 			std::unique_lock<std::mutex> lk(m);
-			blockAvailable.wait(lk, [this,currentBlockSize]{return ddr_size-ddr_mem_used-4>=currentBlockSize+4; });
+			blockAvailable.wait(lk, [this,currentBlockSize]{return ddr_size-ddr_mem_used-4>=currentBlockSize+4 || stop; });
 			
-			if(!ddr_mem) return;
+			if(!ddr_mem || stop) return;
 			
 			assert(getFreeMemory()>=currentBlockSize+4);
 			
@@ -253,6 +253,10 @@ void PruTimer::push_block(uint8_t* blockMemory, size_t blockLen, unsigned int un
 	
 }
 
+void PruTimer::waitUntilFinished() {
+	std::unique_lock<std::mutex> lk(m);
+	blockAvailable.wait(lk, [this]{return ddr_mem_used==0 || stop; });
+}
 
 void PruTimer::run() {
 	while(!stop) {
@@ -289,6 +293,6 @@ void PruTimer::run() {
 		logger << "NB event after " << nb << " / " << currentNbEvents << std::endl;
 		logger << ddr_mem_used << " bytes used." << std::endl;
 		
-		blockAvailable.notify_one();
+		blockAvailable.notify_all();
 	}
 }

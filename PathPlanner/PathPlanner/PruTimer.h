@@ -49,6 +49,7 @@ public:
 	
 	void runThread();
 	void stopThread(bool join);
+	void waitUntilFinished();
 	
 	size_t getFreeMemory() {
 		std::unique_lock<std::mutex> lk(m);

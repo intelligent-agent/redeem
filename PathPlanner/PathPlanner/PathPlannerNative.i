@@ -63,7 +63,7 @@ public:
   void setMaxJerk(unsigned long maxJerk, unsigned long maxZJerk);
   void setMinimumSpeed(unsigned long minSpeed, unsigned long minZSpeed);
   void setMaximumExtruderStartFeedrate(unsigned long maxstartfeedrate);
-  
+  void waitUntilFinished();
   bool initPRU(const std::string& firmware_stepper, const std::string& firmware_endstops);
   
   

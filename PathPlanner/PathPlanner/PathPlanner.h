@@ -92,7 +92,7 @@ private:
     unsigned int vMax;              ///< Maximum reached speed in steps/s.
     unsigned int vStart;            ///< Starting speed in steps/s.
     unsigned int vEnd;              ///< End speed in steps/s
-    int32_t stepsRemaining;            ///< Remaining steps, until move is finished
+    unsigned int stepsRemaining;            ///< Remaining steps, until move is finished
 
 	
 	
@@ -262,9 +262,9 @@ private:
         dir |= 1<<axis;
     }
 	
-	inline bool moveDecelerating()
+	inline bool moveDecelerating(unsigned int stepNumber)
     {
-        if(stepsRemaining <= decelSteps)
+        if(stepNumber <= decelSteps)
         {
             if (!(flags & FLAG_DECELERATING))
             {
@@ -372,7 +372,7 @@ public:
 	void setMinimumSpeed(unsigned long minSpeed, unsigned long minZSpeed);
 	void setMaximumExtruderStartFeedrate(unsigned long maxstartfeedrate);
 	
-	
+	void waitUntilFinished();
 	
 	bool initPRU(const std::string& firmware_stepper, const std::string& firmware_endstops) {
 		return pru.initPRU(firmware_stepper, firmware_endstops);

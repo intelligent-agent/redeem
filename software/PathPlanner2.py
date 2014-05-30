@@ -86,18 +86,18 @@ class PathPlanner:
         new.set_prev(self.prev)
 
         if new.is_G92():
-            pass #FIXME: Flush the path in the planner or tell the planner it's a G92....
+            pass #FIXME: Flush the path in the planner or tell the planner it's a G92.... I dont know actually...
+        else:
+            #push this new segment
+            #unit for speed is mm/min
+            #unit for position is in steps
+            #FIXME: CLEAN THAT MESS!
 
-        #push this new segment
-        #unit for speed is mm/min
-        #unit for position is in steps
-        #FIXME: CLEAN THAT MESS!
+            speed = new.speed*60000.0
+            start = new.start_pos * Path.steps_pr_meter
+            end = new.end_pos * Path.steps_pr_meter
 
-        speed = new.speed*60000.0
-        start = new.start_pos * Path.steps_pr_meter
-        end = new.end_pos * Path.steps_pr_meter
-
-        self.native_planner.queueMove((start[0],start[1],start[2],start[3]),(end[0],end[1],end[2],end[3]),speed)
+            self.native_planner.queueMove((start[0],start[1],start[2],start[3]),(end[0],end[1],end[2],end[3]),speed)
 
 
         self.prev = new
