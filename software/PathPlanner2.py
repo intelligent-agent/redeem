@@ -100,11 +100,11 @@ class PathPlanner:
             pass #FIXME: Flush the path in the planner or tell the planner it's a G92.... I dont know actually...
         else:
             #push this new segment
-            #unit for speed is mm/min
+            #unit for speed is mm/s
             #unit for position is in steps
             #FIXME: CLEAN THAT MESS!
 
-            speed = new.speed*60000.0
+            speed = new.speed*1000.0
             start = new.start_pos * Path.steps_pr_meter
             end = new.end_pos * Path.steps_pr_meter
 

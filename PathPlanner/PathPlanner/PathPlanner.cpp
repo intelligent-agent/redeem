@@ -64,13 +64,13 @@ PathPlanner::PathPlanner() {
 	linesPos = 0;
 	linesWritePos = 0;
 	
-	maxFeedrate[0]=200;
+	maxFeedrate[0]=200; //mm/s
 	maxFeedrate[1]=200;
 	maxFeedrate[2]=5;
 	maxFeedrate[3]=200;
 	//maxFeedrate[4]=200;
 	
-	axisStepsPerMM[0]=50;
+	axisStepsPerMM[0]=50; //step per mm, including micro stepping
 	axisStepsPerMM[1]=50;
 	axisStepsPerMM[2]=2133.33333;
 	axisStepsPerMM[3]=535;
@@ -223,7 +223,8 @@ float PathPlanner::safeSpeed(Path* p)
 void PathPlanner::calculateMove(Path* p,float axis_diff[NUM_AXIS])
 {
     unsigned int axisInterval[NUM_AXIS];
-    float timeForMove = (float)(F_CPU)*p->distance / p->speed; // time is in ticks
+	float timeForMove = (float)(F_CPU)*p->distance / (p->isXOrYMove() ? std::max(minimumSpeed,p->speed): p->speed); // time is in ticks
+
 	// bool critical = false;
 	/* if(linesCount < MOVE_CACHE_LOW && timeForMove < LOW_TICKS_PER_MOVE)   // Limit speed to keep cache full.
 	 {
