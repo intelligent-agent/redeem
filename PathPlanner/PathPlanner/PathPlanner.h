@@ -16,292 +16,11 @@
 #include <string.h>
 #include <strings.h>
 #include "PruTimer.h"
-
-#define NUM_AXIS 4
-#define X_AXIS 0
-#define Y_AXIS 1
-#define Z_AXIS 2
-#define E_AXIS 3
-#define H_AXIS 4
-
-#define FLAG_WARMUP 1
-#define FLAG_NOMINAL 2
-#define FLAG_DECELERATING 4
-#define FLAG_ACCELERATION_ENABLED 8
-#define FLAG_CHECK_ENDSTOPS 16
-#define FLAG_SKIP_ACCELERATING 32
-#define FLAG_SKIP_DEACCELERATING 64
-#define FLAG_BLOCKED 128
-
-/** Are the step parameter computed */
-#define FLAG_JOIN_STEPPARAMS_COMPUTED 1
-/** The right speed is fixed. Don't check this block or any block to the left. */
-#define FLAG_JOIN_END_FIXED 2
-/** The left speed is fixed. Don't check left block. */
-#define FLAG_JOIN_START_FIXED 4
-/** Start filament retraction at move start */
-#define FLAG_JOIN_START_RETRACT 8
-/** Wait for filament pushback, before ending move */
-#define FLAG_JOIN_END_RETRACT 16
-/** Disable retract for this line */
-#define FLAG_JOIN_NO_RETRACT 32
-/** Wait for the extruder to finish it's up movement */
-#define FLAG_JOIN_WAIT_EXTRUDER_UP 64
-/** Wait for the extruder to finish it's down movement */
-#define FLAG_JOIN_WAIT_EXTRUDER_DOWN 128
-
-#define MOVE_CACHE_SIZE 16
-
-typedef struct SteppersCommand {
-	uint8_t     step  ;              //Steppers are defined as 0b000HEZYX - A 1 for a stepper means we will do a step for this stepper
-	uint8_t     direction ;          //Steppers are defined as 0b000HEZYX - Direction for each stepper
-	uint16_t    options   ;          //Options for the move - If the first bit is set to 1, then the stepper has the cancellable
-//option meaning that as soon as an endstop is hit, all the moves in the DDR are removed and canceled without making the steppers to move.
-	uint32_t    delay    ;           //number of cycle to wait (this is the # of PRU click cycles)
-} SteppersCommand;
-
-static_assert(sizeof(SteppersCommand)==8,"Invalid stepper command size");
-
-class Path {
-private:
-	unsigned int joinFlags;
-	std::atomic_uint_fast32_t flags;
-	
-	unsigned int primaryAxis;
-    int timeInTicks;
-    unsigned int dir;                       ///< Direction of movement. 1 = X+, 2 = Y+, 4= Z+, values can be combined.
-    int delta[NUM_AXIS];                  ///< Steps we want to move.
-    int error[NUM_AXIS];                  ///< Error calculation for Bresenham algorithm
-    float speedX;                   ///< Speed in x direction at fullInterval in mm/s
-    float speedY;                   ///< Speed in y direction at fullInterval in mm/s
-    float speedZ;                   ///< Speed in z direction at fullInterval in mm/s
-    float speedE;                   ///< Speed in E direction at fullInterval in mm/s
-    float fullSpeed;                ///< Desired speed mm/s
-    float invFullSpeed;             ///< 1.0/fullSpeed for fatser computation
-    float accelerationDistance2;             ///< Real 2.0*distanceÜacceleration mm²/s²
-    float maxJunctionSpeed;         ///< Max. junction speed between this and next segment
-    float startSpeed;               ///< Staring speed in mm/s
-    float endSpeed;                 ///< Exit speed in mm/s
-    float minSpeed;
-    float distance;
-    unsigned int fullInterval;     ///< interval at full speed in ticks/step.
-    unsigned int accelSteps;        ///< How much steps does it take, to reach the plateau.
-    unsigned int decelSteps;        ///< How much steps does it take, to reach the end speed.
-    unsigned int accelerationPrim; ///< Acceleration along primary axis
-    unsigned int fAcceleration;    ///< accelerationPrim*262144/F_CPU
-    unsigned int vMax;              ///< Maximum reached speed in steps/s.
-    unsigned int vStart;            ///< Starting speed in steps/s.
-    unsigned int vEnd;              ///< End speed in steps/s
-    unsigned int stepsRemaining;            ///< Remaining steps, until move is finished
-
-	
-	
-	inline bool areParameterUpToDate()
-    {
-        return joinFlags & FLAG_JOIN_STEPPARAMS_COMPUTED;
-    }
-    inline void invalidateParameter()
-    {
-        joinFlags &= ~FLAG_JOIN_STEPPARAMS_COMPUTED;
-    }
-    inline void setParameterUpToDate()
-    {
-        joinFlags |= FLAG_JOIN_STEPPARAMS_COMPUTED;
-    }
-    inline bool isStartSpeedFixed()
-    {
-        return joinFlags & FLAG_JOIN_START_FIXED;
-    }
-    inline void setStartSpeedFixed(bool newState)
-    {
-        joinFlags = (newState ? joinFlags | FLAG_JOIN_START_FIXED : joinFlags & ~FLAG_JOIN_START_FIXED);
-    }
-    inline void fixStartAndEndSpeed()
-    {
-        joinFlags |= FLAG_JOIN_END_FIXED | FLAG_JOIN_START_FIXED;
-    }
-    inline bool isEndSpeedFixed()
-    {
-        return joinFlags & FLAG_JOIN_END_FIXED;
-    }
-    inline void setEndSpeedFixed(bool newState)
-    {
-        joinFlags = (newState ? joinFlags | FLAG_JOIN_END_FIXED : joinFlags & ~FLAG_JOIN_END_FIXED);
-    }
-    inline bool isWarmUp()
-    {
-        return flags & FLAG_WARMUP;
-    }
-    inline uint8_t getWaitForXLinesFilled()
-    {
-        return primaryAxis;
-    }
-    inline void setWaitForXLinesFilled(uint8_t b)
-    {
-        primaryAxis = b;
-    }
-    inline bool isExtruderForwardMove()
-    {
-        return (dir & 136)==136;
-    }
-    inline void block()
-    {
-        flags |= FLAG_BLOCKED;
-    }
-    inline void unblock()
-    {
-        flags &= ~FLAG_BLOCKED;
-    }
-    inline bool isBlocked()
-    {
-        return flags & FLAG_BLOCKED;
-    }
-    inline bool isCheckEndstops()
-    {
-        return flags & FLAG_CHECK_ENDSTOPS;
-    }
-    inline bool isNominalMove()
-    {
-        return flags & FLAG_NOMINAL;
-    }
-    inline void setNominalMove()
-    {
-        flags |= FLAG_NOMINAL;
-    }
-
-    inline void setXMoveFinished()
-    {
-        dir&=~16;
-    }
-    inline void setYMoveFinished()
-    {
-        dir&=~32;
-    }
-    inline void setZMoveFinished()
-    {
-        dir&=~64;
-    }
-    inline void setXYMoveFinished()
-    {
-        dir&=~48;
-    }
-    inline bool isXPositiveMove()
-    {
-        return (dir & 17)==17;
-    }
-    inline bool isXNegativeMove()
-    {
-        return (dir & 17)==16;
-    }
-    inline bool isYPositiveMove()
-    {
-        return (dir & 34)==34;
-    }
-    inline bool isYNegativeMove()
-    {
-        return (dir & 34)==32;
-    }
-    inline bool isZPositiveMove()
-    {
-        return (dir & 68)==68;
-    }
-    inline bool isZNegativeMove()
-    {
-        return (dir & 68)==64;
-    }
-    inline bool isEPositiveMove()
-    {
-        return (dir & 136)==136;
-    }
-    inline bool isENegativeMove()
-    {
-        return (dir & 136)==128;
-    }
-    inline bool isXMove()
-    {
-        return (dir & 16);
-    }
-    inline bool isYMove()
-    {
-        return (dir & 32);
-    }
-    inline bool isXOrYMove()
-    {
-        return dir & 48;
-    }
-    inline bool isZMove()
-    {
-        return (dir & 64);
-    }
-    inline bool isEMove()
-    {
-        return (dir & 128);
-    }
-    inline bool isEOnlyMove()
-    {
-        return (dir & 240)==128;
-    }
-    inline bool isNoMove()
-    {
-        return (dir & 240)==0;
-    }
-    inline bool isXYZMove()
-    {
-        return dir & 112;
-    }
-    inline bool isMoveOfAxis(uint8_t axis)
-    {
-        return (dir & (16<<axis));
-    }
-    inline void setMoveOfAxis(uint8_t axis)
-    {
-        dir |= 16<<axis;
-    }
-    inline void setPositiveDirectionForAxis(uint8_t axis)
-    {
-        dir |= 1<<axis;
-    }
-	
-	inline bool moveDecelerating(unsigned int stepNumber)
-    {
-        if(stepNumber <= decelSteps)
-        {
-            if (!(flags & FLAG_DECELERATING))
-            {
-                //Printer::timer = 0;
-                flags |= FLAG_DECELERATING;
-            }
-            return true;
-        }
-        else return false;
-    }
-	
-	inline bool moveAccelerating(unsigned int stepNumber)
-    {
-        return stepNumber <= accelSteps;
-    }
-	
-	
-	void updateStepsParameter();
-
-	
-	SteppersCommand *commands;
-	
-public:
-	
-	float speed; //Feedrate
-	
-	float startPos[NUM_AXIS];
-	float endPos[NUM_AXIS];
-	
-	
-	
-	
-	friend class PathPlanner;
-};
+#include "Path.h"
+#include "config.h"
 
 class PathPlanner {
-
+private:
 	void calculateMove(Path* p,float axis_diff[NUM_AXIS]);
 	float safeSpeed(Path *p);
 	void updateTrapezoids();
@@ -320,7 +39,11 @@ class PathPlanner {
 	
 	float minimumSpeed;
 	float minimumZSpeed;
-	float Extruder_maxStartFeedrate;
+	
+	float maxExtruderStartFeedrate[NUM_EXTRUDER];
+	
+	unsigned int currentExtruder;
+	
 	float invAxisStepsPerMM[NUM_AXIS];
 	unsigned long axisStepsPerMM[NUM_AXIS];
 
@@ -357,28 +80,135 @@ class PathPlanner {
 	
 	PruTimer pru;
 	void recomputeParameters();
-	
-public:
-	PathPlanner();
-	void queueMove(float startPos[NUM_AXIS],float endPos[NUM_AXIS],float speed);
 	void run();
+
+public:
 	
-	void runThread();
-	void stopThread(bool join);
+	/**
+	 * @brief Create a new path planner that is used to compute paths parameters and send it to the PRU for execution
+	 * @details Create a new path planner that is used to compute paths parameters and send it to the PRU for execution
+	 */
+	PathPlanner();
 	
-	void setMaxFeedrates(unsigned long rates[NUM_AXIS]);
-	void setAxisStepsPerMM(unsigned long stepPerMM[NUM_AXIS]);
-	void setPrintAcceleration(unsigned long accel[NUM_AXIS]);
-	void setTravelAcceleration(unsigned long accel[NUM_AXIS]);
-	void setMaxJerk(unsigned long maxJerk, unsigned long maxZJerk);
-	void setMaximumExtruderStartFeedrate(unsigned long maxstartfeedrate);
-	
-	void waitUntilFinished();
-	
+	/**
+	 * @brief  Init the internal PRU co-processors
+	 * @details Init the internal PRU co-processors with the provided firmware
+	 * 
+	 * @param firmware_stepper The firmware for the stepper step generation, will be executed on PRU0
+	 * @param firmware_endstops The firmware for the endstop checks, will be executed on PRU1
+	 * 
+	 * @return true in case of success, false otherwise.
+	 */
 	bool initPRU(const std::string& firmware_stepper, const std::string& firmware_endstops) {
 		return pru.initPRU(firmware_stepper, firmware_endstops);
 	}
+
+	/**
+	 * @brief Queue a line move for execution
+	 * @details Queue a line move execution in the path planner. Note that the path planner 
+	 * has no internal state in term of printer head position. Therefore you have 
+	 * to pass the correct start and end position everytime.
+	 * 
+	 * The coordinates unit is in meters. As a general rule, every public method of this class use SI units.
+	 * 
+	 * @param startPos The starting position of the path in meters
+	 * @param  endPose The end position of the path in meters
+	 * @param speed The feedrate (aka speed) of the move in m/s
+	 */
+	void queueMove(float startPos[NUM_AXIS], float endPos[NUM_AXIS], float speed);
+
 	
+	/**
+	 * @brief Run the path planner thread
+	 * @details Run the path planner thread that is in charge to compute the different delays and submit it to the PRU for execution.
+	 */
+	void runThread();
+
+	/**
+	 * @brief Stop the path planner thread
+	 * @details Stop the path planner thread and optionnaly wait until it is stopped before returning.
+	 * 
+	 * @param join If true, the method does not return until the thread is effectively stopped.
+	 */
+	void stopThread(bool join);
+	
+
+	/**
+	 * @brief Wait until all queued move are finished to be executed
+	 * @details Wait until all queued move are finished to be executed
+	 */
+	void waitUntilFinished();
+
+	/**
+	 * @brief Set the maximum feedrates of the different axis
+	 * @details Set the maximum feedrates of the different axis in m/s
+	 * 
+	 * @param rates The feedrate for each of the axis, consisting of a NUM_AXIS length array.
+	 */
+	void setMaxFeedrates(float rates[NUM_AXIS]);
+
+
+	/**
+	 * @brief Set the number of steps required to move each axis by 1 meter
+	 * @details Set the number of steps required to move each axis by 1 meter
+	 * 
+	 * @param stepPerM the number of steps required to move each axis by 1 meter, consisting of a NUM_AXIS length array.
+	 */
+	void setAxisStepsPerMeter(unsigned long stepPerM[NUM_AXIS]);
+
+	/**
+	 * @brief Set the max acceleration for printing moves
+	 * @details Set the max acceleration for moves when the extruder is activated
+	 * 
+	 * @param accel The acceleration in m/s^2
+	 */
+	void setPrintAcceleration(float accel[NUM_AXIS]);
+
+	/**
+	 * @brief Set the max acceleration for travel moves
+	 * @details Set the max acceleration for moves when the extruder is not activated (i.e. not printing)
+	 * 
+	 * @param accel The acceleration in m/s^2
+	 */
+	void setTravelAcceleration(float accel[NUM_AXIS]);
+
+	/**
+	 * @brief Set the maximum speed that can be used when in a corner
+	 * @details The jerk determines your start speed and the maximum speed at the join of two segments.
+	 * 
+	 * Its unit is m/s. 
+	 * 
+	 * If the printer is standing still, the start speed is jerk/2. At the join of two segments, the speed 
+	 * difference is limited to the jerk value.
+	 * 
+	 * Examples:
+	 * 
+	 * For all examples jerk is assumed as 40.
+	 * 
+	 * Segment 1: vx = 50, vy = 0
+	 * Segment 2: vx = 0, vy = 50
+	 * v_diff = sqrt((50-0)^2+(0-50)^2) = 70.71
+	 * v_diff > jerk => vx_1 = vy_2 = jerk/v_diff*vx_1 = 40/70.71*50 = 28.3 mm/s at the join
+	 * 
+	 * Segment 1: vx = 50, vy = 0
+	 * Segment 2: vx = 35.36, vy = 35.36
+	 * v_diff = sqrt((50-35.36)^2+(0-35.36)^2) = 38.27 < jerk
+	 * Corner can be printed with full speed of 50 mm/s
+	 *
+	 * @param maxJerk The maximum jerk for X and Y axis in m/s
+	 * @param maxZJerk The maximum jerk for Z axis in m/s
+	 */
+	void setMaxJerk(float maxJerk, float maxZJerk);
+
+	/**
+	 * @brief Set the maximum speed at which the extruder can start
+	 * @details Set the maximum speed at which the extruder can start
+	 * 
+	 * @param maxstartfeedrate the maximum speed at which the extruder can start in m/s
+	 */
+	void setMaximumExtruderStartFeedrate(float maxstartfeedrate[NUM_EXTRUDER]);
+	
+
 	
 	virtual ~PathPlanner();
 

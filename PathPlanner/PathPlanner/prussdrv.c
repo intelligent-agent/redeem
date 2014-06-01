@@ -700,7 +700,7 @@ int prussdrv_exec_program(int prunum, const char *filename)
 {
     FILE *fPtr;
     unsigned char fileDataArray[PRUSS_MAX_IRAM_SIZE];
-    int fileSize = 0;
+    long fileSize = 0;
 
     // Open an File from the hard drive
     fPtr = fopen(filename, "rb");
@@ -731,7 +731,7 @@ int prussdrv_exec_program(int prunum, const char *filename)
 
     fclose(fPtr);
 
-    return prussdrv_exec_code(prunum, (const unsigned int *) fileDataArray, fileSize);
+    return prussdrv_exec_code(prunum, (const unsigned int *) fileDataArray, (int)fileSize);
 }
 
 int prussdrv_exec_code(int prunum, const unsigned int *code, int codelen)

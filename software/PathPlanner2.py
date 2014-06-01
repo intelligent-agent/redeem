@@ -39,8 +39,8 @@ class PathPlanner:
 
             self.native_planner.initPRU( pru_firmware.get_firmware(0), pru_firmware.get_firmware(1))
 
-            s = (long(Path.steps_pr_meter[0]/1000),long(Path.steps_pr_meter[1]/1000),long(Path.steps_pr_meter[2]/1000),long(Path.steps_pr_meter[3]/1000))
-            self.native_planner.setAxisStepsPerMM(s)
+            s = (long(Path.steps_pr_meter[0]),long(Path.steps_pr_meter[1]),long(Path.steps_pr_meter[2]),long(Path.steps_pr_meter[3]))
+            self.native_planner.setAxisStepsPerMeter(s)
             
 
             self.native_planner.runThread()

@@ -44,6 +44,9 @@
 		4E6C54B419376CCE006610F6 /* pruss_intc_mapping.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.objj.h; path = pruss_intc_mapping.h; sourceTree = "<group>"; };
 		4E6C54B519376CCE006610F6 /* prussdrv.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = prussdrv.c; sourceTree = "<group>"; };
 		4E6C54B619376CCE006610F6 /* prussdrv.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.objj.h; path = prussdrv.h; sourceTree = "<group>"; };
+		4EB69340193B1E18009B46B4 /* Path.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Path.h; sourceTree = "<group>"; };
+		4EB69342193B1E5F009B46B4 /* StepperCommand.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = StepperCommand.h; sourceTree = "<group>"; };
+		4EB69343193B1EAB009B46B4 /* config.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = config.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -87,6 +90,9 @@
 				4E6C54B019375D85006610F6 /* PruTimer.h */,
 				4E1C313A1938888C00AC9306 /* Logger.h */,
 				4E1C313C193890B100AC9306 /* Logger.cpp */,
+				4EB69340193B1E18009B46B4 /* Path.h */,
+				4EB69342193B1E5F009B46B4 /* StepperCommand.h */,
+				4EB69343193B1EAB009B46B4 /* config.h */,
 			);
 			path = PathPlanner;
 			sourceTree = "<group>";
