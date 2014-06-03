@@ -93,7 +93,7 @@ class PathPlanner:
         # Link to the previous segment in the chain
         new.set_prev(self.prev)
         
-        #logging.debug("Adding path "+str(new))
+        logging.debug("Adding path "+str(new))
         #logging.debug("Previous path was "+str(self.prev))
 
         if new.is_G92():
@@ -109,7 +109,7 @@ class PathPlanner:
 
             self.native_planner.queueMove((start[0],start[1],start[2],start[3]),(end[0],end[1],end[2],end[3]),speed)
 
-
+        logging.debug("Path added.")
         self.prev = new
 
     

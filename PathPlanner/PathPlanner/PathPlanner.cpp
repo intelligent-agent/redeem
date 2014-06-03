@@ -128,11 +128,15 @@ PathPlanner::PathPlanner() {
 void PathPlanner::queueMove(float startPos[NUM_AXIS],float endPos[NUM_AXIS],float speed) {
     float axis_diff[NUM_AXIS]; // Axis movement in mm
 	
+	logger << "Waiting for free move command space..." << std::endl;
+	
 	// wait for the worker
     if(linesCount>=MOVE_CACHE_SIZE){
         std::unique_lock<std::mutex> lk(m);
-        lineAvailable.wait(lk, [this]{return linesCount<MOVE_CACHE_SIZE;});
+        lineAvailable.wait(lk, [this]{return linesCount<MOVE_CACHE_SIZE || stop;});
     }
+	
+	if(stop) return;
 	
 	Path *p = &lines[linesWritePos];
 	
@@ -218,6 +222,8 @@ void PathPlanner::queueMove(float startPos[NUM_AXIS],float endPos[NUM_AXIS],floa
     lineAvailable.notify_all();
 	
 	// END_INTERRUPT_PROTECTED
+	
+	logger << "End queuing move command" << std::endl;
 }
 
 float PathPlanner::safeSpeed(Path* p)
@@ -700,6 +706,7 @@ void PathPlanner::run() {
 			 }*/
 			cur = NULL;
 			//return 2000;
+			logger << "Path planner thread: path " <<  std::dec << linesPos<< " is blocked, waiting... " << std::endl;
 			std::this_thread::sleep_for( std::chrono::milliseconds(100) );
 			continue;
 		}
@@ -713,7 +720,7 @@ void PathPlanner::run() {
 			if(linesCount<=cur->getWaitForXLinesFilled())
 			{
 				cur = NULL;
-				
+				logger << "Path planner thread: path " <<  std::dec << linesPos<< " is warming up, waiting... " << std::endl;
 				std::this_thread::sleep_for( std::chrono::milliseconds(100) );
 				continue;
 			}
@@ -724,6 +731,11 @@ void PathPlanner::run() {
 			 removeCurrentLineForbidInterrupt();
 			 
 			 return(wait); // waste some time for path optimization to fill up*/
+			logger << "Path planner thread: path " <<  std::dec << linesPos<< " is processing a warm up path, waiting... " << std::endl;
+			removeCurrentLineForbidInterrupt();
+			
+			lineAvailable.notify_all();
+			
 			std::this_thread::sleep_for( std::chrono::milliseconds(100) );
 			continue;
 		} // End if WARMUP
@@ -879,15 +891,14 @@ void PathPlanner::run() {
 			}
 			//std::cout << interval << std::endl;
 			
-			
+			assert(interval < F_CPU*4);
 			cmd.delay = interval;
 		} // stepsRemaining
 				
-		logger << "Done with " << std::dec << linesPos << std::endl;
 		
 		logger << "Sending " << std::dec << linesPos << std::endl;
 		
-		pru.push_block((uint8_t*)cur->commands, sizeof(SteppersCommand)*cur->stepsRemaining, sizeof(SteppersCommand));
+		pru.push_block((uint8_t*)cur->commands, sizeof(SteppersCommand)*cur->stepsRemaining, sizeof(SteppersCommand),linesPos);
 		
 		logger << "Done sending with " << std::dec << linesPos << std::endl;
 		

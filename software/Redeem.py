@@ -266,9 +266,11 @@ class Redeem:
         if g.message == "ok" or g.code()=="ok" or g.code()=="No-Gcode":
             g.set_answer(None)
             return
+        logging.debug("Processing "+str(g))
 
         self.printer.processor.execute(g)
-   
+        logging.debug("Done processing GCode.")
+
     ''' An endStop has been hit '''
     def end_stop_hit(self, endstop):
         logging.warning("End Stop " + endstop.name +" hit!")

@@ -378,7 +378,10 @@ CANCEL_COMMAND_AFTER:
             
             
 WAIT:           
+    MOV  r3, DDR_MAGIC                                      // Load the fancy word into r3
+WAIT2:
     LBBO r1, r4, 0, 4                                       // Load values from external DDR Memory into R1
+    QBEQ RESET_R4, r1, r3                                   // Check if the end of DDR is reached   
     QBNE PINS, r1, 0                                        // Start to process the commands stored in DDR if we have a value != of 0 stored in the current location of the DDR
-    QBA WAIT                                                // Loop back to wait for new data
+    QBA WAIT2                                                // Loop back to wait for new data
 

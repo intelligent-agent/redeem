@@ -172,7 +172,7 @@ extern "C" {
 
     /** Wait for the specified host interrupt.
      * @return the number of times the event has happened. */
-    unsigned int prussdrv_pru_wait_event(unsigned int host_interrupt);
+    unsigned int prussdrv_pru_wait_event(unsigned int host_interrupt, unsigned int timeout);
 
     int prussdrv_pru_event_fd(unsigned int host_interrupt);
 

@@ -479,42 +479,45 @@ int prussdrv_pru_send_event(unsigned int eventnum)
     return 0;
 }
 
-unsigned int prussdrv_pru_wait_event(unsigned int host_interrupt)
+unsigned int prussdrv_pru_wait_event(unsigned int host_interrupt, unsigned int timeout)
 {
     unsigned int event_count = 0;
 	
 	int fd = prussdrv.fd[host_interrupt];
-#ifdef USE_SELECT
-	fd_set rfds;
-	struct timeval tv;
-	int retval;
+
 	
+	
+	if(timeout) {
+		fd_set rfds;
+		struct timeval tv;
+		int retval;
+		
 #warning FIXME: Don't create the set each time we call this method
-	
-	/* Watch stdin (fd 0) to see when it has input. */
-	FD_ZERO(&rfds);
-	FD_SET(fd, &rfds);
-	
-	/* Wait up to five seconds. */
-	tv.tv_sec = 0;
-	tv.tv_usec = 100000;
-	
-	do {
-	retval = select(fd+1, &rfds, NULL, NULL, &tv);
+		
+		/* Watch stdin (fd 0) to see when it has input. */
+		FD_ZERO(&rfds);
+		FD_SET(fd, &rfds);
+		
+		/* Wait up to five seconds. */
+		tv.tv_sec = 0;
+		tv.tv_usec = timeout*1000;
+
+		//Wait until some data available
+		retval = select(fd+1, &rfds, NULL, NULL, &tv);
 		/* Don't rely on the value of tv now! */
 		
 		if (retval == -1)
-			return 0;
-		else if (retval) {
-			read(fd, &event_count, sizeof(unsigned int));
-			/* FD_ISSET(0, &rfds) will be true. */
-		}else {
-			//printf("No data within five seconds.\n");
+			return 0; //Error
+		else if(retval==0) {
+			
+			return 0; //Timeout
 		}
-	} while(retval==0 && prussdrv.fd[host_interrupt]>0);
-#else
+
+
+	}
+	
 	read(fd, &event_count, sizeof(unsigned int));
-#endif
+	
     return event_count;
 }
 
@@ -548,7 +551,7 @@ int prussdrv_pru_send_wait_clear_event(unsigned int send_eventnum,
                                        unsigned int ack_eventnum)
 {
     prussdrv_pru_send_event(send_eventnum);
-    prussdrv_pru_wait_event(host_interrupt);
+    prussdrv_pru_wait_event(host_interrupt,0);
     prussdrv_pru_clear_event(host_interrupt, ack_eventnum);
     return 0;
 

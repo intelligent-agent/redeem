@@ -20,8 +20,15 @@
 //#define DEMO_PRU
 
 class PruTimer {
+	
+	class BlockDef{
+	public:
+		unsigned long start,end,id;
+	};
+	
 	/* Should be locked when used */
 	std::queue<size_t> ddr_used;
+	std::queue<BlockDef> blocksID;
 	size_t ddr_mem_used;
 	
 	unsigned long ddr_addr;
@@ -62,7 +69,7 @@ public:
 		return ddr_size-ddr_mem_used-4;
 	}
 	
-	void push_block(uint8_t* blockMemory, size_t blockLen, unsigned int unit);
+	void push_block(uint8_t* blockMemory, size_t blockLen, unsigned int unit, unsigned int pathID);
 };
 
 #endif /* defined(__PathPlanner__PruTimer__) */
