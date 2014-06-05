@@ -128,7 +128,7 @@ PathPlanner::PathPlanner() {
 void PathPlanner::queueMove(float startPos[NUM_AXIS],float endPos[NUM_AXIS],float speed) {
     float axis_diff[NUM_AXIS]; // Axis movement in mm
 	
-	logger << "Waiting for free move command space..." << std::endl;
+	LOG( "Waiting for free move command space..." << std::endl);
 	
 	// wait for the worker
     if(linesCount>=MOVE_CACHE_SIZE){
@@ -149,8 +149,8 @@ void PathPlanner::queueMove(float startPos[NUM_AXIS],float endPos[NUM_AXIS],floa
 	memcpy(p->endPos, endPos, sizeof(float)*NUM_AXIS);
 	
 	
-	logger << std::dec << "Moving from " << startPos[0] << "," << startPos[1] << "," << startPos[2] << " to "
-	 << endPos[0] << "," << endPos[1] << "," << endPos[2] << std::endl;
+	LOG("Moving from " << startPos[0] << "," << startPos[1] << "," << startPos[2] << " to "
+	 << endPos[0] << "," << endPos[1] << "," << endPos[2] << std::endl);
 	
 	p->speed = speed;
 	
@@ -179,7 +179,7 @@ void PathPlanner::queueMove(float startPos[NUM_AXIS],float endPos[NUM_AXIS],floa
 	
     if(p->isNoMove())
 	{
-		logger << "Warning: no move path" << std::endl;
+		LOG( "Warning: no move path" << std::endl);
 		// if(newPath)   // need to delete dummy elements, otherwise commands can get locked.
 		// resetPathPlanner();
 		return; // No steps included
@@ -223,7 +223,7 @@ void PathPlanner::queueMove(float startPos[NUM_AXIS],float endPos[NUM_AXIS],floa
 	
 	// END_INTERRUPT_PROTECTED
 	
-	logger << "End queuing move command" << std::endl;
+	LOG( "End queuing move command" << std::endl);
 }
 
 float PathPlanner::safeSpeed(Path* p)
@@ -706,7 +706,7 @@ void PathPlanner::run() {
 			 }*/
 			cur = NULL;
 			//return 2000;
-			logger << "Path planner thread: path " <<  std::dec << linesPos<< " is blocked, waiting... " << std::endl;
+			LOG( "Path planner thread: path " <<  std::dec << linesPos<< " is blocked, waiting... " << std::endl);
 			std::this_thread::sleep_for( std::chrono::milliseconds(100) );
 			continue;
 		}
@@ -720,7 +720,7 @@ void PathPlanner::run() {
 			if(linesCount<=cur->getWaitForXLinesFilled())
 			{
 				cur = NULL;
-				logger << "Path planner thread: path " <<  std::dec << linesPos<< " is warming up, waiting... " << std::endl;
+				LOG( "Path planner thread: path " <<  std::dec << linesPos<< " is warming up, waiting... " << std::endl);
 				std::this_thread::sleep_for( std::chrono::milliseconds(100) );
 				continue;
 			}
@@ -731,7 +731,7 @@ void PathPlanner::run() {
 			 removeCurrentLineForbidInterrupt();
 			 
 			 return(wait); // waste some time for path optimization to fill up*/
-			logger << "Path planner thread: path " <<  std::dec << linesPos<< " is processing a warm up path, waiting... " << std::endl;
+			LOG( "Path planner thread: path " <<  std::dec << linesPos<< " is processing a warm up path, waiting... " << std::endl);
 			removeCurrentLineForbidInterrupt();
 			
 			lineAvailable.notify_all();
@@ -896,11 +896,11 @@ void PathPlanner::run() {
 		} // stepsRemaining
 				
 		
-		logger << "Sending " << std::dec << linesPos << std::endl;
+		LOG( "Sending " << std::dec << linesPos << std::endl);
 		
 		pru.push_block((uint8_t*)cur->commands, sizeof(SteppersCommand)*cur->stepsRemaining, sizeof(SteppersCommand),linesPos);
 		
-		logger << "Done sending with " << std::dec << linesPos << std::endl;
+		LOG( "Done sending with " << std::dec << linesPos << std::endl);
 		
 		
 		removeCurrentLineForbidInterrupt();

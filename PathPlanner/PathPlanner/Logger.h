@@ -58,6 +58,6 @@ public:
 	}
 };
 
-#define logger Logger()
+#define LOG(x) Logger() << x
 
 #endif /* defined(__PathPlanner__Logger__) */

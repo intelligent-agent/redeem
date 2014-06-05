@@ -11,7 +11,7 @@
 
 int main(int argc, const char * argv[])
 {
-	logger << "Start test program" << std::endl;
+	LOG( "Start test program" << std::endl);
 	
 
 	PathPlanner planner;
