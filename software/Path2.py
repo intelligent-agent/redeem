@@ -45,11 +45,11 @@ class Path:
     
 
     """ The axes of evil, the feed rate in m/s and ABS or REL """
-    def __init__(self, axes, speed, acceleration, cancellable=False):
+    def __init__(self, axes, speed, acceleration, cancelable=False):
         self.axes               = axes
         self.speed              = speed
         self.acceleration       = acceleration
-        self.cancellable        = int(cancellable)
+        self.cancelable        = int(cancelable)
         self.mag                = None
         self.pru_data = []
         self.next               = None
@@ -74,12 +74,16 @@ class Path:
     def __str__(self):
         return "Path from "+str(self.start_pos)+" to "+str(self.end_pos)
 
+    @staticmethod
+    def axis_to_index(axis):
+        return Path.AXES.index(axis)
+
 
 ''' A path segment with absolute movement '''
 class AbsolutePath(Path):
 
-    def __init__(self, axes, speed, acceleration, cancellable=False):
-        Path.__init__(self, axes, speed, acceleration, cancellable)
+    def __init__(self, axes, speed, acceleration, cancelable=False):
+        Path.__init__(self, axes, speed, acceleration, cancelable)
         self.movement = Path.ABSOLUTE
 
     ''' Set the previous path element '''
@@ -106,8 +110,8 @@ class AbsolutePath(Path):
 ''' A path segment with Relative movement '''
 class RelativePath(Path):
 
-    def __init__(self, axes, speed, acceleration=0.5, cancellable=False):
-        Path.__init__(self, axes, speed, acceleration, cancellable)
+    def __init__(self, axes, speed, acceleration=0.5, cancelable=False):
+        Path.__init__(self, axes, speed, acceleration, cancelable)
         self.movement = Path.RELATIVE
 
     ''' Link to previous segment '''
@@ -129,8 +133,8 @@ class RelativePath(Path):
 ''' A reset axes path segment. No movement occurs, only global position setting '''
 class G92Path(Path):
     
-    def __init__(self, axes, speed, acceleration=0.5, cancellable=False):
-        Path.__init__(self, axes, speed, acceleration, cancellable)
+    def __init__(self, axes, speed, acceleration=0.5, cancelable=False):
+        Path.__init__(self, axes, speed, acceleration, cancelable)
         self.movement = Path.G92
         self.ratios = np.ones(Path.NUM_AXES)
 

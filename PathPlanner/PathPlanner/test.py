@@ -11,7 +11,7 @@ t.runThread()
 start = (0,0,0,0)
 end = (0,0,2133*100,0)
 
-t.queueMove(start,end,3000)
+t.queueMove(start,end,3000,False)
 
 
 # for i in xrange(1,12):

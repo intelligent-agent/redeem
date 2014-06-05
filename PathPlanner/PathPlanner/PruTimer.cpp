@@ -102,6 +102,11 @@ bool PruTimer::initPRU(const std::string &firmware_stepper, const std::string &f
 	
 	ddr_size = std::stoul(s, nullptr, 16);
 	
+	if(!ddr_size || !ddr_addr) {
+		LOG("[ERROR] Unable to find DDR address and size for PRU" << std::endl);
+		return false;
+	}
+	
 	LOG( "The DDR memory reserved for the PRU is 0x" << std::hex <<  ddr_size << " and has addr 0x" <<  std::hex <<  ddr_addr << std::endl);
 	
     /* open the device */
@@ -498,7 +503,7 @@ void PruTimer::run() {
 #endif
 		if(stop) break;
 		
-		//LOG( ("\tINFO: PRU0 completed transfer.\r\n"));
+		LOG( ("\tINFO: PRU0 completed transfer.\r\n"));
 		
 #ifndef DEMO_PRU
 		if(nbWaitedEvent)
@@ -512,9 +517,9 @@ void PruTimer::run() {
 		
 		
 		{
-			std::unique_lock<std::mutex> lk(mutex_memory);
+			std::lock_guard<std::mutex> lk(mutex_memory);
 			
-			//LOG( "NB event " << nb << " / " << currentNbEvents << "\t\tRead event from UIO = " << nbWaitedEvent << ", block in the queue: " << ddr_used.size() << std::endl);
+			LOG( "NB event " << nb << " / " << currentNbEvents << "\t\tRead event from UIO = " << nbWaitedEvent << ", block in the queue: " << ddr_used.size() << std::endl);
 
 			while(currentNbEvents!=nb && !ddr_used.empty()) { //We use != to handle the overflow case
 				
@@ -522,7 +527,7 @@ void PruTimer::run() {
 				
 				assert(ddr_mem_used<ddr_size);
 				
-				//LOG( "Block of size " << std::dec << ddr_used.front() << " with ID " << blocksID.front().id << " from 0x" << std::hex << blocksID.front().start << " to 0x" << std::hex<< blocksID.front().end  << " done." << std::endl);
+				LOG( "Block of size " << std::dec << ddr_used.front() << " with ID " << blocksID.front().id << " from 0x" << std::hex << blocksID.front().start << " to 0x" << std::hex<< blocksID.front().end  << " done." << std::endl);
 				
 
 				ddr_used.pop();
@@ -536,8 +541,8 @@ void PruTimer::run() {
 		
 		
 		
-		//LOG( "NB event after " << std::dec << nb << " / " << currentNbEvents << std::endl);
-		//LOG( std::dec <<ddr_mem_used << " bytes used, free: " <<std::dec <<  ddr_size-ddr_mem_used<< "." << std::endl);
+		LOG( "NB event after " << std::dec << nb << " / " << currentNbEvents << std::endl);
+		LOG( std::dec <<ddr_mem_used << " bytes used, free: " <<std::dec <<  ddr_size-ddr_mem_used<< "." << std::endl);
 		
 		blockAvailable.notify_all();
 	}

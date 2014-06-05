@@ -22,6 +22,7 @@
 #define FLAG_SKIP_ACCELERATING 32
 #define FLAG_SKIP_DEACCELERATING 64
 #define FLAG_BLOCKED 128
+#define FLAG_CANCELABLE 256
 
 /** Are the step parameter computed */
 #define FLAG_JOIN_STEPPARAMS_COMPUTED 1
@@ -113,6 +114,12 @@ private:
     {
         return joinFlags & FLAG_JOIN_END_FIXED;
     }
+	inline bool isCancelable() {
+		return joinFlags & FLAG_CANCELABLE;
+	}
+	inline void setCancelable(bool newState) {
+		joinFlags = (newState ? joinFlags | FLAG_CANCELABLE : joinFlags & ~FLAG_CANCELABLE);
+	}
     inline void setEndSpeedFixed(bool newState)
     {
         joinFlags = (newState ? joinFlags | FLAG_JOIN_END_FIXED : joinFlags & ~FLAG_JOIN_END_FIXED);

@@ -28,7 +28,7 @@ int main(int argc, const char * argv[])
 	bzero(end,5*4);
 	end[2] = 2133*10;
 	
-	planner.queueMove(start,end,1000);
+	planner.queueMove(start,end,1000,true);
 	
 	start[0] = 500;
 	end[0] = 0;

@@ -65,15 +65,16 @@ class PathPlanner:
 
     ''' Home the given axis using endstops (min) '''
     def home(self,axis):
-        return 
 
         if axis=="E" or axis=="H":
             return
 
         logging.debug("homing "+axis)
+
         speed = Path.home_speed[Path.axis_to_index(axis)]
         # Move until endstop is hit
-        p = RelativePath({axis:-self.travel_length[axis]}, speed, self.printer.acceleration)
+        p = RelativePath({axis:-self.travel_length[axis]}, speed, self.printer.acceleration,True)
+        
         self.add_path(p)
 
         # Reset position to offset
@@ -83,7 +84,6 @@ class PathPlanner:
         # Move to offset
         p = AbsolutePath({axis:0}, speed, self.printer.acceleration)
         self.add_path(p)
-        self.finalize_paths()
         self.wait_until_done()
         logging.debug("homing done for "+axis)
 
@@ -93,12 +93,10 @@ class PathPlanner:
         # Link to the previous segment in the chain
         new.set_prev(self.prev)
         
-        logging.debug("Adding path "+str(new))
+        #logging.debug("Adding path "+str(new))
         #logging.debug("Previous path was "+str(self.prev))
 
-        if new.is_G92():
-            pass #FIXME: Flush the path in the planner or tell the planner it's a G92.... I dont know actually...
-        else:
+        if not new.is_G92():
             #push this new segment
             #unit for speed is mm/s
             #unit for position is in mm
@@ -107,9 +105,9 @@ class PathPlanner:
             start = new.start_pos * 1000
             end = new.end_pos * 1000
 
-            self.native_planner.queueMove((start[0],start[1],start[2],start[3]),(end[0],end[1],end[2],end[3]),speed)
+            self.native_planner.queueMove((start[0],start[1],start[2],start[3]),(end[0],end[1],end[2],end[3]),speed,True if new.cancelable else False)
 
-        logging.debug("Path added.")
+        #logging.debug("Path added.")
         self.prev = new
 
     

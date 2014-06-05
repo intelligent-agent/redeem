@@ -115,7 +115,7 @@ public:
 	 * @param  endPose The end position of the path in meters
 	 * @param speed The feedrate (aka speed) of the move in m/s
 	 */
-	void queueMove(float startPos[NUM_AXIS], float endPos[NUM_AXIS], float speed);
+	void queueMove(float startPos[NUM_AXIS], float endPos[NUM_AXIS], float speed, bool cancelable);
 
 	
 	/**

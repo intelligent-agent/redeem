@@ -125,7 +125,7 @@ PathPlanner::PathPlanner() {
 	bzero(lines, sizeof(lines));
 }
 
-void PathPlanner::queueMove(float startPos[NUM_AXIS],float endPos[NUM_AXIS],float speed) {
+void PathPlanner::queueMove(float startPos[NUM_AXIS],float endPos[NUM_AXIS],float speed, bool cancelable) {
     float axis_diff[NUM_AXIS]; // Axis movement in mm
 	
 	LOG( "Waiting for free move command space..." << std::endl);
@@ -144,6 +144,7 @@ void PathPlanner::queueMove(float startPos[NUM_AXIS],float endPos[NUM_AXIS],floa
 		delete[] p->commands;
 		p->commands=NULL;
 	}
+
 	
 	memcpy(p->startPos, startPos, sizeof(float)*NUM_AXIS);
 	memcpy(p->endPos, endPos, sizeof(float)*NUM_AXIS);
@@ -156,7 +157,7 @@ void PathPlanner::queueMove(float startPos[NUM_AXIS],float endPos[NUM_AXIS],floa
 	
     p->joinFlags = 0;
 	p->commands=NULL;
-	
+	p->setCancelable(cancelable);
     p->dir = 0;
     //Printer::constrainDestinationCoords();
 	
@@ -688,7 +689,7 @@ void PathPlanner::run() {
 		
 		long cur_errupd=0;
 		uint8_t directionMask = 0; //0b000HEZYX
-		
+		uint16_t optionMask;
 		
 		
 		unsigned int vMaxReached ;
@@ -764,8 +765,6 @@ void PathPlanner::run() {
 		vMaxReached = cur->vStart;
 		
 		
-		
-		
 		//HAL::forbidInterrupts();
 		//Determine direction of movement,check if endstop was hit
 		if(cur->commands) {
@@ -773,7 +772,7 @@ void PathPlanner::run() {
 		}
 		cur->commands = new SteppersCommand[cur->stepsRemaining];
 		
-		
+		optionMask = cur->isCancelable() ? 1 : 0;
 		
 		directionMask|=((uint8_t)cur->isXPositiveMove() << X_AXIS);
 		directionMask|=((uint8_t)cur->isYPositiveMove() << Y_AXIS);
@@ -812,7 +811,7 @@ void PathPlanner::run() {
 			
 			SteppersCommand& cmd = cur->commands[stepNumber];
 			cmd.direction = directionMask;
-			cmd.options = 0;
+			cmd.options = optionMask;
 			cmd.step = 0;
 			if(cur->isEMove())
 			{
