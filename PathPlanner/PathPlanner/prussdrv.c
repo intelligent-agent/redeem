@@ -2,6 +2,7 @@
  * prussdrv.c
  *
  * User space driver for PRUSS
+ * Modfied by Mathieu Monney for use in Redeem 3D Printer control software.
  *
  * Copyright (C) 2012 Texas Instruments Incorporated - http://www.ti.com/
  *
