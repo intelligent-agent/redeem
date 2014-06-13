@@ -294,8 +294,14 @@ void PruTimer::push_block(uint8_t* blockMemory, size_t blockLen, unsigned int un
 				if(!maxSize) {
 					//Dont have the size for a single command! Reset the DDR
 					//LOG( "No more space at 0x" << std::hex << ddr_write_location << ". Resetting DDR..." << std::endl);
-					uint32_t nb =DDR_MAGIC;
+					uint32_t nb;
 	
+					//First put 0 for next command
+					nb=0;
+					memcpy(ddr_mem, &nb, sizeof(nb));
+					msync(ddr_mem, sizeof(nb), MS_SYNC);
+					
+					nb=DDR_MAGIC;
 					memcpy(ddr_write_location, &nb, sizeof(nb));
 					
 					msync(ddr_write_location, sizeof(nb), MS_SYNC);
@@ -350,6 +356,12 @@ void PruTimer::push_block(uint8_t* blockMemory, size_t blockLen, unsigned int un
 				assert(ddr_write_location+maxSize+sizeof(nb)*2<=ddr_mem_end);
 				
 				memcpy(ddr_write_location+maxSize+sizeof(nb), &nb, sizeof(nb));
+				
+				if(!resetDDR) {
+					nb=0;
+					memcpy(ddr_mem, &nb, sizeof(nb));
+					msync(ddr_mem, sizeof(nb), MS_SYNC);
+				}
 				
 				//Need it?
 				msync(ddr_write_location+4, maxSize+4, MS_SYNC);

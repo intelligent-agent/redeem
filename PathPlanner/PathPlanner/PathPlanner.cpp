@@ -711,7 +711,7 @@ void PathPlanner::run() {
 		
 		
 		unsigned int vMaxReached ;
-		unsigned int timer = 0;
+		unsigned long timer = 0;
 		
 		
 		Path* cur = &lines[linesPos];
@@ -905,6 +905,7 @@ void PathPlanner::run() {
 			{
 				// constant speed reached
 				interval = cur->fullInterval;
+				timer = 0;
 			}
 			//std::cout << interval << std::endl;
 			
