@@ -1,9 +1,9 @@
 '''
-Path planner for Replicape. Just add paths to 
-this and they will be executed as soon as no other 
-paths are being executed. 
-It's a good idea to stack up maybe five path 
-segments, to have a buffer. 
+Path planner for Replicape. Just add paths to
+this and they will be executed as soon as no other
+paths are being executed.
+It's a good idea to stack up maybe five path
+segments, to have a buffer.
 
 Author: Elias Bakken
 email: elias(dot)bakken(at)gmail(dot)com
@@ -14,22 +14,12 @@ License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 import time
 import logging
 from Path import Path, AbsolutePath, RelativePath, G92Path
-import numpy as np  
-from threading import Thread
+import numpy as np
 from Printer import Printer
-import os 
-
-try:
-    from Pru import Pru
-except ImportError:
-    pass
-
-try:
-    import braid
-except ImportError:
-    pass
+from PathPlannerNative import PathPlannerNative
+import threading
 import Queue
-from collections import defaultdict
+
 
 
 class PathPlanner:
@@ -37,20 +27,23 @@ class PathPlanner:
     def __init__(self, printer, pru_firmware):
         self.printer        = printer
         self.steppers       = printer.steppers
-        if pru_firmware:
-            self.pru        = Pru(pru_firmware)
-        self.paths          = Queue.Queue(1000)
-        self.segments       = []
-        self.running        = True
-        self.t              = Thread(target=self._do_work)
-        self.t.daemon       = True
+
+
         self.travel_length  = {"X":0.0, "Y":0.0, "Z":0.0}
         self.center_offset  = {"X":0.0, "Y":0.0, "Z":0.0}
         self.prev           =  G92Path({"X":0.0, "Y":0.0, "Z":0.0, "E":0.0,"H":0.0}, 0)
         self.prev.set_prev(None)
+ 
+        if pru_firmware:
+            self.native_planner = PathPlannerNative()
 
-        if __name__ != '__main__':
-            self.t.start()		 
+            self.native_planner.initPRU( pru_firmware.get_firmware(0), pru_firmware.get_firmware(1))
+
+            self.native_planner.setPrintAcceleration(tuple([float(self.printer.acceleration) for i in range(Path.NUM_AXES)]))
+            self.native_planner.setTravelAcceleration(tuple([float(self.printer.acceleration) for i in range(Path.NUM_AXES)]))
+            self.native_planner.setAxisStepsPerMeter(tuple([long(i) for i in Path.steps_pr_meter]))
+
+            self.native_planner.runThread()
 
     ''' Get the current pos as a dict '''
     def get_current_pos(self):
@@ -62,16 +55,26 @@ class PathPlanner:
             pos2[axis] = pos[index]
 
         return pos2
-            
+          
+    def wait_until_done(self):
+        """ Wait until the queue is empty """
+        self.native_planner.waitUntilFinished()
+
+    def force_exit(self):
+        self.native_planner.stopThread(True)
+
     ''' Home the given axis using endstops (min) '''
     def home(self,axis):
+
         if axis=="E" or axis=="H":
             return
 
         logging.debug("homing "+axis)
+
         speed = Path.home_speed[Path.axis_to_index(axis)]
         # Move until endstop is hit
-        p = RelativePath({axis:-self.travel_length[axis]}, speed, self.printer.acceleration)
+        p = RelativePath({axis:-self.travel_length[axis]}, speed, self.printer.acceleration,(axis != "Z"))
+        
         self.add_path(p)
 
         # Reset position to offset
@@ -81,352 +84,76 @@ class PathPlanner:
         # Move to offset
         p = AbsolutePath({axis:0}, speed, self.printer.acceleration)
         self.add_path(p)
-        self.finalize_paths()
         self.wait_until_done()
         logging.debug("homing done for "+axis)
 
     ''' Add a path segment to the path planner '''        
     def add_path(self, new):   
-        #logging.debug("Adding path "+str(new.movement))
+
         # Link to the previous segment in the chain
         new.set_prev(self.prev)
+        
+        #logging.debug("Adding path "+str(new))
+        #logging.debug("Previous path was "+str(self.prev))
 
-        if not self.prev.is_added:
-            self.segments.append(self.prev)
-            self.prev.is_added = True
-            # If we find an end segment, add all path segments to the queue for execution           
-            if self.prev.is_end_segment:
-                logging.debug("Processing all ("+str(len(self.segments))+") segments on queue!")
-                [self.paths.put(path) for path in self.segments]
-                self.segments = []
+        if not new.is_G92():
+            #push this new segment
+            #unit for speed is mm/s
+            #unit for position is in mm
+ 
+            speed = new.speed*1000.0
+            start = new.start_pos * 1000
+            end = new.stepper_end_pos * 1000
 
-        # If this is a relative move or G92, add it right away
-        if new.is_end_segment:
-            self.finalize_paths()
-            self.paths.put(new)
-            new.is_added = True
-            self.segments = []
+            #self.native_planner.queueMove((start[0],start[1],start[2],start[3]),(end[0],end[1],end[2],end[3]),speed,True if new.cancelable else False)
+            self.native_planner.queueMove(tuple(start[:4]),tuple(end[:4]), speed, bool(new.cancelable))
 
+        #logging.debug("Path added.")
         self.prev = new
 
-    ''' Add the last path to the queue for processing '''
-    def finalize_paths(self):
-        #logging.debug("Finalize paths")
-        if self.prev.movement == Path.ABSOLUTE and not self.prev.is_added:
-            logging.debug("Finalizing")
-            self.prev.finalize()
-            self.segments.append(self.prev)
-            self.prev.is_added = True
+    def set_extruder(self, ext_nr):
+        if ext_nr in [0, 1]:
+            self.native_planner.setExtruder(ext_nr)
 
-            #Produce the data for the segments
-            for path in self.segments:
-                self.produce_pru_data(path)
-                
-            [self.paths.put(path) for path in self.segments]
-            self.segments = []
-    
-    ''' Return the number of paths currently on queue '''
-    def nr_of_paths(self):
-        return self.paths.qsize()
 
-    '''Wait until planner is done'''
-    def wait_until_done(self):
-        self.paths.join()
-        self.pru.wait_until_done()		 
+    ''' start of Python impl of queue_move '''
+    def queue_move(self, path):
+        path.primay_axis     = np.max(path.delta)
+        path.diff            = path.delta*(1.0/path.steps_pr_meter)
 
-    """ This loop pops a path, sends it to the PRU and waits for an event """
-    def _do_work(self):
-        while self.running:       
-           self.do_work()
-    
-    def produce_pru_data(self,path):
+        path.steps_remaining = path.delta[path.primary_axis]
+        path.xyz_dist        = np.sqrt(np.dot(path.delta[:3],path.delta[:3]))
+        path.distance        = np.max(path.xyz_dist, path.diff[4])
 
-        if not hasattr(path,'pru_data') or len(path.pru_data) == 0:
-            for axis_nr, val in enumerate(path.vec):                       # Run through all the axes in the path                   
-                if val != 0:
-                    data = self._make_data(path, axis_nr)        
-                    if data:
-                        if len(path.pru_data) == 0:
-                            path.pru_data = zip(*data)
-                        else:
-                            #pass
-                            self._braid_data1(path.pru_data, zip(*data))
-                            #path.pru_data = self._braid_data(path.pru_data, zip(*data))
+        calculate_move(path)        
 
-    ''' This is just a separate function so the test at the bottom will pass '''
-    def do_work(self):
-        path = self.paths.get()                            # Get the last path added            
-        #logging.debug("Doing path = "+str(path.movement))
-
-        if path.is_G92():                                   # Only set the position of the axes
-            self.paths.task_done()            
-            return                
+    ''' Start of Python impl of calculate move '''
+    def caluculate_move(self, path):
+        axis_interval[4];
+        speed = max(minimumSpeed, path.speed) if path.is_x_or_y_move() else path.speed
+        path.time_in_ticks = time_for_move = F_CPU * path.distance / speed # time is in ticks
         
-        
-        self.produce_pru_data(path)
+        # Compute the slowest allowed interval (ticks/step), so maximum feedrate is not violated
+        axis_interval = abs(path.diff)*F_CPU / Path.max_speeds*path.steps_remaining #
+        limit_interval = max(np.max(axis_interval), time_for_move/path.steps_remaining) 
+	
+        path.full_interval = limit_interval
 
-        while len(path.pru_data) > 0:  
-            data = path.pru_data[0:0x20000/8]
-            del path.pru_data[0:0x20000/8]
-            if len(path.pru_data) > 0:
-                logging.debug("Long path segment is cut. remaining: "+str(len(path.pru_data)))       
-            if hasattr(self, 'pru'):
-                while not self.pru.has_capacity_for(len(data)*8):          
-                    time.sleep(0.5)   
-                logging.debug("Comitting long data...")             
-                self.pru.add_data(zip(*data))
-                self.pru.commit_data()                            # Commit data to ddr
-        
-        path.pru_data = []
-        
-        self.paths.task_done()
-        path.unlink()                                         # Remove reference to enable garbage collection
+        # new time at full speed = limitInterval*p->stepsRemaining [ticks]
+        time_for_move = limit_interval * path.steps_remaining; 
+        inv_time_s = F_CPU / time_for_move;
 
-    def emergency_interrupt(self):
-        self.pru.emergency_interrupt()
-        while True:
-            try:
-                path = self.paths.get(block=False)
-                if path != None:
-                    self.paths.task_done()
-                    path.unlink()
-            except Queue.Empty:
-                break
-
-    def _braid_data(self, data1, data2):
-        """ Braid/merge together the data from the two data sets"""
-        return braid.braid_data_c(data1, data2)               # Use the Optimized C-function for this. 
-    
-    def _braid_data1(self, data1, data2):
-        """ Braid/merge together the data from the two data sets"""
-        line = 0
-        (pin1,dir1,o1, dly1) = data1[line]
-        (pin2,dir2,o2, dly2) = data2.pop(0)
-        while True: 
-            dly = min(dly1, dly2)
-            dly1 -= dly    
-            dly2 -= dly            
-            try: 
-                if dly1==0 and dly2==0:
-                    data1[line] = (pin1|pin2, dir1 | dir2,o1 | o2, dly)
-                    (pin1,dir1,o1, dly1) = data1[line+1]
-                    (pin2,dir2,o2, dly2) = data2.pop(0)
-                elif dly1==0:
-                    data1[line] = (pin1, dir1 ,o1 , dly)
-                    (pin1,dir1,o1, dly1) = data1[line+1]
-                elif dly2==0:    
-                    data1.insert(line, (pin2, dir2, o2, dly))
-                    (pin2,dir2,o2, dly2) = data2.pop(0)
-                line += 1
-            except IndexError:
-                break
-
-        if dly2 > 0:   
-            #data1[line] =  (data1[line][0],data1[line][1],data1[line][2], data1[line][3]+dly2) 
-            data1.append((pin2, dir2,o2, dly2)) 
-            line += 1      
-        elif dly1 > 0:
-            data1[line] = (data1[line][0], data1[line][1],data1[line][2], data1[line][3]+dly1)  
-            #data1.pop(line+1)
-        
-        while len(data2) > 0:
-            line += 1
-            (pin2,dir2,o2, dly2) = data2.pop(0)
-            data1.append((pin2, dir2,o2, dly2))
-        #while len(data1) > line+1:
-        #    line += 1
-        #    (pin1, dir1,o1, dly1) = data1[line]
-        #    data1[line] = (pin2|pin1,dir1 | dir2,o1 | o2, dly1)
-
-    ''' Join the thread '''
-    def exit(self):
-        self.running = False
-        self.pru.join()
-        self.t.join()
+        axis_interval   = time_for_move / path.delta;
+        path.speed      = sign(path.delta) * axis_diff * inv_time_s;
 
 
-    def force_exit(self):
-        self.running = False
-        self.pru.force_exit()
-
-    ''' Make the data for the PRU or steppers '''
-    def _make_data(self, path, axis_nr):  
-        axis            = Path.index_to_axis(axis_nr)                            
-        stepper         = self.steppers[axis]
-        num_steps       = path.num_steps[axis_nr]      # Number of steps to tick
-        if num_steps == 0:
-            return None
-        #logging.debug("Processing "+axis+" of len "+str(path.stepper_vec[axis_nr]))
-        step_pin        = stepper.get_step_pin()                            # Get the step pin
-        dir_pin         = stepper.get_dir_pin()                             # Get the direction pin
-        dir_pin         = 0 if path.stepper_vec[axis_nr] < 0 else dir_pin   # Dir-pin low if we are going backwards  
-        step_pins       = [step_pin]*num_steps                              # Make the pin states
-        dir_pins        = [dir_pin]*num_steps 
-        option_pins     = [path.cancellable]*num_steps                  
-
-        s = path.abs_vec[axis_nr]
-        a = path.accelerations[axis_nr]
-        d = path.decelerations[axis_nr]
-        v_start = path.start_speeds[axis_nr]
-        v_end = path.end_speeds[axis_nr]
-        v_max = path.max_speeds[axis_nr]
-
-        delays = np.array([])
-
-        meters_pr_step = 1.0/stepper.get_steps_pr_meter()
-        step_per_meter = stepper.get_steps_pr_meter()
-        total_steps = int(np.round(s/meters_pr_step))
-
-        #print "total_steps = "+str(total_steps)
-
-        if a > 0.00001 and not np.isnan(a):
-            #We need to accelerate
-            #How much time we need to accelerate
-            t = abs((v_max-v_start) / abs(a))
-            #print "Time at end accel "+str(t)
-            #Generate delays for that time
-            #Where are we at max speed?
-            #logging.debug("a="+str(a)+" "+str(v_max-v_start))
-
-            pos = v_start * t + 0.5*abs(a)*t**2
-            nb_step_accel = int(np.round(pos * step_per_meter))
-            logging.debug("Nb step accel "+str(nb_step_accel))
-
-
-            delays_accel = np.ones(nb_step_accel)
-            delays_accel = np.cumsum(delays_accel)
-            delays_accel =  (-v_start+np.sqrt(v_start**2+2*abs(a)*meters_pr_step*delays_accel)) / abs(a)
-
-
-            delays_accel = np.diff(np.append(np.array([0]),delays_accel))
-
-        else:
-            delays_accel = np.array([])
-
-        if d > 0.00001 and not np.isnan(d):
-            #We need to accelerate
-            #How much time we need to accelerate
-            t = abs((v_max-v_end) / abs(d))
-            #print "Time at start decel "+str(t)
-            #Generate delays for that time
-            #Where are we at max speed?
-            pos = v_end * t + 0.5*abs(d)*t**2
-            nb_step_decel = int(np.round(pos * step_per_meter))
-            #print "Nb step decel "+str(nb_step_decel)
-            delays_decel = np.ones(nb_step_decel)
-            delays_decel = np.cumsum(delays_decel)
-            delays_decel =  (-v_end+np.sqrt(v_end**2+2*abs(d)*meters_pr_step*delays_decel)) / abs(d)
-
-
-            delays_decel = np.diff(np.append(np.array([0]),delays_decel))
-
-            delays_decel = np.flipud(delays_decel)
-        else:
-            delays_decel = np.array([])
-
-        # Generate cruising profile
-        nr_delays_inter = total_steps - len(delays_accel) - len(delays_decel)
-        #print "Plateau # steps = "+str(nr_delays_inter)+" len a = "+str(len(delays_accel) )+", len d = " +str(len(delays_decel))
-        if nr_delays_inter > 0:
-            delays_inter = np.ones(nr_delays_inter)*(meters_pr_step/v_max)
-        else:
-            delays_inter = np.array([])
-
-        delays = np.append(np.append(delays_accel, delays_inter), delays_decel)
-
-        #delays = self.acceleration_profile(stepper, s, a, d, v_start, v_end, v_max)
-
-        #if not hasattr(path, 'delays'):
-        #    path.delays = [[], [], [], [], []]
-        #path.delays[axis_nr] = delays
-
-        #logging.debug("Processing "+axis+" of len "+str(path.stepper_vec[axis_nr])+" nb step "+str(num_steps)+", total delay = "+str(np.sum(delays)))
-
-        #pprint(getmembers(path))
-
-        return (step_pins,dir_pins,option_pins, delays)                                           # return the pin states and the data
-
-    ''' Make the acceleration profile '''
-    def acceleration_profile(self, stepper, s, a, d, v_start, v_end, v_max):
-        meters_pr_step = 1.0/stepper.get_steps_pr_meter()
-        total_steps = int(np.round(s/meters_pr_step))
-
-        # Generate acceleraion profile 
-        if a != 0 and not np.isnan(a):
-            abs_a = abs(a)
-
-            #speed at start of portion
-            ss_accel     = (v_start**2)/(2.0*abs_a)
-
-            #speed at end
-            se_accel     = (v_max**2)/(2.0*abs_a)
-
-
-
-            idx_ss       = int(np.round(ss_accel/meters_pr_step))
-            idx_se       = int(np.round(se_accel/meters_pr_step))
-            if idx_se < idx_ss:
-                idx_se, idx_ss = idx_ss, idx_se
-            delays_start = np.diff(np.sqrt(2.0*abs_a*stepper.distances[idx_ss-1:idx_se])/abs_a)
-            
-
-            if a < 0:
-                delays_start = np.flipud(delays_start)
-        else:
-            delays_start = np.array([])
-
-        # Generate deceleration profile
-        if d != 0 and not np.isnan(d):
-            abs_d = abs(d)
-            es_accel     = (v_end**2)/(2.0*abs_d)
-            ee_accel     = (v_max**2)/(2.0*abs_d)
-            idx_es       = int(np.round(es_accel/meters_pr_step))
-            idx_ee       = int(np.round(ee_accel/meters_pr_step))
-            if idx_ee < idx_es:
-                idx_ee, idx_es = idx_es, idx_ee
-            delays_end   = np.diff(np.sqrt(2.0*abs_d*stepper.distances[idx_es-1:idx_ee])/abs_d)                     
-            if v_max > v_end:
-                delays_end = np.flipud(delays_end)
-        else:
-            delays_end = np.array([])
-
-        # Generate cruising profile
-        nr_delays_inter = total_steps - len(delays_start) - len(delays_end)
-        if nr_delays_inter > 0:
-            #logging.debug("Cruising "+str(nr_delays_inter))
-            delays_inter = np.ones(nr_delays_inter)*(meters_pr_step/v_max)
-        else:
-            delays_inter = np.array([])
-
-        
-
-        # Return the table of delays
-        return np.append(np.append(delays_start, delays_inter), delays_end)
-
-    ''' Make the acceleration tables for each of the steppers '''
-    def make_acceleration_tables(self):
-        s = {"X": 0.5, "Y": 0.5, "Z": 0.2, "E": 0.3, "H": 0.3}
-        for name, stepper in self.steppers.iteritems():
-            meters_pr_step = 1.0/stepper.get_steps_pr_meter()
-            num_steps = int(s[name]/meters_pr_step)
-            stepper.distances = np.cumsum([meters_pr_step]*num_steps)
-
-
-    def save_acceleration_tables(self):
-        dirname = os.path.dirname(os.path.realpath(__file__))
-        for name, stepper in self.steppers.iteritems():
-            np.save(dirname+'/distances_'+name+'.npy', stepper.distances)
-
-    def load_acceleration_tables(self):
-        dirname = os.path.dirname(os.path.realpath(__file__))
-        for name, stepper in self.steppers.iteritems():
-            stepper.distances = np.load(dirname+'/distances_'+name+'.npy')
 
 if __name__ == '__main__':
     import cProfile
     import numpy as np
-
+    import os
     import sys
+    from CascadingConfigParser import CascadingConfigParser
 
     logging.basicConfig(level=logging.DEBUG, 
                     format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
@@ -435,12 +162,15 @@ if __name__ == '__main__':
 
     from Stepper import Stepper
     from Gcode import Gcode
+    from PruFirmware import PruFirmware
 
 
-    Path.steps_pr_meter = np.array([24000, 24000, 64000, 20000, 20000])
+    Path.steps_pr_meter = np.array([3.125*(2**4)*1000.0, 3.125*(2**4)*1000.0, 133.33333333*(2**4)*1000.0, 33.4375*(2**4)*1000.0, 33.4375*(2**4)*1000.0])
         
     
     print "Making steppers"
+
+
     steppers = {}
     steppers["X"] = Stepper("GPIO0_27", "GPIO1_29", "GPIO2_4",  0, "X",None,0,0)
     steppers["X"].set_microstepping(2)
@@ -462,202 +192,35 @@ if __name__ == '__main__':
 
     printer.steppers = steppers
 
-    path_planner = PathPlanner(printer, None)
-    path_planner.make_acceleration_tables()
-    #path_planner.save_acceleration_tables()
-    #path_planner.load_acceleration_tables()
-    #Path.axis_config = Path.AXIS_CONFIG_H_BELT
+    # Parse the config
+    printer.config = CascadingConfigParser(['/etc/redeem/default.cfg', '/etc/redeem/local.cfg'])
+
+    # Get the revision from the Config file
+    revision = printer.config.get('System', 'revision', "A4")
+  
+
+    dirname = os.path.dirname(os.path.realpath(__file__))
+
+    pru_firmware = PruFirmware(dirname+"/../firmware/firmware_runtime.p",dirname+"/../firmware/firmware_runtime.bin",dirname+"/../firmware/firmware_endstops.p",dirname+"/../firmware/firmware_endstops.bin",revision,printer.config,"/usr/bin/pasm")
 
 
-    radius = 0.05
-    speed = 0.1
-    acceleration = 0.3
-    rand = 0.0
-    plotfac = 1.5
-    plotoffset_x = 0.1
-    plotoffset_y = 0.1
+    path_planner = PathPlanner(printer, pru_firmware)
 
-    ds = np.pi/16
-    t = np.arange(-np.pi/4, np.pi/4+ds, ds)
-    rand_x = rand*np.random.uniform(-1, 1, size=len(t))
-    rand_y = rand*np.random.uniform(-1, 1, size=len(t))
-    if len(sys.argv) > 1:
-        line_nr = 0
-        with open(sys.argv[1]) as infile:         
-            for line in infile:
-                line_nr += 1
-                if len(sys.argv) > 3 and line_nr >= int(sys.argv[2]) and line_nr < int(sys.argv[3]):
-                    g = Gcode({"message": line, "prot": None})
-                    if g.code() == "G1":
-                        if g.has_letter("F"):                                    # Get the feed rate                 
-                            speed = float(g.get_value_by_letter("F"))/60000.0 # Convert from mm/min to SI unit m/s
-                            g.remove_token_by_letter("F")
-                        smds = {}
-                        for i in range(g.num_tokens()):                          
-                            axis = g.token_letter(i)                             
-                            smds[axis] = float(g.token_value(i))/1000.0          # Get the value, new position or vector   
-                        path_planner.add_path(AbsolutePath(smds, speed, acceleration))
-                    elif g.code() == "G92":
-                        if g.num_tokens() == 0:
-                            logging.debug("Adding all to G92")
-                            g.set_tokens(["X0", "Y0", "Z0", "E0", "H0"])            # If no token is present, do this for all
-                        pos = {}                                                    # All steppers 
-                        for i in range(g.num_tokens()):                             # Run through all tokens
-                            axis = g.token_letter(i)                                # Get the axis, X, Y, Z or E
-                            pos[axis] = float(g.token_value(i))/1000.0              # Get the value, new position or vector             
-                        path = G92Path(pos, speed)                     # Make a path segment from the axes
-                        path_planner.add_path(path)  
-        path_planner.finalize_paths()
-    else:
-        for idx, i in enumerate(t):
-            path_planner.add_path(AbsolutePath(
-                {"X": radius*np.sin(i)+rand_x[i], "Y": radius*np.cos(i)+rand_y[i], 
-                 "E": 0.01*(idx+1)
-                }, speed, acceleration))
-            #path_planner.add_path(Path({"X": radius*(16*np.power(np.sin(i), 3)), "Y": radius*(13*np.cos(i)-5*np.cos(2*i)-2*np.cos(3*i)-np.cos(4*i))}, speed, Path.ABSOLUTE, acceleration))
-            
-        #path_planner.add_path(AbsolutePath({"X": -0.1, "Y": 0.1}, speed, acceleration))
-        #path_planner.add_path(AbsolutePath({"X": 0.0, "Y": 0.2}, speed, acceleration))
-        #path_planner.add_path(AbsolutePath({"X": 0.1, "Y": 0.1}, speed, acceleration))
-        #path_planner.add_path(AbsolutePath({"X": 0.0, "Y": 0.0}, speed, acceleration))
-        path_planner.finalize_paths()
-        #path_planner.add_path(RelativePath({"X": -radius, "Y": -radius}, speed, acceleration))
+    speed=3000/60000.0
+    acceleration = 0.5
 
-    try:
-        import matplotlib.pyplot as plt
-    except ImportError:
-        exit(0)
+    path_planner.add_path(AbsolutePath(
+    {
+        "X": 0.01
+    }, speed, acceleration))
 
+    path_planner.add_path(AbsolutePath(
+    {
+        "X": 0.0
+    }, speed, acceleration))
+   
+    path_planner.wait_until_done()
 
-    ax0 = plt.subplot(2, 3, 4)
-    plt.ylim([-plotfac*radius+plotoffset_y, plotfac*radius+plotoffset_y])
-    plt.xlim([-plotfac*radius+plotoffset_x, plotfac*radius+plotoffset_x])
-    plt.title('Trajectory')
+    path_planner.force_exit()
 
-    print "Trajectory done"
-    speeds_x = []
-    speeds_y = []
-    speeds_e = []
-    speeds = []
-    magnitudes = []
-
-    for path in list(path_planner.paths.queue):
-        if not path.movement == Path.G92:
-            #print path.vec[:2]
-            if (path.vec[:2] != 0).any():
-                ax0.arrow(path.start_pos[0], path.start_pos[1], path.true_vec[0], path.true_vec[1], 
-                    width=0.00001, head_width=0.0005, head_length=0.001, fc='k', ec='k',  length_includes_head=True)
-            magnitudes.append(path.get_magnitude())
-            speeds_x.append(path.start_speeds[0])
-            speeds_y.append(path.start_speeds[1])
-            speeds.append(np.linalg.norm(path.start_speeds[0:2]))
-            speeds_e.append(path.start_speeds[3])
-
-    positions = np.insert(np.cumsum(magnitudes), 0, 0)
-    speeds_x = np.append(speeds_x, path.end_speeds[0])
-    speeds_y = np.append(speeds_y, path.end_speeds[1])
-    speeds = np.append(speeds, np.linalg.norm(path.end_speeds[0:2]))
-    speeds_e = np.append(speeds_e, path.end_speeds[3])
-
-    ax1 = plt.subplot(2, 3, 5)
-    plt.plot(positions, speeds_x, "r")
-    plt.plot(positions, speeds_y, "b")
-    plt.plot(positions, speeds, "g")
-    plt.plot(positions, speeds_e, "y")
-    plt.ylim([0, np.max(speeds)*1.5])
-    plt.xlim([0, positions[-1]*1.1])
-    plt.title('Velocity')
-
-    print np.array(magnitudes)
-    print speeds
-    print speeds_e
-
-    # Acceleration
-    ax2 = plt.subplot(2, 3, 6)
-    delays = np.array([])
-    delays2 = np.array([])
-    delays3 = np.array([])
-    mag = 0
-    mag_x = 0
-    mag_y = 0  
-    mag_e = 0  
-    
-    delaysarrow=[]
-
-    for idx, path in enumerate(list(path_planner.paths.queue)):
-        path_planner.do_work()
-        if not path.movement == Path.G92:
-            if hasattr(path, 'delays_pru'):
-                delaysarrow.append(np.sum(path.delays_pru))
-
-            plt.arrow(mag_x, path.start_speeds[0], path.abs_vec[0], path.end_speeds[0]-path.start_speeds[0], fc='r', ec='r', width=0.00001)
-            plt.arrow(mag_y, path.start_speeds[1], path.abs_vec[1], path.end_speeds[1]-path.start_speeds[1], fc='b', ec='b', width=0.00001)
-            plt.arrow(mag_e, path.start_speeds[3], path.abs_vec[3], path.end_speeds[3]-path.start_speeds[3], fc='y', ec='y', width=0.00001)
-            
-            # Plot the acceleration profile and deceleration profile
-            vec_x = abs(path.vec[0])
-            mag += abs(path.get_magnitude())
-            mag_x += path.abs_vec[0]
-            mag_y += abs(path.vec[1])
-            mag_e += abs(path.vec[3])
-            if hasattr(path, 'delays'):
-                delays = np.append(delays, path.delays[0])
-                delays2 = np.append(delays2, path.delays[1])
-                delays3 = np.append(delays3, path.delays[3])
-
-
-    plt.xlim([0, max(mag_x, mag_y)])
-    plt.ylim([0, speed])
-    plt.title('Also velocity')
-
-    # Plot the delays 
-    ax2 = plt.subplot(2, 1, 1)
-    # plt.plot(np.cumsum(delays),delays, 'r')
-    # plt.plot(np.cumsum(delays2),delays2, 'b')
-    # plt.plot(np.cumsum(delays3),delays3, 'y')
-    # plt.ylim([0, 0.08])
-
-    plt.plot(np.cumsum(path_planner.debug),path_planner.debug, '-r+')
-    plt.plot(np.cumsum(path_planner.debug_axis[0]),path_planner.debug_axis[0], '-g+')
-    plt.plot(np.cumsum(path_planner.debug_axis[1]),path_planner.debug_axis[1], '-b+')
-    deb = 0
-    scale=20e5
-    for d in delaysarrow:
-        plt.arrow(deb,scale, d,0,  width=0.00001*scale, head_width=0.05*scale, head_length=0.1*scale, fc='k', ec='k',  length_includes_head=True)
-        deb+=d
-
- 
-    plt.title('Delays for X and Y sent to PRU. Black are the path segments.')
-
-    print "total distance X = "+str(mag_x)
-    print "total distance Y = "+str(mag_y)
-    print "total distance E = "+str(mag_e)
-    print "total time X = "+str(np.sum(delays))
-    print "total time Y = "+str(np.sum(delays2))
-    print "total time E = "+str(np.sum(delays3))
-
-    plt.show()
-    exit(0)
-
-
-    print "Profiling speed"
-    
-    nb = 100
-    for x in range(nb):
-        path = Path({"Z":x*0.001, "X": np.sin(x*0.1), "Y": np.cos(x*0.1)}, 0.1, Path.ABSOLUTE)
-        path_planner.add_path(path)
-    path_planner.finalize_paths()
-
-    print "Doing work"
-    
-    cProfile.run('[path_planner.do_work() for i in range('+str(nb)+')]', sort='time')
-
-    print "Going back"
-
-    path = Path({"Z":0, "X":0, "Y":0}, 0.1, Path.ABSOLUTE)
-    path_planner.add_path(path)
-
-    cProfile.run('path_planner.do_work()')
-
-    print "done"
 

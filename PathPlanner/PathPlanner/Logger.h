@@ -72,6 +72,6 @@ public:
 	}
 };
 
-#define LOG(x) Logger() << x
+#define LOG(x) Logger() << x << std::flush
 
 #endif /* defined(__PathPlanner__Logger__) */

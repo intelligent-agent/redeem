@@ -10,6 +10,7 @@ License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 '''
 
 import logging
+import re
 
 # A command received from pronterface or whatever
 class Gcode:
@@ -30,13 +31,13 @@ class Gcode:
                 self.gcode = "No-Gcode"
                 return 
             self.tokens = self.message.split(" ")
-            if self.tokens[0][0] == "N":                                # Ok, checksum
-                line_num = self.message.split(" ")[0][1::]
+            if self.tokens[0][0] == "N":                                # Ok, checksum               
+                line_num = re.findall(r"[\d]+", self.message)[0]
                 cmd = self.message.split("*")[0]                             # Command
                 csc = self.message.split("*")[1]                             # Command to compare with
                 if int(csc) != self._getCS(cmd):
                     logging.error("CRC error!")
-                self.message =  self.message.split("*")[0][(1+len(line_num)+1)::] # Remove crc stuff
+                self.message =  self.message.split("*")[0][(1+len(line_num))::].strip(" ") # Remove crc stuff
                 self.line_number = int(line_num)                        # Set the line number
                 Gcode.line_number += 1                                  # Increase the global counter 
                 self.has_crc = True

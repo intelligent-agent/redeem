@@ -7,7 +7,7 @@ Website: http://www.xwaves.net
 License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 '''
 
-from Path2 import Path
+from Path import Path
 
 # A command received from pronterface or whatever
 class Printer:

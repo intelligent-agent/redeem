@@ -10,7 +10,7 @@ License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 Minor verion tag is Arhold Schwartsnegger movies chronologically. 
 '''
 
-version = "0.12.0~The Villain"
+version = "0.13.0~Scavenger Hunt"
 
 from math import sqrt
 import time
@@ -36,8 +36,8 @@ from Ethernet import Ethernet
 from Gcode import Gcode
 import sys
 from Extruder import Extruder, HBP
-from Path2 import Path, RelativePath, AbsolutePath, G92Path
-from PathPlanner2 import PathPlanner
+from Path import Path, RelativePath, AbsolutePath, G92Path
+from PathPlanner import PathPlanner
 from ColdEnd import ColdEnd
 from PruFirmware import PruFirmware
 from CascadingConfigParser import CascadingConfigParser
@@ -206,9 +206,6 @@ class Redeem:
         self.printer.path_planner = PathPlanner(self.printer, pru_firmware)
         self.printer.path_planner.acceleration = float(self.printer.config.get('Steppers', 'acceleration'))
         self.printer.acceleration = float(self.printer.config.get('Steppers', 'acceleration'))
-        #self.printer.path_planner.make_acceleration_tables()
-        #self.printer.path_planner.save_acceleration_tables()
-        #self.printer.path_planner.load_acceleration_tables()
 
         travel={}
         offset={}
@@ -221,12 +218,13 @@ class Redeem:
         self.printer.processor = GCodeProcessor(self.printer);
 
         # Set up communication channels
-        #self.printer.comms["USB"]    = USB(self.commands)
+        self.printer.comms["USB"]    = USB(self.commands)
         self.printer.comms["Eth"]    = Ethernet(self.commands)
-        #self.printer.comms["Pipe_0"] = Pipe(self.commands, "Pipe_0")     # Pipe for Octoprint
-        #self.printer.comms["Pipe_1"] = Pipe(self.commands, "Pipe_1")     # Pipe for Toggle
-        #self.printer.comms["Pipe_2"] = Pipe(self.commands, "Pipe_2")     # Pipe for testing
-        #self.printer.comms["Pipe_2"].send_response = False     
+        self.printer.comms["octoprint"] = Pipe(self.commands, "octoprint")   # Pipe for Octoprint
+        self.printer.comms["toggle"] = Pipe(self.commands, "toggle")      # Pipe for Toggle
+        self.printer.comms["testing"] = Pipe(self.commands, "testing")     # Pipe for testing
+        self.printer.comms["testing_noret"] = Pipe(self.commands, "testing_noret")     # Pipe for testing
+        self.printer.comms["testing_noret"].send_response = False     
 
         self.running = True
 
@@ -266,10 +264,9 @@ class Redeem:
         if g.message == "ok" or g.code()=="ok" or g.code()=="No-Gcode":
             g.set_answer(None)
             return
-        logging.debug("Processing "+str(g))
-
+        logging.debug("Processing "+str(g.code()))
         self.printer.processor.execute(g)
-        logging.debug("Done processing GCode.")
+        #logging.debug("Done processing GCode.")
 
     ''' An endStop has been hit '''
     def end_stop_hit(self, endstop):

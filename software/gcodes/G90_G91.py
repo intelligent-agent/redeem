@@ -9,7 +9,7 @@ License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 '''
 
 from GCodeCommand import GCodeCommand
-from Path2 import Path
+from Path import Path
 
 class G90(GCodeCommand):
 

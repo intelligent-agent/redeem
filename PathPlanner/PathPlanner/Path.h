@@ -84,6 +84,7 @@ private:
     float speedY;                   ///< Speed in y direction at fullInterval in mm/s
     float speedZ;                   ///< Speed in z direction at fullInterval in mm/s
     float speedE;                   ///< Speed in E direction at fullInterval in mm/s
+    float speedH;                   ///< Speed in H direction at fullInterval in mm/s
     float fullSpeed;                ///< Desired speed mm/s
     float invFullSpeed;             ///< 1.0/fullSpeed for fatser computation
     float accelerationDistance2;             ///< Real 2.0*distanceÜacceleration mm²/s²

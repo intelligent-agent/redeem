@@ -31,9 +31,11 @@
 
 #define F_CPU 200000000
 
+void PathPlanner::setExtruder(int extNr){
+    currentExtruder = extNr;
+}
 
 void PathPlanner::setMaxFeedrates(float rates[NUM_AXIS]){
-	
 	//here the target unit is mm/s, we need to convert from m/s to mm/s
 	for(int i=0;i<NUM_AXIS;i++) {
 		maxFeedrate[i] = rates[i]*1000;
@@ -41,8 +43,7 @@ void PathPlanner::setMaxFeedrates(float rates[NUM_AXIS]){
 }
 
 void PathPlanner::setPrintAcceleration(float accel[NUM_AXIS]){
-	//here the target unit is mm/s^2, we need to convert from m/s^2 to mm/s^2
-	
+	//here the target unit is mm/s^2, we need to convert from m/s^2 to mm/s^2	
 	for(int i=0;i<NUM_AXIS;i++) {
 		maxAccelerationMMPerSquareSecond[i] = accel[i]*1000;
 	}
@@ -50,12 +51,10 @@ void PathPlanner::setPrintAcceleration(float accel[NUM_AXIS]){
 }
 
 void PathPlanner::setTravelAcceleration(float accel[NUM_AXIS]){
-	//here the target unit is mm/s^2, we need to convert from m/s^2 to mm/s^2
-	
+	//here the target unit is mm/s^2, we need to convert from m/s^2 to mm/s^2	
 	for(int i=0;i<NUM_AXIS;i++) {
 		maxTravelAccelerationMMPerSquareSecond[i] = accel[i]*1000;
 	}
-
 	recomputeParameters();
 }
 
@@ -72,12 +71,10 @@ void PathPlanner::setMaximumExtruderStartFeedrate(float maxstartfeedrate[NUM_EXT
 }
 
 void PathPlanner::setAxisStepsPerMeter(unsigned long stepPerM[NUM_AXIS]) {
-	//here the target unit is step / mm, we need to convert from step / m to step / mm
-	
+	//here the target unit is step / mm, we need to convert from step / m to step / mm	
 	for(int i=0;i<NUM_AXIS;i++) {
 		axisStepsPerMM[i] = stepPerM[i]/1000;
-	}
-	
+	}	
 	recomputeParameters();
 }
 
@@ -112,7 +109,7 @@ PathPlanner::PathPlanner() {
 	
 	axisStepsPerMM[0]=50; //step per mm, including micro stepping
 	axisStepsPerMM[1]=50;
-	axisStepsPerMM[2]=2133.33333;
+	axisStepsPerMM[2]=2133;
 	axisStepsPerMM[3]=535;
 	//axisStepsPerMM[4]=535;
 	
@@ -130,6 +127,7 @@ PathPlanner::PathPlanner() {
 	
 		
 	maxExtruderStartFeedrate[0]=10;
+	maxExtruderStartFeedrate[1]=10;
 	
 	maxJerk =20;
 	maxZJerk= 0.3;
@@ -154,37 +152,31 @@ void PathPlanner::queueMove(float startPos[NUM_AXIS],float endPos[NUM_AXIS],floa
         lineAvailable.wait(lk, [this]{return linesCount<MOVE_CACHE_SIZE || stop;});
     }
 	
-	if(stop) return;
-	
+	if(stop) 
+        return;	
 	Path *p = &lines[linesWritePos];
-	
+
 	if(p->commands) {
 		delete[] p->commands;
 		p->commands=NULL;
 	}
-
 	
 	memcpy(p->startPos, startPos, sizeof(float)*NUM_AXIS);
 	memcpy(p->endPos, endPos, sizeof(float)*NUM_AXIS);
 	
-	
 	LOG("Moving from " << startPos[0] << "," << startPos[1] << "," << startPos[2] << " to "
 	 << endPos[0] << "," << endPos[1] << "," << endPos[2] << std::endl);
 	
-	p->speed = speed;
-	
+	p->speed = speed;	
     p->joinFlags = 0;
 	p->commands=NULL;
 	p->setCancelable(cancelable);
     p->dir = 0;
-    //Printer::constrainDestinationCoords();
 	
     //Find direction
-    for(uint8_t axis=0; axis < NUM_AXIS; axis++)
-    {
-		
-		p->startPos[axis]=ceil(p->startPos[axis]*axisStepsPerMM[axis]);
-		p->endPos[axis]=ceil(p->endPos[axis]*axisStepsPerMM[axis]);
+    for(uint8_t axis=0; axis < NUM_AXIS; axis++){
+		p->startPos[axis] = ceil(p->startPos[axis]*axisStepsPerMM[axis]);
+		p->endPos[axis]   = ceil(p->endPos[axis]*axisStepsPerMM[axis]);
 		
         if((p->delta[axis]=p->endPos[axis]-p->startPos[axis])>=0)
             p->setPositiveDirectionForAxis(axis);
@@ -528,7 +520,6 @@ void PathPlanner::computeMaxJunctionSpeed(Path *previous,Path *current)
     if(eJerk > maxExtruderStartFeedrate[currentExtruder])
         factor = std::min(factor,maxExtruderStartFeedrate[currentExtruder] / eJerk);
     previous->maxJunctionSpeed = std::min(previous->fullSpeed * factor,current->fullSpeed);
-	
 }
 
 
@@ -662,8 +653,6 @@ void PathPlanner::stopThread(bool join) {
 	if(join && runningThread.joinable()) {
 		runningThread.join();
 	}
-	
-	
 }
 
 PathPlanner::~PathPlanner() {
@@ -681,7 +670,9 @@ PathPlanner::~PathPlanner() {
 
 void PathPlanner::waitUntilFinished() {
 	std::unique_lock<std::mutex> lk(m);
-	lineAvailable.wait(lk, [this]{return linesCount==0 || stop;});
+	lineAvailable.wait(lk, [this]{
+        return linesCount==0 || stop;
+    });
 	
 	//Wait for PruTimer then
 	if(!stop) {
@@ -694,35 +685,20 @@ void PathPlanner::run() {
 		
 		std::unique_lock<std::mutex> lk(m);
 		lineAvailable.wait(lk, [this]{return linesCount>0 || stop;});
-		
-		
-		
 		lk.unlock();
-
-		
-		if(!linesCount)
-		{
+		if(!linesCount){
 			continue;
 		}
 		
 		long cur_errupd=0;
 		uint8_t directionMask = 0; //0b000HEZYX
 		uint16_t optionMask;
-		
-		
 		unsigned int vMaxReached ;
-		unsigned long timer = 0;
-		
+        unsigned long timer = 0;
 		
 		Path* cur = &lines[linesPos];
 		if(cur->isBlocked())   // This step is in computation - shouldn't happen
 		{
-			/*if(lastblk!=(int)cur) // can cause output errors!
-			 {
-			 HAL::allowInterrupts();
-			 lastblk = (int)cur;
-			 Com::printFLN(Com::tBLK,lines_count);
-			 }*/
 			cur = NULL;
 			//return 2000;
 			LOG( "Path planner thread: path " <<  std::dec << linesPos<< " is blocked, waiting... " << std::endl);
@@ -760,30 +736,15 @@ void PathPlanner::run() {
 		} // End if WARMUP
 		
 		//Only enable axis that are moving. If the axis doesn't need to move then it can stay disabled depending on configuration.
-		
-		/*if(cur->isXMove()) Printer::enableXStepper();
-		 if(cur->isYMove()) Printer::enableYStepper();
-		 
-		 if(cur->isZMove())
-		 {
-		 Printer::enableZStepper();
-		 }
-		 if(cur->isEMove()) Extruder::enable();*/
-		
-		cur->fixStartAndEndSpeed();
-		
-		//HAL::allowInterrupts();
+		cur->fixStartAndEndSpeed();		
 		cur_errupd = cur->delta[cur->primaryAxis];
 		if(!cur->areParameterUpToDate())  // should never happen, but with bad timings???
 		{
 			cur->updateStepsParameter();
-		}
-		
+		}		
 		
 		vMaxReached = cur->vStart;
 		
-		
-		//HAL::forbidInterrupts();
 		//Determine direction of movement,check if endstop was hit
 		if(cur->commands) {
 			delete[] cur->commands;
@@ -795,38 +756,17 @@ void PathPlanner::run() {
 		directionMask|=((uint8_t)cur->isXPositiveMove() << X_AXIS);
 		directionMask|=((uint8_t)cur->isYPositiveMove() << Y_AXIS);
 		directionMask|=((uint8_t)cur->isZPositiveMove() << Z_AXIS);
-		directionMask|=((uint8_t)cur->isEPositiveMove() << E_AXIS);
-		
-		
-		/*if(Printer::wasLastHalfstepping && cur->isFullstepping())   // Switch halfstepping -> full stepping
-		 {
-		 Printer::wasLastHalfstepping = 0;
-		 return Printer::interval+Printer::interval+Printer::interval; // Wait an other 150% from last half step to make the 100% full
-		 }
-		 else if(!Printer::wasLastHalfstepping && !cur->isFullstepping())     // Switch full to half stepping
-		 {
-		 Printer::wasLastHalfstepping = 1;
-		 }
-		 else
-		 return Printer::interval; // Wait an other 50% from last step to make the 100% full*/
-		
-		
+
+        if(currentExtruder == 0)
+    		directionMask|=((uint8_t)cur->isEPositiveMove() << E_AXIS);
+        else if (currentExtruder == 1)
+    		directionMask|=((uint8_t)cur->isEPositiveMove() << H_AXIS);
 		
 		assert(cur);
 		assert(cur->commands);
 		
-		//HAL::allowInterrupts();
-		/* For halfstepping, we divide the actions into even and odd actions to split
-		 time used per loop. */
-		//HAL::forbidInterrupts();
-		//if(doEven) cur->checkEndstops();
-		
-		
 		unsigned int interval=0;
-		for(unsigned int stepNumber=0; stepNumber<cur->stepsRemaining; stepNumber++)
-		{
-			
-			
+		for(unsigned int stepNumber=0; stepNumber<cur->stepsRemaining; stepNumber++){
 			SteppersCommand& cmd = cur->commands[stepNumber];
 			cmd.direction = directionMask;
 			cmd.options = optionMask;
@@ -835,7 +775,10 @@ void PathPlanner::run() {
 			{
 				if((cur->error[E_AXIS] -= cur->delta[E_AXIS]) < 0)
 				{
-					cmd.step |= (1 << E_AXIS);
+                    if(currentExtruder == 0)
+    					cmd.step |= (1 << E_AXIS);
+                    else if (currentExtruder == 1)
+                        cmd.step |= (1 << H_AXIS);
 					cur->error[E_AXIS] += cur_errupd;
 				}
 			}
@@ -865,17 +808,6 @@ void PathPlanner::run() {
 				}
 			}
 			
-			//Printer::insertStepperHighDelay();
-			
-			//Extruder::unstep();
-			//Printer::endXYZSteps();
-			//} // for loop
-			
-			
-			
-			
-			//HAL::allowInterrupts(); // Allow interrupts for other types, timer1 is still disabled
-			
 #define ComputeV(timer,accel)  (((timer>>8)*accel)>>10)
 			
 			//If acceleration is enabled on this move and we are in the acceleration segment, calculate the current interval
@@ -892,10 +824,10 @@ void PathPlanner::run() {
 				unsigned int v = ComputeV(timer,cur->fAcceleration);
 				if (v > vMaxReached)   // if deceleration goes too far it can become too large
 					v = cur->vEnd;
-				else
-				{
+				else{
 					v=vMaxReached - v;
-					if (v<cur->vEnd) v = cur->vEnd; // extra steps at the end of desceleration due to rounding erros
+					if (v < cur->vEnd) 
+                        v = cur->vEnd; // extra steps at the end of desceleration due to rounding erros
 				}
 				
 				interval = F_CPU/(v);
@@ -905,7 +837,7 @@ void PathPlanner::run() {
 			{
 				// constant speed reached
 				interval = cur->fullInterval;
-				timer = 0;
+                timer = 0;
 			}
 			//std::cout << interval << std::endl;
 			

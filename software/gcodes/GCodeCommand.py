@@ -25,3 +25,7 @@ class GCodeCommand(object):
     def get_description(self):
         pass
     
+    ''' The class name of the gcode '''
+    def __str__(self):
+        return type(self).__name__
+

@@ -50,7 +50,7 @@ private:
 	unsigned long maxPrintAccelerationStepsPerSquareSecond[NUM_AXIS];
 	unsigned long maxTravelAccelerationStepsPerSquareSecond[NUM_AXIS];
 	unsigned long maxAccelerationMMPerSquareSecond[NUM_AXIS];
-	unsigned long  maxTravelAccelerationMMPerSquareSecond[NUM_AXIS];
+	unsigned long maxTravelAccelerationMMPerSquareSecond[NUM_AXIS];
 	
 	float maxJerk;
 	float maxZJerk;
@@ -156,6 +156,15 @@ public:
 	 * @details Wait until all queued move are finished to be executed
 	 */
 	void waitUntilFinished();
+
+
+	/**
+	 * @brief Set extruder number used
+	 * @details Set extruder number used starting with ext 0
+	 * 
+	 * @param extNr The extruder number
+	 */
+    void setExtruder(int extNr);
 
 	/**
 	 * @brief Set the maximum feedrates of the different axis

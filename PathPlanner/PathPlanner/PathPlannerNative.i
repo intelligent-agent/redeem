@@ -113,6 +113,13 @@ public:
    */
   void setMaxFeedrates(float rates[NUM_AXIS]);
 
+  /**
+   * @brief Set extruder number used
+   * @details Set extruder number used starting with ext 0
+   * 
+   * @param extNr The extruder number
+   */
+  void setExtruder(int extNr);
 
   /**
    * @brief Set the number of steps required to move each axis by 1 meter

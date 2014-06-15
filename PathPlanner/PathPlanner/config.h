@@ -27,9 +27,9 @@
 #define NUM_AXIS 4
 
 /* Number of move to cache to execute the path planner on. */
-#define MOVE_CACHE_SIZE 16
+#define MOVE_CACHE_SIZE 32
 
 /* Number of extruder */
-#define NUM_EXTRUDER 1
+#define NUM_EXTRUDER 2
 
 #endif

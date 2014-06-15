@@ -466,13 +466,9 @@ void PruTimer::push_block(uint8_t* blockMemory, size_t blockLen, unsigned int un
 				uint32_t nb = 0;
 				
 				assert(ddr_write_location+currentBlockSize+sizeof(nb)*2<=ddr_mem_end);
-				
-				
 				memcpy(ddr_write_location+currentBlockSize+sizeof(nb), &nb, sizeof(nb));
-				
 				//Need it?
 				msync(ddr_write_location+sizeof(nb), currentBlockSize, MS_SYNC);
-				
 				//Then signal how much data we have to the PRU
 				nb = (uint32_t)currentBlockSize/unit;
 				nbStepsWritten+=nb;
@@ -499,7 +495,9 @@ void PruTimer::push_block(uint8_t* blockMemory, size_t blockLen, unsigned int un
 
 void PruTimer::waitUntilFinished() {
 	std::unique_lock<std::mutex> lk(mutex_memory);
-	blockAvailable.wait(lk, [this]{return ddr_mem_used==0 || stop; });
+	blockAvailable.wait(lk, [this]{
+        return ddr_mem_used==0 || stop; 
+    });
 }
 
 void PruTimer::run() {
@@ -529,7 +527,7 @@ void PruTimer::run() {
 #endif
 		if(stop) break;
 		
-		LOG( ("\tINFO: PRU0 completed transfer.\r\n"));
+		//LOG( ("\tINFO: PRU0 completed transfer.\r\n"));
 		
 #ifndef DEMO_PRU
 		if(nbWaitedEvent)
@@ -545,7 +543,7 @@ void PruTimer::run() {
 		{
 			std::lock_guard<std::mutex> lk(mutex_memory);
 			
-			LOG( "NB event " << nb << " / " << currentNbEvents << "\t\tRead event from UIO = " << nbWaitedEvent << ", block in the queue: " << ddr_used.size() << std::endl);
+			//LOG( "NB event " << nb << " / " << currentNbEvents << "\t\tRead event from UIO = " << nbWaitedEvent << ", block in the queue: " << ddr_used.size() << std::endl);
 
 			while(currentNbEvents!=nb && !ddr_used.empty()) { //We use != to handle the overflow case
 				
@@ -567,8 +565,8 @@ void PruTimer::run() {
 		
 		
 		
-		LOG( "NB event after " << std::dec << nb << " / " << currentNbEvents << std::endl);
-		LOG( std::dec <<ddr_mem_used << " bytes used, free: " <<std::dec <<  ddr_size-ddr_mem_used<< "." << std::endl);
+		//LOG( "NB event after " << std::dec << nb << " / " << currentNbEvents << std::endl);
+		//LOG( std::dec <<ddr_mem_used << " bytes used, free: " <<std::dec <<  ddr_size-ddr_mem_used<< "." << std::endl);
 		
 		blockAvailable.notify_all();
 	}

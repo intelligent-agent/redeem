@@ -13,6 +13,7 @@ from GCodeCommand import GCodeCommand
 class T0(GCodeCommand):
 
     def execute(self,g):
+        self.printer.path_planner.set_extruder(0)
         self.printer.current_tool = "E"
 
     def get_description(self):
@@ -21,7 +22,18 @@ class T0(GCodeCommand):
 class T1(GCodeCommand):
 
     def execute(self,g):
+        self.printer.path_planner.set_extruder(1)
         self.printer.current_tool = "H"
 
     def get_description(self):
         return "Select currently used extruder tool to be T1 (H)"
+
+class T2(GCodeCommand):
+
+    def execute(self,g):
+        self.printer.path_planner.set_extruder(2)
+        self.printer.current_tool = "A"
+
+    def get_description(self):
+        return "Select currently used extruder tool to be T2 (A)"
+

@@ -21,14 +21,12 @@ class Pipe:
         self.queue = queue
         self.prot = prot
 
-        p = subprocess.Popen('tty0tty', stderr=subprocess.PIPE)
+        pipe_0 = "/dev/"+self.prot+"_0"
+        pipe_1 = "/dev/"+self.prot+"_1"
+        p = subprocess.Popen(["tty0tty", pipe_0, pipe_1], stderr=subprocess.PIPE)
         line = p.stderr.readline()
-        m = re.search('\(.*\) ', line)
-        filename = m.group(0)[1:-2]
-        pipename = line.rstrip()            
-
-        self.fifo = os.open(filename, os.O_RDWR)
-        logging.info("Pipe "+self.prot+" connected to end '"+str(filename)+"' on virtual tty '"+str(pipename)+"'")        
+        self.fifo = os.open(pipe_0, os.O_RDWR)
+        logging.info("Pipe "+self.prot+" open. Use '"+pipe_1+"' to communicate with it")        
 
         self.running = True
         self.t = Thread(target=self.get_message)
