@@ -246,35 +246,35 @@
 				fault_x {
 					label = "Fault-X";
 					debounce_interval = <50>;
-					linux,code = <118>;
+					linux,code = <90>;
 					gpios = <&gpio3 4 0x5>;
 					gpio-key,wakeup;	
 				};
 				fault_y {
 					label = "Fault-Y";
 					debounce_interval = <50>;
-					linux,code = <119>;
+					linux,code = <91>;
 					gpios = <&gpio3 5 0x5>;
 					gpio-key,wakeup;	
 				};
 				fault_z {
 					label = "Fault-Z";
 					debounce_interval = <50>;
-					linux,code = <120>;
+					linux,code = <92>;
 					gpios = <&gpio1 15 0x5>;
 					gpio-key,wakeup;	
 				};
 				fault_ext_1 {
 					label = "Fault-Ext-1";
 					debounce_interval = <50>;
-					linux,code = <121>;
+					linux,code = <93>;
 					gpios = <&gpio3 1 0x5>;
 					gpio-key,wakeup;	
 				};
 				fault_ext_2 {
 					label = "Fault-Ext-2";
 					debounce_interval = <50>;
-					linux,code = <122>;
+					linux,code = <94>;
 					gpios = <&gpio3 3 0x5>;
 					gpio-key,wakeup;	
 				};
