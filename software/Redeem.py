@@ -203,9 +203,9 @@ class Redeem:
         # Create the firmware compiler
         pru_firmware = PruFirmware(dirname+"/../firmware/firmware_runtime.p",dirname+"/../firmware/firmware_runtime.bin",dirname+"/../firmware/firmware_endstops.p",dirname+"/../firmware/firmware_endstops.bin",self.revision,self.printer.config,"/usr/bin/pasm")
 
-        self.printer.path_planner = PathPlanner(self.printer, pru_firmware)
-        self.printer.path_planner.acceleration = float(self.printer.config.get('Steppers', 'acceleration'))
         self.printer.acceleration = float(self.printer.config.get('Steppers', 'acceleration'))
+        self.printer.path_planner = PathPlanner(self.printer, pru_firmware)
+        
 
         travel={}
         offset={}
