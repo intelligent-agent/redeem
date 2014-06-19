@@ -40,11 +40,11 @@ int main(int argc, const char * argv[])
 	
 	bzero(start,5*4);
 	bzero(end,5*4);
-	end[2] = 10;
+	end[2] = 10/1000.0;
 	
-	planner.queueMove(start,end,1000,true);
+	planner.queueMove(start,end,1000/1000.0,true);
 	
-	start[0] = 500;
+	start[0] = 500/1000.0;
 	end[0] = 0;
 	
 	//planner.queueMove(start,end,1000);

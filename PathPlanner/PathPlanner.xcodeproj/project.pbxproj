@@ -198,6 +198,7 @@
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 10.9;
 				ONLY_ACTIVE_ARCH = YES;
+				OTHER_CFLAGS = "-DDEMO_PRU";
 				SDKROOT = macosx;
 			};
 			name = Debug;
@@ -230,6 +231,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 10.9;
+				OTHER_CFLAGS = "-DDEMO_PRU";
 				SDKROOT = macosx;
 			};
 			name = Release;

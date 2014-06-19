@@ -39,9 +39,22 @@ class PathPlanner:
 
             self.native_planner.initPRU( pru_firmware.get_firmware(0), pru_firmware.get_firmware(1))
 
-            self.native_planner.setPrintAcceleration(tuple([float(self.printer.acceleration) for i in range(Path.NUM_AXES)]))
-            self.native_planner.setTravelAcceleration(tuple([float(self.printer.acceleration) for i in range(Path.NUM_AXES)]))
-            self.native_planner.setAxisStepsPerMeter(tuple([long(i) for i in Path.steps_pr_meter]))
+            self.native_planner.setPrintAcceleration(tuple([float(self.printer.acceleration) for i in range(3)]))
+            self.native_planner.setTravelAcceleration(tuple([float(self.printer.acceleration) for i in range(3)]))
+            self.native_planner.setAxisStepsPerMeter(tuple([long(Path.steps_pr_meter[i]) for i in range(3)]))
+            self.native_planner.setMaxFeedrates(tuple([float(Path.max_speeds[i]) for i in range(3)]))
+            self.native_planner.setMaxJerk(20/1000.0,0.3/1000.0)
+            
+            #Setup the extruders
+            for i in range(Path.NUM_AXES-3):
+                e = self.native_planner.getExtruder(i)
+                e.setMaxFeedrate(Path.max_speeds[i+3])
+                e.setPrintAcceleration(self.printer.acceleration)
+                e.setTravelAcceleration(self.printer.acceleration)
+                e.setMaxStartFeedrate(0.04)
+                e.setAxisStepsPerMeter(long(Path.steps_pr_meter[i+3]))
+
+            self.native_planner.setExtruder(0)
 
             self.native_planner.runThread()
 
@@ -73,7 +86,7 @@ class PathPlanner:
 
         speed = Path.home_speed[Path.axis_to_index(axis)]
         # Move until endstop is hit
-        p = RelativePath({axis:-self.travel_length[axis]}, speed, self.printer.acceleration,(axis != "Z"))
+        p = RelativePath({axis:-self.travel_length[axis]}, speed, self.printer.acceleration, True)
         
         self.add_path(p)
 
@@ -98,15 +111,10 @@ class PathPlanner:
 
         if not new.is_G92():
             #push this new segment
-            #unit for speed is mm/s
-            #unit for position is in mm
- 
-            speed = new.speed*1000.0
-            start = new.start_pos * 1000
-            end = new.stepper_end_pos * 1000
+            start = new.start_pos[:4]
+            end = new.stepper_end_pos[:4]
 
-            #self.native_planner.queueMove((start[0],start[1],start[2],start[3]),(end[0],end[1],end[2],end[3]),speed,True if new.cancelable else False)
-            self.native_planner.queueMove(tuple(start[:4]),tuple(end[:4]), speed, bool(new.cancelable))
+            self.native_planner.queueMove(tuple(start),tuple(end), new.speed, bool(new.cancelable))
 
         #logging.debug("Path added.")
         self.prev = new

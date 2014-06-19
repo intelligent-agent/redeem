@@ -256,7 +256,7 @@ void PruTimer::push_block(uint8_t* blockMemory, size_t blockLen, unsigned int un
 	
 	size_t nbStepsWritten = 0;
 	
-	for(int i=0;i<nbBlocks;i++) {
+	for(unsigned int i=0;i<nbBlocks;i++) {
 		
 		uint8_t *blockStart = blockMemory + i*blockSize;
 		

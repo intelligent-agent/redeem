@@ -64,7 +64,6 @@
 #define Y_AXIS 1
 #define Z_AXIS 2
 #define E_AXIS 3
-#define H_AXIS 4
 
 #if NUM_AXIS!=4
 #error Invalid number of axis

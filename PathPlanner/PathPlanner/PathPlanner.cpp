@@ -31,28 +31,77 @@
 
 #define F_CPU 200000000
 
-void PathPlanner::setExtruder(int extNr){
-    currentExtruder = extNr;
+
+
+void Extruder::setMaxFeedrate(float rate){
+	//here the target unit is mm/s, we need to convert from m/s to mm/s
+	maxFeedrate = rate*1000;
 }
 
-void PathPlanner::setMaxFeedrates(float rates[NUM_AXIS]){
+void Extruder::setPrintAcceleration(float accel){
+	//here the target unit is mm/s^2, we need to convert from m/s^2 to mm/s^2
+	maxAccelerationMMPerSquareSecond = accel*1000;
+	recomputeParameters();
+}
+
+void Extruder::setTravelAcceleration(float accel){
+	//here the target unit is mm/s^2, we need to convert from m/s^2 to mm/s^2
+	maxTravelAccelerationMMPerSquareSecond = accel*1000;
+	recomputeParameters();
+}
+
+void Extruder::setAxisStepsPerMeter(unsigned long stepPerM) {
+	//here the target unit is step / mm, we need to convert from step / m to step / mm
+	axisStepsPerMM = stepPerM/1000;
+	recomputeParameters();
+}
+
+void Extruder::setMaxStartFeedrate(float f) {
+	maxStartFeedrate = f;
+}
+
+void Extruder::recomputeParameters() {
+	invAxisStepsPerMM=1.0/axisStepsPerMM;
+	/** Acceleration in steps/s^2 in printing mode.*/
+	maxPrintAccelerationStepsPerSquareSecond =  maxAccelerationMMPerSquareSecond * (axisStepsPerMM);
+	/** Acceleration in steps/s^2 in movement mode.*/
+	maxTravelAccelerationStepsPerSquareSecond = maxTravelAccelerationMMPerSquareSecond * (axisStepsPerMM);
+}
+
+
+
+void PathPlanner::setExtruder(int extNr){
+	assert(extNr<NUM_EXTRUDER);
+	
+    currentExtruder = extruders+extNr;
+	
+	maxFeedrate[E_AXIS] = currentExtruder->maxFeedrate;
+	maxPrintAccelerationStepsPerSquareSecond[E_AXIS] = currentExtruder->maxPrintAccelerationStepsPerSquareSecond;
+	maxTravelAccelerationStepsPerSquareSecond[E_AXIS] = currentExtruder->maxTravelAccelerationStepsPerSquareSecond;
+	maxAccelerationMMPerSquareSecond[E_AXIS] = currentExtruder->maxAccelerationMMPerSquareSecond;
+	maxTravelAccelerationMMPerSquareSecond[E_AXIS] = currentExtruder->maxTravelAccelerationMMPerSquareSecond;
+	invAxisStepsPerMM[E_AXIS] = currentExtruder->invAxisStepsPerMM;
+	axisStepsPerMM[E_AXIS] = currentExtruder->axisStepsPerMM;
+}
+
+void PathPlanner::setMaxFeedrates(float rates[NUM_MOVING_AXIS]){
 	//here the target unit is mm/s, we need to convert from m/s to mm/s
-	for(int i=0;i<NUM_AXIS;i++) {
+	for(int i=0;i<NUM_MOVING_AXIS;i++) {
 		maxFeedrate[i] = rates[i]*1000;
 	}
 }
 
-void PathPlanner::setPrintAcceleration(float accel[NUM_AXIS]){
+void PathPlanner::setPrintAcceleration(float accel[NUM_MOVING_AXIS]){
 	//here the target unit is mm/s^2, we need to convert from m/s^2 to mm/s^2	
-	for(int i=0;i<NUM_AXIS;i++) {
+	for(int i=0;i<NUM_MOVING_AXIS;i++) {
 		maxAccelerationMMPerSquareSecond[i] = accel[i]*1000;
 	}
 	recomputeParameters();
 }
 
-void PathPlanner::setTravelAcceleration(float accel[NUM_AXIS]){
+void PathPlanner::setTravelAcceleration(float accel[NUM_MOVING_AXIS]){
 	//here the target unit is mm/s^2, we need to convert from m/s^2 to mm/s^2	
-	for(int i=0;i<NUM_AXIS;i++) {
+	for(int i=0;i<NUM_MOVING_AXIS;i++) {
 		maxTravelAccelerationMMPerSquareSecond[i] = accel[i]*1000;
 	}
 	recomputeParameters();
@@ -63,23 +112,16 @@ void PathPlanner::setMaxJerk(float maxJerk, float maxZJerk){
 	this->maxZJerk = maxZJerk * 1000;
 }
 
-void PathPlanner::setMaximumExtruderStartFeedrate(float maxstartfeedrate[NUM_EXTRUDER]) {
-	//here the target unit is mm/s, we need to convert from m/s to mm/s
-	for(int i=0;i<NUM_EXTRUDER;i++) {
-		maxExtruderStartFeedrate[i] = maxstartfeedrate[i]*1000;
-	}
-}
-
-void PathPlanner::setAxisStepsPerMeter(unsigned long stepPerM[NUM_AXIS]) {
+void PathPlanner::setAxisStepsPerMeter(unsigned long stepPerM[NUM_MOVING_AXIS]) {
 	//here the target unit is step / mm, we need to convert from step / m to step / mm	
-	for(int i=0;i<NUM_AXIS;i++) {
+	for(int i=0;i<NUM_MOVING_AXIS;i++) {
 		axisStepsPerMM[i] = stepPerM[i]/1000;
 	}	
 	recomputeParameters();
 }
 
 void PathPlanner::recomputeParameters() {
-	for(uint8_t i=0; i<NUM_AXIS; i++)
+	for(uint8_t i=0; i<NUM_MOVING_AXIS; i++)
     {
 		invAxisStepsPerMM[i]=1.0/axisStepsPerMM[i];
         /** Acceleration in steps/s^2 in printing mode.*/
@@ -100,42 +142,52 @@ PathPlanner::PathPlanner() {
 	linesPos = 0;
 	linesWritePos = 0;
 	
-	//Default settings
+	//Default settings for debug mode
+#ifdef DEMO_PRU
 	maxFeedrate[0]=200; //mm/s
 	maxFeedrate[1]=200;
 	maxFeedrate[2]=5;
 	maxFeedrate[3]=200;
-	//maxFeedrate[4]=200;
 	
 	axisStepsPerMM[0]=50; //step per mm, including micro stepping
 	axisStepsPerMM[1]=50;
 	axisStepsPerMM[2]=2133;
 	axisStepsPerMM[3]=535;
-	//axisStepsPerMM[4]=535;
 	
 	maxAccelerationMMPerSquareSecond[0]=1000;
 	maxAccelerationMMPerSquareSecond[1]=1000;
 	maxAccelerationMMPerSquareSecond[2]=100;
 	maxAccelerationMMPerSquareSecond[3]=1000;
-	//maxAccelerationMMPerSquareSecond[4]=1000;
 	
 	maxTravelAccelerationMMPerSquareSecond[0]=2000;
 	maxTravelAccelerationMMPerSquareSecond[1]=2000;
 	maxTravelAccelerationMMPerSquareSecond[2]=200;
 	maxTravelAccelerationMMPerSquareSecond[3]=2000;
-	//maxTravelAccelerationMMPerSquareSecond[4]=2000;
 	
-		
-	maxExtruderStartFeedrate[0]=10;
-	maxExtruderStartFeedrate[1]=10;
+	extruders[0].setAxisStepsPerMeter(535/1000.0);
+	extruders[0].setTravelAcceleration(2);
+	extruders[0].setPrintAcceleration(1);
+	extruders[0].setMaxFeedrate(0.2);
+	extruders[0].setMaxStartFeedrate(20/1000.0);
+
+	setExtruder(0);
+	
+#endif
+	
+	static_assert(NUM_EXTRUDER>0,"Invalid number of extruder");
+	
+	for(unsigned int i=0;i<NUM_EXTRUDER;i++) {
+		extruders[i].stepperCommandPosition = i+3;
+	}
 	
 	maxJerk =20;
 	maxZJerk= 0.3;
+	
 	recomputeParameters();
 	
 	linesCount = 0;
 	
-	currentExtruder = 0;
+	currentExtruder = &extruders[0];
 	
 	stop = false;
 	bzero(lines, sizeof(lines));
@@ -153,7 +205,8 @@ void PathPlanner::queueMove(float startPos[NUM_AXIS],float endPos[NUM_AXIS],floa
     }
 	
 	if(stop) 
-        return;	
+        return;
+	
 	Path *p = &lines[linesWritePos];
 
 	if(p->commands) {
@@ -164,10 +217,18 @@ void PathPlanner::queueMove(float startPos[NUM_AXIS],float endPos[NUM_AXIS],floa
 	memcpy(p->startPos, startPos, sizeof(float)*NUM_AXIS);
 	memcpy(p->endPos, endPos, sizeof(float)*NUM_AXIS);
 	
-	LOG("Moving from " << startPos[0] << "," << startPos[1] << "," << startPos[2] << " to "
-	 << endPos[0] << "," << endPos[1] << "," << endPos[2] << std::endl);
+	//Convert meters to mm
+	for(uint8_t axis=0; axis < NUM_AXIS; axis++){
+		p->startPos[axis]*=1000.0;
+		p->endPos[axis]*=1000.0;
+	}
 	
-	p->speed = speed;	
+	
+	
+	LOG("Moving from " << p->startPos[0] << "," << p->startPos[1] << "," << p->startPos[2] << " to "
+	 << p->endPos[0] << "," << p->endPos[1] << "," << p->endPos[2] << std::endl);
+	
+	p->speed = speed*1000; //Speed is in m/s
     p->joinFlags = 0;
 	p->commands=NULL;
 	p->setCancelable(cancelable);
@@ -196,20 +257,21 @@ void PathPlanner::queueMove(float startPos[NUM_AXIS],float endPos[NUM_AXIS],floa
 		return; // No steps included
 	}
 	
-	
-    float xydist2;
-	
-	
     //Define variables that are needed for the Bresenham algorithm. Please note that  Z is not currently included in the Bresenham algorithm.
-    if(p->delta[Y_AXIS] > p->delta[X_AXIS] && p->delta[Y_AXIS] > p->delta[Z_AXIS] && p->delta[Y_AXIS] > p->delta[E_AXIS]) p->primaryAxis = Y_AXIS;
-    else if (p->delta[X_AXIS] > p->delta[Z_AXIS] && p->delta[X_AXIS] > p->delta[E_AXIS]) p->primaryAxis = X_AXIS;
-    else if (p->delta[Z_AXIS] > p->delta[E_AXIS]) p->primaryAxis = Z_AXIS;
-    else p->primaryAxis = E_AXIS;
+    if(p->delta[Y_AXIS] > p->delta[X_AXIS] && p->delta[Y_AXIS] > p->delta[Z_AXIS] && p->delta[Y_AXIS] > p->delta[E_AXIS])
+		p->primaryAxis = Y_AXIS;
+    else if (p->delta[X_AXIS] > p->delta[Z_AXIS] && p->delta[X_AXIS] > p->delta[E_AXIS])
+		p->primaryAxis = X_AXIS;
+    else if (p->delta[Z_AXIS] > p->delta[E_AXIS])
+		p->primaryAxis = Z_AXIS;
+    else
+		p->primaryAxis = E_AXIS;
+	
     p->stepsRemaining = p->delta[p->primaryAxis];
     
 	if(p->isXYZMove())
     {
-        xydist2 = axis_diff[X_AXIS] * axis_diff[X_AXIS] + axis_diff[Y_AXIS] * axis_diff[Y_AXIS];
+        float xydist2 = axis_diff[X_AXIS] * axis_diff[X_AXIS] + axis_diff[Y_AXIS] * axis_diff[Y_AXIS];
         if(p->isZMove())
             p->distance = std::max((float)sqrt(xydist2 + axis_diff[Z_AXIS] * axis_diff[Z_AXIS]),(float)fabs(axis_diff[E_AXIS]));
         else
@@ -221,7 +283,9 @@ void PathPlanner::queueMove(float startPos[NUM_AXIS],float endPos[NUM_AXIS],floa
     calculateMove(p,axis_diff);
 	
 	linesWritePos++;
-	if(linesWritePos>=MOVE_CACHE_SIZE) linesWritePos = 0;
+	
+	if(linesWritePos>=MOVE_CACHE_SIZE)
+		linesWritePos = 0;
 	
 	// BEGIN_INTERRUPT_PROTECTED
 	
@@ -254,9 +318,9 @@ float PathPlanner::safeSpeed(Path* p)
     if(p->isEMove())
     {
         if(p->isXYZMove())
-            safe = std::min(safe,(float)(0.5*maxExtruderStartFeedrate[currentExtruder]*p->fullSpeed/fabs(p->speedE)));
+            safe = std::min(safe,(float)(0.5*currentExtruder->maxStartFeedrate*p->fullSpeed/fabs(p->speedE)));
         else
-            safe = 0.5*maxExtruderStartFeedrate[currentExtruder]; // This is a retraction move
+            safe = 0.5*currentExtruder->maxStartFeedrate; // This is a retraction move
     }
     if(p->primaryAxis == X_AXIS || p->primaryAxis == Y_AXIS) // enforce minimum speed for numerical stability of explicit speed integration
         safe = std::max(minimumSpeed,safe);
@@ -517,8 +581,8 @@ void PathPlanner::computeMaxJunctionSpeed(Path *previous,Path *current)
     }
 	
     float eJerk = fabs(current->speedE - previous->speedE);
-    if(eJerk > maxExtruderStartFeedrate[currentExtruder])
-        factor = std::min(factor,maxExtruderStartFeedrate[currentExtruder] / eJerk);
+    if(eJerk > currentExtruder->maxStartFeedrate)
+        factor = std::min(factor,currentExtruder->maxStartFeedrate / eJerk);
     previous->maxJunctionSpeed = std::min(previous->fullSpeed * factor,current->fullSpeed);
 }
 
@@ -756,12 +820,8 @@ void PathPlanner::run() {
 		directionMask|=((uint8_t)cur->isXPositiveMove() << X_AXIS);
 		directionMask|=((uint8_t)cur->isYPositiveMove() << Y_AXIS);
 		directionMask|=((uint8_t)cur->isZPositiveMove() << Z_AXIS);
-
-        if(currentExtruder == 0)
-    		directionMask|=((uint8_t)cur->isEPositiveMove() << E_AXIS);
-        else if (currentExtruder == 1)
-    		directionMask|=((uint8_t)cur->isEPositiveMove() << H_AXIS);
-		
+		directionMask|=((uint8_t)cur->isEPositiveMove() << currentExtruder->stepperCommandPosition);
+     
 		assert(cur);
 		assert(cur->commands);
 		
@@ -775,10 +835,7 @@ void PathPlanner::run() {
 			{
 				if((cur->error[E_AXIS] -= cur->delta[E_AXIS]) < 0)
 				{
-                    if(currentExtruder == 0)
-    					cmd.step |= (1 << E_AXIS);
-                    else if (currentExtruder == 1)
-                        cmd.step |= (1 << H_AXIS);
+					cmd.step |= (1 << currentExtruder->stepperCommandPosition);
 					cur->error[E_AXIS] += cur_errupd;
 				}
 			}

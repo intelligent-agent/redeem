@@ -45,6 +45,86 @@
   }
 }
 
+// Grab a 3 element array as a Python 3-tuple
+%typemap(in) float[3](float temp[3]) {   // temp[3] becomes a local variable
+  if (PyTuple_Check($input)) {
+    if (!PyArg_ParseTuple($input,"fff",temp,temp+1,temp+2)) {
+      PyErr_SetString(PyExc_TypeError,"tuple must have 3 elements");
+      return NULL;
+    }
+    $1 = &temp[0];
+  } else {
+    PyErr_SetString(PyExc_TypeError,"expected a tuple.");
+    return NULL;
+  }
+}
+
+%typemap(in) unsigned long[3](unsigned long temp[3]) {   // temp[3] becomes a local variable
+  if (PyTuple_Check($input)) {
+    if (!PyArg_ParseTuple($input,"kkk",temp,temp+1,temp+2)) {
+      PyErr_SetString(PyExc_TypeError,"tuple must have 3 elements");
+      return NULL;
+    }
+    $1 = &temp[0];
+  } else {
+    PyErr_SetString(PyExc_TypeError,"expected a tuple.");
+    return NULL;
+  }
+}
+
+
+
+class Extruder {
+public:
+  
+  /**
+   * @brief Set the maximum feedrate of the extruder
+   * @details Set the maximum feedrate of the extruder in m/s
+   *
+   * @param rates The feedrate of the extruder
+   */
+  void setMaxFeedrate(float rate);
+  
+  /**
+   * @brief Set the maximum speed at which the extruder can start
+   * @details Set the maximum speed at which the extruder can start
+   *
+   * @param maxstartfeedrate the maximum speed at which the extruder can start in m/s
+   */
+  void setMaxStartFeedrate(float maxstartfeedrate);
+  
+  /**
+   * @brief Set the number of steps required to move each axis by 1 meter
+   * @details Set the number of steps required to move each axis by 1 meter
+   *
+   * @param stepPerM the number of steps required to move each axis by 1 meter, consisting of a 3 length array.
+   */
+  void setAxisStepsPerMeter(unsigned long stepPerM);
+  
+  /**
+   * @brief Set the max acceleration for printing moves
+   * @details Set the max acceleration for moves when the extruder is activated
+   *
+   * @param accel The acceleration in m/s^2
+   */
+  void setPrintAcceleration(float accel);
+  
+  /**
+   * @brief Set the max acceleration for travel moves
+   * @details Set the max acceleration for moves when the extruder is not activated (i.e. not printing)
+   *
+   * @param accel The acceleration in m/s^2
+   */
+  void setTravelAcceleration(float accel);
+  
+  /**
+   * @brief Return the bit that needs to be tiggled for setting direction and step pin of the stepper driver for this extruder
+   * @return the bit that needs to be tiggled for setting direction and step pin of the stepper driver for this extruder
+   *
+   */
+  unsigned int getStepperCommandPosition();
+};
+
 
 
 class PathPlanner {
@@ -109,9 +189,9 @@ public:
    * @brief Set the maximum feedrates of the different axis
    * @details Set the maximum feedrates of the different axis in m/s
    * 
-   * @param rates The feedrate for each of the axis, consisting of a NUM_AXIS length array.
+   * @param rates The feedrate for each of the axis, consisting of a 3 length array.
    */
-  void setMaxFeedrates(float rates[NUM_AXIS]);
+  void setMaxFeedrates(float rates[3]);
 
   /**
    * @brief Set extruder number used
@@ -122,12 +202,21 @@ public:
   void setExtruder(int extNr);
 
   /**
+   * @brief Return the extruder extNr
+   * @details Return the extruder extNr in order to configure it.
+   * @warning You have to call setExtruder() again if you modify the currently used extruder.
+   * @param extNr The extruder number to get
+   * @return The extruder corresponding to extNr
+   */
+  Extruder* getExtruder(int extNr);
+
+  /**
    * @brief Set the number of steps required to move each axis by 1 meter
    * @details Set the number of steps required to move each axis by 1 meter
    * 
-   * @param stepPerM the number of steps required to move each axis by 1 meter, consisting of a NUM_AXIS length array.
+   * @param stepPerM the number of steps required to move each axis by 1 meter, consisting of a 3 length array.
    */
-  void setAxisStepsPerMeter(unsigned long stepPerM[NUM_AXIS]);
+  void setAxisStepsPerMeter(unsigned long stepPerM[3]);
 
   /**
    * @brief Set the max acceleration for printing moves
@@ -135,7 +224,7 @@ public:
    * 
    * @param accel The acceleration in m/s^2
    */
-  void setPrintAcceleration(float accel[NUM_AXIS]);
+  void setPrintAcceleration(float accel[3]);
 
   /**
    * @brief Set the max acceleration for travel moves
@@ -143,7 +232,7 @@ public:
    * 
    * @param accel The acceleration in m/s^2
    */
-  void setTravelAcceleration(float accel[NUM_AXIS]);
+  void setTravelAcceleration(float accel[3]);
 
   /**
    * @brief Set the maximum speed that can be used when in a corner
@@ -172,14 +261,6 @@ public:
    * @param maxZJerk The maximum jerk for Z axis in m/s
    */
   void setMaxJerk(float maxJerk, float maxZJerk);
-
-  /**
-   * @brief Set the maximum speed at which the extruder can start
-   * @details Set the maximum speed at which the extruder can start
-   * 
-   * @param maxstartfeedrate the maximum speed at which the extruder can start in m/s
-   */
-  void setMaximumExtruderStartFeedrate(float maxstartfeedrate[NUM_EXTRUDER]);
 
   
   virtual ~PathPlanner();

@@ -16,7 +16,7 @@ import ConfigParser
 import logging
 
 class Path:     
-    AXES                = "XYZE"
+    AXES                = "XYZEH"
     NUM_AXES            = len(AXES)
 
     AXIS_CONFIG_XY      = 0

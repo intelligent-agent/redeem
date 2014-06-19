@@ -23,7 +23,10 @@
 #ifndef PathPlanner_config_h
 #define PathPlanner_config_h
 
-/* Number of axis that the system supports. Currently only 4 is supported */
+/* Number of axis needed to move the printer head. Only 3 supported */
+#define NUM_MOVING_AXIS 3
+
+/* Total number of axis that the system supports, including the currently selected extruder. Currently only 4 is supported */
 #define NUM_AXIS 4
 
 /* Number of move to cache to execute the path planner on. */
