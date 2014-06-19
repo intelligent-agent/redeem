@@ -16,11 +16,14 @@ import logging
 from Path import Path, AbsolutePath, RelativePath, G92Path
 import numpy as np
 from Printer import Printer
-from PathPlannerNative import PathPlannerNative
 import threading
 import Queue
 
-
+try:
+    from PathPlannerNative import PathPlannerNative
+except Exception, e:
+    logging.error("You have to compile the native path planner before running Redeem. Make sure you have swig installed (apt-get install swig) and run cd ../../PathPlanner/PathPlanner && python setup.py install")
+    raise e
 
 class PathPlanner:
     ''' Init the planner '''
