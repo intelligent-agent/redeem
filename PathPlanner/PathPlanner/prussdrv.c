@@ -263,7 +263,7 @@ int prussdrv_open(unsigned int host_interrupt)
     }
 }
 
-int prussdrv_version() {
+int prussdrv_version(void) {
     return prussdrv.version;
 }
 

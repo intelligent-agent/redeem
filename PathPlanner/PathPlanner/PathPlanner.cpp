@@ -890,7 +890,7 @@ void PathPlanner::run() {
 		//LOG("Current move time " << pru.getTotalQueuedMovesTime() / (double) F_CPU << std::endl);
 		
 		//Wait until we need to push some lines so that the path planner can fill up
-		pru.waitUntilLowMoveTime(F_CPU*MIN_BUFFERED_MOVE_TIME/1000); //in seconds
+		pru.waitUntilLowMoveTime((F_CPU/1000)*MIN_BUFFERED_MOVE_TIME); //in seconds
 		
 		LOG( "Sending " << std::dec << linesPos << ", Start speed=" << cur->startSpeed << ", end speed="<<cur->endSpeed << ", nb steps = " << cur->stepsRemaining << std::endl);
 		
