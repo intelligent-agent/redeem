@@ -11,6 +11,7 @@ License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 import numpy as np
 import logging
 from threading import Lock
+import time
 
 # Import the temp chart. 
 from temp_chart import *
@@ -36,7 +37,8 @@ class Thermistor:
                     voltage += (float(file.read().rstrip())/4096)*1.8
                     aquisitions += 1
                 except IOError as e:
-                    logging.error("Unable to get ADC value for the {2}. time ({0}): {1}".format(e.errno, e.strerror, i))                                                  
+                    logging.error("Unable to get ADC value for the {2}. time ({0}): {1}".format(e.errno, e.strerror, i))        
+                time.sleep(0.05)                                          
         Thermistor.mutex.release()
         if aquisitions == 0:
             return -1.0

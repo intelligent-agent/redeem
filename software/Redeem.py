@@ -10,7 +10,7 @@ License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 Minor verion tag is Arhold Schwartsnegger movies chronologically. 
 '''
 
-version = "0.12.0~The Villain"
+version = "0.13.0~Scavenger Hunt"
 
 from math import sqrt
 import time
@@ -36,7 +36,6 @@ from Ethernet import Ethernet
 from Gcode import Gcode
 import sys
 from Extruder import Extruder, HBP
-from Pru import Pru
 from Path import Path, RelativePath, AbsolutePath, G92Path
 from PathPlanner import PathPlanner
 from ColdEnd import ColdEnd
@@ -74,14 +73,14 @@ class Redeem:
             self.printer.end_stops["X2"] = EndStop("GPIO0_30", 113, "X2", self.printer.config.getboolean("Endstops", "invert_X2"))
             self.printer.end_stops["Y1"] = EndStop("GPIO1_17", 114, "Y1", self.printer.config.getboolean("Endstops", "invert_Y1"))
             self.printer.end_stops["Y2"] = EndStop("GPIO1_19", 115, "Y2", self.printer.config.getboolean("Endstops", "invert_Y2"))
-            self.printer.end_stops["Z1"] = EndStop("GPIO0_31", 116, "Z1", self.printer.config.getboolean("Endstops", "invert_Z1"))
+            self.printer.end_stops["Z1"] = EndStop("GPIO0_31", 123, "Z1", self.printer.config.getboolean("Endstops", "invert_Z1"))
             self.printer.end_stops["Z2"] = EndStop("GPIO0_4" , 117, "Z2", self.printer.config.getboolean("Endstops", "invert_Z2"))
         else:
             self.printer.end_stops["X1"] = EndStop("GPIO0_14", 112, "X1", self.printer.config.getboolean("Endstops", "invert_X1"))
             self.printer.end_stops["X2"] = EndStop("GPIO3_21", 113, "X2", self.printer.config.getboolean("Endstops", "invert_X2"))
             self.printer.end_stops["Y1"] = EndStop("GPIO2_2",  114, "Y1", self.printer.config.getboolean("Endstops", "invert_Y1"))
             self.printer.end_stops["Y2"] = EndStop("GPIO0_31", 115, "Y2", self.printer.config.getboolean("Endstops", "invert_Y2"))
-            self.printer.end_stops["Z1"] = EndStop("GPIO0_30", 116, "Z1", self.printer.config.getboolean("Endstops", "invert_Z1"))
+            self.printer.end_stops["Z1"] = EndStop("GPIO0_30", 123, "Z1", self.printer.config.getboolean("Endstops", "invert_Z1"))
             self.printer.end_stops["Z2"] = EndStop("GPIO0_4",  117, "Z2", self.printer.config.getboolean("Endstops", "invert_Z2"))
             
         if self.revision == "A3":
@@ -131,8 +130,8 @@ class Redeem:
         # Init the 3 heaters. Argument is channel number
         if self.revision == "A3":
           mosfet_ext1 = Mosfet(3)
-          mosfet_ext2 = Mosfet(4)
-          mosfet_hbp  = Mosfet(5)
+          mosfet_ext2 = Mosfet(5)
+          mosfet_hbp  = Mosfet(4)
         else:
           mosfet_ext1 = Mosfet(5)
           mosfet_ext2 = Mosfet(3)
@@ -162,9 +161,9 @@ class Redeem:
         # Init the three fans. Argument is PWM channel number
         self.printer.fans=[]
         if self.revision == "A3":
+            self.printer.fans.append(Fan(0))
             self.printer.fans.append(Fan(1))
             self.printer.fans.append(Fan(2))
-            self.printer.fans.append(Fan(0))
         else:
             self.printer.fans.append(Fan(8))
             self.printer.fans.append(Fan(9))
@@ -204,13 +203,9 @@ class Redeem:
         # Create the firmware compiler
         pru_firmware = PruFirmware(dirname+"/../firmware/firmware_runtime.p",dirname+"/../firmware/firmware_runtime.bin",dirname+"/../firmware/firmware_endstops.p",dirname+"/../firmware/firmware_endstops.bin",self.revision,self.printer.config,"/usr/bin/pasm")
 
-        self.printer.path_planner = PathPlanner(self.printer, pru_firmware)
-        self.printer.path_planner.acceleration = float(self.printer.config.get('Steppers', 'acceleration'))
         self.printer.acceleration = float(self.printer.config.get('Steppers', 'acceleration'))
-        self.printer.path_planner.make_acceleration_tables()
-        #self.printer.path_planner.save_acceleration_tables()
-        #self.printer.path_planner.load_acceleration_tables()
-
+        self.printer.path_planner = PathPlanner(self.printer, pru_firmware)
+        
         travel={}
         offset={}
         for axis in ['X','Y','Z']:
@@ -251,21 +246,26 @@ class Redeem:
 		
     def exit(self):
         self.running = False
-        self.printer.path_planner.force_exit()
+        
         for name, stepper in self.printer.steppers.iteritems():
             stepper.set_disabled() 
 
         # Commit changes for the Steppers
         Stepper.commit()
 
+        self.printer.path_planner.force_exit()
+
+        
+
     ''' Execute a G-code '''
     def _execute(self, g):  
         if g.message == "ok" or g.code()=="ok" or g.code()=="No-Gcode":
             g.set_answer(None)
             return
-
+        logging.debug("Processing "+str(g.code()))
         self.printer.processor.execute(g)
-   
+        #logging.debug("Done processing GCode.")
+
     ''' An endStop has been hit '''
     def end_stop_hit(self, endstop):
         logging.warning("End Stop " + endstop.name +" hit!")

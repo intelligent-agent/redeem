@@ -13,13 +13,18 @@ from GCodeCommand import GCodeCommand
 class M105(GCodeCommand):
 
     def execute(self,g):
-        answer = "ok T:"+str(self.printer.heaters['E'].get_temperature())
+        # Cura expects the temperature from the first 
+        answer = "ok T:"+str(self.printer.heaters[self.printer.current_tool].get_temperature())
+
+        # Append all other readings 
         if "HBP" in self.printer.heaters:
             answer += " B:"+str(int(self.printer.heaters['HBP'].get_temperature()))
+        if "E" in self.printer.heaters:
+            answer += " T0:"+str(int(self.printer.heaters['E'].get_temperature()))
         if "H" in self.printer.heaters:
             answer += " T1:"+str(int(self.printer.heaters['H'].get_temperature()))
         if len(self.printer.cold_ends)>0:
-            answer += " T2:"+str(int(self.printer.cold_ends[0].get_temperature())) 
+            answer += " C2:"+str(int(self.printer.cold_ends[0].get_temperature())) 
    
         g.set_answer(answer)  
 

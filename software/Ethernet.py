@@ -66,7 +66,11 @@ class Ethernet:
         #logging.debug("'"+message+"'")
         if message[-1] != "\n":
             message += "\n"
-        self.client.send(message)
+        try: 
+            self.client.send(message)
+        except socket.error, (value,message): 
+            logging.error("Ethernet "+ message)
+       
 
     # Stop receiving mesassages
     def close(self):
