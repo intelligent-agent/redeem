@@ -22,9 +22,6 @@ class G0(GCodeCommand):
         for i in range(g.num_tokens()):                          
             axis = g.token_letter(i)                             
             smds[axis] = float(g.token_value(i))/1000.0          # Get the value, new position or vector             
-        if g.has_letter("E") and self.printer.current_tool != "E":       # We are using a different tool, switch..
-            smds[self.printer.current_tool] = smds["E"]
-            del smds["E"]
         if self.printer.movement == Path.ABSOLUTE:
             path = AbsolutePath(smds, self.printer.feed_rate, self.printer.acceleration)
         elif self.printer.movement == Path.RELATIVE:

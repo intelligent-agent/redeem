@@ -22,10 +22,6 @@ class G92(GCodeCommand):
         for i in range(g.num_tokens()):                             # Run through all tokens
             axis = g.token_letter(i)                                # Get the axis, X, Y, Z or E
             pos[axis] = float(g.token_value(i))/1000.0              # Get the value, new position or vector             
-        if self.printer.current_tool == "H" and "E" in pos: 
-            logging.debug("Adding H to G92")
-            pos["H"] = pos["E"];
-            del pos["E"]
         path = G92Path(pos, self.printer.feed_rate)                 # Make a path segment from the axes
         self.printer.path_planner.add_path(path)  
 
