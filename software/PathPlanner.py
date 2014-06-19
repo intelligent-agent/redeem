@@ -147,7 +147,7 @@ class PathPlanner:
         # Compute the slowest allowed interval (ticks/step), so maximum feedrate is not violated
         axis_interval = abs(path.diff)*F_CPU / Path.max_speeds*path.steps_remaining #
         limit_interval = max(np.max(axis_interval), time_for_move/path.steps_remaining) 
-	
+    
         path.full_interval = limit_interval
 
         # new time at full speed = limitInterval*p->stepsRemaining [ticks]
@@ -233,5 +233,4 @@ if __name__ == '__main__':
     path_planner.wait_until_done()
 
     path_planner.force_exit()
-
 
