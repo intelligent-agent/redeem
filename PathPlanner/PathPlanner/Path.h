@@ -75,7 +75,7 @@ private:
 	std::atomic_uint_fast32_t flags;
 	
 	unsigned int primaryAxis;
-    int timeInTicks;
+    unsigned long timeInTicks;
     unsigned int dir;                       ///< Direction of movement. 1 = X+, 2 = Y+, 4= Z+, values can be combined.
     int delta[NUM_AXIS];                  ///< Steps we want to move.
     int error[NUM_AXIS];                  ///< Error calculation for Bresenham algorithm
@@ -276,13 +276,22 @@ private:
         dir |= 1<<axis;
     }
 	
+	inline unsigned long getWaitMS()
+    {
+        return timeInTicks;
+    }
+	
+    inline void setWaitMS(unsigned long wait)
+    {
+        timeInTicks = wait;
+    }
+	
 	inline bool moveDecelerating(unsigned int stepNumber)
     {
         if(stepsRemaining - stepNumber <= decelSteps)
         {
             if (!(flags & FLAG_DECELERATING))
             {
-                //Printer::timer = 0;
                 flags |= FLAG_DECELERATING;
             }
             return true;

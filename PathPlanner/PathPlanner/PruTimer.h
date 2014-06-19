@@ -24,13 +24,16 @@ class PruTimer {
 	
 	class BlockDef{
 	public:
-		unsigned long start,end,id;
+		unsigned long id;
+		unsigned long size;
+		unsigned long totalTime;
+		BlockDef(unsigned long id, unsigned long size, unsigned long totalTime) : id(id),size(size),totalTime(totalTime) {}
 	};
 	
 	/* Should be locked when used */
-	std::queue<size_t> ddr_used;
 	std::queue<BlockDef> blocksID;
 	size_t ddr_mem_used;
+	size_t totalQueuedMovesTime;
 	
 	unsigned long ddr_addr;
 	unsigned long ddr_size;
@@ -66,11 +69,18 @@ public:
 	void waitUntilFinished();
 	
 	size_t getFreeMemory() {
-		std::unique_lock<std::mutex> lk(mutex_memory);
+		std::lock_guard<std::mutex> lk(mutex_memory);
 		return ddr_size-ddr_mem_used-4;
 	}
 	
-	void push_block(uint8_t* blockMemory, size_t blockLen, unsigned int unit, unsigned int pathID);
+	unsigned long getTotalQueuedMovesTime() {
+		std::lock_guard<std::mutex> lk(mutex_memory);
+		return totalQueuedMovesTime;
+	}
+	
+	void waitUntilLowMoveTime(unsigned long lowMoveTimeTicks);
+	
+	void push_block(uint8_t* blockMemory, size_t blockLen, unsigned int unit, unsigned int pathID, unsigned long totalTime);
 };
 
 #endif /* defined(__PathPlanner__PruTimer__) */

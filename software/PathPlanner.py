@@ -114,7 +114,7 @@ class PathPlanner:
             start = new.start_pos[:4]
             end = new.stepper_end_pos[:4]
 
-            self.native_planner.queueMove(tuple(start),tuple(end), new.speed, bool(new.cancelable))
+            self.native_planner.queueMove(tuple(start),tuple(end), new.speed, bool(new.cancelable), True if new.movement != Path.RELATIVE else False)
 
         #logging.debug("Path added.")
         self.prev = new

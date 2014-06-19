@@ -72,6 +72,10 @@ public:
 	}
 };
 
+#ifndef NDEBUG
 #define LOG(x) Logger() << x << std::flush
+#else
+#define LOG(X)
+#endif
 
 #endif /* defined(__PathPlanner__Logger__) */

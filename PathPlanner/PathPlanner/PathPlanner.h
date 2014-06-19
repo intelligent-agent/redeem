@@ -160,7 +160,7 @@ private:
 		
     }
 	
-	std::mutex m;
+	std::mutex line_mutex;
 	std::condition_variable lineAvailable;
 	
 	std::thread runningThread;
@@ -203,7 +203,7 @@ public:
 	 * @param  endPose The end position of the path in meters
 	 * @param speed The feedrate (aka speed) of the move in m/s
 	 */
-	void queueMove(float startPos[NUM_AXIS], float endPos[NUM_AXIS], float speed, bool cancelable);
+	void queueMove(float startPos[NUM_AXIS], float endPos[NUM_AXIS], float speed, bool cancelable, bool optimize=true );
 
 	
 	/**
@@ -308,8 +308,6 @@ public:
 	 * @param maxZJerk The maximum jerk for Z axis in m/s
 	 */
 	void setMaxJerk(float maxJerk, float maxZJerk);
-	
-
 	
 	virtual ~PathPlanner();
 

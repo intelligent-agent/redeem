@@ -493,8 +493,6 @@ unsigned int prussdrv_pru_wait_event(unsigned int host_interrupt, unsigned int t
 		struct timeval tv;
 		int retval;
 		
-#warning FIXME: Don't create the set each time we call this method
-		
 		/* Watch stdin (fd 0) to see when it has input. */
 		FD_ZERO(&rfds);
 		FD_SET(fd, &rfds);

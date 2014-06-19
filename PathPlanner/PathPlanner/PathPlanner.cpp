@@ -29,8 +29,6 @@
 #include <assert.h>
 #include <thread>
 
-#define F_CPU 200000000
-
 
 
 void Extruder::setMaxFeedrate(float rate){
@@ -57,7 +55,7 @@ void Extruder::setAxisStepsPerMeter(unsigned long stepPerM) {
 }
 
 void Extruder::setMaxStartFeedrate(float f) {
-	maxStartFeedrate = f;
+	maxStartFeedrate = f*1000;
 }
 
 void Extruder::recomputeParameters() {
@@ -143,37 +141,7 @@ PathPlanner::PathPlanner() {
 	linesWritePos = 0;
 	
 	//Default settings for debug mode
-#ifdef DEMO_PRU
-	maxFeedrate[0]=200; //mm/s
-	maxFeedrate[1]=200;
-	maxFeedrate[2]=5;
-	maxFeedrate[3]=200;
-	
-	axisStepsPerMM[0]=50; //step per mm, including micro stepping
-	axisStepsPerMM[1]=50;
-	axisStepsPerMM[2]=2133;
-	axisStepsPerMM[3]=535;
-	
-	maxAccelerationMMPerSquareSecond[0]=1000;
-	maxAccelerationMMPerSquareSecond[1]=1000;
-	maxAccelerationMMPerSquareSecond[2]=100;
-	maxAccelerationMMPerSquareSecond[3]=1000;
-	
-	maxTravelAccelerationMMPerSquareSecond[0]=2000;
-	maxTravelAccelerationMMPerSquareSecond[1]=2000;
-	maxTravelAccelerationMMPerSquareSecond[2]=200;
-	maxTravelAccelerationMMPerSquareSecond[3]=2000;
-	
-	extruders[0].setAxisStepsPerMeter(535/1000.0);
-	extruders[0].setTravelAcceleration(2);
-	extruders[0].setPrintAcceleration(1);
-	extruders[0].setMaxFeedrate(0.2);
-	extruders[0].setMaxStartFeedrate(20/1000.0);
 
-	setExtruder(0);
-	
-#endif
-	
 	static_assert(NUM_EXTRUDER>0,"Invalid number of extruder");
 	
 	for(unsigned int i=0;i<NUM_EXTRUDER;i++) {
@@ -193,19 +161,49 @@ PathPlanner::PathPlanner() {
 	bzero(lines, sizeof(lines));
 }
 
-void PathPlanner::queueMove(float startPos[NUM_AXIS],float endPos[NUM_AXIS],float speed, bool cancelable) {
+void PathPlanner::queueMove(float startPos[NUM_AXIS],float endPos[NUM_AXIS],float speed, bool cancelable, bool optimize) {
     float axis_diff[NUM_AXIS]; // Axis movement in mm
-	
-	LOG( "Waiting for free move command space..." << std::endl);
-	
+
 	// wait for the worker
-    if(linesCount>=MOVE_CACHE_SIZE){
-        std::unique_lock<std::mutex> lk(m);
+    {
+        std::unique_lock<std::mutex> lk(line_mutex);
+		//LOG( "Waiting for free move command space... Current: " << linesCount << std::endl);
         lineAvailable.wait(lk, [this]{return linesCount<MOVE_CACHE_SIZE || stop;});
     }
 	
 	if(stop) 
         return;
+
+	
+	if(linesCount==0 && optimize && pru.getTotalQueuedMovesTime()==0) {
+		//Add 4 dummy lines to make the system wait a bit so that we have more move to compute stuffs on
+		uint8_t w = 4;
+        while(w--)
+        {
+			
+			Path *p = &lines[linesWritePos];
+			
+            p->flags = FLAG_WARMUP;
+			
+            p->joinFlags = FLAG_JOIN_STEPPARAMS_COMPUTED | FLAG_JOIN_END_FIXED | FLAG_JOIN_START_FIXED;
+            p->dir = 0;
+            p->setWaitForXLinesFilled(w);
+			
+            p->setWaitMS(150);
+			
+            linesWritePos++;
+			
+			if(linesWritePos>=MOVE_CACHE_SIZE)
+				linesWritePos = 0;
+			// send data to the worker thread
+			{
+				std::lock_guard<std::mutex> lk(line_mutex);
+				linesCount++;
+			}
+        }
+		lineAvailable.notify_all();
+
+	}
 	
 	Path *p = &lines[linesWritePos];
 
@@ -225,11 +223,12 @@ void PathPlanner::queueMove(float startPos[NUM_AXIS],float endPos[NUM_AXIS],floa
 	
 	
 	
-	LOG("Moving from " << p->startPos[0] << "," << p->startPos[1] << "," << p->startPos[2] << " to "
+	LOG("[" << linesWritePos << "]" << " Moving from " << p->startPos[0] << "," << p->startPos[1] << "," << p->startPos[2] << " to "
 	 << p->endPos[0] << "," << p->endPos[1] << "," << p->endPos[2] << std::endl);
 	
 	p->speed = speed*1000; //Speed is in m/s
     p->joinFlags = 0;
+	p->flags = 0;
 	p->commands=NULL;
 	p->setCancelable(cancelable);
     p->dir = 0;
@@ -252,8 +251,11 @@ void PathPlanner::queueMove(float startPos[NUM_AXIS],float endPos[NUM_AXIS],floa
     if(p->isNoMove())
 	{
 		LOG( "Warning: no move path" << std::endl);
-		// if(newPath)   // need to delete dummy elements, otherwise commands can get locked.
-		// resetPathPlanner();
+		/*if(newPath) {  // need to delete dummy elements, otherwise commands can get locked.
+			std::lock_guard<std::mutex> lk(m);
+			linesCount = 0;
+			linesPos.store(linesWritePos);
+		}*/
 		return; // No steps included
 	}
 	
@@ -287,16 +289,13 @@ void PathPlanner::queueMove(float startPos[NUM_AXIS],float endPos[NUM_AXIS],floa
 	if(linesWritePos>=MOVE_CACHE_SIZE)
 		linesWritePos = 0;
 	
-	// BEGIN_INTERRUPT_PROTECTED
-	
 	// send data to the worker thread
     {
-        std::lock_guard<std::mutex> lk(m);
+        std::lock_guard<std::mutex> lk(line_mutex);
         linesCount++;
     }
     lineAvailable.notify_all();
 	
-	// END_INTERRUPT_PROTECTED
 	
 	LOG( "End queuing move command" << std::endl);
 }
@@ -336,14 +335,16 @@ void PathPlanner::calculateMove(Path* p,float axis_diff[NUM_AXIS])
     unsigned int axisInterval[NUM_AXIS];
 	float timeForMove = (float)(F_CPU)*p->distance / (p->isXOrYMove() ? std::max(minimumSpeed,p->speed): p->speed); // time is in ticks
 
-	// bool critical = false;
-	/* if(linesCount < MOVE_CACHE_LOW && timeForMove < LOW_TICKS_PER_MOVE)   // Limit speed to keep cache full.
+/*
+#define MOVE_CACHE_LOW 10
+	 if(linesCount < MOVE_CACHE_LOW)   // Limit speed to keep cache full.
 	 {
-	 //OUT_P_I("L:",lines_count);
-	 timeForMove += (3 * (LOW_TICKS_PER_MOVE-timeForMove)) / (linesCount+1); // Increase time if queue gets empty. Add more time if queue gets smaller.
-	 //OUT_P_F_LN("Slow ",time_for_move);
-	 critical=true;
-	 }*/
+#define LOW_TICKS_PER_MOVE F_CPU/50
+		 
+		 timeForMove += (3 * (LOW_TICKS_PER_MOVE-timeForMove)) / (linesCount+1); // Increase time if queue gets empty. Add more time if queue gets smaller.
+	 }
+*/
+	
     p->timeInTicks = timeForMove;
 	
     // Compute the solwest allowed interval (ticks/step), so maximum feedrate is not violated
@@ -433,10 +434,7 @@ void PathPlanner::calculateMove(Path* p,float axis_diff[NUM_AXIS])
         p->setNominalMove();
 	
     p->vMax = F_CPU / p->fullInterval; // maximum steps per second, we can reach
-    // if(p->vMax>46000)  // gets overflow in N computation
-    //   p->vMax = 46000;
-    //p->plateauN = (p->vMax*p->vMax/p->accelerationPrim)>>1;
-	
+
     updateTrapezoids();
     // how much steps on primary axis do we need to reach target feedrate
     //p->plateauSteps = (long) (((float)p->acceleration *0.5f / slowest_axis_plateau_time_repro + p->vMin) *1.01f/slowest_axis_plateau_time_repro);
@@ -605,14 +603,7 @@ void PathPlanner::backwardPlanner(unsigned int start, unsigned int last)
     {
         previousPlannerIndex(start);
         previous = &lines[start];
-		
-		
-        /* if(prev->isEndSpeedFixed())   // Nothing to update from here on, happens when path optimize disabled
-         {
-		 act->setStartSpeedFixed(true);
-		 return;
-         }*/
-		
+				
         // Avoid speed calcs if we know we can accelerate within the line
         lastJunctionSpeed = (act->isNominalMove() ? act->fullSpeed : sqrt(lastJunctionSpeed * lastJunctionSpeed + act->accelerationDistance2)); // acceleration is acceleration*distance*2! What can be reached if we try?
         // If that speed is more that the maximum junction speed allowed then ...
@@ -655,11 +646,6 @@ void PathPlanner::forwardPlanner(unsigned int first)
         act = next;
         nextPlannerIndex(first);
         next = &lines[first];
-        /* if(act->isEndSpeedFixed())
-         {
-		 leftSpeed = act->endSpeed;
-		 continue; // Nothing to do here
-         }*/
 		
         // Avoid speed calcs if we know we can accelerate within the line.
         vmaxRight = (act->isNominalMove() ? act->fullSpeed : sqrt(leftSpeed * leftSpeed + act->accelerationDistance2));
@@ -733,7 +719,7 @@ PathPlanner::~PathPlanner() {
 }
 
 void PathPlanner::waitUntilFinished() {
-	std::unique_lock<std::mutex> lk(m);
+	std::unique_lock<std::mutex> lk(line_mutex);
 	lineAvailable.wait(lk, [this]{
         return linesCount==0 || stop;
     });
@@ -747,31 +733,32 @@ void PathPlanner::waitUntilFinished() {
 void PathPlanner::run() {
 	while(!stop) {
 		
-		std::unique_lock<std::mutex> lk(m);
+		std::unique_lock<std::mutex> lk(line_mutex);
 		lineAvailable.wait(lk, [this]{return linesCount>0 || stop;});
+		
+		Path* cur = &lines[linesPos];
+		
 		lk.unlock();
-		if(!linesCount){
+		
+		if(!linesCount || stop){
 			continue;
 		}
 		
 		long cur_errupd=0;
 		uint8_t directionMask = 0; //0b000HEZYX
 		uint16_t optionMask;
-		unsigned int vMaxReached ;
-        unsigned long timer = 0;
-		
-		Path* cur = &lines[linesPos];
+		unsigned long vMaxReached;
+        unsigned long timer_accel = 0;
+		unsigned long timer_decel = 0;
+
 		if(cur->isBlocked())   // This step is in computation - shouldn't happen
 		{
 			cur = NULL;
-			//return 2000;
 			LOG( "Path planner thread: path " <<  std::dec << linesPos<< " is blocked, waiting... " << std::endl);
 			std::this_thread::sleep_for( std::chrono::milliseconds(100) );
 			continue;
 		}
-		//HAL::allowInterrupts();
-		//lastblk = -1;
-		
+
 		if(cur->isWarmUp())
 		{
 			// This is a warmup move to initalize the path planner correctly. Just waste
@@ -780,22 +767,19 @@ void PathPlanner::run() {
 			{
 				cur = NULL;
 				LOG( "Path planner thread: path " <<  std::dec << linesPos<< " is warming up, waiting... " << std::endl);
-				std::this_thread::sleep_for( std::chrono::milliseconds(100) );
+				std::this_thread::sleep_for( std::chrono::milliseconds(cur->getWaitMS()) );
 				continue;
 			}
 			
-#warning TODO
-			/*long wait = cur->getWaitTicks();
-			 
-			 removeCurrentLineForbidInterrupt();
-			 
-			 return(wait); // waste some time for path optimization to fill up*/
+	
 			LOG( "Path planner thread: path " <<  std::dec << linesPos<< " is processing a warm up path, waiting... " << std::endl);
+
+			std::this_thread::sleep_for( std::chrono::milliseconds(cur->getWaitMS()) );
+			
 			removeCurrentLineForbidInterrupt();
 			
 			lineAvailable.notify_all();
 			
-			std::this_thread::sleep_for( std::chrono::milliseconds(100) );
 			continue;
 		} // End if WARMUP
 		
@@ -825,7 +809,8 @@ void PathPlanner::run() {
 		assert(cur);
 		assert(cur->commands);
 		
-		unsigned int interval=0;
+		
+		
 		for(unsigned int stepNumber=0; stepNumber<cur->stepsRemaining; stepNumber++){
 			SteppersCommand& cmd = cur->commands[stepNumber];
 			cmd.direction = directionMask;
@@ -867,48 +852,51 @@ void PathPlanner::run() {
 			
 #define ComputeV(timer,accel)  (((timer>>8)*accel)>>10)
 			
+			unsigned long interval;
+			
 			//If acceleration is enabled on this move and we are in the acceleration segment, calculate the current interval
 			if (cur->moveAccelerating(stepNumber))   // we are accelerating
 			{
-				vMaxReached = ComputeV(timer,cur->fAcceleration)+cur->vStart;
+				vMaxReached = ComputeV(timer_accel,cur->fAcceleration)+cur->vStart;
 				if(vMaxReached>cur->vMax) vMaxReached = cur->vMax;
-				unsigned int v = vMaxReached;
+				unsigned long v = vMaxReached;
 				interval = F_CPU/(v);
-				timer+=interval;
+				timer_accel+=interval;
 			}
 			else if (cur->moveDecelerating(stepNumber))     // time to slow down
 			{
-				unsigned int v = ComputeV(timer,cur->fAcceleration);
+				unsigned long v = ComputeV(timer_decel,cur->fAcceleration);
 				if (v > vMaxReached)   // if deceleration goes too far it can become too large
 					v = cur->vEnd;
-				else{
+			 	else{
 					v=vMaxReached - v;
 					if (v < cur->vEnd) 
                         v = cur->vEnd; // extra steps at the end of desceleration due to rounding erros
 				}
 				
 				interval = F_CPU/(v);
-				timer += interval;
+				timer_decel += interval;
 			}
 			else // full speed reached
 			{
 				// constant speed reached
 				interval = cur->fullInterval;
-                timer = 0;
 			}
-			//std::cout << interval << std::endl;
 			
 			assert(interval < F_CPU*4);
-			cmd.delay = interval;
+			cmd.delay = (uint32_t)interval;
 		} // stepsRemaining
-				
 		
-		LOG( "Sending " << std::dec << linesPos << std::endl);
+		//LOG("Current move time " << pru.getTotalQueuedMovesTime() / (double) F_CPU << std::endl);
 		
-		pru.push_block((uint8_t*)cur->commands, sizeof(SteppersCommand)*cur->stepsRemaining, sizeof(SteppersCommand),linesPos);
+		//Wait until we need to push some lines so that the path planner can fill up
+		pru.waitUntilLowMoveTime(F_CPU*MIN_BUFFERED_MOVE_TIME/1000); //in seconds
+		
+		LOG( "Sending " << std::dec << linesPos << ", Start speed=" << cur->startSpeed << ", end speed="<<cur->endSpeed << ", nb steps = " << cur->stepsRemaining << std::endl);
+		
+		pru.push_block((uint8_t*)cur->commands, sizeof(SteppersCommand)*cur->stepsRemaining, sizeof(SteppersCommand),linesPos,cur->timeInTicks);
 		
 		LOG( "Done sending with " << std::dec << linesPos << std::endl);
-		
 		
 		removeCurrentLineForbidInterrupt();
 		

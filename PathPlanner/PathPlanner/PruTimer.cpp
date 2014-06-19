@@ -34,6 +34,7 @@
 #include "prussdrv.h"
 #include "pruss_intc_mapping.h"
 #include <cmath>
+#include "StepperCommand.h"
 
 #define PRU_NUM0	  0
 #define PRU_NUM1	  1
@@ -45,6 +46,8 @@ PruTimer::PruTimer() {
 	mem_fd=-1;
 	ddr_addr = 0;
 	ddr_size = 0;
+	totalQueuedMovesTime = 0;
+	ddr_mem_used = 0;
 	stop = false;
 }
 
@@ -185,9 +188,9 @@ bool PruTimer::initPRU(const std::string &firmware_stepper, const std::string &f
 #endif
 	
 	ddr_mem_used = 0;
-	ddr_used = std::queue<size_t>();
 	blocksID = std::queue<BlockDef>();
 	currentNbEvents = 0;
+	totalQueuedMovesTime = 0;
 	
 	return true;
 }
@@ -237,7 +240,7 @@ void PruTimer::stopThread(bool join) {
 	LOG( "PruTimer stopped." << std::endl);
 }
 
-void PruTimer::push_block(uint8_t* blockMemory, size_t blockLen, unsigned int unit, unsigned int pathID) {
+void PruTimer::push_block(uint8_t* blockMemory, size_t blockLen, unsigned int unit, unsigned int pathID, unsigned long totalTime) {
 	
 	if(!ddr_write_location) return;
 	
@@ -324,20 +327,11 @@ void PruTimer::push_block(uint8_t* blockMemory, size_t blockLen, unsigned int un
 				}
 				
 				assert(maxSize>0);
-				
-		
-				ddr_used.push(maxSize+4);
-				
-				
+				unsigned long t = currentBlockSize-maxSize > 0 ? totalTime/2 : totalTime;
+				blocksID.emplace(BlockDef(pathID,maxSize+4,t)); //FIXME: TotalTime is not /2 but doesn't it to be precise to make it work...
 				
 				ddr_mem_used+=maxSize+4;
-				
-				BlockDef b;
-				b.id = pathID;
-				b.start = (unsigned long)ddr_write_location;
-				b.end = (unsigned long)ddr_write_location+4+maxSize;
-				
-				blocksID.push(b);
+				totalQueuedMovesTime += t;
 				
 				//First copy the data
 				//LOG( std::dec << "Writing " << maxSize+4 << " bytes to 0x" << std::hex << (unsigned long)ddr_write_location << std::endl);
@@ -395,15 +389,13 @@ void PruTimer::push_block(uint8_t* blockMemory, size_t blockLen, unsigned int un
 				if(remainingSize) {
 					
 					assert(remainingSize == (remainingSize/unit)*unit);
+
 					
-					ddr_used.push(remainingSize+4);
+					blocksID.emplace(BlockDef(pathID,remainingSize+4,totalTime-t)); //FIXME: TotalTime is not /2 but doesn't it to be precise to make it work...
+					
 					ddr_mem_used+=remainingSize+4;
-					BlockDef b;
-					b.id = pathID;
-					b.start = (unsigned long)ddr_write_location;
-					b.end = (unsigned long)ddr_write_location+4+remainingSize;
+					totalQueuedMovesTime += totalTime-t;
 					
-					blocksID.push(b);
 
 					assert(ddr_write_location+remainingSize+sizeof(nb)*2<=ddr_mem_end);
 					
@@ -445,15 +437,10 @@ void PruTimer::push_block(uint8_t* blockMemory, size_t blockLen, unsigned int un
 				
 			} else {
 				
-				ddr_used.push(currentBlockSize+4);
+				blocksID.emplace(BlockDef(pathID,currentBlockSize+4,totalTime)); //FIXME: TotalTime is not /2 but doesn't it to be precise to make it work...
+				
 				ddr_mem_used+=currentBlockSize+4;
-				BlockDef b;
-				b.id = pathID;
-				b.start = (unsigned long)ddr_write_location;
-				b.end = (unsigned long)ddr_write_location+4+currentBlockSize;
-				
-				blocksID.push(b);
-				
+				totalQueuedMovesTime += totalTime;
 
 
 				//First copy the data
@@ -500,18 +487,37 @@ void PruTimer::waitUntilFinished() {
     });
 }
 
+void PruTimer::waitUntilLowMoveTime(unsigned long lowMoveTimeTicks) {
+	std::unique_lock<std::mutex> lk(mutex_memory);
+	blockAvailable.wait(lk, [this,lowMoveTimeTicks]{ LOG("Current wait " << totalQueuedMovesTime << "/" << lowMoveTimeTicks <<  std::endl); return totalQueuedMovesTime<lowMoveTimeTicks || stop; });
+}
+
 void PruTimer::run() {
 	
 	LOG( "Starting PruTimer thread..." << std::endl);
 	
 	while(!stop) {
 #ifdef DEMO_PRU
-		std::this_thread::sleep_for( std::chrono::milliseconds(300) );
+		
 		
 		unsigned int* nbCommand = (unsigned int *)currentReadingAddress;
 		
-		if(!nbCommand)
+		if(!nbCommand || stop || !*nbCommand)
 			continue;
+		
+		SteppersCommand * cmd = (SteppersCommand*)(currentReadingAddress+4);
+		
+		float totalWait = 0;
+		
+		for(int i=0;i<*nbCommand;i++) {
+			totalWait+=cmd->delay/200000.0;
+			
+			
+			cmd++;
+		}
+		
+		std::this_thread::sleep_for( std::chrono::milliseconds((unsigned)totalWait) );
+		
 		
 		currentReadingAddress+=(*nbCommand)*8+4;
 		
@@ -523,7 +529,7 @@ void PruTimer::run() {
 		
 		*ddr_nr_events=(*ddr_nr_events)+1;
 #else
-		unsigned int nbWaitedEvent = prussdrv_pru_wait_event (PRU_EVTOUT_0,250); //250ms timeout
+		unsigned int nbWaitedEvent = prussdrv_pru_wait_event (PRU_EVTOUT_0,1000); //250ms timeout
 #endif
 		if(stop) break;
 		
@@ -545,16 +551,17 @@ void PruTimer::run() {
 			
 			//LOG( "NB event " << nb << " / " << currentNbEvents << "\t\tRead event from UIO = " << nbWaitedEvent << ", block in the queue: " << ddr_used.size() << std::endl);
 
-			while(currentNbEvents!=nb && !ddr_used.empty()) { //We use != to handle the overflow case
+			while(currentNbEvents!=nb && !blocksID.empty()) { //We use != to handle the overflow case
 				
-				ddr_mem_used-=ddr_used.front();
+				BlockDef & front = blocksID.front();
+				
+				ddr_mem_used-=front.size;
+				totalQueuedMovesTime -=front.totalTime;
 				
 				assert(ddr_mem_used<ddr_size);
 				
-				LOG( "Block of size " << std::dec << ddr_used.front() << " with ID " << blocksID.front().id << " from 0x" << std::hex << blocksID.front().start << " to 0x" << std::hex<< blocksID.front().end  << " done." << std::endl);
-				
+				LOG( "Block of size " << std::dec << front.size << " with ID " << front.id << " and time " << front.totalTime << " done." << std::endl);
 
-				ddr_used.pop();
 				blocksID.pop();
 				
 				currentNbEvents++;

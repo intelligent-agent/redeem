@@ -161,7 +161,7 @@ public:
    * @param  endPose The end position of the path in meters
    * @param speed The feedrate (aka speed) of the move in m/s
    */
-  void queueMove(float startPos[NUM_AXIS], float endPos[NUM_AXIS], float speed, bool cancelable);
+  void queueMove(float startPos[NUM_AXIS], float endPos[NUM_AXIS], float speed, bool cancelable, bool optimize);
 
   
   /**
@@ -208,7 +208,7 @@ public:
    * @param extNr The extruder number to get
    * @return The extruder corresponding to extNr
    */
-  Extruder* getExtruder(int extNr);
+  Extruder& getExtruder(int extNr);
 
   /**
    * @brief Set the number of steps required to move each axis by 1 meter
