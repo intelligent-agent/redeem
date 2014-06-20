@@ -488,15 +488,7 @@ void PathPlanner::updateTrapezoids()
     unsigned int maxfirst = linesPos; // first non fixed segment
     if(maxfirst != linesWritePos)
         nextPlannerIndex(maxfirst); // don't touch the line printing
-    // Now ignore enough segments to gain enough time for path planning
-    int32_t timeleft = 0;
-    // Skip as many stored moves as needed to gain enough time for computation
-    long long minTime = 4500L * std::min(MOVE_CACHE_SIZE,10);
-    while(timeleft < minTime && maxfirst != linesWritePos)
-    {
-        timeleft += lines[maxfirst].timeInTicks;
-        nextPlannerIndex(maxfirst);
-    }
+
     // Search last fixed element
     while(first != maxfirst && !lines[first].isEndSpeedFixed())
         previousPlannerIndex(first);
