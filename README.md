@@ -18,3 +18,10 @@ Software features:
 
 Wiki: http://wiki.thing-printer.com/index.php?title=Redeem
 
+Installation:  
+Make sure gcc, swig and python-dev is installed before compiling the native path planner. 
+On Angstrom,  
+  opkg install swig python-dev gcc
+
+
+  
