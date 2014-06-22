@@ -151,7 +151,7 @@ private:
         p = (p == MOVE_CACHE_SIZE - 1 ? 0 : p + 1);
     }
 	
-	inline void removeCurrentLineForbidInterrupt()
+	inline void removeCurrentLine()
     {
         linesPos++;
         if(linesPos>=MOVE_CACHE_SIZE) linesPos=0;

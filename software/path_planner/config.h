@@ -42,4 +42,10 @@
 /* Should be as low as possible so that we can keep some moves in the PathPlanner buffer for proper speed computations */
 #define MIN_BUFFERED_MOVE_TIME 100
 
+/* Time to wait before processing a print command if the buffer is not full enough, expressed in milliseconds. 
+ * Increasing this time will reduce the slow downs due to the path planner not having enough path in the buffer 
+ * but it will increase the startup time of the print.
+ */
+#define PRINT_MOVE_BUFFER_WAIT 500
+
 #endif
