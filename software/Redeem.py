@@ -34,8 +34,8 @@ from USB import USB
 from Pipe import Pipe
 from Ethernet import Ethernet
 from Gcode import Gcode
-import sys
 from Extruder import Extruder, HBP
+from Cooler import Cooler
 from Path import Path, RelativePath, AbsolutePath, G92Path
 from PathPlanner import PathPlanner
 from ColdEnd import ColdEnd
@@ -122,7 +122,7 @@ class Redeem:
 
         path = self.printer.config.get('Cold-ends', 'path', 0)
         if os.path.exists(path):
-            self.printer.cold_ends.append(ColdEnd(path, "Cold End 1"))
+            self.printer.cold_ends.append(ColdEnd(path, "Cold End 0"))
             logging.info("Found Cold end on "+path)
         else:
             logging.info("No cold end present in path: "+path)            
@@ -139,23 +139,23 @@ class Redeem:
 
         # Make extruder 1
         self.printer.heaters['E'] = Extruder(self.printer.steppers["E"], therm_ext1, mosfet_ext1, "Ext1", self.printer.config.getboolean('Heaters', 'ext1_onoff_control'))
-        self.printer.heaters['E'].set_p_value(self.printer.config.getfloat('Heaters', "ext1_pid_p"))
-        self.printer.heaters['E'].set_d_value(self.printer.config.getfloat('Heaters', "ext1_pid_d"))
-        self.printer.heaters['E'].set_i_value(self.printer.config.getfloat('Heaters', "ext1_pid_i"))
+        self.printer.heaters['E'].P = self.printer.config.getfloat('Heaters', "ext1_pid_p")
+        self.printer.heaters['E'].I = self.printer.config.getfloat('Heaters', "ext1_pid_i")
+        self.printer.heaters['E'].D = self.printer.config.getfloat('Heaters', "ext1_pid_d")
         self.printer.heaters['E'].ok_range = self.printer.config.getfloat('Heaters', "ext1_ok_range")
 
         # Make Heated Build platform 
         self.printer.heaters['HBP'] = HBP( therm_hbp, mosfet_hbp, self.printer.config.getboolean('Heaters', 'hbp_onoff_control'))       
-        self.printer.heaters['HBP'].set_p_value(self.printer.config.getfloat('Heaters', "hbp_pid_p"))
-        self.printer.heaters['HBP'].set_d_value(self.printer.config.getfloat('Heaters', "hbp_pid_i"))     
-        self.printer.heaters['HBP'].set_i_value(self.printer.config.getfloat('Heaters', "hbp_pid_d"))
+        self.printer.heaters['HBP'].P = self.printer.config.getfloat('Heaters', "hbp_pid_p")
+        self.printer.heaters['HBP'].I = self.printer.config.getfloat('Heaters', "hbp_pid_i")
+        self.printer.heaters['HBP'].D = self.printer.config.getfloat('Heaters', "hbp_pid_d")
         self.printer.heaters['HBP'].ok_range = self.printer.config.getfloat('Heaters', "hbp_ok_range")
 
         # Make extruder 2.
         self.printer.heaters['H'] = Extruder(self.printer.steppers["H"], therm_ext2, mosfet_ext2, "Ext2", self.printer.config.getboolean('Heaters', 'ext2_onoff_control'))
-        self.printer.heaters['H'].set_p_value(self.printer.config.getfloat('Heaters', "ext2_pid_p"))
-        self.printer.heaters['H'].set_d_value(self.printer.config.getfloat('Heaters', "ext2_pid_i"))     
-        self.printer.heaters['H'].set_i_value(self.printer.config.getfloat('Heaters', "ext2_pid_d"))
+        self.printer.heaters['H'].P = self.printer.config.getfloat('Heaters', "ext2_pid_p")
+        self.printer.heaters['H'].I = self.printer.config.getfloat('Heaters', "ext2_pid_i")
+        self.printer.heaters['H'].D = self.printer.config.getfloat('Heaters', "ext2_pid_d")
         self.printer.heaters['H'].ok_range = self.printer.config.getfloat('Heaters', "ext2_ok_range")        
 
         # Init the three fans. Argument is PWM channel number
@@ -174,8 +174,15 @@ class Redeem:
         for f in self.printer.fans:
             f.set_value(0)
 
+        # Connect the cold end 0 to fan 2
+        if len(self.printer.cold_ends):
+            self.printer.coolers.append(Cooler(self.printer.cold_ends[0], self.printer.fans[2], "Cooler0", False))
+            self.printer.coolers[0].ok_range = 4
+            self.printer.coolers[0].set_target_temperature(60)   
+            self.printer.coolers[0].enable()   
+
         # Make a queue of commands
-        self.commands = Queue.Queue(10)
+        self.printer.commands  = Queue.Queue(100)
         
         # Init the path planner
         Path.axis_config = int(self.printer.config.get('Geometry', 'axis_config'))
@@ -217,12 +224,12 @@ class Redeem:
         self.printer.processor = GCodeProcessor(self.printer);
 
         # Set up communication channels
-        self.printer.comms["USB"]    = USB(self.commands)
-        self.printer.comms["Eth"]    = Ethernet(self.commands)
-        self.printer.comms["octoprint"] = Pipe(self.commands, "octoprint")   # Pipe for Octoprint
-        self.printer.comms["toggle"] = Pipe(self.commands, "toggle")      # Pipe for Toggle
-        self.printer.comms["testing"] = Pipe(self.commands, "testing")     # Pipe for testing
-        self.printer.comms["testing_noret"] = Pipe(self.commands, "testing_noret")     # Pipe for testing
+        self.printer.comms["USB"]           = USB(self.printer)
+        self.printer.comms["Eth"]           = Ethernet(self.printer)
+        self.printer.comms["octoprint"]     = Pipe(self.printer, "octoprint")   # Pipe for Octoprint
+        self.printer.comms["toggle"]        = Pipe(self.printer, "toggle")      # Pipe for Toggle
+        self.printer.comms["testing"]       = Pipe(self.printer, "testing")     # Pipe for testing
+        self.printer.comms["testing_noret"] = Pipe(self.printer, "testing_noret")     # Pipe for testing
         self.printer.comms["testing_noret"].send_response = False     
 
         self.running = True
@@ -235,12 +242,12 @@ class Redeem:
         try:
             while self.running:
                 try:
-                    gcode = Gcode(self.commands.get(True,1.0))
+                    gcode = Gcode(self.printer.commands.get(True,0.1))
                 except Queue.Empty as e:
                     continue
                 self._execute(gcode)
-                self.printer.reply(gcode)                
-                self.commands.task_done()
+                self.printer.reply(gcode)   
+                self.printer.commands.task_done()
         except Exception as e:
             logging.exception("Ooops: ")
 		
@@ -262,9 +269,9 @@ class Redeem:
         if g.message == "ok" or g.code()=="ok" or g.code()=="No-Gcode":
             g.set_answer(None)
             return
-        logging.debug("Processing "+str(g.code()))
+        #logging.debug("Processing "+str(g.code()))
         self.printer.processor.execute(g)
-        #logging.debug("Done processing GCode.")
+        #logging.debug("Done processing "+str(g.code()))
 
     ''' An endStop has been hit '''
     def end_stop_hit(self, endstop):

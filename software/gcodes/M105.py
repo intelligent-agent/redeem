@@ -23,8 +23,8 @@ class M105(GCodeCommand):
             answer += " T0:"+str(int(self.printer.heaters['E'].get_temperature()))
         if "H" in self.printer.heaters:
             answer += " T1:"+str(int(self.printer.heaters['H'].get_temperature()))
-        if len(self.printer.cold_ends)>0:
-            answer += " C2:"+str(int(self.printer.cold_ends[0].get_temperature())) 
+        if len(self.printer.coolers)>0:
+            answer += " C2:"+str(int(self.printer.coolers[0].get_temperature())) 
    
         g.set_answer(answer)  
 
