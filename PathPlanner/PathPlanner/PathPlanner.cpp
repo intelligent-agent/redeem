@@ -173,37 +173,6 @@ void PathPlanner::queueMove(float startPos[NUM_AXIS],float endPos[NUM_AXIS],floa
 	
 	if(stop) 
         return;
-
-	
-	if(linesCount==0 && optimize && pru.getTotalQueuedMovesTime()==0) {
-		//Add 4 dummy lines to make the system wait a bit so that we have more move to compute stuffs on
-		uint8_t w = 4;
-        while(w--)
-        {
-			
-			Path *p = &lines[linesWritePos];
-			
-            p->flags = FLAG_WARMUP;
-			
-            p->joinFlags = FLAG_JOIN_STEPPARAMS_COMPUTED | FLAG_JOIN_END_FIXED | FLAG_JOIN_START_FIXED;
-            p->dir = 0;
-            p->setWaitForXLinesFilled(w);
-			
-            p->setWaitMS(150);
-			
-            linesWritePos++;
-			
-			if(linesWritePos>=MOVE_CACHE_SIZE)
-				linesWritePos = 0;
-			// send data to the worker thread
-			{
-				std::lock_guard<std::mutex> lk(line_mutex);
-				linesCount++;
-			}
-        }
-		lineAvailable.notify_all();
-
-	}
 	
 	Path *p = &lines[linesWritePos];
 
@@ -231,6 +200,9 @@ void PathPlanner::queueMove(float startPos[NUM_AXIS],float endPos[NUM_AXIS],floa
 	p->flags = 0;
 	p->commands=NULL;
 	p->setCancelable(cancelable);
+	
+	p->setWaitMS(optimize ? PRINT_MOVE_BUFFER_WAIT : 0);
+	
     p->dir = 0;
 	
     //Find direction
@@ -723,18 +695,46 @@ void PathPlanner::waitUntilFinished() {
 }
 
 void PathPlanner::run() {
+	
+	bool waitUntilFilledUp = true;
+	
 	while(!stop) {
 		
 		std::unique_lock<std::mutex> lk(line_mutex);
+
 		lineAvailable.wait(lk, [this]{return linesCount>0 || stop;});
 		
 		Path* cur = &lines[linesPos];
+		
+		//If the buffer is half or more empty and the line to print is an optimized one , wait for 500 ms again so that we can get some other path in the path planner buffer, and we do that until the buffer is not anymore half empty.
+		if(linesCount<MOVE_CACHE_SIZE/2 && cur->getWaitMS()>0 && waitUntilFilledUp) {
+			unsigned lastCount = 0;
+			do {
+				lastCount = linesCount;
+				LOG("Waiting for buffer to fill up... " << linesCount  << ", before " << lastCount << std::endl);
+				
+				
+				lineAvailable.wait_for(lk,  std::chrono::milliseconds(PRINT_MOVE_BUFFER_WAIT), [this,lastCount]{return linesCount>lastCount || stop;});
+				
+			} while(lastCount<linesCount && linesCount<MOVE_CACHE_SIZE/2 && !stop);
+			
+			waitUntilFilledUp = false;
+		}
+		
+		//The buffer is empty, we enable again the "wait until buffer is enough full" timing procedure.
+		if(linesCount<=1) {
+			waitUntilFilledUp = true;
+		}
+		
 		
 		lk.unlock();
 		
 		if(!linesCount || stop){
 			continue;
 		}
+		
+		
+		
 		
 		long cur_errupd=0;
 		uint8_t directionMask = 0; //0b000HEZYX
@@ -750,30 +750,6 @@ void PathPlanner::run() {
 			std::this_thread::sleep_for( std::chrono::milliseconds(100) );
 			continue;
 		}
-
-		if(cur->isWarmUp())
-		{
-			// This is a warmup move to initalize the path planner correctly. Just waste
-			// a bit of time to get the planning up to date.
-			if(linesCount<=cur->getWaitForXLinesFilled())
-			{
-				cur = NULL;
-				LOG( "Path planner thread: path " <<  std::dec << linesPos<< " is warming up, waiting... " << std::endl);
-				std::this_thread::sleep_for( std::chrono::milliseconds(cur->getWaitMS()) );
-				continue;
-			}
-			
-	
-			LOG( "Path planner thread: path " <<  std::dec << linesPos<< " is processing a warm up path, waiting... " << std::endl);
-
-			std::this_thread::sleep_for( std::chrono::milliseconds(cur->getWaitMS()) );
-			
-			removeCurrentLineForbidInterrupt();
-			
-			lineAvailable.notify_all();
-			
-			continue;
-		} // End if WARMUP
 		
 		//Only enable axis that are moving. If the axis doesn't need to move then it can stay disabled depending on configuration.
 		cur->fixStartAndEndSpeed();		
@@ -891,7 +867,7 @@ void PathPlanner::run() {
 		LOG( "Done sending with " << std::dec << linesPos << std::endl);
 		
 		removeCurrentLineForbidInterrupt();
-		
+
 		lineAvailable.notify_all();
 	}
 }
