@@ -866,7 +866,7 @@ void PathPlanner::run() {
 		
 		LOG( "Done sending with " << std::dec << linesPos << std::endl);
 		
-		removeCurrentLineForbidInterrupt();
+		removeCurrentLine();
 
 		lineAvailable.notify_all();
 	}
