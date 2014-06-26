@@ -694,6 +694,10 @@ void PathPlanner::waitUntilFinished() {
 	}
 }
 
+void PathPlanner::reset() {
+	pru.reset();
+}
+
 void PathPlanner::run() {
 	
 	bool waitUntilFilledUp = true;

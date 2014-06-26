@@ -100,6 +100,9 @@ INIT:
     LBBO r6, r0, 0, 4                                       // Put it in R6
     MOV  r5, 0                                              // Make r5 the nr of events counter, 0 initially
     SBBO r5, r6, 0, 4                                       // store the number of interrupts that have occured in the second reg of DRAM
+
+    MOV  r0, 8                                              // Load the address of the pru_control, written by the host system
+    LBBO r27, r0, 0, 4                                      // Put it in R27
     
     //This parts read the GPIO IN Pins in all banks and return them to the hosts so that it can now the initial states of the end-stops.
 
@@ -363,7 +366,12 @@ DELAY:
     QBNE DELAY, r0, 0
 
 
-    SUB r1, r1, 1                                           //r1 contains the number of PIN instructions in the DDR, we remove one.
+    SUB r1, r1, 1                                           //r1 contains the number of stepper instructions in the DDR, we remove one.
+    
+SUSPENDED:
+    LBBO r0, r27, 0, 4                                      //Check if we are suspended or not
+    QBNE SUSPENDED, r0, 0
+
     QBNE NEXT_COMMAND, r1, 0                                // Still more commands to go, jump back           
             
 CANCEL_COMMAND_AFTER:           

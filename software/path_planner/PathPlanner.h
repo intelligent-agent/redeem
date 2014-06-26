@@ -309,6 +309,17 @@ public:
 	 */
 	void setMaxJerk(float maxJerk, float maxZJerk);
 	
+	void suspend() {
+		pru.suspend();
+	}
+	
+	void resume() {
+		pru.resume();
+	}
+
+	
+	void reset();
+	
 	virtual ~PathPlanner();
 
 };

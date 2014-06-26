@@ -18,3 +18,6 @@ class M81(GCodeCommand):
 
     def get_description(self):
         return "Shutdown the whole Replicape controller board"
+
+    def is_buffered(self):
+        return False

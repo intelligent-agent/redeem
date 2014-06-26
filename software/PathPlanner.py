@@ -30,7 +30,7 @@ class PathPlanner:
     def __init__(self, printer, pru_firmware):
         self.printer        = printer
         self.steppers       = printer.steppers
-
+        self.pru_firmware   = pru_firmware
 
         self.travel_length  = {"X":0.0, "Y":0.0, "Z":0.0}
         self.center_offset  = {"X":0.0, "Y":0.0, "Z":0.0}
@@ -38,28 +38,31 @@ class PathPlanner:
         self.prev.set_prev(None)
  
         if pru_firmware:
-            self.native_planner = PathPlannerNative()
+            self.__init_path_planner()
 
-            self.native_planner.initPRU( pru_firmware.get_firmware(0), pru_firmware.get_firmware(1))
+    def __init_path_planner(self):
+        self.native_planner = PathPlannerNative()
 
-            self.native_planner.setPrintAcceleration(tuple([float(self.printer.acceleration) for i in range(3)]))
-            self.native_planner.setTravelAcceleration(tuple([float(self.printer.acceleration) for i in range(3)]))
-            self.native_planner.setAxisStepsPerMeter(tuple([long(Path.steps_pr_meter[i]) for i in range(3)]))
-            self.native_planner.setMaxFeedrates(tuple([float(Path.max_speeds[i]) for i in range(3)]))
-            self.native_planner.setMaxJerk(20/1000.0,0.3/1000.0)
-            
-            #Setup the extruders
-            for i in range(Path.NUM_AXES-3):
-                e = self.native_planner.getExtruder(i)
-                e.setMaxFeedrate(Path.max_speeds[i+3])
-                e.setPrintAcceleration(self.printer.acceleration)
-                e.setTravelAcceleration(self.printer.acceleration)
-                e.setMaxStartFeedrate(0.04)
-                e.setAxisStepsPerMeter(long(Path.steps_pr_meter[i+3]))
+        self.native_planner.initPRU( self.pru_firmware.get_firmware(0), self.pru_firmware.get_firmware(1))
 
-            self.native_planner.setExtruder(0)
+        self.native_planner.setPrintAcceleration(tuple([float(self.printer.acceleration) for i in range(3)]))
+        self.native_planner.setTravelAcceleration(tuple([float(self.printer.acceleration) for i in range(3)]))
+        self.native_planner.setAxisStepsPerMeter(tuple([long(Path.steps_pr_meter[i]) for i in range(3)]))
+        self.native_planner.setMaxFeedrates(tuple([float(Path.max_speeds[i]) for i in range(3)]))
+        self.native_planner.setMaxJerk(20/1000.0,0.3/1000.0)
+        
+        #Setup the extruders
+        for i in range(Path.NUM_AXES-3):
+            e = self.native_planner.getExtruder(i)
+            e.setMaxFeedrate(Path.max_speeds[i+3])
+            e.setPrintAcceleration(self.printer.acceleration)
+            e.setTravelAcceleration(self.printer.acceleration)
+            e.setMaxStartFeedrate(0.04)
+            e.setAxisStepsPerMeter(long(Path.steps_pr_meter[i+3]))
 
-            self.native_planner.runThread()
+        self.native_planner.setExtruder(0)
+
+        self.native_planner.runThread()
 
     ''' Get the current pos as a dict '''
     def get_current_pos(self):
@@ -78,6 +81,24 @@ class PathPlanner:
 
     def force_exit(self):
         self.native_planner.stopThread(True)
+
+    def emergency_interrupt(self):
+        """ Stop in emergency any moves. """
+        # Note: This method has to be thread safe as it can be called from the command thread directly or from the command queue thread
+        self.native_planner.suspend()
+        for name, stepper in self.printer.steppers.iteritems():
+            stepper.set_disabled(True)
+
+        #Create a new path planner to have everything clean when it restarts
+        self.native_planner.stopThread(True)
+        self.__init_path_planner()
+
+
+    def suspend(self):
+        self.native_planner.suspend()
+
+    def resume(self):
+        self.native_planner.resume()
 
     ''' Home the given axis using endstops (min) '''
     def home(self,axis):
