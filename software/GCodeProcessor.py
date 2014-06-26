@@ -45,6 +45,13 @@ class GCodeProcessor:
 
         return ret
 
+    def is_buffered(self, gcode):
+        val = gcode.code()
+        if not val in self.gcodes:
+            return False
+
+        return self.gcodes[val].is_buffered()
+
     def execute(self, gcode):
         val = gcode.code()
         if not val in self.gcodes:

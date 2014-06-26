@@ -15,6 +15,7 @@ import logging
 import os
 import re
 import subprocess
+from Gcode import Gcode
 
 class Pipe:
     def __init__(self, printer, prot):
@@ -41,9 +42,12 @@ class Pipe:
             ret = select.select( [self.fifo],[],[], 1.0 )
     	    if ret[0] == [self.fifo]:
                 message = self.readline_custom()
-                if len(message) > 0:        
-                    self.printer.commands.put({"message": message, "prot": self.prot})            
-                    logging.debug("Got message")
+                if len(message)>0:
+                    g = Gcode({"message": message, "prot": self.prot})
+                    if self.printer.processor.is_buffered(g):
+                        self.printer.commands.put(g)
+                    else:
+                        self.printer.unbuffered_commands.put(g)
 
     def send_message(self, message):
         if self.send_response: 
