@@ -17,11 +17,11 @@ class M130(GCodeCommand):
       extr = g.get_int_by_letter("P", 0)               
       value = float(g.get_value_by_letter("S"))
       if extr == 0:
-        self.printer.heaters['E'].set_p_value(value)
+        self.printer.heaters['E'].P = value
       elif extr == 1:
-        self.printer.heaters['H'].set_p_value(value)
+        self.printer.heaters['H'].P = value
       elif extr == 2:
-        self.printer.heaters['HBP'].set_p_value(value)
+        self.printer.heaters['HBP'].P = value
 
     def get_description(self):
         return "Set PID P-value, Format (M130 P0 S8.0)"
@@ -32,11 +32,11 @@ class M131(GCodeCommand):
       extr = g.get_int_by_letter("P", 0)               
       value = float(g.get_value_by_letter("S"))
       if extr == 0:
-        self.printer.heaters['E'].set_i_value(value)
+        self.printer.heaters['E'].I = value
       elif extr == 1:
-        self.printer.heaters['H'].set_i_value(value)
+        self.printer.heaters['H'].I = value
       elif extr == 2:
-        self.printer.heaters['HBP'].set_i_value(value)
+        self.printer.heaters['HBP'].I = value
 
     def get_description(self):
         return "Set PID I-value, Format (M131 P0 S8.0)"
@@ -47,11 +47,11 @@ class M132(GCodeCommand):
       extr = g.get_int_by_letter("P", 0)               
       value = float(g.get_value_by_letter("S"))
       if extr == 0:
-        self.printer.heaters['E'].set_d_value(value)
+        self.printer.heaters['E'].D = value
       elif extr == 1:
-        self.printer.heaters['H'].set_d_value(value)
+        self.printer.heaters['H'].D = value
       elif extr == 2:
-        self.printer.heaters['HBP'].set_d_value(value)
+        self.printer.heaters['HBP'].D = value
 
     def get_description(self):
         return "Set PID D-value, Format (M132 P0 S8.0)"

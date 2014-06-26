@@ -1,31 +1,21 @@
-'''
-Extruder file for Replicape. 
-
-Author: Elias Bakken
-email: elias(dot)bakken(at)gmail(dot)com
-Website: http://www.thing-printer.com
-License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
-'''
+#Cooler.py
 
 from threading import Thread
 import time
 import logging
 
-''' 
-A heater element that must keep temperature, 
-either an extruder, a HBP or could even be a heated chamber
-'''
-class Heater(object):
+
+class Cooler:
     ''' Init '''
-    def __init__(self, thermistor, mosfet, name, onoff_control):
-        self.thermistor = thermistor     
-        self.mosfet = mosfet             
+    def __init__(self, cold_end, fan, name, onoff_control):
+        self.cold_end = cold_end
+        self.fan = fan             
         self.name = name                   # Name, used for debugging
         self.current_temp = 0.0
         self.target_temp = 0.0             # Target temperature (Ts). Start off. 
         self.last_error = 0.0              # Previous error term, used in calculating the derivative
         self.error_integral = 0.0          # Accumulated integral since the temperature came within the boudry
-        self.error_integral_limit = 100.0  # Integral temperature boundry
+        self.error_integral_limit = 40.0  # Integral temperature boundry
         self.P = 1.0                      # Proportional 
         self.I = 0.0                      # Integral 
         self.D = 0.0                      # Derivative
@@ -54,8 +44,7 @@ class Heater(object):
         while self.disabled == False:
             time.sleep(0.2)
         # The PID loop has finished		
-        self.mosfet.set_power(0.0)
-        self.mosfet.close()
+        self.fan.set_power(0.0)
 
     ''' Start the PID controller '''
     def enable(self):
@@ -65,10 +54,20 @@ class Heater(object):
         self.t.daemon = True
         self.t.start()		
 
+    ''' Set values for Proportional, Integral, Derivative'''
+    def set_p_value(self, P):
+        self.P = P # Proportional 
+
+    def set_i_value(self, I):
+        self.I = I # Integral
+
+    def set_d_value(self, D):
+        self.D = D # Derivative
+
     ''' PID Thread that keeps the temperature stable '''
     def keep_temperature(self):
         while self.enabled:            			
-            self.current_temp = self.thermistor.getTemperature()    
+            self.current_temp = self.cold_end.get_temperature()    
             error = self.target_temp-self.current_temp    
             
             if self.onoff_control:
@@ -77,7 +76,7 @@ class Heater(object):
                 else:
                     power=0.0
             else:
-                if abs(error)>30: #Avoid windup
+                if abs(error)>10: #Avoid windup
                     if error>0:
                         power=1.0
                     else:
@@ -93,8 +92,11 @@ class Heater(object):
 
             # If the Thermistor is disconnected or running away or something
             if self.current_temp <= 5 or self.current_temp > 250:
-                power = 0
-            self.mosfet.set_power(power)            		 
+                power = 0.0
+        
+            power = 1.0-power
+            #logging.debug("temp: "+str(self.current_temp)+" error: "+str(error)+" Cooler "+str(power))
+            self.fan.set_value(power)            		 
             time.sleep(1)
         self.disabled = True
 
@@ -108,18 +110,9 @@ class Heater(object):
     ''' Calculate and return the error integral '''
     def _getErrorIntegral(self, error):
         self.error_integral += error
+        if self.current_temp < (self.target_temp-self.error_integral_limit):
+            self.error_integral = 0.0
+        if self.current_temp > (self.target_temp+self.error_integral_limit):
+            self.error_integral = 0.0
         return self.error_integral
 
-''' Subclass for Heater, this is an extruder '''
-class Extruder(Heater):
-    def __init__(self, smd, thermistor, mosfet, name, onoff_control):
-        Heater.__init__(self, thermistor, mosfet, name, onoff_control)
-        self.smd = smd
-        self.enable()  
-
-
-''' Subclass for heater, this is a Heated build platform '''
-class HBP(Heater):
-    def __init__(self, thermistor, mosfet, onoff_control):
-        Heater.__init__(self, thermistor, mosfet, "HBP", onoff_control)
-        self.enable()

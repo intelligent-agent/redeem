@@ -17,8 +17,8 @@ import re
 import subprocess
 
 class Pipe:
-    def __init__(self, queue, prot):
-        self.queue = queue
+    def __init__(self, printer, prot):
+        self.printer = printer
         self.prot = prot
 
         pipe_0 = "/dev/"+self.prot+"_0"
@@ -42,7 +42,8 @@ class Pipe:
     	    if ret[0] == [self.fifo]:
                 message = self.readline_custom()
                 if len(message) > 0:        
-                    self.queue.put({"message": message, "prot": self.prot})            
+                    self.printer.commands.put({"message": message, "prot": self.prot})            
+                    logging.debug("Got message")
 
     def send_message(self, message):
         if self.send_response: 

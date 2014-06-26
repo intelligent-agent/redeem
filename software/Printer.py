@@ -19,6 +19,7 @@ class Printer:
         self.fans=fans
         self.cold_ends=cold_ends
         self.path_planner=path_planner
+        self.coolers = []
 
         self.comms = {} # Communication channels
 
