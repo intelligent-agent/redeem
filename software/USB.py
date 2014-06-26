@@ -13,8 +13,8 @@ import select
 import logging
 
 class USB:
-    def __init__(self, queue):
-        self.queue = queue
+    def __init__(self, printer):
+        self.printer = printer
         self.tty = open("/dev/ttyGS0", "r+")
         self.running = True
         self.debug = 0
@@ -28,9 +28,9 @@ class USB:
             ret = select.select( [self.tty],[],[], 1.0 )
     	    if ret[0] == [self.tty]:
                 message = self.tty.readline().strip("\n")
-                if len(message) > 0:        
-                    self.queue.put({"message": message, "prot": "USB"})
-            
+                if len(message) > 0:  
+                    self.printer.commands.put({"message": message, "prot": "USB"})
+                
 
     # Send a message		
     def send_message(self, message):

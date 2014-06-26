@@ -16,8 +16,8 @@ import select
 size = 1024 
 
 class Ethernet:
-    def __init__(self, queue):
-        self.queue = queue
+    def __init__(self, printer):
+        self.printer = printer
         self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         host = ''
         port = 50000
@@ -59,7 +59,7 @@ class Ethernet:
                 if not "\n" in line: # Make sure the whole line was read. 
                     break
                 message = line.strip("\n")
-                self.queue.put({"message": message, "prot": "Eth"})
+                self.printer.commands.put({"message": message, "prot": "Eth"})
 
     # Send a message		
     def send_message(self, message):

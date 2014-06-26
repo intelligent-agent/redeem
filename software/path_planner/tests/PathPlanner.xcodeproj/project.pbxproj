@@ -7,16 +7,11 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		4E1C313D193890B100AC9306 /* Logger.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4E1C313C193890B100AC9306 /* Logger.cpp */; };
-		4E6C549B19370F2E006610F6 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4E6C549A19370F2E006610F6 /* main.cpp */; };
-		4E6C54A919370F5B006610F6 /* PathPlanner.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4E6C54A719370F5B006610F6 /* PathPlanner.cpp */; };
-		4E6C54AA19370F5B006610F6 /* PathPlanner.h in Sources */ = {isa = PBXBuildFile; fileRef = 4E6C54A819370F5B006610F6 /* PathPlanner.h */; };
-		4E6C54B119375D85006610F6 /* PruTimer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4E6C54AF19375D85006610F6 /* PruTimer.cpp */; };
-		4E6C54B219375D85006610F6 /* PruTimer.h in Sources */ = {isa = PBXBuildFile; fileRef = 4E6C54B019375D85006610F6 /* PruTimer.h */; };
-		4E6C54B719376CCE006610F6 /* __prussdrv.h in Sources */ = {isa = PBXBuildFile; fileRef = 4E6C54B319376CCE006610F6 /* __prussdrv.h */; };
-		4E6C54B819376CCE006610F6 /* pruss_intc_mapping.h in Sources */ = {isa = PBXBuildFile; fileRef = 4E6C54B419376CCE006610F6 /* pruss_intc_mapping.h */; };
-		4E6C54B919376CCE006610F6 /* prussdrv.c in Sources */ = {isa = PBXBuildFile; fileRef = 4E6C54B519376CCE006610F6 /* prussdrv.c */; };
-		4E6C54BA19376CCE006610F6 /* prussdrv.h in Sources */ = {isa = PBXBuildFile; fileRef = 4E6C54B619376CCE006610F6 /* prussdrv.h */; };
+		4EE50D991956FC4E0022CD00 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4EE50D981956FC4E0022CD00 /* main.cpp */; };
+		4EE50DA81956FC590022CD00 /* Logger.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4EE50D9C1956FC590022CD00 /* Logger.cpp */; };
+		4EE50DA91956FC590022CD00 /* PathPlanner.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4EE50D9F1956FC590022CD00 /* PathPlanner.cpp */; };
+		4EE50DAA1956FC590022CD00 /* prussdrv.c in Sources */ = {isa = PBXBuildFile; fileRef = 4EE50DA21956FC590022CD00 /* prussdrv.c */; };
+		4EE50DAB1956FC590022CD00 /* PruTimer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4EE50DA41956FC590022CD00 /* PruTimer.cpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -32,21 +27,21 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		4E1C313A1938888C00AC9306 /* Logger.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Logger.h; sourceTree = "<group>"; };
-		4E1C313C193890B100AC9306 /* Logger.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Logger.cpp; sourceTree = "<group>"; };
 		4E6C549719370F2E006610F6 /* PathPlanner */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = PathPlanner; sourceTree = BUILT_PRODUCTS_DIR; };
-		4E6C549A19370F2E006610F6 /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
-		4E6C54A719370F5B006610F6 /* PathPlanner.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PathPlanner.cpp; sourceTree = "<group>"; };
-		4E6C54A819370F5B006610F6 /* PathPlanner.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.objj.h; path = PathPlanner.h; sourceTree = "<group>"; };
-		4E6C54AF19375D85006610F6 /* PruTimer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PruTimer.cpp; sourceTree = "<group>"; };
-		4E6C54B019375D85006610F6 /* PruTimer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.objj.h; path = PruTimer.h; sourceTree = "<group>"; };
-		4E6C54B319376CCE006610F6 /* __prussdrv.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.objj.h; path = __prussdrv.h; sourceTree = "<group>"; };
-		4E6C54B419376CCE006610F6 /* pruss_intc_mapping.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.objj.h; path = pruss_intc_mapping.h; sourceTree = "<group>"; };
-		4E6C54B519376CCE006610F6 /* prussdrv.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = prussdrv.c; sourceTree = "<group>"; };
-		4E6C54B619376CCE006610F6 /* prussdrv.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.objj.h; path = prussdrv.h; sourceTree = "<group>"; };
-		4EB69340193B1E18009B46B4 /* Path.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Path.h; sourceTree = "<group>"; };
-		4EB69342193B1E5F009B46B4 /* StepperCommand.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = StepperCommand.h; sourceTree = "<group>"; };
-		4EB69343193B1EAB009B46B4 /* config.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = config.h; sourceTree = "<group>"; };
+		4EE50D981956FC4E0022CD00 /* main.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
+		4EE50D9A1956FC590022CD00 /* __prussdrv.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = __prussdrv.h; path = ../__prussdrv.h; sourceTree = "<group>"; };
+		4EE50D9B1956FC590022CD00 /* config.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = config.h; path = ../config.h; sourceTree = "<group>"; };
+		4EE50D9C1956FC590022CD00 /* Logger.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Logger.cpp; path = ../Logger.cpp; sourceTree = "<group>"; };
+		4EE50D9D1956FC590022CD00 /* Logger.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Logger.h; path = ../Logger.h; sourceTree = "<group>"; };
+		4EE50D9E1956FC590022CD00 /* Path.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Path.h; path = ../Path.h; sourceTree = "<group>"; };
+		4EE50D9F1956FC590022CD00 /* PathPlanner.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = PathPlanner.cpp; path = ../PathPlanner.cpp; sourceTree = "<group>"; };
+		4EE50DA01956FC590022CD00 /* PathPlanner.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PathPlanner.h; path = ../PathPlanner.h; sourceTree = "<group>"; };
+		4EE50DA11956FC590022CD00 /* pruss_intc_mapping.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = pruss_intc_mapping.h; path = ../pruss_intc_mapping.h; sourceTree = "<group>"; };
+		4EE50DA21956FC590022CD00 /* prussdrv.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = prussdrv.c; path = ../prussdrv.c; sourceTree = "<group>"; };
+		4EE50DA31956FC590022CD00 /* prussdrv.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = prussdrv.h; path = ../prussdrv.h; sourceTree = "<group>"; };
+		4EE50DA41956FC590022CD00 /* PruTimer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = PruTimer.cpp; path = ../PruTimer.cpp; sourceTree = "<group>"; };
+		4EE50DA51956FC590022CD00 /* PruTimer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PruTimer.h; path = ../PruTimer.h; sourceTree = "<group>"; };
+		4EE50DA71956FC590022CD00 /* StepperCommand.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = StepperCommand.h; path = ../StepperCommand.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -63,7 +58,20 @@
 		4E6C548E19370F2E006610F6 = {
 			isa = PBXGroup;
 			children = (
-				4E6C549919370F2E006610F6 /* PathPlanner */,
+				4EE50D981956FC4E0022CD00 /* main.cpp */,
+				4EE50D9A1956FC590022CD00 /* __prussdrv.h */,
+				4EE50D9B1956FC590022CD00 /* config.h */,
+				4EE50D9C1956FC590022CD00 /* Logger.cpp */,
+				4EE50D9D1956FC590022CD00 /* Logger.h */,
+				4EE50D9E1956FC590022CD00 /* Path.h */,
+				4EE50D9F1956FC590022CD00 /* PathPlanner.cpp */,
+				4EE50DA01956FC590022CD00 /* PathPlanner.h */,
+				4EE50DA11956FC590022CD00 /* pruss_intc_mapping.h */,
+				4EE50DA21956FC590022CD00 /* prussdrv.c */,
+				4EE50DA31956FC590022CD00 /* prussdrv.h */,
+				4EE50DA41956FC590022CD00 /* PruTimer.cpp */,
+				4EE50DA51956FC590022CD00 /* PruTimer.h */,
+				4EE50DA71956FC590022CD00 /* StepperCommand.h */,
 				4E6C549819370F2E006610F6 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -74,27 +82,6 @@
 				4E6C549719370F2E006610F6 /* PathPlanner */,
 			);
 			name = Products;
-			sourceTree = "<group>";
-		};
-		4E6C549919370F2E006610F6 /* PathPlanner */ = {
-			isa = PBXGroup;
-			children = (
-				4E6C54B319376CCE006610F6 /* __prussdrv.h */,
-				4E6C54B419376CCE006610F6 /* pruss_intc_mapping.h */,
-				4E6C54B519376CCE006610F6 /* prussdrv.c */,
-				4E6C54B619376CCE006610F6 /* prussdrv.h */,
-				4E6C549A19370F2E006610F6 /* main.cpp */,
-				4E6C54A719370F5B006610F6 /* PathPlanner.cpp */,
-				4E6C54A819370F5B006610F6 /* PathPlanner.h */,
-				4E6C54AF19375D85006610F6 /* PruTimer.cpp */,
-				4E6C54B019375D85006610F6 /* PruTimer.h */,
-				4E1C313A1938888C00AC9306 /* Logger.h */,
-				4E1C313C193890B100AC9306 /* Logger.cpp */,
-				4EB69340193B1E18009B46B4 /* Path.h */,
-				4EB69342193B1E5F009B46B4 /* StepperCommand.h */,
-				4EB69343193B1EAB009B46B4 /* config.h */,
-			);
-			path = PathPlanner;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -148,16 +135,11 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				4E6C54B819376CCE006610F6 /* pruss_intc_mapping.h in Sources */,
-				4E1C313D193890B100AC9306 /* Logger.cpp in Sources */,
-				4E6C54B219375D85006610F6 /* PruTimer.h in Sources */,
-				4E6C54AA19370F5B006610F6 /* PathPlanner.h in Sources */,
-				4E6C54B119375D85006610F6 /* PruTimer.cpp in Sources */,
-				4E6C54B919376CCE006610F6 /* prussdrv.c in Sources */,
-				4E6C54B719376CCE006610F6 /* __prussdrv.h in Sources */,
-				4E6C54A919370F5B006610F6 /* PathPlanner.cpp in Sources */,
-				4E6C549B19370F2E006610F6 /* main.cpp in Sources */,
-				4E6C54BA19376CCE006610F6 /* prussdrv.h in Sources */,
+				4EE50DAA1956FC590022CD00 /* prussdrv.c in Sources */,
+				4EE50DA91956FC590022CD00 /* PathPlanner.cpp in Sources */,
+				4EE50DAB1956FC590022CD00 /* PruTimer.cpp in Sources */,
+				4EE50D991956FC4E0022CD00 /* main.cpp in Sources */,
+				4EE50DA81956FC590022CD00 /* Logger.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
