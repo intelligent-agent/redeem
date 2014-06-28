@@ -103,26 +103,40 @@ class PathPlanner:
     ''' Home the given axis using endstops (min) '''
     def home(self,axis):
 
-        if axis=="E" or axis=="H":
-            return
+        logging.debug("homing "+str(axis))
 
-        logging.debug("homing "+axis)
+        
 
-        speed = Path.home_speed[Path.axis_to_index(axis)]
+        path_back={}
+        path_center={}
+        path_zero={}
+        
+        speed = Path.home_speed[0]
+
+        for a in axis:
+
+            if a == 'E' or a == 'H':
+                continue
+
+            path_back[a] = -self.travel_length[a]
+            path_center[a] = -self.center_offset[a]
+            path_zero[a] = 0
+            speed = min(speed, Path.home_speed[Path.axis_to_index(a)])
+
         # Move until endstop is hit
-        p = RelativePath({axis:-self.travel_length[axis]}, speed, self.printer.acceleration, True)
+        p = RelativePath(path_back, speed, self.printer.acceleration, True)
         
         self.add_path(p)
 
         # Reset position to offset
-        p = G92Path({axis:-self.center_offset[axis]}, speed)
+        p = G92Path(path_center, speed)
         self.add_path(p)
         
         # Move to offset
-        p = AbsolutePath({axis:0}, speed, self.printer.acceleration)
+        p = AbsolutePath(path_zero, speed, self.printer.acceleration)
         self.add_path(p)
         self.wait_until_done()
-        logging.debug("homing done for "+axis)
+        logging.debug("homing done for "+str(axis))
 
     ''' Add a path segment to the path planner '''        
     def add_path(self, new):   

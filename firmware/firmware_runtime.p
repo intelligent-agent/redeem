@@ -59,8 +59,8 @@
 .struct SteppersCommand
     .u8     step                //Steppers are defined as 0b000HEZYX - A 1 for a stepper means we will do a step for this stepper
     .u8     direction           //Steppers are defined as 0b000HEZYX - Direction for each stepper
-    .u16    options             //Options for the move - If the first bit is set to 1, then the stepper has the cancellable 
-                                //option meaning that as soon as an endstop is hit, all the moves in the DDR are removed and canceled without making the steppers to move.
+    .u8     cancellableMask     //If the endstop match the mask, all the move commands are canceled. 
+    .u8     options              //Options for the move, not yet used.
     .u32    delay               //number of cycle to wait (this is the # of PRU click cycles)
 .ends
 
@@ -232,13 +232,13 @@ NEXT_COMMAND:
 
     OR  r7.b0, r7.b3, r7.b2                 // r7.b0 = r7.b3 | r7.b2
 
-    //Check if this is a cancellable move
-    QBNE notcancel, pinCommand.options, 0x01
+    //Check if we have to cancel the move based on the cancellableMask
+    QBEQ notcancel, pinCommand.cancellableMask, 0
 
-    //Check if we need to cancel the move, we have to if the step is 1 and the endstop is 0
-    AND r7.b1,pinCommand.step,r7.b0    
+    //Check if we need to cancel the move, we have to if the mask doesn't match the allowed move
+    AND r7.b1,pinCommand.cancellableMask,r7.b0    
 
-    QBEQ notcancel, r7.b1,pinCommand.step
+    QBNE notcancel, r7.b1,0
 
     //Cancel the move and all the other moves
 
