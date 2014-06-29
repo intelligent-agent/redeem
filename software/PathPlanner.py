@@ -105,8 +105,6 @@ class PathPlanner:
 
         logging.debug("homing "+str(axis))
 
-        
-
         path_back={}
         path_center={}
         path_zero={}
@@ -143,9 +141,6 @@ class PathPlanner:
 
         # Link to the previous segment in the chain
         new.set_prev(self.prev)
-        
-        #logging.debug("Adding path "+str(new))
-        #logging.debug("Previous path was "+str(self.prev))
 
         if not new.is_G92():
             #push this new segment
@@ -154,7 +149,6 @@ class PathPlanner:
 
             self.native_planner.queueMove(tuple(start),tuple(end), new.speed, bool(new.cancelable), True if new.movement != Path.RELATIVE else False)
 
-        #logging.debug("Path added.")
         self.prev = new
 
     def set_extruder(self, ext_nr):
