@@ -10,10 +10,11 @@ License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 
 from GCodeCommand import GCodeCommand
 
+
 class M24(GCodeCommand):
 
-    def execute(self,g):
-        self.printer.path_planner.resume()    
+    def execute(self, g):
+        self.printer.path_planner.resume()
 
     def get_description(self):
         return "Resume the print where it was paused by the M25 command."
@@ -21,10 +22,11 @@ class M24(GCodeCommand):
     def is_buffered(self):
         return False
 
+
 class M25(GCodeCommand):
 
-    def execute(self,g):
-        self.printer.path_planner.suspend()    
+    def execute(self, g):
+        self.printer.path_planner.suspend()
 
     def get_description(self):
         return "Pause the current print."

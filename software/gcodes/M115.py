@@ -13,7 +13,7 @@ from GCodeCommand import GCodeCommand
 
 class M115(GCodeCommand):
 
-    def execute(self,g):
+    def execute(self, g):
     	#FIXME: Adjust the answer according to http://reprap.org/wiki/M115_Keywords
         g.set_answer("ok PROTOCOL_VERSION:0.1 FIRMWARE_NAME:Redeem FIRMWARE_URL:http%3A//wiki.thing-printer.com/index.php?title=Replicape MACHINE_TYPE:Mendel EXTRUDER_COUNT:2")
 
