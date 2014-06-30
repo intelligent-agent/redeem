@@ -10,11 +10,12 @@ License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 
 from GCodeCommand import GCodeCommand
 import logging
-from Path import Path, G92Path
+from Path import G92Path
+
 
 class G92(GCodeCommand):
 
-    def execute(self,g):
+    def execute(self, g):
         if g.num_tokens() == 0:
             logging.debug("Adding all to G92")
             g.set_tokens(["X0", "Y0", "Z0", "E0", "H0"])            # If no token is present, do this for all
@@ -23,7 +24,7 @@ class G92(GCodeCommand):
             axis = g.token_letter(i)                                # Get the axis, X, Y, Z or E
             pos[axis] = float(g.token_value(i))/1000.0              # Get the value, new position or vector             
         path = G92Path(pos, self.printer.feed_rate)                 # Make a path segment from the axes
-        self.printer.path_planner.add_path(path)  
+        self.printer.path_planner.add_path(path)
 
     def get_description(self):
         return "Set the current position of steppers without moving them"

@@ -10,10 +10,10 @@ License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 
 from GCodeCommand import GCodeCommand
 
+
 class M112(GCodeCommand):
 
-    def execute(self,g):
-        #FIXME: Really cancel everything!
+    def execute(self, g):
         self.printer.path_planner.emergency_interrupt()
 
     def get_description(self):
