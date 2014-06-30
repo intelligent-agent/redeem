@@ -18,3 +18,6 @@ class M112(GCodeCommand):
 
     def get_description(self):
         return "Cancel all the planned move in emergency."
+
+    def is_buffered(self):
+        return False

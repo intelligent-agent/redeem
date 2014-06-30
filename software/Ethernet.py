@@ -12,6 +12,7 @@ from threading import Thread
 import socket
 import logging
 import select
+from Gcode import Gcode
 
 size = 1024 
 
@@ -59,7 +60,12 @@ class Ethernet:
                 if not "\n" in line: # Make sure the whole line was read. 
                     break
                 message = line.strip("\n")
-                self.printer.commands.put({"message": message, "prot": "Eth"})
+                if len(message)>0:
+                    g = Gcode({"message": message, "prot": "Eth"})
+                    if self.printer.processor.is_buffered(g):
+                        self.printer.commands.put(g)
+                    else:
+                        self.printer.unbuffered_commands.put(g)
 
     # Send a message		
     def send_message(self, message):
