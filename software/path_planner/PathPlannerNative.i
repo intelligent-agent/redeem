@@ -262,6 +262,11 @@ public:
    */
   void setMaxJerk(float maxJerk, float maxZJerk);
 
+  void suspend();
+  
+  void resume();
+
+  void reset();
   
   virtual ~PathPlanner();
 

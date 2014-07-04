@@ -30,6 +30,8 @@ class PruTimer {
 		BlockDef(unsigned long id, unsigned long size, unsigned long totalTime) : id(id),size(size),totalTime(totalTime) {}
 	};
 	
+	std::string firmwareStepper, firmwareEndstop;
+	
 	/* Should be locked when used */
 	std::queue<BlockDef> blocksID;
 	size_t ddr_mem_used;
@@ -43,6 +45,7 @@ class PruTimer {
 	
 	uint8_t *ddr_write_location; //Next available write location
 	uint32_t* ddr_nr_events; //location of number of events returned by the PRU
+	uint32_t* pru_control;
 	
 	uint32_t currentNbEvents;
 	
@@ -56,6 +59,8 @@ class PruTimer {
 #ifdef DEMO_PRU
 	uint8_t *currentReadingAddress;
 #endif
+	
+	void initalizePRURegisters();
 	
 public:
 	PruTimer();
@@ -79,6 +84,12 @@ public:
 	}
 	
 	void waitUntilLowMoveTime(unsigned long lowMoveTimeTicks);
+	
+	void suspend();
+	
+	void resume();
+	
+	void reset();
 	
 	void push_block(uint8_t* blockMemory, size_t blockLen, unsigned int unit, unsigned int pathID, unsigned long totalTime);
 };

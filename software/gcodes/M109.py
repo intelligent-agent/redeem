@@ -12,9 +12,10 @@ from GCodeCommand import GCodeCommand
 import logging
 from Gcode import Gcode
 
+
 class M109(GCodeCommand):
 
-    def execute(self,g):
+    def execute(self, g):
         logging.debug("M109 tokens is '"+" ".join(g.get_tokens())+"'")
         m104 = Gcode({"message": "M104 "+" ".join(g.get_tokens()), "prot": g.prot})
         self.printer.processor.execute(m104)

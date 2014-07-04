@@ -54,6 +54,9 @@ PruTimer::PruTimer() {
 bool PruTimer::initPRU(const std::string &firmware_stepper, const std::string &firmware_endstops) {
 	std::unique_lock<std::mutex> lk(mutex_memory);
 	
+	firmwareStepper = firmware_stepper;
+	firmwareEndstop = firmware_endstops;
+	
 #ifdef DEMO_PRU
 	ddr_size=0x40000;
 	
@@ -68,7 +71,8 @@ bool PruTimer::initPRU(const std::string &firmware_stepper, const std::string &f
 	
 	ddr_write_location  = ddr_mem;
 	ddr_nr_events  = (uint32_t*)(ddr_mem+ddr_size-4);
-	ddr_mem_end = ddr_mem+ddr_size-4;
+	ddr_mem_end = ddr_mem+ddr_size-8;
+	pru_control = (uint32_t*)(ddr_mem+ddr_size-8);
 	
 	*((uint32_t*)ddr_write_location)=0; //So that the PRU waits
 	*ddr_nr_events = 0;
@@ -148,19 +152,10 @@ bool PruTimer::initPRU(const std::string &firmware_stepper, const std::string &f
 	
 	ddr_write_location  = ddr_mem;
 	ddr_nr_events  = (uint32_t*)(ddr_mem+ddr_size-4);
-	ddr_mem_end = ddr_mem+ddr_size-4;
+	ddr_mem_end = ddr_mem+ddr_size-8;
+	pru_control = (uint32_t*)(ddr_mem+ddr_size-8);
 	
-	*((uint32_t*)ddr_write_location)=0; //So that the PRU waits
-	*ddr_nr_events = 0;
-	
-	//Set DDR location for PRU
-	//pypruss.pru_write_memory(0, 0, [self.ddr_addr, self.ddr_nr_events, 0])
-	uint32_t ddrstartData[3];
-	ddrstartData[0] = (uint32_t)ddr_addr;
-	ddrstartData[1] = (uint32_t)(ddr_addr+ddr_size-4);
-	ddrstartData[2] = 0;
-	
-	prussdrv_pru_write_memory(PRUSS0_PRU0_DATARAM, 0, ddrstartData, sizeof(ddrstartData));
+	initalizePRURegisters();
 	
 	//bzero(ddr_mem, ddr_size);
 	
@@ -195,10 +190,54 @@ bool PruTimer::initPRU(const std::string &firmware_stepper, const std::string &f
 	return true;
 }
 
+void PruTimer::initalizePRURegisters() {
+	*((uint32_t*)ddr_write_location)=0; //So that the PRU waits
+	*ddr_nr_events = 0;
+	*pru_control = 0;
+	
+	//Set DDR location for PRU
+	//pypruss.pru_write_memory(0, 0, [self.ddr_addr, self.ddr_nr_events, 0])
+	uint32_t ddrstartData[3];
+	ddrstartData[0] = (uint32_t)ddr_addr;
+	ddrstartData[1] = (uint32_t)(ddr_addr+ddr_size-4);
+	ddrstartData[2] = (uint32_t)(ddr_addr+ddr_size-8); //PRU control register address
+	
+	prussdrv_pru_write_memory(PRUSS0_PRU0_DATARAM, 0, ddrstartData, sizeof(ddrstartData));
+	
+	
+}
+
 PruTimer::~PruTimer() {
 	
 }
 
+void PruTimer::reset() {
+	std::unique_lock<std::mutex> lk(mutex_memory);
+	
+	prussdrv_pru_disable(0);
+	prussdrv_pru_disable(1);
+	
+	initalizePRURegisters();
+	
+	/* Execute firmwares on PRU */
+    LOG( ("\tINFO: Starting stepper firmware on PRU0\r\n"));
+	unsigned int ret = prussdrv_exec_program (PRU_NUM0, firmwareStepper.c_str());
+	if(ret!=0) {
+		LOG( "[WARNING] Unable to execute firmware on PRU0" << std::endl);
+	}
+	
+    LOG( ("\tINFO: Starting endstop firmware on PRU1\r\n"));
+    ret=prussdrv_exec_program (PRU_NUM1, firmwareEndstop.c_str());
+	if(ret!=0) {
+		LOG( "[WARNING] Unable to execute firmware on PRU1" << std::endl);
+	}
+	
+	totalQueuedMovesTime = 0;
+	ddr_mem_used = 0;
+	currentNbEvents = 0;
+	
+	blocksID = std::queue<BlockDef>();
+}
 
 void PruTimer::runThread() {
 	stop=false;
@@ -245,7 +284,7 @@ void PruTimer::push_block(uint8_t* blockMemory, size_t blockLen, unsigned int un
 	if(!ddr_write_location) return;
 	
 	//Split the block in smaller blocks if needed
-	size_t nbBlocks = ceil((blockLen+12)/(float)(ddr_size-8));
+	size_t nbBlocks = ceil((blockLen+12)/(float)(ddr_size-12));
 	
 	size_t blockSize = blockLen / nbBlocks;
 	
@@ -277,7 +316,7 @@ void PruTimer::push_block(uint8_t* blockMemory, size_t blockLen, unsigned int un
 			//LOG( "Waiting for " << std::dec << currentBlockSize+12 << " bytes available. Currently: " << getFreeMemory() << std::endl);
 			
 			std::unique_lock<std::mutex> lk(mutex_memory);
-			blockAvailable.wait(lk, [this,currentBlockSize]{ return ddr_size-ddr_mem_used-4>=currentBlockSize+12 || stop; });
+			blockAvailable.wait(lk, [this,currentBlockSize]{ return ddr_size-ddr_mem_used-8>=currentBlockSize+12 || stop; });
 			
 			if(!ddr_mem || stop) return;
 			
@@ -577,4 +616,18 @@ void PruTimer::run() {
 		
 		blockAvailable.notify_all();
 	}
+}
+
+void PruTimer::suspend() {
+	//We lock it so that we are thread safe
+	std::unique_lock<std::mutex> lk(mutex_memory);
+
+	*pru_control = 1;
+}
+
+void PruTimer::resume() {
+	//We lock it so that we are thread safe
+	std::unique_lock<std::mutex> lk(mutex_memory);
+	
+	*pru_control = 0;
 }

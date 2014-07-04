@@ -694,6 +694,10 @@ void PathPlanner::waitUntilFinished() {
 	}
 }
 
+void PathPlanner::reset() {
+	pru.reset();
+}
+
 void PathPlanner::run() {
 	
 	bool waitUntilFilledUp = true;
@@ -738,7 +742,7 @@ void PathPlanner::run() {
 		
 		long cur_errupd=0;
 		uint8_t directionMask = 0; //0b000HEZYX
-		uint16_t optionMask;
+		uint8_t cancellableMask;
 		unsigned long vMaxReached;
         unsigned long timer_accel = 0;
 		unsigned long timer_decel = 0;
@@ -766,14 +770,21 @@ void PathPlanner::run() {
 			delete[] cur->commands;
 		}
 		cur->commands = new SteppersCommand[cur->stepsRemaining];
-		
-		optionMask = cur->isCancelable() ? 1 : 0;
-		
+
 		directionMask|=((uint8_t)cur->isXPositiveMove() << X_AXIS);
 		directionMask|=((uint8_t)cur->isYPositiveMove() << Y_AXIS);
 		directionMask|=((uint8_t)cur->isZPositiveMove() << Z_AXIS);
 		directionMask|=((uint8_t)cur->isEPositiveMove() << currentExtruder->stepperCommandPosition);
      
+		cancellableMask = 0;
+		
+		if(cur->isCancelable()) {
+			cancellableMask|=((uint8_t)cur->isXMove() << X_AXIS);
+			cancellableMask|=((uint8_t)cur->isYMove() << Y_AXIS);
+			cancellableMask|=((uint8_t)cur->isZMove() << Z_AXIS);
+			cancellableMask|=((uint8_t)cur->isEMove() << currentExtruder->stepperCommandPosition);
+		}
+		
 		assert(cur);
 		assert(cur->commands);
 		
@@ -782,7 +793,8 @@ void PathPlanner::run() {
 		for(unsigned int stepNumber=0; stepNumber<cur->stepsRemaining; stepNumber++){
 			SteppersCommand& cmd = cur->commands[stepNumber];
 			cmd.direction = directionMask;
-			cmd.options = optionMask;
+			cmd.cancellableMask = cancellableMask;
+			cmd.options = 0;
 			cmd.step = 0;
 			if(cur->isEMove())
 			{

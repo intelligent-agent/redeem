@@ -13,13 +13,15 @@ from GCodeCommand import GCodeCommand
 
 class M906(GCodeCommand):
 
-    def execute(self,g):
+    def execute(self, g):
         self.printer.path_planner.wait_until_done()
         
-        for i in range(g.num_tokens()):                             
-            axis = g.token_letter(i)                                
-            stepper = self.printer.steppers[axis] 
-            stepper.set_current_value(max(int(g.token_value(i)), 2500)/1000.0) # Cap at 2.5A and convert to A.
+        for i in range(g.num_tokens()):
+            axis = g.token_letter(i)
+            stepper = self.printer.steppers[axis]
+
+            # Cap at 2.5A and convert to A.
+            stepper.set_current_value(max(int(g.token_value(i)), 2500)/1000.0)
 
     def get_description(self):
         return "Set stepper current in mA"

@@ -11,6 +11,7 @@ License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 from threading import Thread
 import select
 import logging
+from Gcode import Gcode
 
 class USB:
     def __init__(self, printer):
@@ -28,8 +29,12 @@ class USB:
             ret = select.select( [self.tty],[],[], 1.0 )
     	    if ret[0] == [self.tty]:
                 message = self.tty.readline().strip("\n")
-                if len(message) > 0:  
-                    self.printer.commands.put({"message": message, "prot": "USB"})
+                if len(message) > 0: 
+                    g = Gcode({"message": message, "prot": "USB"})
+                    if self.printer.processor.is_buffered(g):
+                        self.printer.commands.put(g)
+                    else:
+                        self.printer.unbuffered_commands.put(g)
                 
 
     # Send a message		

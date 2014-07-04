@@ -11,9 +11,10 @@ License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 from GCodeCommand import GCodeCommand
 from Gcode import Gcode
 
+
 class M110(GCodeCommand):
 
-    def execute(self,g):
+    def execute(self, g):
         Gcode.line_number = 0
 
     def get_description(self):

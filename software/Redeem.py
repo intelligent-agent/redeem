@@ -22,7 +22,7 @@ import os.path
 import sys 
 import signal
 import sys
-
+from threading import Thread
 import profile
 
 from Mosfet import Mosfet
@@ -183,7 +183,10 @@ class Redeem:
             self.printer.coolers[0].enable()   
 
         # Make a queue of commands
-        self.printer.commands  = Queue.Queue(10)
+        self.printer.commands  = Queue.Queue(100)
+
+        # Make a queue of commands that should not be buffered
+        self.printer.unbuffered_commands  = Queue.Queue(100)
         
         # Init the path planner
         Path.axis_config = int(self.printer.config.get('Geometry', 'axis_config'))
@@ -233,6 +236,10 @@ class Redeem:
         self.printer.comms["testing_noret"] = Pipe(self.printer, "testing_noret")     # Pipe for testing
         self.printer.comms["testing_noret"].send_response = False     
 
+        self.unbuffer_thread = Thread(target=self.loop_unbuffered)
+        self.unbuffer_thread.daemon = True
+        
+
         self.running = True
 
         # Signal everything ready
@@ -240,15 +247,33 @@ class Redeem:
 	
     ''' When a new gcode comes in, excute it '''
     def loop(self):
+        
+        self.unbuffer_thread.start()
+
         try:
             while self.running:
                 try:
-                    gcode = Gcode(self.printer.commands.get(True,0.1))
+                    gcode = self.printer.commands.get(True,0.1)
                 except Queue.Empty as e:
                     continue
                 self._execute(gcode)
                 self.printer.reply(gcode)   
                 self.printer.commands.task_done()
+        except Exception as e:
+            logging.exception("Ooops: ")
+
+    ''' When a new unbuffered gcode comes in, excute it '''
+    def loop_unbuffered(self):
+        try:
+            while self.running:
+                try:
+                    gcode = self.printer.unbuffered_commands.get(True,0.1)
+                except Queue.Empty as e:
+                    continue
+                print "Excuting unbuffered "+str(gcode.code())
+                self._execute(gcode)
+                self.printer.reply(gcode)   
+                self.printer.unbuffered_commands.task_done()
         except Exception as e:
             logging.exception("Ooops: ")
 		
@@ -262,8 +287,6 @@ class Redeem:
         Stepper.commit()
 
         self.printer.path_planner.force_exit()
-
-        
 
     ''' Execute a G-code '''
     def _execute(self, g):  

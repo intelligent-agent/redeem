@@ -13,7 +13,7 @@ from GCodeCommand import GCodeCommand
 
 class M114(GCodeCommand):
 
-    def execute(self,g):
+    def execute(self, g):
         g.set_answer("ok C: "+' '.join('%s:%s' % i for i in self.printer.path_planner.get_current_pos().iteritems()))
 
     def get_description(self):
