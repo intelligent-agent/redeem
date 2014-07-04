@@ -42,8 +42,7 @@ class Pipe:
     	    if ret[0] == [self.fifo]:
                 message = self.readline_custom()
                 if len(message) > 0:        
-                    self.printer.commands.put({"message": message, "prot": self.prot})            
-                    logging.debug("Got message")
+                    self.printer.commands.put({"message": message, "prot": self.prot})                                
 
     def send_message(self, message):
         if self.send_response: 

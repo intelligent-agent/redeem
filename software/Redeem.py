@@ -175,6 +175,7 @@ class Redeem:
             f.set_value(0)
 
         # Connect the cold end 0 to fan 2
+        # This is very "Thing" specific, should be configurable somehow. 
         if len(self.printer.cold_ends):
             self.printer.coolers.append(Cooler(self.printer.cold_ends[0], self.printer.fans[2], "Cooler0", False))
             self.printer.coolers[0].ok_range = 4
@@ -182,7 +183,7 @@ class Redeem:
             self.printer.coolers[0].enable()   
 
         # Make a queue of commands
-        self.printer.commands  = Queue.Queue(100)
+        self.printer.commands  = Queue.Queue(10)
         
         # Init the path planner
         Path.axis_config = int(self.printer.config.get('Geometry', 'axis_config'))
