@@ -26,7 +26,7 @@ class GCodeCommand(object):
     
     ''' Return true if the command has to wait in the command buffer or false to be executed immediately '''
     def is_buffered(self):
-        return True
+        return False
 
     ''' The class name of the gcode '''
     def __str__(self):

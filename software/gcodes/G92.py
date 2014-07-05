@@ -28,3 +28,7 @@ class G92(GCodeCommand):
 
     def get_description(self):
         return "Set the current position of steppers without moving them"
+
+    def is_buffered(self):
+        return True
+

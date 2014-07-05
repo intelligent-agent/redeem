@@ -33,3 +33,7 @@ class G28(GCodeCommand):
 
     def get_description(self):
         return "Move the steppers to their homing position (and find it as well)"
+
+    def is_buffered(self):
+        return True
+

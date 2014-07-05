@@ -33,6 +33,9 @@ class G0(GCodeCommand):
     def get_description(self):
         return "Control the printer head position as well as the currently selected tool."
 
+    def is_buffered(self):
+        return True
+
 
 class G1(G0):
     pass

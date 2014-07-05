@@ -32,6 +32,9 @@ class Heater(object):
         self.onoff_control = onoff_control #If we use PID or ON/OFF control
         self.ok_range = 4.0
 
+        self.current_time = time.time()
+        self.prev_time = time.time()
+
     ''' Set the desired temperature of the extruder '''
     def set_target_temperature(self, temp):
         self.target_temp = float(temp)
@@ -94,7 +97,11 @@ class Heater(object):
             # If the Thermistor is disconnected or running away or something
             if self.current_temp <= 5 or self.current_temp > 250:
                 power = 0
-            self.mosfet.set_power(power)            		 
+            self.mosfet.set_power(power)
+            #if self.name == "Ext2":
+            #logging.debug(self.name + " temp: "+str(self.current_temp)+" time delta: "+str(self.current_time-self.prev_time))
+            self.prev_time = self.current_time
+            self.current_time = time.time()
             time.sleep(1)
         self.disabled = True
 
