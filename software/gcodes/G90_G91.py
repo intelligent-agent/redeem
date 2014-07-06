@@ -15,18 +15,27 @@ from Path import Path
 class G90(GCodeCommand):
 
     def execute(self, g):
+        self.printer.path_planner.wait_until_done()
         self.printer.movement = Path.ABSOLUTE
 
 
     def get_description(self):
         return "Set movement mode to absolute"
 
+    def is_buffered(self):
+        return True
+
 
 class G91(GCodeCommand):
 
     def execute(self, g):
+        self.printer.path_planner.wait_until_done()
         self.printer.movement = Path.RELATIVE
 
 
     def get_description(self):
         return "Set movement mode to relative"
+
+    def is_buffered(self):
+        return True
+

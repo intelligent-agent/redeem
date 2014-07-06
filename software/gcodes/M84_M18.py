@@ -29,6 +29,9 @@ class M18(GCodeCommand):
     def get_description(self):
         return "Disable all steppers. No more current is applied to the stepper motors after this command."
 
+    def is_buffered(self):
+        return True
+
 
 class M84(M18):
     pass
