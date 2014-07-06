@@ -372,7 +372,7 @@ void PruTimer::push_block(uint8_t* blockMemory, size_t blockLen, unsigned int un
 				
 				assert(maxSize>0);
 				unsigned long t = currentBlockSize-maxSize > 0 ? totalTime/2 : totalTime;
-				blocksID.emplace(BlockDef(maxSize+4,t)); //FIXME: TotalTime is not /2 but doesn't it to be precise to make it work...
+				blocksID.emplace(maxSize+4,t); //FIXME: TotalTime is not /2 but doesn't it to be precise to make it work...
 				
 				ddr_mem_used+=maxSize+4;
 				totalQueuedMovesTime += t;
@@ -435,7 +435,7 @@ void PruTimer::push_block(uint8_t* blockMemory, size_t blockLen, unsigned int un
 					assert(remainingSize == (remainingSize/unit)*unit);
 
 					
-					blocksID.emplace(BlockDef(remainingSize+4,totalTime-t)); //FIXME: TotalTime is not /2 but doesn't it to be precise to make it work...
+					blocksID.emplace(remainingSize+4,totalTime-t); //FIXME: TotalTime is not /2 but doesn't it to be precise to make it work...
 					
 					ddr_mem_used+=remainingSize+4;
 					totalQueuedMovesTime += totalTime-t;
@@ -481,7 +481,7 @@ void PruTimer::push_block(uint8_t* blockMemory, size_t blockLen, unsigned int un
 				
 			} else {
 				
-				blocksID.emplace(BlockDef(currentBlockSize+4,totalTime)); //FIXME: TotalTime is not /2 but doesn't it to be precise to make it work...
+				blocksID.emplace(currentBlockSize+4,totalTime); //FIXME: TotalTime is not /2 but doesn't it to be precise to make it work...
 				
 				ddr_mem_used+=currentBlockSize+4;
 				totalQueuedMovesTime += totalTime;
