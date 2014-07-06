@@ -20,3 +20,6 @@ class M141(GCodeCommand):
 
     def get_description(self):
         return "Set fan power and PWM frequency"
+
+    def is_buffered(self):
+        return True

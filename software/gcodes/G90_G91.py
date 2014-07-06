@@ -21,6 +21,9 @@ class G90(GCodeCommand):
     def get_description(self):
         return "Set movement mode to absolute"
 
+    def is_buffered(self):
+        return True
+
 
 class G91(GCodeCommand):
 
@@ -30,3 +33,6 @@ class G91(GCodeCommand):
 
     def get_description(self):
         return "Set movement mode to relative"
+
+    def is_buffered(self):
+        return True

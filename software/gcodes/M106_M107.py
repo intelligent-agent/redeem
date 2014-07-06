@@ -23,7 +23,7 @@ class M106(GCodeCommand):
         return "Set the current fan power. Specify S parameter for the power (between 0 and 255) and the P parameter for the fan number. P=0 and S=255 by default."
 
     def is_buffered(self):
-        return False
+        return True
 
 class M107(GCodeCommand):
 
@@ -36,4 +36,4 @@ class M107(GCodeCommand):
         return "Turn off the specified fan. Specify the P parameter for the fan number. P=0 by default."
 
     def is_buffered(self):
-        return False
+        return True

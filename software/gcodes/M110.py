@@ -19,3 +19,6 @@ class M110(GCodeCommand):
 
     def get_description(self):
         return "Reset GCode line counter"
+
+    def is_buffered(self):
+        return True
