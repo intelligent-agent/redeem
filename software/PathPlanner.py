@@ -150,6 +150,8 @@ class PathPlanner:
             self.native_planner.queueMove(tuple(start),tuple(end), new.speed, bool(new.cancelable), True if new.movement != Path.RELATIVE else False)
 
         self.prev = new
+        self.prev.unlink() # We don't want to store the entire print 
+                           # in memory, so we keep only the last path.
 
     def set_extruder(self, ext_nr):
         if ext_nr in [0, 1]:

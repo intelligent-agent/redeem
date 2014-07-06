@@ -23,7 +23,8 @@ import sys
 import signal
 import sys
 from threading import Thread
-from multiprocessing import Process, Queue, JoinableQueue
+from multiprocessing import Process, JoinableQueue
+import Queue
 import profile
 
 from Mosfet import Mosfet
@@ -251,6 +252,8 @@ class Redeem:
         # Start the two processes
         p0 = Thread(target=self.loop, args=(self.printer.commands,"buffered"))
         p1 = Thread(target=self.loop, args=(self.printer.unbuffered_commands,"unbuffered"))
+        p0.daemon = True
+        p1.daemon = True
 
         p0.start()
         p1.start()
@@ -266,7 +269,11 @@ class Redeem:
     def loop(self, queue, name):
         try:
             while self.running:
-                gcode = queue.get(True)
+                try:
+                    gcode = queue.get(True,0.1)
+                except Queue.Empty:
+                    continue
+
                 logging.debug("Executing "+gcode.code()+" from "+name)
                 self._execute(gcode)
                 self.printer.reply(gcode)   
