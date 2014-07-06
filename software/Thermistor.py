@@ -26,9 +26,10 @@ class Thermistor:
         self.name = name
         self.temp_table = np.array(temp_chart[chart_name]).transpose()
 	
+    ''' Return the temperature in degrees celcius '''
     def getTemperature(self):	
-        """ Return the temperature in degrees celcius """
-        Thermistor.mutex.acquire()
+        
+        #Thermistor.mutex.acquire()
         voltage = 0
         aquisitions = 0
         for i in xrange(10):           
@@ -38,8 +39,8 @@ class Thermistor:
                     aquisitions += 1
                 except IOError as e:
                     logging.error("Unable to get ADC value for the {2}. time ({0}): {1}".format(e.errno, e.strerror, i))        
-                time.sleep(0.05)                                          
-        Thermistor.mutex.release()
+                #time.sleep(0.05)                                          
+        #Thermistor.mutex.release()
         if aquisitions == 0:
             return -1.0
         voltage /= aquisitions

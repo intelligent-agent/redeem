@@ -8,17 +8,16 @@ License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 '''
 
 from abc import ABCMeta, abstractmethod
-import logging
+
 
 class GCodeCommand(object):
     __metaclass__ = ABCMeta
     
     def __init__(self, printer):
-        self.printer=printer
-
+        self.printer = printer
 
     @abstractmethod
-    def execute(self,gcode):
+    def execute(self, gcode):
         pass
 
     @abstractmethod
@@ -27,9 +26,8 @@ class GCodeCommand(object):
     
     ''' Return true if the command has to wait in the command buffer or false to be executed immediately '''
     def is_buffered(self):
-        return True
+        return False
 
     ''' The class name of the gcode '''
     def __str__(self):
         return type(self).__name__
-

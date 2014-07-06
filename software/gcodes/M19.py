@@ -10,12 +10,13 @@ License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 
 from GCodeCommand import GCodeCommand
 
+
 class M19(GCodeCommand):
 
-    def execute(self,g):
+    def execute(self, g):
         self.printer.path_planner.wait_until_done()
         for name, stepper in self.printer.steppers.iteritems():
-            stepper.reset() 
+            stepper.reset()
 
     def get_description(self):
         return "Reset the stepper controllers"

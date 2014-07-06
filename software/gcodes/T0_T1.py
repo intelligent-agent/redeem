@@ -10,9 +10,10 @@ License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 
 from GCodeCommand import GCodeCommand
 
+
 class T0(GCodeCommand):
 
-    def execute(self,g):
+    def execute(self, g):
         self.printer.path_planner.set_extruder(0)
         self.printer.current_tool = "E"
 
@@ -21,7 +22,7 @@ class T0(GCodeCommand):
 
 class T1(GCodeCommand):
 
-    def execute(self,g):
+    def execute(self, g):
         self.printer.path_planner.set_extruder(1)
         self.printer.current_tool = "H"
 
@@ -30,7 +31,7 @@ class T1(GCodeCommand):
 
 class T2(GCodeCommand):
 
-    def execute(self,g):
+    def execute(self, g):
         self.printer.path_planner.set_extruder(2)
         self.printer.current_tool = "A"
 

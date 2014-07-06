@@ -11,9 +11,10 @@ License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 from GCodeCommand import GCodeCommand
 from Gcode import Gcode
 
+
 class M190(GCodeCommand):
 
-    def execute(self,g):
+    def execute(self, g):
         self.printer.heaters['HBP'].set_target_temperature(float(g.get_value_by_letter("S")))
         self.printer.processor.execute(Gcode({"message": "M116", "prot": g.prot}))
 

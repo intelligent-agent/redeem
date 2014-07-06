@@ -10,16 +10,19 @@ License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 
 from GCodeCommand import GCodeCommand
 
+
 class M101(GCodeCommand):
 
-    def execute(self,g):
+    def execute(self, g):
         pass
 
     def get_description(self):
         return "Deprecated"
 
+
 class M103(M101):
-	pass
+    pass
+
 
 class M108(M101):
-	pass
+    pass

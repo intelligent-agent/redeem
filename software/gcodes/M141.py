@@ -13,7 +13,7 @@ from GCodeCommand import GCodeCommand
 
 class M141(GCodeCommand):
 
-    def execute(self,g):
+    def execute(self, g):
         fan = self.printer.fans[int(g.get_value_by_letter("P"))]
         fan.set_PWM_frequency(int(g.get_value_by_letter("F")))
         fan.set_value(float(g.get_value_by_letter("S")))

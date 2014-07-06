@@ -14,7 +14,7 @@ version = "0.13.0~Scavenger Hunt"
 
 from math import sqrt
 import time
-import Queue 
+import Queue as que
 import logging
 import traceback
 import os
@@ -23,6 +23,7 @@ import sys
 import signal
 import sys
 from threading import Thread
+from multiprocessing import Process, Queue, JoinableQueue
 import profile
 
 from Mosfet import Mosfet
@@ -175,6 +176,7 @@ class Redeem:
             f.set_value(0)
 
         # Connect the cold end 0 to fan 2
+        # This is very "Thing" specific, should be configurable somehow. 
         if len(self.printer.cold_ends):
             self.printer.coolers.append(Cooler(self.printer.cold_ends[0], self.printer.fans[2], "Cooler0", False))
             self.printer.coolers[0].ok_range = 4
@@ -182,10 +184,10 @@ class Redeem:
             self.printer.coolers[0].enable()   
 
         # Make a queue of commands
-        self.printer.commands  = Queue.Queue(100)
+        self.printer.commands  = JoinableQueue(100)
 
         # Make a queue of commands that should not be buffered
-        self.printer.unbuffered_commands  = Queue.Queue(100)
+        self.printer.unbuffered_commands  = JoinableQueue(100)
         
         # Init the path planner
         Path.axis_config = int(self.printer.config.get('Geometry', 'axis_config'))
@@ -211,7 +213,12 @@ class Redeem:
         dirname = os.path.dirname(os.path.realpath(__file__))
 
         # Create the firmware compiler
-        pru_firmware = PruFirmware(dirname+"/../firmware/firmware_runtime.p",dirname+"/../firmware/firmware_runtime.bin",dirname+"/../firmware/firmware_endstops.p",dirname+"/../firmware/firmware_endstops.bin",self.revision,self.printer.config,"/usr/bin/pasm")
+        pru_firmware = PruFirmware(
+            dirname+"/../firmware/firmware_runtime.p",
+            dirname+"/../firmware/firmware_runtime.bin",
+            dirname+"/../firmware/firmware_endstops.p",
+            dirname+"/../firmware/firmware_endstops.bin",
+            self.revision,self.printer.config,"/usr/bin/pasm")
 
         self.printer.acceleration = float(self.printer.config.get('Steppers', 'acceleration'))
         self.printer.path_planner = PathPlanner(self.printer, pru_firmware)
@@ -235,46 +242,38 @@ class Redeem:
         self.printer.comms["testing_noret"] = Pipe(self.printer, "testing_noret")     # Pipe for testing
         self.printer.comms["testing_noret"].send_response = False     
 
-        self.unbuffer_thread = Thread(target=self.loop_unbuffered)
-        self.unbuffer_thread.daemon = True
+        #self.unbuffer_thread = Thread(target=self.loop_unbuffered)
+        #self.unbuffer_thread.daemon = True
         
 
         self.running = True
 
+        # Start the two processes
+        p0 = Thread(target=self.loop, args=(self.printer.commands,"buffered"))
+        p1 = Thread(target=self.loop, args=(self.printer.unbuffered_commands,"unbuffered"))
+
+        p0.start()
+        p1.start()
+
         # Signal everything ready
         logging.info("Redeem ready")
 	
+        # Wait for exit signal
+        p0.join()
+        p1.join()
+
     ''' When a new gcode comes in, excute it '''
-    def loop(self):
-        
-        self.unbuffer_thread.start()
-
+    def loop(self, queue, name):
         try:
             while self.running:
-                try:
-                    gcode = self.printer.commands.get(True,0.1)
-                except Queue.Empty as e:
-                    continue
+                gcode = queue.get(True)
+                logging.debug("Executing "+gcode.code()+" from "+name)
                 self._execute(gcode)
                 self.printer.reply(gcode)   
-                self.printer.commands.task_done()
+                queue.task_done()
         except Exception as e:
             logging.exception("Ooops: ")
 
-    ''' When a new unbuffered gcode comes in, excute it '''
-    def loop_unbuffered(self):
-        try:
-            while self.running:
-                try:
-                    gcode = self.printer.unbuffered_commands.get(True,0.1)
-                except Queue.Empty as e:
-                    continue
-                print "Excuting unbuffered "+str(gcode.code())
-                self._execute(gcode)
-                self.printer.reply(gcode)   
-                self.printer.unbuffered_commands.task_done()
-        except Exception as e:
-            logging.exception("Ooops: ")
 		
     def exit(self):
         self.running = False
