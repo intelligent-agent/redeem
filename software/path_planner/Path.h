@@ -309,6 +309,7 @@ private:
 	
 	
 	SteppersCommand *commands;
+	size_t commandBufferSize;
 	
 public:
 	

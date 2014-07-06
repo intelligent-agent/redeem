@@ -29,7 +29,9 @@
 #include <assert.h>
 #include <thread>
 
-
+#ifdef BUILD_PYTHON_EXT
+#include <Python.h>
+#endif
 
 void Extruder::setMaxFeedrate(float rate){
 	//here the target unit is mm/s, we need to convert from m/s to mm/s
@@ -164,6 +166,10 @@ PathPlanner::PathPlanner() {
 void PathPlanner::queueMove(float startPos[NUM_AXIS],float endPos[NUM_AXIS],float speed, bool cancelable, bool optimize) {
     float axis_diff[NUM_AXIS]; // Axis movement in mm
 
+#ifdef BUILD_PYTHON_EXT
+	Py_BEGIN_ALLOW_THREADS
+#endif
+	
 	// wait for the worker
     {
         std::unique_lock<std::mutex> lk(line_mutex);
@@ -171,15 +177,14 @@ void PathPlanner::queueMove(float startPos[NUM_AXIS],float endPos[NUM_AXIS],floa
         lineAvailable.wait(lk, [this]{return linesCount<MOVE_CACHE_SIZE || stop;});
     }
 	
+#ifdef BUILD_PYTHON_EXT
+	Py_END_ALLOW_THREADS
+#endif
+	
 	if(stop) 
         return;
 	
 	Path *p = &lines[linesWritePos];
-
-	if(p->commands) {
-		delete[] p->commands;
-		p->commands=NULL;
-	}
 	
 	memcpy(p->startPos, startPos, sizeof(float)*NUM_AXIS);
 	memcpy(p->endPos, endPos, sizeof(float)*NUM_AXIS);
@@ -198,7 +203,6 @@ void PathPlanner::queueMove(float startPos[NUM_AXIS],float endPos[NUM_AXIS],floa
 	p->speed = speed*1000; //Speed is in m/s
     p->joinFlags = 0;
 	p->flags = 0;
-	p->commands=NULL;
 	p->setCancelable(cancelable);
 	
 	p->setWaitMS(optimize ? PRINT_MOVE_BUFFER_WAIT : 0);
@@ -670,15 +674,15 @@ void PathPlanner::stopThread(bool join) {
 }
 
 PathPlanner::~PathPlanner() {
+	if(runningThread.joinable()) {
+		stopThread(true);
+	}
+	
 	for(unsigned i = 0;i<MOVE_CACHE_SIZE;i++) {
 		if(lines[i].commands) {
 			delete[] lines[i].commands;
 			lines[i].commands=NULL;
 		}
-	}
-	
-	if(runningThread.joinable()) {
-		stopThread(true);
 	}
 }
 
@@ -766,11 +770,17 @@ void PathPlanner::run() {
 		vMaxReached = cur->vStart;
 		
 		//Determine direction of movement,check if endstop was hit
-		if(cur->commands) {
+		if(cur->commands && (cur->commandBufferSize<cur->stepsRemaining || (cur->commandBufferSize-cur->stepsRemaining)>1024*1024)) { //Delete the buffer if the delta in MB is more than commandSize.
 			delete[] cur->commands;
+			cur->commandBufferSize = 0;
+			cur->commands = NULL;
 		}
-		cur->commands = new SteppersCommand[cur->stepsRemaining];
-
+		
+		if(!cur->commands) {
+			cur->commands = new SteppersCommand[cur->stepsRemaining];
+			cur->commandBufferSize = cur->stepsRemaining;
+		}
+		
 		directionMask|=((uint8_t)cur->isXPositiveMove() << X_AXIS);
 		directionMask|=((uint8_t)cur->isYPositiveMove() << Y_AXIS);
 		directionMask|=((uint8_t)cur->isZPositiveMove() << Z_AXIS);

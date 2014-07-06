@@ -262,10 +262,15 @@ void PruTimer::stopThread(bool join) {
     prussdrv_exit ();
 	
 	if(ddr_mem) {
+#ifdef DEMO_PRU
+		free(ddr_mem);
+		ddr_mem = NULL;
+#else
 		munmap(ddr_mem, ddr_size);
 		close(mem_fd);
-		ddr_mem = 0;
+		ddr_mem = NULL;
 		mem_fd=-1;
+#endif
 	}
     
 	LOG( "PRU disabled, DDR released, FD closed." << std::endl);
@@ -367,7 +372,7 @@ void PruTimer::push_block(uint8_t* blockMemory, size_t blockLen, unsigned int un
 				
 				assert(maxSize>0);
 				unsigned long t = currentBlockSize-maxSize > 0 ? totalTime/2 : totalTime;
-				blocksID.emplace(BlockDef(pathID,maxSize+4,t)); //FIXME: TotalTime is not /2 but doesn't it to be precise to make it work...
+				blocksID.emplace(BlockDef(maxSize+4,t)); //FIXME: TotalTime is not /2 but doesn't it to be precise to make it work...
 				
 				ddr_mem_used+=maxSize+4;
 				totalQueuedMovesTime += t;
@@ -430,7 +435,7 @@ void PruTimer::push_block(uint8_t* blockMemory, size_t blockLen, unsigned int un
 					assert(remainingSize == (remainingSize/unit)*unit);
 
 					
-					blocksID.emplace(BlockDef(pathID,remainingSize+4,totalTime-t)); //FIXME: TotalTime is not /2 but doesn't it to be precise to make it work...
+					blocksID.emplace(BlockDef(remainingSize+4,totalTime-t)); //FIXME: TotalTime is not /2 but doesn't it to be precise to make it work...
 					
 					ddr_mem_used+=remainingSize+4;
 					totalQueuedMovesTime += totalTime-t;
@@ -476,7 +481,7 @@ void PruTimer::push_block(uint8_t* blockMemory, size_t blockLen, unsigned int un
 				
 			} else {
 				
-				blocksID.emplace(BlockDef(pathID,currentBlockSize+4,totalTime)); //FIXME: TotalTime is not /2 but doesn't it to be precise to make it work...
+				blocksID.emplace(BlockDef(currentBlockSize+4,totalTime)); //FIXME: TotalTime is not /2 but doesn't it to be precise to make it work...
 				
 				ddr_mem_used+=currentBlockSize+4;
 				totalQueuedMovesTime += totalTime;
@@ -599,7 +604,7 @@ void PruTimer::run() {
 				
 				assert(ddr_mem_used<ddr_size);
 				
-				LOG( "Block of size " << std::dec << front.size << " with ID " << front.id << " and time " << front.totalTime << " done." << std::endl);
+				LOG( "Block of size " << std::dec << front.size << " and time " << front.totalTime << " done." << std::endl);
 
 				blocksID.pop();
 				
