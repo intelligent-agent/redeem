@@ -24,10 +24,9 @@ class PruTimer {
 	
 	class BlockDef{
 	public:
-		unsigned long id;
 		unsigned long size;
 		unsigned long totalTime;
-		BlockDef(unsigned long id, unsigned long size, unsigned long totalTime) : id(id),size(size),totalTime(totalTime) {}
+		BlockDef(unsigned long size, unsigned long totalTime) : size(size),totalTime(totalTime) {}
 	};
 	
 	std::string firmwareStepper, firmwareEndstop;

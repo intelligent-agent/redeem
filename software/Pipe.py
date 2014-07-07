@@ -45,7 +45,7 @@ class Pipe:
                 if len(message)>0:
                     g = Gcode({"message": message, "prot": self.prot})
                     if self.printer.processor.is_buffered(g):
-                        logging.debug("Adding buffered from "+g.prot)
+                        #logging.debug("Adding buffered from "+g.prot)
                         self.printer.commands.put(g)
                     else:
                         #logging.debug("Adding un-buffered from "+g.prot)

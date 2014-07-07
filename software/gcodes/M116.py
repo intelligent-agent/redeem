@@ -38,3 +38,6 @@ class M116(GCodeCommand):
 
     def get_description(self):
         return "Wait for all temperature to be reached"
+
+    def is_buffered(self):
+        return True

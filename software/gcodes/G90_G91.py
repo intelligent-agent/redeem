@@ -38,4 +38,3 @@ class G91(GCodeCommand):
 
     def is_buffered(self):
         return True
-
