@@ -15,6 +15,7 @@ from Path import Path
 class G90(GCodeCommand):
 
     def execute(self, g):
+        self.printer.path_planner.wait_until_done()
         self.printer.movement = Path.ABSOLUTE
 
 
@@ -28,6 +29,7 @@ class G90(GCodeCommand):
 class G91(GCodeCommand):
 
     def execute(self, g):
+        self.printer.path_planner.wait_until_done()
         self.printer.movement = Path.RELATIVE
 
 
