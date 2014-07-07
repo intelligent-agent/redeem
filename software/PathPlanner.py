@@ -100,8 +100,8 @@ class PathPlanner:
     def resume(self):
         self.native_planner.resume()
 
-    ''' Home the given axis using endstops (min) '''
-    def home(self,axis):
+    ''' Private method for homing a set or a single axis '''
+    def _home_internal(self, axis):
 
         logging.debug("homing "+str(axis))
 
@@ -121,7 +121,7 @@ class PathPlanner:
             path_zero[a] = 0
             speed = min(speed, Path.home_speed[Path.axis_to_index(a)])
 
-        # Move until endstop is hit
+         # Move until endstop is hit
         p = RelativePath(path_back, speed, self.printer.acceleration, True)
         
         self.add_path(p)
@@ -135,6 +135,18 @@ class PathPlanner:
         self.add_path(p)
         self.wait_until_done()
         logging.debug("homing done for "+str(axis))
+
+    ''' Home the given axis using endstops (min) '''
+    def home(self, axis):
+
+        logging.debug("homing "+str(axis))
+
+        # Home axis for core X,Y and H-Belt independently to avoid hardware dammages.
+        if Path.axis_config == Path.AXIS_CONFIG_CORE_XY or Path.axis_config == Path.AXIS_CONFIG_H_BELT:
+            for a in axis:
+                self._home_internal(a)
+        else:
+            self._home_internal(axis)
 
     ''' Add a path segment to the path planner '''        
     def add_path(self, new):   
