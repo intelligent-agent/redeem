@@ -270,7 +270,7 @@ class Redeem:
         try:
             while self.running:
                 try:
-                    gcode = queue.get(True,0.1)
+                    gcode = queue.get(True,1)
                 except Queue.Empty:
                     continue
 
