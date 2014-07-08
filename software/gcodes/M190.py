@@ -20,3 +20,6 @@ class M190(GCodeCommand):
 
     def get_description(self):
         return "Set heated bed temperature and wait for it to be reached"
+
+    def is_buffered(self):
+        return True

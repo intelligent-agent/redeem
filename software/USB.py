@@ -32,10 +32,8 @@ class USB:
                 if len(message) > 0: 
                     g = Gcode({"message": message, "prot": "USB"})
                     if self.printer.processor.is_buffered(g):
-                        #logging.debug("Adding buffered from "+g.prot)
                         self.printer.commands.put(g)
                     else:
-                        #logging.debug("Adding un-buffered from "+g.prot)
                         self.printer.unbuffered_commands.put(g)
                 
 

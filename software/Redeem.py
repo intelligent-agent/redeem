@@ -10,7 +10,7 @@ License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 Minor verion tag is Arhold Schwartsnegger movies chronologically. 
 '''
 
-version = "0.13.0~Scavenger Hunt"
+version = "0.14.0~Conan the Barbarian"
 
 from math import sqrt
 import time
@@ -185,10 +185,10 @@ class Redeem:
             self.printer.coolers[0].enable()   
 
         # Make a queue of commands
-        self.printer.commands  = JoinableQueue(100)
+        self.printer.commands  = JoinableQueue(10)
 
         # Make a queue of commands that should not be buffered
-        self.printer.unbuffered_commands  = JoinableQueue(100)
+        self.printer.unbuffered_commands  = JoinableQueue(10)
         
         # Init the path planner
         Path.axis_config = int(self.printer.config.get('Geometry', 'axis_config'))
@@ -243,10 +243,6 @@ class Redeem:
         self.printer.comms["testing_noret"] = Pipe(self.printer, "testing_noret")     # Pipe for testing
         self.printer.comms["testing_noret"].send_response = False     
 
-        #self.unbuffer_thread = Thread(target=self.loop_unbuffered)
-        #self.unbuffer_thread.daemon = True
-        
-
         self.running = True
 
         # Start the two processes
@@ -274,7 +270,7 @@ class Redeem:
                 except Queue.Empty:
                     continue
 
-                logging.debug("Executing "+gcode.code()+" from "+name)
+                #logging.debug("Executing "+gcode.code()+" from "+name)
                 self._execute(gcode)
                 self.printer.reply(gcode)   
                 queue.task_done()
@@ -298,21 +294,11 @@ class Redeem:
         if g.message == "ok" or g.code()=="ok" or g.code()=="No-Gcode":
             g.set_answer(None)
             return
-        #logging.debug("Processing "+str(g.code()))
         self.printer.processor.execute(g)
-        #logging.debug("Done processing "+str(g.code()))
 
     ''' An endStop has been hit '''
     def end_stop_hit(self, endstop):
         logging.warning("End Stop " + endstop.name +" hit!")
-
-def signal_handler(signal, frame):
-        print 'Cleaning up...'
-        logging.info("KTHNXBYE!")
-        r.exit()
-        sys.exit(0)
-
-signal.signal(signal.SIGINT, signal_handler)
 
 r = Redeem()
 r.loop()

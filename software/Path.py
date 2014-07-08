@@ -42,25 +42,6 @@ class Path:
     matrix_XY       = np.matrix('-0.5 0.5; -0.5 -0.5')    
     matrix_XY_inv   = np.linalg.inv(matrix_XY)
 
-    # Delta printer variables
-    delta_R          = 0.2
-    delta_Ls         = 0.1**2
-    delta_Hcz        = 0.01
-
-    e = 26.0
-    f = 69.0
-    re = 128.0
-    rf = 88.0
- 
-    # Trigonometric constants
-    s = 165*2
-    sqrt3 = np.sqrt(3.0)
-    sin120 = sqrt3 / 2.0
-    cos120 = -0.5
-    tan60 = sqrt3
-    sin30 = 0.5
-    tan30 = 1.0 / sqrt3
-
     axis_config = AXIS_CONFIG_XY # Default config is normal cartesian XY
     max_speeds  = np.ones(NUM_AXES)
     min_speed   = 0.005

@@ -98,8 +98,8 @@ class Heater(object):
             if self.current_temp <= 5 or self.current_temp > 250:
                 power = 0
             self.mosfet.set_power(power)
-            #if self.name == "Ext2":
-            #logging.debug(self.name + " temp: "+str(self.current_temp)+" time delta: "+str(self.current_time-self.prev_time))
+            if self.current_time-self.prev_time > 2:
+                logging.warning("Heater time update large: "+self.name + " temp: "+str(self.current_temp)+" time delta: "+str(self.current_time-self.prev_time))
             self.prev_time = self.current_time
             self.current_time = time.time()
             time.sleep(1)
