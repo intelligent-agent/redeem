@@ -28,8 +28,9 @@ Make sure gcc, swig, python-dev, binutils and g++ is installed before compiling 
 Compile the native path planner module:  
   cd /usr/src/redeem/software/path_planner  
   python setup.py install  
+  chmod +x /usr/src/redeem/software/Redeem.py
   
 On systemd distros, use the redeem service:  
   cp /usr/src/redeem/systemd/redeem.service /lib/systemd/system/redeem.service  
   systemctl enable redeem  
-  systemctl start redeem  
+  systemctl start redeem
