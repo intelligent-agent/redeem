@@ -39,7 +39,7 @@ class Path:
 
     # Precalculate the CoreXY matrix
     # TODO: This is the wrong transformation 
-    matrix_XY       = np.matrix('-0.5 0.5; -0.5 -0.5')    
+    matrix_XY       = np.matrix('1.0 0.0; 0.0 1.0')    
     matrix_XY_inv   = np.linalg.inv(matrix_XY)
 
     axis_config = AXIS_CONFIG_XY # Default config is normal cartesian XY
@@ -139,13 +139,13 @@ class AbsolutePath(Path):
 
         # Compute stepper translation
         vec            = self.transform_vector(self.vec)
-        num_steps      = np.ceil(np.abs(vec) * Path.steps_pr_meter)        
+        num_steps      = np.ceil(np.abs(vec) * Path.steps_pr_meter)
+        self.num_steps = num_steps
         self.delta     = np.sign(vec)*num_steps/Path.steps_pr_meter
         vec            = self.reverse_transform_vector(self.delta)
 
         # Set stepper and true posision
         self.end_pos            = self.start_pos + vec
-        self.stepper_end_pos    = self.start_pos + self.delta
 
         prev.next = self
               
@@ -171,14 +171,12 @@ class RelativePath(Path):
 
         # Compute stepper translation
         vec            = self.transform_vector(self.vec, self.start_pos)
-        num_steps      = np.ceil(np.abs(vec) * Path.steps_pr_meter)        
-        stepper_vec    = np.sign(vec)*num_steps/Path.steps_pr_meter
-        vec            = self.reverse_transform_vector(stepper_vec)
+        self.num_steps = np.ceil(np.abs(vec) * Path.steps_pr_meter)        
+        self.delta     = np.sign(vec)*self.num_steps/Path.steps_pr_meter
+        vec            = self.reverse_transform_vector(self.delta)
 
         # Set stepper and true posision
         self.end_pos            = self.start_pos + vec
-        self.stepper_end_pos    = self.start_pos + stepper_vec
-
 
 ''' A reset axes path segment. No movement occurs, only global position setting '''
 class G92Path(Path):
@@ -202,28 +200,5 @@ class G92Path(Path):
             if axis in self.axes:
                 self.end_pos[index] = self.axes[axis]
         self.vec = np.zeros(Path.NUM_AXES)
-
-
-
-'''
-theta = [0, 0, 0]
-            status = self.angle_yz(vec[0],vec[1],vec[2])
-            logging.debug(status) 
-            if status[0] == 0:
-                theta[0] = status[1]
-                status = self.angle_yz(vec[0]*Path.cos120 + vec[1]*Path.sin120, 
-                vec[1]*Path.cos120-vec[0]*Path.sin120,
-                vec[2],
-                theta[1])
-            if status[0] == 0:
-                theta[1] = status[1]
-                status = self.angle_yz(vec[0]*Path.cos120 - vec[1]*Path.sin120,
-                vec[1]*Path.cos120 + vec[0]*Path.sin120,
-                vec[2],
-                theta[2])            
-            theta[2] = status[1]
-            ret_vec[:3] = theta
-'''
-
 
 

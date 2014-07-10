@@ -156,10 +156,8 @@ class PathPlanner:
 
         if not new.is_G92():
             #push this new segment
-            start = new.start_pos[:4]
-            end = new.stepper_end_pos[:4]
-
-            self.native_planner.queueMove(tuple(start),tuple(end), new.speed, bool(new.cancelable), True if new.movement != Path.RELATIVE else False)
+            self.native_planner.queueMove(tuple(new.delta[:4]), tuple(new.num_steps[:4]), new.speed, bool(new.cancelable), bool(new.movement != Path.RELATIVE))
+            #self.native_planner.queueMove(tuple(start),tuple(end), new.speed, bool(new.cancelable), True if new.movement != Path.RELATIVE else False,tuple(steps))
 
         self.prev = new
         self.prev.unlink() # We don't want to store the entire print 
@@ -171,6 +169,7 @@ class PathPlanner:
 
 
     ''' start of Python impl of queue_move '''
+    # Not working!
     def queue_move(self, path):
         path.primay_axis     = np.max(path.delta)
         path.diff            = path.delta*(1.0/path.steps_pr_meter)
@@ -182,6 +181,7 @@ class PathPlanner:
         calculate_move(path)        
 
     ''' Start of Python impl of calculate move '''
+    # Not working!
     def caluculate_move(self, path):
         axis_interval[4];
         speed = max(minimumSpeed, path.speed) if path.is_x_or_y_move() else path.speed

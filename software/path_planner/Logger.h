@@ -68,12 +68,12 @@ public:
 	
 	virtual ~Logger() {
 		std::unique_lock<std::mutex> lk(coutMutex);
-		std::cout << internalStream.str();
+		std::cerr << internalStream.str();
 	}
 };
 
 #ifndef NDEBUG
-#define LOG(x) Logger() << x << std::flush
+#define LOG(x) Logger() << x
 #else
 #define LOG(X)
 #endif

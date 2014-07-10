@@ -163,8 +163,7 @@ PathPlanner::PathPlanner() {
 	bzero(lines, sizeof(lines));
 }
 
-void PathPlanner::queueMove(float startPos[NUM_AXIS],float endPos[NUM_AXIS],float speed, bool cancelable, bool optimize) {
-    float axis_diff[NUM_AXIS]; // Axis movement in mm
+void PathPlanner::queueMove(float axis_diff[NUM_AXIS], float num_steps[NUM_AXIS], float speed, bool cancelable, bool optimize) {
 
 #ifdef BUILD_PYTHON_EXT
 	Py_BEGIN_ALLOW_THREADS
@@ -186,55 +185,34 @@ void PathPlanner::queueMove(float startPos[NUM_AXIS],float endPos[NUM_AXIS],floa
 	
 	Path *p = &lines[linesWritePos];
 	
-	memcpy(p->startPos, startPos, sizeof(float)*NUM_AXIS);
-	memcpy(p->endPos, endPos, sizeof(float)*NUM_AXIS);
-	
-	//Convert meters to mm
-	for(uint8_t axis=0; axis < NUM_AXIS; axis++){
-		p->startPos[axis]*=1000.0;
-		p->endPos[axis]*=1000.0;
-	}
-	
-	
-	
-	LOG("[" << linesWritePos << "]" << " Moving from " << p->startPos[0] << "," << p->startPos[1] << "," << p->startPos[2] << " to "
-	 << p->endPos[0] << "," << p->endPos[1] << "," << p->endPos[2] << std::endl);
+    Logger() << " PathPlanner::queueMove(" << axis_diff[0] << ", "<< num_steps[0] << ")" << std::endl ;
 	
 	p->speed = speed*1000; //Speed is in m/s
     p->joinFlags = 0;
 	p->flags = 0;
 	p->setCancelable(cancelable);
-	
 	p->setWaitMS(optimize ? PRINT_MOVE_BUFFER_WAIT : 0);
-	
     p->dir = 0;
-	
-    //Find direction
-    for(uint8_t axis=0; axis < NUM_AXIS; axis++){
-		p->startPos[axis] = ceil(p->startPos[axis]*axisStepsPerMM[axis]);
-		p->endPos[axis]   = ceil(p->endPos[axis]*axisStepsPerMM[axis]);
-		
-        if((p->delta[axis]=p->endPos[axis]-p->startPos[axis])>=0)
+
+	//Copy data and convert meters to mm
+	for(uint8_t axis=0; axis < NUM_AXIS; axis++){
+        axis_diff[axis] *= 1000.0;
+		p->delta[axis] = num_steps[axis];
+        
+        // Set direction
+        if(axis_diff[axis] >= 0)
             p->setPositiveDirectionForAxis(axis);
-        else
-            p->delta[axis] = -p->delta[axis];
-		
-        axis_diff[axis] = p->delta[axis] * invAxisStepsPerMM[axis];
-        if(p->delta[axis]) p->setMoveOfAxis(axis);
-		
-    }
+        // Set movement or not
+        if(p->delta[axis]) 
+            p->setMoveOfAxis(axis);
+	}
 	
     if(p->isNoMove())
 	{
 		LOG( "Warning: no move path" << std::endl);
-		/*if(newPath) {  // need to delete dummy elements, otherwise commands can get locked.
-			std::lock_guard<std::mutex> lk(m);
-			linesCount = 0;
-			linesPos.store(linesWritePos);
-		}*/
 		return; // No steps included
 	}
-	
+	   
     //Define variables that are needed for the Bresenham algorithm. Please note that  Z is not currently included in the Bresenham algorithm.
     if(p->delta[Y_AXIS] > p->delta[X_AXIS] && p->delta[Y_AXIS] > p->delta[Z_AXIS] && p->delta[Y_AXIS] > p->delta[E_AXIS])
 		p->primaryAxis = Y_AXIS;
@@ -271,7 +249,6 @@ void PathPlanner::queueMove(float startPos[NUM_AXIS],float endPos[NUM_AXIS],floa
         linesCount++;
     }
     lineAvailable.notify_all();
-	
 	
 	LOG( "End queuing move command" << std::endl);
 }
