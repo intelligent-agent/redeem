@@ -185,8 +185,6 @@ void PathPlanner::queueMove(float axis_diff[NUM_AXIS], float num_steps[NUM_AXIS]
 	
 	Path *p = &lines[linesWritePos];
 	
-    Logger() << " PathPlanner::queueMove(" << axis_diff[0] << ", "<< num_steps[0] << ")" << std::endl ;
-	
 	p->speed = speed*1000; //Speed is in m/s
     p->joinFlags = 0;
 	p->flags = 0;

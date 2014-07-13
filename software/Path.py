@@ -76,7 +76,7 @@ class Path:
         self.prev = None
 
     ''' Transform vector to whatever coordinate system is used '''
-    def transform_vector(self, vec, cur_pos=None):
+    def transform_vector(self, vec, cur_pos):
         ret_vec = np.copy(vec)
         if Path.axis_config == Path.AXIS_CONFIG_H_BELT:            
             X = np.dot(Path.matrix_H_inv, vec[0:2])
@@ -85,15 +85,15 @@ class Path:
             X = np.dot(Path.matrix_XY_inv, vec[0:2])
             ret_vec[:2] = X[0]
         if Path.axis_config == Path.AXIS_CONFIG_DELTA:       
-            logging.debug("Before "+str(ret_vec[:3]))  
-            ret_vec[:3] = Delta.inverse_kinematics(vec[0], vec[1], vec[2])
-            logging.debug("After inverse "+str(ret_vec[:3])) 
-            ret_vec[:3] -= Delta.forward_kinematics(cur_pos[0], cur_pos[1], cur_pos[2])
-            logging.debug("After forward "+str(ret_vec[:3])) 
+            # Subtract the current column positions 
+            start_ABC = Delta.inverse_kinematics(cur_pos[0], cur_pos[1], cur_pos[2])
+            # Find the next column positions
+            end_ABC   = Delta.inverse_kinematics(cur_pos[0]+vec[0], cur_pos[1]+vec[1], cur_pos[2]+vec[2])
+            ret_vec[:3] = end_ABC-start_ABC
         return ret_vec
     
     ''' Transform back from whatever '''
-    def reverse_transform_vector(self, vec):
+    def reverse_transform_vector(self, vec, cur_pos):
         ret_vec = np.copy(vec)
         if Path.axis_config == Path.AXIS_CONFIG_H_BELT:            
             X = np.dot(Path.matrix_H, vec[0:2])
@@ -101,9 +101,17 @@ class Path:
         if Path.axis_config == Path.AXIS_CONFIG_CORE_XY:            
             X = np.dot(Path.matrix_XY, vec[0:2])
             ret_vec[:2] = X[0]
-        if Path.axis_config == Path.AXIS_CONFIG_DELTA:    
-            ret_vec[:3] = Delta.forward_kinematics(vec[0], vec[1], vec[2])
-            #ret_vec[:3] = Delta.forward_kinematics(cur_pos[0], cur_pos[1], cur_pos[2])
+        if Path.axis_config == Path.AXIS_CONFIG_DELTA:
+
+            # Subtract the current column positions 
+            start_ABC = Delta.inverse_kinematics(cur_pos[0], cur_pos[1], cur_pos[2])
+            # Find the next column positions
+            end_ABC   = start_ABC+vec[:3]
+
+            # We have the column translations and need to find what that represents in cartesian. 
+            start_xyz = Delta.forward_kinematics(start_ABC[0], start_ABC[1], start_ABC[2])
+            end_xyz   = Delta.forward_kinematics(end_ABC[0], end_ABC[1], end_ABC[2])
+            ret_vec[:3] = end_xyz - start_xyz
         return ret_vec
 
  
@@ -138,14 +146,20 @@ class AbsolutePath(Path):
         self.vec = self.end_pos - self.start_pos    
 
         # Compute stepper translation
-        vec            = self.transform_vector(self.vec)
+        vec            = self.transform_vector(self.vec, self.start_pos)
         num_steps      = np.ceil(np.abs(vec) * Path.steps_pr_meter)
         self.num_steps = num_steps
         self.delta     = np.sign(vec)*num_steps/Path.steps_pr_meter
-        vec            = self.reverse_transform_vector(self.delta)
+        vec            = self.reverse_transform_vector(self.delta, self.start_pos)
 
         # Set stepper and true posision
         self.end_pos            = self.start_pos + vec
+
+        if np.isnan(vec).any():
+            self.end_pos   = self.start_pos
+            self.num_steps = np.zeros(Path.NUM_AXES)
+            self.delta     = np.zeros(Path.NUM_AXES)
+
 
         prev.next = self
               
@@ -162,7 +176,8 @@ class RelativePath(Path):
         self.prev = prev
         prev.next = self
         self.start_pos = prev.end_pos
-               
+ 
+
         # Generate the vector 
         self.vec = np.zeros(Path.NUM_AXES, dtype=Path.DTYPE)
         for index, axis in enumerate(Path.AXES):
@@ -173,10 +188,20 @@ class RelativePath(Path):
         vec            = self.transform_vector(self.vec, self.start_pos)
         self.num_steps = np.ceil(np.abs(vec) * Path.steps_pr_meter)        
         self.delta     = np.sign(vec)*self.num_steps/Path.steps_pr_meter
-        vec            = self.reverse_transform_vector(self.delta)
+        vec            = self.reverse_transform_vector(self.delta, self.start_pos)
 
         # Set stepper and true posision
         self.end_pos            = self.start_pos + vec
+
+        # Make sure the calculateions are correct, or no movement occurs: 
+        if np.isnan(vec).any():
+            self.end_pos   = self.start_pos
+            self.num_steps = np.zeros(Path.NUM_AXES)
+            self.delta     = np.zeros(Path.NUM_AXES)
+
+        logging.debug("Start pos "+str(['{:.2f}'.format(i) for i in self.start_pos]))
+        logging.debug("End pos   "+str(['{:.2f}'.format(i) for i in self.end_pos]))
+
 
 ''' A reset axes path segment. No movement occurs, only global position setting '''
 class G92Path(Path):
@@ -200,5 +225,4 @@ class G92Path(Path):
             if axis in self.axes:
                 self.end_pos[index] = self.axes[axis]
         self.vec = np.zeros(Path.NUM_AXES)
-
 

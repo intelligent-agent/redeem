@@ -5,20 +5,20 @@ import numpy as np                                                          # Ne
 import logging
 
 class Delta:
-    Hez = 0.0    # Distance head extends below the effector. 
-    L   = 0.14    # Length of the rod
-    r   = 0.1341 # Radius of the columns
-    Ae  = 0.026  # Effector offset
+    Hez = 0.0   # Distance head extends below the effector. 
+    L   = 0.135 # Length of the rod
+    r   = 0.144 # Radius of the columns
+    Ae  = 0.026 # Effector offset
     Be  = 0.026
     Ce  = 0.026
-    Aco = 0.019  # Carriage offset
+    Aco = 0.019 # Carriage offset
     Bco = 0.019
     Cco = 0.019
 
     # Column theta
     At = np.pi/2.0
-    Bt = np.pi/3.0 + np.pi/2.0
-    Ct = 2.0*np.pi/3.0 + np.pi/2.0
+    Bt = 7.0*np.pi/6.0
+    Ct = 11.0*np.pi/6.0
 
     # Calculate the column positions
     Apx = r*np.cos(At)
@@ -59,7 +59,7 @@ class Delta:
         Bz = Z + Bcz + Delta.Hez
         Cz = Z + Ccz + Delta.Hez
         
-        return [Az, Bz, Cz]
+        return np.array([Az, Bz, Cz])
 
     ''' Forward kinematics for Delta Bot. Returns the X, Y, Z point given column translations '''
     @staticmethod
@@ -67,31 +67,28 @@ class Delta:
         p1 = np.array([Delta.Avx, Delta.Avy, Az])
         p2 = np.array([Delta.Bvx, Delta.Bvy, Bz])
         p3 = np.array([Delta.Cvx, Delta.Cvy, Cz])
-
-        ex = (p2-p1)/np.linalg.norm(p2-p1)
-        i = ex * (p3-p1)
         
-        ey = (p1-p3-i*ex)/np.linalg.norm(p1-p3-i*ex)
-
-        logging.debug(ex)
-        logging.debug(ey)
-
+        p12 = p2-p1
+        
+        ex = p12/np.linalg.norm(p12)
+        p13 = p3-p1
+        i = np.dot(ex, p13)
+        iex = i*ex
+        ey = (p13-iex)/np.linalg.norm(p13-iex)
         ez = np.cross(ex,ey)
     
-        d = np.sqrt((pow(p2[0]-p1[0], 2))+
-            (pow(p2[1]-p1[1], 2))+
-            (pow(p2[2]-p1[2], 2)))
+        d = np.linalg.norm(p12)
 
-        j = np.dot(ey,(p3-p1))
+        j = np.dot(ey,p13) # Signed magnitude of the Y component
         
         D = Delta.L
 
-        x = (pow(D,2) - pow(D,2) + pow(d,2))/(2*d);
-        y = ((pow(D,2) - pow(D,2) + pow(i,2) + pow(j,2))/(2*j)) - ((i/j)*x);
-        z = np.sqrt(pow(D,2) - pow(x,2) - pow(y,2));
+        x = d/2;
+        y = ((i**2 + j**2)/2 -i*x)/j;
+        z = np.sqrt(D**2 - x**2 - y**2);
 
         # Construct the final point
-        XYZ = p1 + x*ex + y*ey + z*ez
+        XYZ = p1 + x*ex + y*ey + -z*ez
 
         return XYZ
 
