@@ -29,6 +29,12 @@ class Printer:
         self.acceleration   = 0.5
         self.current_tool   = "E"
 
+    ''' This method is callled for every move, so it should be fast/cached. '''
+    def ensure_steppers_enabled(self):
+        for name, stepper in self.steppers.iteritems():
+            if stepper.in_use and not stepper.enabled: # Stepper should be enabled, but is not.
+                stepper.set_enabled(True) # Force update
+
     ''' Send a reply through the proper channel '''
     def reply(self, gcode):
         if(gcode.get_answer()!=None):

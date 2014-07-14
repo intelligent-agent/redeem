@@ -79,7 +79,8 @@ class Stepper:
         self.name            = name
         self.state           = (1<<Stepper.SLEEP)|(1<<Stepper.RESET)| (1<<Stepper.ENABLED) # The initial state of the inputs
         self.dacvalue 	     = 0x00   	    # The voltage value on the VREF		
-        self.enabled 	     = False	      # Start disabled
+        self.enabled 	     = False	    # Start disabled
+        self.in_use          = False        # Is the stepper used?
         self.seconds_pr_step = 0.001        # Delay between each step (will be set by feed rate)
         self.steps_pr_mm     = 1            # Numer of steps pr mm. 
         self.microsteps      = 1.0          # Well, this is the microstep number

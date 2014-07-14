@@ -101,11 +101,8 @@ class Redeem:
 
         # Enable the steppers and set the current, steps pr mm and microstepping  
         for name, stepper in self.printer.steppers.iteritems():
-            stepper.set_current_value(self.printer.config.getfloat('Steppers', 'current_'+name)) 
-            if self.printer.config.getboolean('Steppers', 'enabled_'+name):
-                stepper.set_enabled()
-            else:
-                stepper.set_disabled()
+            stepper.set_current_value(self.printer.config.getfloat('Steppers', 'current_'+name))
+            stepper.in_use = self.printer.config.getboolean('Steppers', 'in_use_'+name)
             stepper.set_steps_pr_mm(self.printer.config.getfloat('Steppers', 'steps_pr_mm_'+name))         
             stepper.set_microstepping(self.printer.config.getint('Steppers', 'microstepping_'+name)) 
             stepper.direction = self.printer.config.getint('Steppers', 'direction_'+name)

@@ -141,10 +141,15 @@ class PathPlanner:
 
         logging.debug("homing "+str(axis))
 
-        # Home axis for core X,Y and H-Belt independently to avoid hardware dammages.
+        # Home axis for core X,Y and H-Belt independently to avoid hardware damages.
         if Path.axis_config == Path.AXIS_CONFIG_CORE_XY or Path.axis_config == Path.AXIS_CONFIG_H_BELT:
             for a in axis:
                 self._home_internal(a)
+        # For delta, switch to cartesian when homing
+        if Path.axis_config == Path.AXIS_CONFIG_DELTA:
+            Path.axis_config = Path.AXIS_CONFIG_XY
+            self._home_internal(axis)
+            Path.axis_config = Path.AXIS_CONFIG_DELTA
         else:
             self._home_internal(axis)
 
@@ -155,9 +160,9 @@ class PathPlanner:
         new.set_prev(self.prev)
 
         if not new.is_G92():
-            #push this new segment
+            self.printer.ensure_steppers_enabled()
+            #push this new segment        
             self.native_planner.queueMove(tuple(new.delta[:4]), tuple(new.num_steps[:4]), new.speed, bool(new.cancelable), bool(new.movement != Path.RELATIVE))
-            #self.native_planner.queueMove(tuple(start),tuple(end), new.speed, bool(new.cancelable), True if new.movement != Path.RELATIVE else False,tuple(steps))
 
         self.prev = new
         self.prev.unlink() # We don't want to store the entire print 

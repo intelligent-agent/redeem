@@ -17,10 +17,11 @@ import logging
 class M270(GCodeCommand):
 
     def execute(self,g):
-        axis_config = int(g.get_value_by_letter("S"))
-        if axis_config in [0, 1, 2, 3]:
-            Path.axis_config = axis_config
-            logging.info("Coordinate system set to "+str(axis_config))
+        if g.has_letter("S"):
+            axis_config = int(g.get_value_by_letter("S"))
+            if axis_config in [0, 1, 2, 3]:
+                Path.axis_config = axis_config
+                logging.info("Coordinate system set to "+str(axis_config))
 
     def get_description(self):
         return "Set coordinate system"
