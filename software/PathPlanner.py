@@ -32,8 +32,8 @@ class PathPlanner:
         self.steppers       = printer.steppers
         self.pru_firmware   = pru_firmware
 
-        self.travel_length  = {"X":0.0, "Y":0.0, "Z":0.0}
-        self.center_offset  = {"X":0.0, "Y":0.0, "Z":0.0}
+        self.travel_length  = {"X":0.0, "Y":0.0, "Z":0.0, "E": 0.0, "H": 0.0}
+        self.center_offset  = {"X":0.0, "Y":0.0, "Z":0.0, "E": 0.0, "H": 0.0}
         self.prev           =  G92Path({"X":0.0, "Y":0.0, "Z":0.0, "E":0.0,"H":0.0}, 0)
         self.prev.set_prev(None)
  
@@ -58,6 +58,7 @@ class PathPlanner:
             e.setPrintAcceleration(self.printer.acceleration)
             e.setTravelAcceleration(self.printer.acceleration)
             e.setMaxStartFeedrate(0.04)
+            logging.debug("setAxisStepsPerMeter "+str(i)+" is "+str(Path.steps_pr_meter[i+3]))
             e.setAxisStepsPerMeter(long(Path.steps_pr_meter[i+3]))
 
         self.native_planner.setExtruder(0)
@@ -112,8 +113,8 @@ class PathPlanner:
         speed = Path.home_speed[0]
 
         for a in axis:
-
-            if a == 'E' or a == 'H':
+            if not self.printer.steppers[a].has_endstop:
+                logging.debug("Skipping homing for "+str(a))
                 continue
 
             path_back[a] = -self.travel_length[a]
@@ -146,7 +147,7 @@ class PathPlanner:
             for a in axis:
                 self._home_internal(a)
         # For delta, switch to cartesian when homing
-        if Path.axis_config == Path.AXIS_CONFIG_DELTA:
+        elif Path.axis_config == Path.AXIS_CONFIG_DELTA:
             Path.axis_config = Path.AXIS_CONFIG_XY
             self._home_internal(axis)
             Path.axis_config = Path.AXIS_CONFIG_DELTA
@@ -169,8 +170,13 @@ class PathPlanner:
                            # in memory, so we keep only the last path.
 
     def set_extruder(self, ext_nr):
-        if ext_nr in [0, 1]:
+        if ext_nr in [0, 1]:            
+            if ext_nr == 0:
+                Path.steps_pr_meter[3] = self.printer.steppers["E"].get_steps_pr_meter()
+            elif ext_nr == 1:
+                Path.steps_pr_meter[3] = self.printer.steppers["H"].get_steps_pr_meter()
             self.native_planner.setExtruder(ext_nr)
+
 
 
     ''' start of Python impl of queue_move '''

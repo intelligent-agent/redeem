@@ -662,11 +662,19 @@ PathPlanner::~PathPlanner() {
 }
 
 void PathPlanner::waitUntilFinished() {
+
+#ifdef BUILD_PYTHON_EXT
+	Py_BEGIN_ALLOW_THREADS
+#endif
 	std::unique_lock<std::mutex> lk(line_mutex);
 	lineAvailable.wait(lk, [this]{
         return linesCount==0 || stop;
     });
 	
+#ifdef BUILD_PYTHON_EXT
+	Py_END_ALLOW_THREADS
+#endif
+
 	//Wait for PruTimer then
 	if(!stop) {
 		pru.waitUntilFinished();

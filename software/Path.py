@@ -199,10 +199,6 @@ class RelativePath(Path):
             self.num_steps = np.zeros(Path.NUM_AXES)
             self.delta     = np.zeros(Path.NUM_AXES)
 
-        logging.debug("Start pos "+str(['{:.2f}'.format(i) for i in self.start_pos]))
-        logging.debug("End pos   "+str(['{:.2f}'.format(i) for i in self.end_pos]))
-
-
 ''' A reset axes path segment. No movement occurs, only global position setting '''
 class G92Path(Path):
     
