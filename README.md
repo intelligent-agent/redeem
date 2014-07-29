@@ -25,12 +25,16 @@ You can clone this repository directly on your BBB:
   git clone https://intelligentagent@bitbucket.org/intelligentagent/redeem.git  
 Make sure gcc, swig, python-dev, binutils and g++ is installed before compiling the native path planner.  
   opkg install swig python-dev gcc binutils g++  
+
 Compile the native path planner module:  
   cd /usr/src/redeem/software/path_planner  
   python setup.py install  
   chmod +x /usr/src/redeem/software/Redeem.py
-  
-On systemd distros, use the redeem service:  
+
+Compile the device tree overlay:  
+  dtc -O dtb -o /lib/firmware/BB-BONE-REPLICAP-0A4A.dtbo -b 0 -@ /usr/src/redeem/Device_tree/BB-BONE-REPLICAP-00A4.dts
+    
+Enable the redeem service:  
   cp /usr/src/redeem/systemd/redeem.service /lib/systemd/system/redeem.service  
-  systemctl enable redeem  
-  systemctl start redeem
+  systemctl enable redeem.service
+  systemctl start redeem.service
