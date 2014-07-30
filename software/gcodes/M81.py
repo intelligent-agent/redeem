@@ -15,7 +15,7 @@ import os
 class M81(GCodeCommand):
 
     def execute(self, g):
-        os.system("shutdown now")
+        os.system("shutdown -h now")
 
     def get_description(self):
         return "Shutdown the whole Replicape controller board"

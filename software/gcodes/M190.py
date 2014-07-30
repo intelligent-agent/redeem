@@ -19,4 +19,7 @@ class M190(GCodeCommand):
         self.printer.processor.execute(Gcode({"message": "M116", "prot": g.prot}))
 
     def get_description(self):
-        return "Set heated bed temperature and for it to be reached"
+        return "Set heated bed temperature and wait for it to be reached"
+
+    def is_buffered(self):
+        return True

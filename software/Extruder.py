@@ -4,7 +4,20 @@ Extruder file for Replicape.
 Author: Elias Bakken
 email: elias(dot)bakken(at)gmail(dot)com
 Website: http://www.thing-printer.com
-License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
+License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
+
+ Redeem is free software: you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation, either version 3 of the License, or
+ (at your option) any later version.
+ 
+ Redeem is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
+ 
+ You should have received a copy of the GNU General Public License
+ along with Redeem.  If not, see <http://www.gnu.org/licenses/>.
 '''
 
 from threading import Thread
@@ -98,8 +111,8 @@ class Heater(object):
             if self.current_temp <= 5 or self.current_temp > 250:
                 power = 0
             self.mosfet.set_power(power)
-            #if self.name == "Ext2":
-            #logging.debug(self.name + " temp: "+str(self.current_temp)+" time delta: "+str(self.current_time-self.prev_time))
+            if self.current_time-self.prev_time > 2:
+                logging.warning("Heater time update large: "+self.name + " temp: "+str(self.current_temp)+" time delta: "+str(self.current_time-self.prev_time))
             self.prev_time = self.current_time
             self.current_time = time.time()
             time.sleep(1)

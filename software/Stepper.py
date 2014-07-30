@@ -5,7 +5,20 @@ A Stepper Motor Driver class for Replicape.
 Author: Elias Bakken
 email: elias(dot)bakken(at)gmail(dot)com
 Website: http://www.thing-printer.com
-License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
+License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
+
+ Redeem is free software: you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation, either version 3 of the License, or
+ (at your option) any later version.
+ 
+ Redeem is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
+ 
+ You should have received a copy of the GNU General Public License
+ along with Redeem.  If not, see <http://www.gnu.org/licenses/>.
 '''
 
 '''
@@ -79,7 +92,8 @@ class Stepper:
         self.name            = name
         self.state           = (1<<Stepper.SLEEP)|(1<<Stepper.RESET)| (1<<Stepper.ENABLED) # The initial state of the inputs
         self.dacvalue 	     = 0x00   	    # The voltage value on the VREF		
-        self.enabled 	     = False	      # Start disabled
+        self.enabled 	     = False	    # Start disabled
+        self.in_use          = False        # Is the stepper used?
         self.seconds_pr_step = 0.001        # Delay between each step (will be set by feed rate)
         self.steps_pr_mm     = 1            # Numer of steps pr mm. 
         self.microsteps      = 1.0          # Well, this is the microstep number

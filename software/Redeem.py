@@ -5,12 +5,26 @@ Redeem main program. This should run on the BeagleBone.
 Author: Elias Bakken
 email: elias(dot)bakken(at)gmail(dot)com
 Website: http://www.thing-printer.com
-License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
+License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
+
+ Redeem is free software: you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation, either version 3 of the License, or
+ (at your option) any later version.
+ 
+ Redeem is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
+ 
+ You should have received a copy of the GNU General Public License
+ along with Redeem.  If not, see <http://www.gnu.org/licenses/>.
+
 
 Minor verion tag is Arhold Schwartsnegger movies chronologically. 
 '''
 
-version = "0.13.0~Scavenger Hunt"
+version = "0.14.0~Conan the Barbarian"
 
 from math import sqrt
 import time
@@ -23,7 +37,8 @@ import sys
 import signal
 import sys
 from threading import Thread
-from multiprocessing import Process, Queue, JoinableQueue
+from multiprocessing import Process, JoinableQueue
+import Queue
 import profile
 
 from Mosfet import Mosfet
@@ -56,8 +71,8 @@ class Redeem:
 
         self.printer = Printer()
 
-        # Parse the config
-        self.printer.config = CascadingConfigParser(['/etc/redeem/default.cfg', '/etc/redeem/local.cfg'])
+        # Parse the config files. 
+        self.printer.config = CascadingConfigParser(['/etc/redeem/default.cfg', '/etc/redeem/printer.cfg', '/etc/redeem/local.cfg'])
 
         # Get the revision from the Config file
         self.revision = self.printer.config.get('System', 'revision', "A4")
@@ -100,15 +115,14 @@ class Redeem:
 
         # Enable the steppers and set the current, steps pr mm and microstepping  
         for name, stepper in self.printer.steppers.iteritems():
-            stepper.set_current_value(self.printer.config.getfloat('Steppers', 'current_'+name)) 
-            if self.printer.config.getboolean('Steppers', 'enabled_'+name):
-                stepper.set_enabled()
-            else:
-                stepper.set_disabled()
-            stepper.set_steps_pr_mm(self.printer.config.getfloat('Steppers', 'steps_pr_mm_'+name))         
+            stepper.set_current_value(self.printer.config.getfloat('Steppers', 'current_'+name))
+            stepper.in_use = self.printer.config.getboolean('Steppers', 'in_use_'+name)
+            stepper.set_steps_pr_mm(self.printer.config.getfloat('Steppers', 'steps_pr_mm_'+name))    
+            logging.debug("stpes pr mm: "+str(self.printer.config.getfloat('Steppers', 'steps_pr_mm_'+name)))
             stepper.set_microstepping(self.printer.config.getint('Steppers', 'microstepping_'+name)) 
             stepper.direction = self.printer.config.getint('Steppers', 'direction_'+name)
             stepper.set_decay(self.printer.config.getboolean("Steppers", "slow_decay_"+name))
+            stepper.has_endstop = self.printer.config.getboolean('Endstops', 'has_'+name)
 
 		# Commit changes for the Steppers
         Stepper.commit()
@@ -184,10 +198,10 @@ class Redeem:
             self.printer.coolers[0].enable()   
 
         # Make a queue of commands
-        self.printer.commands  = JoinableQueue(100)
+        self.printer.commands  = JoinableQueue(10)
 
         # Make a queue of commands that should not be buffered
-        self.printer.unbuffered_commands  = JoinableQueue(100)
+        self.printer.unbuffered_commands  = JoinableQueue(10)
         
         # Init the path planner
         Path.axis_config = int(self.printer.config.get('Geometry', 'axis_config'))
@@ -225,7 +239,7 @@ class Redeem:
         
         travel={}
         offset={}
-        for axis in ['X','Y','Z']:
+        for axis in ['X','Y','Z', 'E', 'H']:
             travel[axis] = self.printer.config.getfloat('Geometry', 'travel_'+axis.lower())
             offset[axis] = self.printer.config.getfloat('Geometry', 'offset_'+axis.lower())
 
@@ -242,15 +256,13 @@ class Redeem:
         self.printer.comms["testing_noret"] = Pipe(self.printer, "testing_noret")     # Pipe for testing
         self.printer.comms["testing_noret"].send_response = False     
 
-        #self.unbuffer_thread = Thread(target=self.loop_unbuffered)
-        #self.unbuffer_thread.daemon = True
-        
-
         self.running = True
 
         # Start the two processes
         p0 = Thread(target=self.loop, args=(self.printer.commands,"buffered"))
         p1 = Thread(target=self.loop, args=(self.printer.unbuffered_commands,"unbuffered"))
+        p0.daemon = True
+        p1.daemon = True
 
         p0.start()
         p1.start()
@@ -266,8 +278,12 @@ class Redeem:
     def loop(self, queue, name):
         try:
             while self.running:
-                gcode = queue.get(True)
-                logging.debug("Executing "+gcode.code()+" from "+name)
+                try:
+                    gcode = queue.get(True,1)
+                except Queue.Empty:
+                    continue
+
+                #logging.debug("Executing "+gcode.code()+" from "+name)
                 self._execute(gcode)
                 self.printer.reply(gcode)   
                 queue.task_done()
@@ -291,21 +307,11 @@ class Redeem:
         if g.message == "ok" or g.code()=="ok" or g.code()=="No-Gcode":
             g.set_answer(None)
             return
-        #logging.debug("Processing "+str(g.code()))
         self.printer.processor.execute(g)
-        #logging.debug("Done processing "+str(g.code()))
 
     ''' An endStop has been hit '''
     def end_stop_hit(self, endstop):
         logging.warning("End Stop " + endstop.name +" hit!")
-
-def signal_handler(signal, frame):
-        print 'Cleaning up...'
-        logging.info("KTHNXBYE!")
-        r.exit()
-        sys.exit(0)
-
-signal.signal(signal.SIGINT, signal_handler)
 
 r = Redeem()
 r.loop()

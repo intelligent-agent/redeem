@@ -8,7 +8,20 @@ segments, to have a buffer.
 Author: Elias Bakken
 email: elias(dot)bakken(at)gmail(dot)com
 Website: http://www.thing-printer.com
-License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
+License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
+
+ Redeem is free software: you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation, either version 3 of the License, or
+ (at your option) any later version.
+ 
+ Redeem is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
+ 
+ You should have received a copy of the GNU General Public License
+ along with Redeem.  If not, see <http://www.gnu.org/licenses/>.
 '''
 
 import time
@@ -32,8 +45,8 @@ class PathPlanner:
         self.steppers       = printer.steppers
         self.pru_firmware   = pru_firmware
 
-        self.travel_length  = {"X":0.0, "Y":0.0, "Z":0.0}
-        self.center_offset  = {"X":0.0, "Y":0.0, "Z":0.0}
+        self.travel_length  = {"X":0.0, "Y":0.0, "Z":0.0, "E": 0.0, "H": 0.0}
+        self.center_offset  = {"X":0.0, "Y":0.0, "Z":0.0, "E": 0.0, "H": 0.0}
         self.prev           =  G92Path({"X":0.0, "Y":0.0, "Z":0.0, "E":0.0,"H":0.0}, 0)
         self.prev.set_prev(None)
  
@@ -58,6 +71,7 @@ class PathPlanner:
             e.setPrintAcceleration(self.printer.acceleration)
             e.setTravelAcceleration(self.printer.acceleration)
             e.setMaxStartFeedrate(0.04)
+            logging.debug("setAxisStepsPerMeter "+str(i)+" is "+str(Path.steps_pr_meter[i+3]))
             e.setAxisStepsPerMeter(long(Path.steps_pr_meter[i+3]))
 
         self.native_planner.setExtruder(0)
@@ -100,8 +114,8 @@ class PathPlanner:
     def resume(self):
         self.native_planner.resume()
 
-    ''' Home the given axis using endstops (min) '''
-    def home(self,axis):
+    ''' Private method for homing a set or a single axis '''
+    def _home_internal(self, axis):
 
         logging.debug("homing "+str(axis))
 
@@ -112,8 +126,8 @@ class PathPlanner:
         speed = Path.home_speed[0]
 
         for a in axis:
-
-            if a == 'E' or a == 'H':
+            if not self.printer.steppers[a].has_endstop:
+                logging.debug("Skipping homing for "+str(a))
                 continue
 
             path_back[a] = -self.travel_length[a]
@@ -121,7 +135,7 @@ class PathPlanner:
             path_zero[a] = 0
             speed = min(speed, Path.home_speed[Path.axis_to_index(a)])
 
-        # Move until endstop is hit
+         # Move until endstop is hit
         p = RelativePath(path_back, speed, self.printer.acceleration, True)
         
         self.add_path(p)
@@ -136,6 +150,23 @@ class PathPlanner:
         self.wait_until_done()
         logging.debug("homing done for "+str(axis))
 
+    ''' Home the given axis using endstops (min) '''
+    def home(self, axis):
+
+        logging.debug("homing "+str(axis))
+
+        # Home axis for core X,Y and H-Belt independently to avoid hardware damages.
+        if Path.axis_config == Path.AXIS_CONFIG_CORE_XY or Path.axis_config == Path.AXIS_CONFIG_H_BELT:
+            for a in axis:
+                self._home_internal(a)
+        # For delta, switch to cartesian when homing
+        elif Path.axis_config == Path.AXIS_CONFIG_DELTA:
+            Path.axis_config = Path.AXIS_CONFIG_XY
+            self._home_internal(axis)
+            Path.axis_config = Path.AXIS_CONFIG_DELTA
+        else:
+            self._home_internal(axis)
+
     ''' Add a path segment to the path planner '''        
     def add_path(self, new):   
 
@@ -143,20 +174,26 @@ class PathPlanner:
         new.set_prev(self.prev)
 
         if not new.is_G92():
-            #push this new segment
-            start = new.start_pos[:4]
-            end = new.stepper_end_pos[:4]
-
-            self.native_planner.queueMove(tuple(start),tuple(end), new.speed, bool(new.cancelable), True if new.movement != Path.RELATIVE else False)
+            self.printer.ensure_steppers_enabled()
+            #push this new segment        
+            self.native_planner.queueMove(tuple(new.delta[:4]), tuple(new.num_steps[:4]), new.speed, bool(new.cancelable), bool(new.movement != Path.RELATIVE))
 
         self.prev = new
+        self.prev.unlink() # We don't want to store the entire print 
+                           # in memory, so we keep only the last path.
 
     def set_extruder(self, ext_nr):
-        if ext_nr in [0, 1]:
+        if ext_nr in [0, 1]:            
+            if ext_nr == 0:
+                Path.steps_pr_meter[3] = self.printer.steppers["E"].get_steps_pr_meter()
+            elif ext_nr == 1:
+                Path.steps_pr_meter[3] = self.printer.steppers["H"].get_steps_pr_meter()
             self.native_planner.setExtruder(ext_nr)
 
 
+
     ''' start of Python impl of queue_move '''
+    # Not working!
     def queue_move(self, path):
         path.primay_axis     = np.max(path.delta)
         path.diff            = path.delta*(1.0/path.steps_pr_meter)
@@ -168,6 +205,7 @@ class PathPlanner:
         calculate_move(path)        
 
     ''' Start of Python impl of calculate move '''
+    # Not working!
     def caluculate_move(self, path):
         axis_interval[4];
         speed = max(minimumSpeed, path.speed) if path.is_x_or_y_move() else path.speed

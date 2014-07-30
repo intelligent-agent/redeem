@@ -18,3 +18,7 @@ class M400(GCodeCommand):
 
     def get_description(self):
         return "Wait until all buffered paths are executed"
+
+    def is_buffered(self):
+        return True
+
