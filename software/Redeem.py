@@ -117,7 +117,6 @@ class Redeem:
             stepper.set_current_value(self.printer.config.getfloat('Steppers', 'current_'+name))
             stepper.in_use = self.printer.config.getboolean('Steppers', 'in_use_'+name)
             stepper.set_steps_pr_mm(self.printer.config.getfloat('Steppers', 'steps_pr_mm_'+name))    
-            logging.debug("stpes pr mm: "+str(self.printer.config.getfloat('Steppers', 'steps_pr_mm_'+name)))
             stepper.set_microstepping(self.printer.config.getint('Steppers', 'microstepping_'+name)) 
             stepper.direction = self.printer.config.getint('Steppers', 'direction_'+name)
             stepper.set_decay(self.printer.config.getboolean("Steppers", "slow_decay_"+name))
