@@ -39,7 +39,6 @@ import sys
 from threading import Thread
 from multiprocessing import Process, JoinableQueue
 import Queue
-import profile
 
 from Mosfet import Mosfet
 from Stepper import Stepper
