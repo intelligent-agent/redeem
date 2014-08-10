@@ -71,7 +71,6 @@ class PathPlanner:
             e.setPrintAcceleration(self.printer.acceleration)
             e.setTravelAcceleration(self.printer.acceleration)
             e.setMaxStartFeedrate(0.04)
-            logging.debug("setAxisStepsPerMeter "+str(i)+" is "+str(Path.steps_pr_meter[i+3]))
             e.setAxisStepsPerMeter(long(Path.steps_pr_meter[i+3]))
 
         self.native_planner.setExtruder(0)

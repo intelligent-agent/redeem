@@ -23,12 +23,19 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
 
 from Adafruit_I2C import Adafruit_I2C 
 import time
+import subprocess
 
 PCA9685_MODE1 = 0x0
 PCA9685_PRESCALE = 0xFE
-DEVICE_TREE = True
 
-pwm = Adafruit_I2C(0x70, 1, False) # Open device
+
+# Looks like the interface has changed..
+kernel_version = subprocess.check_output(["uname", "-r"]).strip()
+if kernel_version == "3.14.14":
+    pwm = Adafruit_I2C(0x70, 2, False) # Open device
+else:
+    pwm = Adafruit_I2C(0x70, 1, False) # Open device
+    
 
 pwm.write8(PCA9685_MODE1, 0x01)    # Reset 
 time.sleep(0.05)				   # Wait for reset 

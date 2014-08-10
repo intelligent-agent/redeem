@@ -79,8 +79,6 @@ class Stepper:
         bytes = []
         for stepper in Stepper.all_steppers:	   
             bytes.append(stepper.get_state())
-        #txt = ", ".join([hex(b) for b in bytes[::-1]])
-        #logging.debug("Updating steppers: "+txt)
         spi2_1.writebytes(bytes[::-1])
 
     ''' Init'''
@@ -161,7 +159,7 @@ class Stepper:
             self.state = int("0b"+bin(self.state)[2:].rjust(8, '0')[:4]+bin(value)[2:].rjust(3, '0')+bin(self.state)[-1:], 2)
             #self.state = int("0b"+bin(self.state)[2:].rjust(8, '0')[:4]+bin(value)[2:].rjust(3, '0')+"0", 2)
         self.mmPrStep    = 1.0/(self.steps_pr_mm*self.microsteps)
-        logging.debug("Updated stepper "+self.name+" to microstepping "+str(self.microsteps))
+        #logging.debug("Updated stepper "+self.name+" to microstepping "+str(self.microsteps))
 
         # update the Path class with new values
         stepper_num = Path.axis_to_index(self.name)
