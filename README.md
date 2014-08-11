@@ -18,6 +18,9 @@ Software features:
 
 Wiki: http://wiki.thing-printer.com/index.php?title=Redeem
 
+Ipk packets (for Angstrom/Opkg) are available: 
+  http://feeds.thing-printer.com/feeds/v2014.06/ipk/eglibc/armv7at2hf-vfp-neon/machine/beaglebone/
+
 Installation:  
 You can clone this repository directly on your BBB:  
   ssh root@192.168.7.2  
@@ -38,3 +41,6 @@ Enable the redeem service:
   cp /usr/src/redeem/systemd/redeem.service /lib/systemd/system/redeem.service  
   systemctl enable redeem.service
   systemctl start redeem.service
+
+Development: 
+  Try to be PEP8 compliant: http://legacy.python.org/dev/peps/pep-0008/

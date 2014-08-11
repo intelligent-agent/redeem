@@ -1,6 +1,6 @@
 #!/usr/bin/env python
-'''
-Ethernet communication file for Replicape. 
+"""
+Ethernet communication file for Replicape.
 
 Author: Elias Bakken
 email: elias(dot)bakken(at)gmail(dot)com
@@ -11,23 +11,23 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
  it under the terms of the GNU General Public License as published by
  the Free Software Foundation, either version 3 of the License, or
  (at your option) any later version.
- 
+
  Redeem is distributed in the hope that it will be useful,
  but WITHOUT ANY WARRANTY; without even the implied warranty of
  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  GNU General Public License for more details.
- 
+
  You should have received a copy of the GNU General Public License
  along with Redeem.  If not, see <http://www.gnu.org/licenses/>.
-'''
+"""
 
 from threading import Thread
 import socket
 import logging
-import select
 from Gcode import Gcode
 
 size = 1024 
+
 
 class Ethernet:
     def __init__(self, printer):
@@ -38,12 +38,12 @@ class Ethernet:
         backlog = 5       
         for i in range(10):
             try: 
-                self.s.bind((host,port))
+                self.s.bind((host, port))
                 break
-            except socket.error as e:
+            except socket.error:
                 port += 1    
 
-        logging.info("Ethernet bound to port "+str(port))
+        logging.info("Ethernet bound to port " + str(port))
         self.s.listen(backlog)
         self.running = True
         self.debug = 0
@@ -51,8 +51,8 @@ class Ethernet:
         self.t.daemon = True
         self.t.start()		
 
-    # Loop that gets messages and pushes them on the queue
     def get_message(self):
+        """Loop that gets messages and pushes them on the queue"""
         while self.running:
             logging.info("Ethernet listening")
             self.client, self.address = self.s.accept()
@@ -60,17 +60,17 @@ class Ethernet:
             while True:
                 line = ''
                 while not "\n" in line:
-                    try: 
+                    try:
                         chunk = self.client.recv(1)
-                    except socket.error, (value,message): 
+                    except socket.error, (value,message):
                         logging.error("Ethernet "+ message)
                         chunk = ''
                     if chunk == '':
                         logging.warning("Ethernet: Connection reset by Per.")
-                        self.client.close()             
+                        self.client.close()
                         break
                     line = line + chunk
-                if not "\n" in line: # Make sure the whole line was read. 
+                if not "\n" in line:  # Make sure the whole line was read.
                     break
                 message = line.strip("\n")
                 if len(message)>0:
@@ -80,19 +80,17 @@ class Ethernet:
                     else:
                         self.printer.unbuffered_commands.put(g)
 
-    # Send a message		
     def send_message(self, message):
+        """Send a message"""
         #logging.debug("'"+message+"'")
         if message[-1] != "\n":
             message += "\n"
-        try: 
+        try:
             self.client.send(message)
-        except socket.error, (value,message): 
-            logging.error("Ethernet "+ message)
-       
+        except socket.error, (value, message):
+            logging.error("Ethernet " + message)
 
-    # Stop receiving mesassages
     def close(self):
+        """Stop receiving messages"""
         self.running = False
         self.t.join()
-
