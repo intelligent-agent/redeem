@@ -24,7 +24,7 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
 Minor version tag is Arnold Schwarzenegger movies chronologically.
 """
 
-version = "0.14.0~Conan the Barbarian"
+version = "0.14.1~Conan the Barbarian"
 
 import logging
 import os
