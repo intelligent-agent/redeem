@@ -1,9 +1,31 @@
+#!/usr/bin/env python
+"""
+Temperature look-up tables for thermistors.
 
+Author: Elias Bakken
+email: elias(dot)bakken(at)gmail(dot)com
+Website: http://www.thing-printer.com
+License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
+
+ Redeem is free software: you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation, either version 3 of the License, or
+ (at your option) any later version.
+
+ Redeem is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
+
+ You should have received a copy of the GNU General Public License
+ along with Redeem.  If not, see <http://www.gnu.org/licenses/>.
+"""
 # Charts for different thermistors.
 
 
 temp_chart = {}
-# This conversion table has been found in the datasheet for B57560G104F and is the one sold for MakerBot Plastruder MK4
+# This conversion table has been found in the datasheet for B57560G104F and is
+# the one sold for MakerBot Plastruder MK4
 # 100 K
 temp_chart["B57560G104F"] = [
 [0.0, 333964. ], 
@@ -872,4 +894,3 @@ temp_chart["B57561G0103F000"] = [
 [259, 57.5584133566],
 [260, 56.8533190304]
 ]
-

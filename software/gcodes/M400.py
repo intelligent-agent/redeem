@@ -13,8 +13,12 @@ from GCodeCommand import GCodeCommand
 
 class M400(GCodeCommand):
 
-    def execute(self,g):
+    def execute(self, g):
         self.printer.path_planner.wait_until_done()
 
     def get_description(self):
         return "Wait until all buffered paths are executed"
+
+    def is_buffered(self):
+        return True
+

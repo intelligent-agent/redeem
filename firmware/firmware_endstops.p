@@ -63,12 +63,12 @@ INIT:
     // Load lookup table
     //Config file syntax is  0b00<Z+><Y+><X+><Z-><Y-><X->
     //We need to produce 0x<DIRMAX><DIRMIN>
-    MOV r10, ((STEPPER_MASK_X1 >> 3) << 8) | (STEPPER_MASK_X1 & 0x07)
-    MOV r11, ((STEPPER_MASK_Y1 >> 3) << 8) | (STEPPER_MASK_Y1 & 0x07)
-    MOV r12, ((STEPPER_MASK_Z1 >> 3) << 8) | (STEPPER_MASK_Z1 & 0x07)
-    MOV r13, ((STEPPER_MASK_X2 >> 3) << 8) | (STEPPER_MASK_X2 & 0x07)
-    MOV r14, ((STEPPER_MASK_Y2 >> 3) << 8) | (STEPPER_MASK_Y2 & 0x07)
-    MOV r15, ((STEPPER_MASK_Z2 >> 3) << 8) | (STEPPER_MASK_Z2 & 0x07)
+    MOV r10, STEPPER_MASK_X1 
+    MOV r11, STEPPER_MASK_Y1
+    MOV r12, STEPPER_MASK_Z1
+    MOV r13, STEPPER_MASK_X2
+    MOV r14, STEPPER_MASK_Y2
+    MOV r15, STEPPER_MASK_Z2
 
     //Load GPIO0,1,2,3 read register content to the DDR
     MOV  r2, GPIO0 | GPIO_DATAIN

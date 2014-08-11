@@ -203,7 +203,9 @@ public:
 	 * @param  endPose The end position of the path in meters
 	 * @param speed The feedrate (aka speed) of the move in m/s
 	 */
-	void queueMove(float startPos[NUM_AXIS], float endPos[NUM_AXIS], float speed, bool cancelable, bool optimize=true );
+	//void queueAbsolute(float startPos[NUM_AXIS], float endPos[NUM_AXIS], float speed, bool cancelable, bool optimize=true );
+    void queueMove(float axis_diff[NUM_AXIS], float num_steps[NUM_AXIS], float speed, bool cancelable, bool optimize);
+
 
 	
 	/**
@@ -308,6 +310,17 @@ public:
 	 * @param maxZJerk The maximum jerk for Z axis in m/s
 	 */
 	void setMaxJerk(float maxJerk, float maxZJerk);
+	
+	void suspend() {
+		pru.suspend();
+	}
+	
+	void resume() {
+		pru.resume();
+	}
+
+	
+	void reset();
 	
 	virtual ~PathPlanner();
 

@@ -1,52 +1,70 @@
 #!/usr/bin/env python
-'''
-Pipe - This uses a virtual TTY for communicating with 
-Toggler or similar front end. 
+"""
+Pipe - This uses a virtual TTY for communicating with
+Toggler or similar front end.
 
 Author: Elias Bakken
 email: elias(dot)bakken(at)gmail(dot)com
 Website: http://www.thing-printer.com
-License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
-'''
+License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
+
+ Redeem is free software: you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation, either version 3 of the License, or
+ (at your option) any later version.
+
+ Redeem is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
+
+ You should have received a copy of the GNU General Public License
+ along with Redeem.  If not, see <http://www.gnu.org/licenses/>.
+"""
 
 from threading import Thread
 import select
 import logging
 import os
-import re
 import subprocess
+from Gcode import Gcode
+
 
 class Pipe:
     def __init__(self, printer, prot):
         self.printer = printer
         self.prot = prot
 
-        pipe_0 = "/dev/"+self.prot+"_0"
-        pipe_1 = "/dev/"+self.prot+"_1"
-        p = subprocess.Popen(["tty0tty", pipe_0, pipe_1], stderr=subprocess.PIPE)
-        line = p.stderr.readline()
+        pipe_0 = "/dev/" + self.prot + "_0"
+        pipe_1 = "/dev/" + self.prot + "_1"
+        p = subprocess.Popen(["tty0tty", pipe_0, pipe_1],
+                             stderr=subprocess.PIPE)
+        p.stderr.readline()
         self.fifo = os.open(pipe_0, os.O_RDWR)
-        logging.info("Pipe "+self.prot+" open. Use '"+pipe_1+"' to communicate with it")        
+        logging.info("Pipe " + self.prot + " open. Use '" + pipe_1 + "' to "
+                     "communicate with it")
 
         self.running = True
         self.t = Thread(target=self.get_message)
         self.send_response = True
         self.t.daemon = True
-        self.t.start()		
+        self.t.start()
 
-
-    ''' Loop that gets messages and pushes them on the queue '''
     def get_message(self):
+        """ Loop that gets messages and pushes them on the queue """
         while self.running:
-            ret = select.select( [self.fifo],[],[], 1.0 )
-    	    if ret[0] == [self.fifo]:
+            ret = select.select([self.fifo], [], [], 1.0)
+            if ret[0] == [self.fifo]:
                 message = self.readline_custom()
-                if len(message) > 0:        
-                    self.printer.commands.put({"message": message, "prot": self.prot})            
-                    logging.debug("Got message")
+                if len(message) > 0:
+                    g = Gcode({"message": message, "prot": self.prot})
+                    if self.printer.processor.is_buffered(g):
+                        self.printer.commands.put(g)
+                    else:
+                        self.printer.unbuffered_commands.put(g)
 
     def send_message(self, message):
-        if self.send_response: 
+        if self.send_response:
             if message[-1] != "\n":
                 message += "\n"
                 os.write(self.fifo, message)
@@ -62,8 +80,6 @@ class Pipe:
         while True:
             cur_char = os.read(self.fifo, 1)
             #Check for newline char    
-            if (cur_char == '\n' or cur_char == ""):
+            if cur_char == '\n' or cur_char == "":
                 return message;
-            message = message + cur_char
-
-
+            message += cur_char

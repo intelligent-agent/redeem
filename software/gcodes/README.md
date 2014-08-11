@@ -23,7 +23,7 @@ How to add a new command
 
         class <GCodeName>(GCodeCommand):
 
-            def execute(self,g):
+            def execute(self, g):
                 #Put your GCode execution commands here. You have access to the self.printer object to control the printer
 
 

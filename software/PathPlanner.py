@@ -1,4 +1,4 @@
-'''
+"""
 Path planner for Replicape. Just add paths to
 this and they will be executed as soon as no other
 paths are being executed.
@@ -8,70 +8,93 @@ segments, to have a buffer.
 Author: Elias Bakken
 email: elias(dot)bakken(at)gmail(dot)com
 Website: http://www.thing-printer.com
-License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
-'''
+License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
 
-import time
+ Redeem is free software: you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation, either version 3 of the License, or
+ (at your option) any later version.
+
+ Redeem is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
+
+ You should have received a copy of the GNU General Public License
+ along with Redeem.  If not, see <http://www.gnu.org/licenses/>.
+"""
+
 import logging
 from Path import Path, AbsolutePath, RelativePath, G92Path
-import numpy as np
 from Printer import Printer
-import threading
-import Queue
 
 try:
     from path_planner.PathPlannerNative import PathPlannerNative
 except Exception, e:
-    logging.error("You have to compile the native path planner before running Redeem. Make sure you have swig installed (apt-get install swig) and run cd ../../PathPlanner/PathPlanner && python setup.py install")
+    logging.error("You have to compile the native path planner before running"
+                  " Redeem. Make sure you have swig installed (apt-get "
+                  "install swig) and run cd ../../PathPlanner/PathPlanner && "
+                  "python setup.py install")
     raise e
 
+
 class PathPlanner:
-    ''' Init the planner '''
+    """ Init the planner """
+
     def __init__(self, printer, pru_firmware):
-        self.printer        = printer
-        self.steppers       = printer.steppers
+        self.printer = printer
+        self.steppers = printer.steppers
+        self.pru_firmware = pru_firmware
 
-
-        self.travel_length  = {"X":0.0, "Y":0.0, "Z":0.0}
-        self.center_offset  = {"X":0.0, "Y":0.0, "Z":0.0}
-        self.prev           =  G92Path({"X":0.0, "Y":0.0, "Z":0.0, "E":0.0,"H":0.0}, 0)
+        self.travel_length = {"X": 0.0, "Y": 0.0, "Z": 0.0, "E": 0.0, "H": 0.0}
+        self.center_offset = {"X": 0.0, "Y": 0.0, "Z": 0.0, "E": 0.0, "H": 0.0}
+        self.prev = G92Path({"X": 0.0, "Y": 0.0, "Z": 0.0, "E": 0.0, "H": 0.0},
+                            0)
         self.prev.set_prev(None)
- 
+
         if pru_firmware:
-            self.native_planner = PathPlannerNative()
+            self.__init_path_planner()
 
-            self.native_planner.initPRU( pru_firmware.get_firmware(0), pru_firmware.get_firmware(1))
+    def __init_path_planner(self):
+        self.native_planner = PathPlannerNative()
 
-            self.native_planner.setPrintAcceleration(tuple([float(self.printer.acceleration) for i in range(3)]))
-            self.native_planner.setTravelAcceleration(tuple([float(self.printer.acceleration) for i in range(3)]))
-            self.native_planner.setAxisStepsPerMeter(tuple([long(Path.steps_pr_meter[i]) for i in range(3)]))
-            self.native_planner.setMaxFeedrates(tuple([float(Path.max_speeds[i]) for i in range(3)]))
-            self.native_planner.setMaxJerk(20/1000.0,0.3/1000.0)
-            
-            #Setup the extruders
-            for i in range(Path.NUM_AXES-3):
-                e = self.native_planner.getExtruder(i)
-                e.setMaxFeedrate(Path.max_speeds[i+3])
-                e.setPrintAcceleration(self.printer.acceleration)
-                e.setTravelAcceleration(self.printer.acceleration)
-                e.setMaxStartFeedrate(0.04)
-                e.setAxisStepsPerMeter(long(Path.steps_pr_meter[i+3]))
+        self.native_planner.initPRU(self.pru_firmware.get_firmware(0),
+                                    self.pru_firmware.get_firmware(1))
 
-            self.native_planner.setExtruder(0)
+        self.native_planner.setPrintAcceleration(
+            tuple([float(self.printer.acceleration) for i in range(3)]))
+        self.native_planner.setTravelAcceleration(
+            tuple([float(self.printer.acceleration) for i in range(3)]))
+        self.native_planner.setAxisStepsPerMeter(
+            tuple([long(Path.steps_pr_meter[i]) for i in range(3)]))
+        self.native_planner.setMaxFeedrates(
+            tuple([float(Path.max_speeds[i]) for i in range(3)]))
+        self.native_planner.setMaxJerk(20 / 1000.0, 0.3 / 1000.0)
 
-            self.native_planner.runThread()
+        #Setup the extruders
+        for i in range(Path.NUM_AXES - 3):
+            e = self.native_planner.getExtruder(i)
+            e.setMaxFeedrate(Path.max_speeds[i + 3])
+            e.setPrintAcceleration(self.printer.acceleration)
+            e.setTravelAcceleration(self.printer.acceleration)
+            e.setMaxStartFeedrate(0.04)
+            e.setAxisStepsPerMeter(long(Path.steps_pr_meter[i + 3]))
 
-    ''' Get the current pos as a dict '''
+        self.native_planner.setExtruder(0)
+
+        self.native_planner.runThread()
+
     def get_current_pos(self):
+        """ Get the current pos as a dict """
         pos = np.zeros(Path.NUM_AXES)
         if self.prev:
-            pos = self.prev.end_pos        
+            pos = self.prev.end_pos
         pos2 = {}
         for index, axis in enumerate(Path.AXES):
             pos2[axis] = pos[index]
 
         return pos2
-          
+
     def wait_until_done(self):
         """ Wait until the queue is empty """
         self.native_planner.waitUntilFinished()
@@ -79,123 +102,180 @@ class PathPlanner:
     def force_exit(self):
         self.native_planner.stopThread(True)
 
-    ''' Home the given axis using endstops (min) '''
-    def home(self,axis):
+    def emergency_interrupt(self):
+        """ Stop in emergency any moves. """
+        # Note: This method has to be thread safe as it can be called from the
+        # command thread directly or from the command queue thread
+        self.native_planner.suspend()
+        for name, stepper in self.printer.steppers.iteritems():
+            stepper.set_disabled(True)
 
-        if axis=="E" or axis=="H":
-            return
+        #Create a new path planner to have everything clean when it restarts
+        self.native_planner.stopThread(True)
+        self.__init_path_planner()
 
-        logging.debug("homing "+axis)
+    def suspend(self):
+        self.native_planner.suspend()
 
-        speed = Path.home_speed[Path.axis_to_index(axis)]
-        # Move until endstop is hit
-        p = RelativePath({axis:-self.travel_length[axis]}, speed, self.printer.acceleration, True)
-        
+    def resume(self):
+        self.native_planner.resume()
+
+    def _home_internal(self, axis):
+        """ Private method for homing a set or a single axis """
+        logging.debug("homing " + str(axis))
+
+        path_back = {}
+        path_center = {}
+        path_zero = {}
+
+        speed = Path.home_speed[0]
+
+        for a in axis:
+            if not self.printer.steppers[a].has_endstop:
+                logging.debug("Skipping homing for " + str(a))
+                continue
+
+            path_back[a] = -self.travel_length[a]
+            path_center[a] = -self.center_offset[a]
+            path_zero[a] = 0
+            speed = min(speed, Path.home_speed[Path.axis_to_index(a)])
+
+            # Move until endstop is hit
+        p = RelativePath(path_back, speed, self.printer.acceleration, True)
+
         self.add_path(p)
 
         # Reset position to offset
-        p = G92Path({axis:-self.center_offset[axis]}, speed)
+        p = G92Path(path_center, speed)
         self.add_path(p)
-        
+
         # Move to offset
-        p = AbsolutePath({axis:0}, speed, self.printer.acceleration)
+        p = AbsolutePath(path_zero, speed, self.printer.acceleration)
         self.add_path(p)
         self.wait_until_done()
-        logging.debug("homing done for "+axis)
+        logging.debug("homing done for " + str(axis))
 
-    ''' Add a path segment to the path planner '''        
-    def add_path(self, new):   
+    def home(self, axis):
+        """ Home the given axis using endstops (min) """
+        logging.debug("homing " + str(axis))
 
+        # Home axis for core X,Y and H-Belt independently to avoid hardware
+        # damages.
+        if Path.axis_config == Path.AXIS_CONFIG_CORE_XY or \
+                        Path.axis_config == Path.AXIS_CONFIG_H_BELT:
+            for a in axis:
+                self._home_internal(a)
+        # For delta, switch to cartesian when homing
+        elif Path.axis_config == Path.AXIS_CONFIG_DELTA:
+            Path.axis_config = Path.AXIS_CONFIG_XY
+            self._home_internal(axis)
+            Path.axis_config = Path.AXIS_CONFIG_DELTA
+        else:
+            self._home_internal(axis)
+
+    def add_path(self, new):
+        """ Add a path segment to the path planner """
         # Link to the previous segment in the chain
         new.set_prev(self.prev)
-        
-        #logging.debug("Adding path "+str(new))
-        #logging.debug("Previous path was "+str(self.prev))
 
         if not new.is_G92():
-            #push this new segment
-            start = new.start_pos[:4]
-            end = new.stepper_end_pos[:4]
+            self.printer.ensure_steppers_enabled()
+            #push this new segment        
+            self.native_planner.queueMove(tuple(new.delta[:4]),
+                                          tuple(new.num_steps[:4]), new.speed,
+                                          bool(new.cancelable),
+                                          bool(new.movement != Path.RELATIVE))
 
-            self.native_planner.queueMove(tuple(start),tuple(end), new.speed, bool(new.cancelable), True if new.movement != Path.RELATIVE else False)
-
-        #logging.debug("Path added.")
         self.prev = new
+        self.prev.unlink()  # We don't want to store the entire print
+        # in memory, so we keep only the last path.
 
     def set_extruder(self, ext_nr):
         if ext_nr in [0, 1]:
+            if ext_nr == 0:
+                Path.steps_pr_meter[3] = self.printer.steppers[
+                    "E"].get_steps_pr_meter()
+            elif ext_nr == 1:
+                Path.steps_pr_meter[3] = self.printer.steppers[
+                    "H"].get_steps_pr_meter()
             self.native_planner.setExtruder(ext_nr)
 
-
-    ''' start of Python impl of queue_move '''
     def queue_move(self, path):
-        path.primay_axis     = np.max(path.delta)
-        path.diff            = path.delta*(1.0/path.steps_pr_meter)
+        """ start of Python impl of queue_move """
+        # Not working!
+        path.primay_axis = np.max(path.delta)
+        path.diff = path.delta * (1.0 / path.steps_pr_meter)
 
         path.steps_remaining = path.delta[path.primary_axis]
-        path.xyz_dist        = np.sqrt(np.dot(path.delta[:3],path.delta[:3]))
-        path.distance        = np.max(path.xyz_dist, path.diff[4])
+        path.xyz_dist = np.sqrt(np.dot(path.delta[:3], path.delta[:3]))
+        path.distance = np.max(path.xyz_dist, path.diff[4])
 
-        calculate_move(path)        
+        calculate_move(path)
 
-    ''' Start of Python impl of calculate move '''
-    def caluculate_move(self, path):
+    def calculate_move(self, path):
+        """ Start of Python impl of calculate move """
+        # Not working!
         axis_interval[4];
-        speed = max(minimumSpeed, path.speed) if path.is_x_or_y_move() else path.speed
-        path.time_in_ticks = time_for_move = F_CPU * path.distance / speed # time is in ticks
-        
-        # Compute the slowest allowed interval (ticks/step), so maximum feedrate is not violated
-        axis_interval = abs(path.diff)*F_CPU / Path.max_speeds*path.steps_remaining #
-        limit_interval = max(np.max(axis_interval), time_for_move/path.steps_remaining) 
-    
+        speed = max(minimumSpeed,
+                    path.speed) if path.is_x_or_y_move() else path.speed
+        # time is in ticks
+        path.time_in_ticks = time_for_move = F_CPU * path.distance / speed
+
+        # Compute the slowest allowed interval (ticks/step), so maximum
+        # feedrate is not violated
+        axis_interval = abs(
+            path.diff) * F_CPU / Path.max_speeds * path.steps_remaining
+        limit_interval = max(np.max(axis_interval),
+                             time_for_move / path.steps_remaining)
+
         path.full_interval = limit_interval
 
         # new time at full speed = limitInterval*p->stepsRemaining [ticks]
-        time_for_move = limit_interval * path.steps_remaining; 
+        time_for_move = limit_interval * path.steps_remaining;
         inv_time_s = F_CPU / time_for_move;
 
-        axis_interval   = time_for_move / path.delta;
-        path.speed      = sign(path.delta) * axis_diff * inv_time_s;
-
+        axis_interval = time_for_move / path.delta;
+        path.speed = sign(path.delta) * axis_diff * inv_time_s;
 
 
 if __name__ == '__main__':
-    import cProfile
     import numpy as np
     import os
-    import sys
     from CascadingConfigParser import CascadingConfigParser
 
-    logging.basicConfig(level=logging.DEBUG, 
-                    format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
-                    datefmt='%m-%d %H:%M')
-
+    logging.basicConfig(level=logging.DEBUG,
+                        format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
+                        datefmt='%m-%d %H:%M')
 
     from Stepper import Stepper
-    from Gcode import Gcode
     from PruFirmware import PruFirmware
 
+    Path.steps_pr_meter = np.array(
+        [3.125 * (2 ** 4) * 1000.0, 3.125 * (2 ** 4) * 1000.0,
+         133.33333333 * (2 ** 4) * 1000.0, 33.4375 * (2 ** 4) * 1000.0,
+         33.4375 * (2 ** 4) * 1000.0])
 
-    Path.steps_pr_meter = np.array([3.125*(2**4)*1000.0, 3.125*(2**4)*1000.0, 133.33333333*(2**4)*1000.0, 33.4375*(2**4)*1000.0, 33.4375*(2**4)*1000.0])
-        
-    
     print "Making steppers"
 
-
     steppers = {}
-    steppers["X"] = Stepper("GPIO0_27", "GPIO1_29", "GPIO2_4",  0, "X",None,0,0)
+    steppers["X"] = Stepper("GPIO0_27", "GPIO1_29", "GPIO2_4", 0, "X", None, 0,
+                            0)
     steppers["X"].set_microstepping(2)
     steppers["X"].set_steps_pr_mm(6.0)
-    steppers["Y"] = Stepper("GPIO1_12", "GPIO0_22", "GPIO2_5",  1, "Y",None,1,1)  
+    steppers["Y"] = Stepper("GPIO1_12", "GPIO0_22", "GPIO2_5", 1, "Y", None, 1,
+                            1)
     steppers["Y"].set_microstepping(2)
     steppers["Y"].set_steps_pr_mm(6.0)
-    steppers["Z"] = Stepper("GPIO0_23", "GPIO0_26", "GPIO0_15", 2, "Z",None,2,2)  
+    steppers["Z"] = Stepper("GPIO0_23", "GPIO0_26", "GPIO0_15", 2, "Z", None,
+                            2, 2)
     steppers["Z"].set_microstepping(2)
     steppers["Z"].set_steps_pr_mm(160.0)
-    steppers["E"] = Stepper("GPIO1_28", "GPIO1_15", "GPIO2_1",  3, "Ext1",None,3,3)
+    steppers["E"] = Stepper("GPIO1_28", "GPIO1_15", "GPIO2_1", 3, "Ext1", None,
+                            3, 3)
     steppers["E"].set_microstepping(2)
     steppers["E"].set_steps_pr_mm(5.0)
-    steppers["H"] = Stepper("GPIO1_13", "GPIO1_14", "GPIO2_3",  4, "Ext2",None,4,4)
+    steppers["H"] = Stepper("GPIO1_13", "GPIO1_14", "GPIO2_3", 4, "Ext2", None,
+                            4, 4)
     steppers["H"].set_microstepping(2)
     steppers["H"].set_steps_pr_mm(5.0)
 
@@ -204,33 +284,35 @@ if __name__ == '__main__':
     printer.steppers = steppers
 
     # Parse the config
-    printer.config = CascadingConfigParser(['/etc/redeem/default.cfg', '/etc/redeem/local.cfg'])
+    printer.config = CascadingConfigParser(
+        ['/etc/redeem/default.cfg', '/etc/redeem/local.cfg'])
 
     # Get the revision from the Config file
     revision = printer.config.get('System', 'revision', "A4")
-  
 
     dirname = os.path.dirname(os.path.realpath(__file__))
 
-    pru_firmware = PruFirmware(dirname+"/../firmware/firmware_runtime.p",dirname+"/../firmware/firmware_runtime.bin",dirname+"/../firmware/firmware_endstops.p",dirname+"/../firmware/firmware_endstops.bin",revision,printer.config,"/usr/bin/pasm")
-
+    pru_firmware = PruFirmware(dirname + "/../firmware/firmware_runtime.p",
+                               dirname + "/../firmware/firmware_runtime.bin",
+                               dirname + "/../firmware/firmware_endstops.p",
+                               dirname + "/../firmware/firmware_endstops.bin",
+                               revision, printer.config, "/usr/bin/pasm")
 
     path_planner = PathPlanner(printer, pru_firmware)
 
-    speed=3000/60000.0
+    speed = 3000 / 60000.0
     acceleration = 0.5
 
     path_planner.add_path(AbsolutePath(
-    {
-        "X": 0.01
-    }, speed, acceleration))
+        {
+            "X": 0.01
+        }, speed, acceleration))
 
     path_planner.add_path(AbsolutePath(
-    {
-        "X": 0.0
-    }, speed, acceleration))
-   
+        {
+            "X": 0.0
+        }, speed, acceleration))
+
     path_planner.wait_until_done()
 
     path_planner.force_exit()
-
