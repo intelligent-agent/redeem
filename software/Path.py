@@ -47,8 +47,9 @@ class Path:
     matrix_H_inv = np.linalg.inv(matrix_H)
 
     # Precalculate the CoreXY matrix
-    # TODO: This is the wrong transformation 
-    matrix_XY = np.matrix('1.0 0.0; 0.0 1.0')
+    # A - motor X (top right), B - motor Y (top left)
+    # home located in bottom right corner    
+    matrix_XY = np.matrix('1.0 1.0; 1.0 -1.0')
     matrix_XY_inv = np.linalg.inv(matrix_XY)
 
     axis_config = AXIS_CONFIG_XY # Default config is normal cartesian XY
@@ -91,7 +92,7 @@ class Path:
             X = np.dot(Path.matrix_H_inv, vec[0:2])
             ret_vec[:2] = X[0]
         if Path.axis_config == Path.AXIS_CONFIG_CORE_XY:
-            X = np.dot(Path.matrix_XY_inv, vec[0:2])
+            X = np.dot(Path.matrix_XY, vec[0:2])
             ret_vec[:2] = X[0]
         if Path.axis_config == Path.AXIS_CONFIG_DELTA:
         # Subtract the current column positions
@@ -111,7 +112,7 @@ class Path:
             X = np.dot(Path.matrix_H, vec[0:2])
             ret_vec[:2] = X[0]
         if Path.axis_config == Path.AXIS_CONFIG_CORE_XY:
-            X = np.dot(Path.matrix_XY, vec[0:2])
+            X = np.dot(Path.matrix_XY_inv, vec[0:2])
             ret_vec[:2] = X[0]
         if Path.axis_config == Path.AXIS_CONFIG_DELTA:
             # Subtract the current column positions
