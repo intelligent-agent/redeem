@@ -51,15 +51,16 @@ from CascadingConfigParser import CascadingConfigParser
 from Printer import Printer
 from GCodeProcessor import GCodeProcessor
 
+# TODO: Set logging level according to configuration file
 logging.basicConfig(level=logging.DEBUG,
                     format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
                     datefmt='%m-%d %H:%M')
 
 
 class Redeem:
-    """ Init """
 
     def __init__(self):
+        """ Init """
         logging.info("Redeem initializing " + version)
 
         self.printer = Printer()
@@ -72,8 +73,6 @@ class Redeem:
         # Get the revision from the Config file
         self.revision = self.printer.config.get('System', 'revision', "A4")
         logging.info("Replicape revision " + self.revision)
-
-
 
         # Init the end stops
         EndStop.callback = self.end_stop_hit
@@ -197,7 +196,7 @@ class Redeem:
         else:
             logging.info("No cold end present in path: " + path)
 
-            # Init the 3 heaters. Argument is channel number
+        # Init the 3 heaters. Argument is channel number
         if self.revision == "A3":
             mosfet_ext1 = Mosfet(3)
             mosfet_ext2 = Mosfet(5)
@@ -342,7 +341,7 @@ class Redeem:
 
         self.printer.path_planner.travel_length = travel
         self.printer.path_planner.center_offset = offset
-        self.printer.processor = GCodeProcessor(self.printer);
+        self.printer.processor = GCodeProcessor(self.printer)
 
         # Set up communication channels
         self.printer.comms["USB"] = USB(self.printer)
@@ -360,7 +359,8 @@ class Redeem:
         self.running = True
 
         # Start the two processes
-        p0 = Thread(target=self.loop, args=(self.printer.commands, "buffered"))
+        p0 = Thread(target=self.loop,
+                    args=(self.printer.commands, "buffered"))
         p1 = Thread(target=self.loop,
                     args=(self.printer.unbuffered_commands, "unbuffered"))
         p0.daemon = True
@@ -377,11 +377,11 @@ class Redeem:
         p1.join()
 
     def loop(self, queue, name):
-        """ When a new gcode comes in, excute it """
+        """ When a new gcode comes in, execute it """
         try:
             while self.running:
                 try:
-                    gcode = queue.get(True, 1)
+                    gcode = queue.get(block=True, timeout=1)
                 except Queue.Empty:
                     continue
 
@@ -390,7 +390,7 @@ class Redeem:
                 self.printer.reply(gcode)
                 queue.task_done()
         except Exception:
-            logging.exception("Ooops: ")
+            logging.exception("Exception in {} loop: ".format(name))
 
     def exit(self):
         self.running = False
@@ -398,7 +398,7 @@ class Redeem:
         for name, stepper in self.printer.steppers.iteritems():
             stepper.set_disabled()
 
-            # Commit changes for the Steppers
+        # Commit changes for the Steppers
         Stepper.commit()
 
         self.printer.path_planner.force_exit()

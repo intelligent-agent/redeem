@@ -62,8 +62,8 @@ class Ethernet:
                 while not "\n" in line:
                     try:
                         chunk = self.client.recv(1)
-                    except socket.error, (value,message):
-                        logging.error("Ethernet "+ message)
+                    except socket.error, (value, message):
+                        logging.error("Ethernet " + message)
                         chunk = ''
                     if chunk == '':
                         logging.warning("Ethernet: Connection reset by Per.")
@@ -73,7 +73,7 @@ class Ethernet:
                 if not "\n" in line:  # Make sure the whole line was read.
                     break
                 message = line.strip("\n")
-                if len(message)>0:
+                if len(message) > 0:
                     g = Gcode({"message": message, "prot": "Eth"})
                     if self.printer.processor.is_buffered(g):
                         self.printer.commands.put(g)

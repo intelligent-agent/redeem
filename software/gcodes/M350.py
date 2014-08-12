@@ -1,4 +1,4 @@
-'''
+"""
 GCode M350
 Set microstepping mode
 
@@ -6,7 +6,7 @@ Author: Elias Bakken
 email: elias.bakken(at)gmail(dot)com
 Website: http://www.thing-printer.com
 License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
-'''
+"""
 
 from GCodeCommand import GCodeCommand
 from Stepper import Stepper
@@ -28,6 +28,6 @@ class M350(GCodeCommand):
         logging.debug("acceleration tables recreated")
 
     def get_description(self):
-        ret = "Set microstepping mode for the axes present with a token. "
-        ret += "Microstepping will be 2^val. Steps pr. mm. is changed accordingly."
-        return ret
+        return "Set microstepping mode for the axes present with a token. " \
+               "Microstepping will be 2^val. Steps pr. mm. is changed" \
+               " accordingly."
