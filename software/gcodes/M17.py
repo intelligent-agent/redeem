@@ -1,4 +1,4 @@
-'''
+"""
 GCode M17
 Enable steppers
 
@@ -6,7 +6,7 @@ Author: Mathieu Monney
 email: zittix(at)xwaves(dot)net
 Website: http://www.xwaves.net
 License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
-'''
+"""
 
 from GCodeCommand import GCodeCommand
 from Stepper import Stepper
@@ -22,4 +22,5 @@ class M17(GCodeCommand):
         Stepper.commit()
 
     def get_description(self):
-        return "Power on and enable all steppers. Motors are active after this command."
+        return "Power on and enable all steppers. Motors are active after " \
+               "this command."
