@@ -39,9 +39,9 @@ except Exception, e:
 
 
 class PathPlanner:
-    """ Init the planner """
 
     def __init__(self, printer, pru_firmware):
+        """ Init the planner """
         self.printer = printer
         self.steppers = printer.steppers
         self.pru_firmware = pru_firmware
@@ -54,6 +54,8 @@ class PathPlanner:
 
         if pru_firmware:
             self.__init_path_planner()
+        else:
+            self.native_planner = None
 
     def __init_path_planner(self):
         self.native_planner = PathPlannerNative()
