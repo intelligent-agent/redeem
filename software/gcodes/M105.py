@@ -24,7 +24,7 @@ class M105(GCodeCommand):
             return "{0}:{1:.0f}".format(prefix, temperature)
 
         # Cura expects the temperature from the first
-        current_tool = self.printer.heaters[self.printer.current_tool]
+        current_tool = self.printer.current_tool
         answer = "ok " + format_temperature(current_tool, "T")
 
         # Append all other readings
