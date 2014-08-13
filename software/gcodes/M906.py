@@ -1,4 +1,4 @@
-'''
+"""
 GCode M906
 Set stepper current in mA
 
@@ -6,7 +6,7 @@ Author: Elias Bakken
 email: elias.bakken(at)gmail(dot)com
 Website: http://www.thing-printer.com
 License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
-'''
+"""
 
 from GCodeCommand import GCodeCommand
 

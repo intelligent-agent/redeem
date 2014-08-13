@@ -23,6 +23,7 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
 
 import inspect
 import logging
+import re
 from gcodes import GCodeCommand
 
 
@@ -87,11 +88,15 @@ if __name__ == '__main__':
 
     proc = GCodeProcessor({})
 
-    #print proc.get_supported_commands()
+    print ""
+    print "Commands:"
 
-    print "\nCommands:"
+    descriptions = proc.get_supported_commands_and_description()
 
-    descrs = proc.get_supported_commands_and_description()
+    def _natural_key(string_):
+        """See http://www.codinghorror.com/blog/archives/001018.html"""
+        return [int(s) if s.isdigit() else
+                s for s in re.split(r'(\d+)', string_)]
 
-    for name in descrs:
-        print name + "\t\t" + descrs[name]
+    for name in sorted(descriptions, key=_natural_key):
+        print name + "\t" + descriptions[name]

@@ -108,7 +108,7 @@ class Stepper:
     def set_enabled(self, force_update=False):
         """ Sets the Stepper enabled """
         if not self.enabled:
-            self.state &= ~(1<<Stepper.ENABLED)
+            self.state &= ~(1 << Stepper.ENABLED)
             self.enabled = True
         if force_update:
             self.update()
@@ -116,7 +116,7 @@ class Stepper:
     def set_disabled(self, force_update=False):
         """ Sets the Stepper disabled """
         if self.enabled:
-            self.state |= (1<<Stepper.ENABLED)
+            self.state |= (1 << Stepper.ENABLED)
             self.enabled = False
         if force_update:
             self.update()
