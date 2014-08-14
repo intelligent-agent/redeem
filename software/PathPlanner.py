@@ -27,6 +27,7 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
 import logging
 from Path import Path, AbsolutePath, RelativePath, G92Path
 from Printer import Printer
+import numpy as np
 
 try:
     from path_planner.PathPlannerNative import PathPlannerNative
