@@ -51,7 +51,7 @@ from CascadingConfigParser import CascadingConfigParser
 from Printer import Printer
 from GCodeProcessor import GCodeProcessor
 
-# TODO: Set logging level according to configuration file
+# Default logging level is set to debug
 logging.basicConfig(level=logging.DEBUG,
                     format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
                     datefmt='%m-%d %H:%M')
@@ -70,8 +70,12 @@ class Redeem:
             ['/etc/redeem/default.cfg', '/etc/redeem/printer.cfg',
              '/etc/redeem/local.cfg'])
 
-        # Get the revision from the Config file
+        # Get the revision and loglevel from the Config file
         self.revision = self.printer.config.get('System', 'revision', "A4")
+        level = self.printer.config.getint('System', 'loglevel')
+        if level > 0:
+            logging.getLogger().setLevel(level)
+	    
         logging.info("Replicape revision " + self.revision)
 
         # Init the end stops
