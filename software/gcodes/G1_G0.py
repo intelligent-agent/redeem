@@ -27,11 +27,9 @@ class G0(GCodeCommand):
             # Get the value, new position or vector
             smds[axis] = float(g.token_value(i)) / 1000.0
         if self.printer.movement == Path.ABSOLUTE:
-            path = AbsolutePath(smds, self.printer.feed_rate,
-                                self.printer.acceleration)
+            path = AbsolutePath(smds, self.printer.feed_rate)
         elif self.printer.movement == Path.RELATIVE:
-            path = RelativePath(smds, self.printer.feed_rate,
-                                self.printer.acceleration)
+            path = RelativePath(smds, self.printer.feed_rate)
         else:
             logging.error("invalid movement: " + str(self.printer.movement))
             return
