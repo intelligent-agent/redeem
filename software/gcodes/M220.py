@@ -25,5 +25,5 @@ class M220(GCodeCommand):
         return "M220 S<factor in percent> - set speed factor override percentage"
 
     def is_buffered(self):
-        return True
+        return False
 

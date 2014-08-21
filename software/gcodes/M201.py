@@ -1,5 +1,5 @@
 """
-GCode M220 & M221  - set acceleration
+GCode M202 & M201  - set acceleration
 
 Author: Boris Lasic
 email: boris(at)max(dot)si
