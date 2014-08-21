@@ -302,17 +302,16 @@ if __name__ == '__main__':
     path_planner = PathPlanner(printer, pru_firmware)
 
     speed = 3000 / 60000.0
-    acceleration = 0.5
 
     path_planner.add_path(AbsolutePath(
         {
             "X": 0.01
-        }, speed, acceleration))
+        }, speed))
 
     path_planner.add_path(AbsolutePath(
         {
             "X": 0.0
-        }, speed, acceleration))
+        }, speed)
 
     path_planner.wait_until_done()
 
