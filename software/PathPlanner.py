@@ -182,8 +182,8 @@ class PathPlanner:
         if not new.is_G92():
             self.printer.ensure_steppers_enabled()
             #push this new segment        
-            self.native_planner.queueMove(tuple(new.delta[:4]),
-                                          tuple(new.num_steps[:4]), new.speed,
+            self.native_planner.queueMove(tuple(new.start_pos[:4]),
+                                          tuple(new.end_pos[:4]), new.speed,
                                           bool(new.cancelable),
                                           bool(new.movement != Path.RELATIVE))
 

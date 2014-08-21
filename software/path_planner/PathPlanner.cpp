@@ -21,7 +21,7 @@
  
  You should have received a copy of the GNU General Public License
  along with Redeem.  If not, see <http://www.gnu.org/licenses/>.
-
+ 
  */
 
 #include "PathPlanner.h"
@@ -92,7 +92,7 @@ void PathPlanner::setMaxFeedrates(float rates[NUM_MOVING_AXIS]){
 }
 
 void PathPlanner::setPrintAcceleration(float accel[NUM_MOVING_AXIS]){
-	//here the target unit is mm/s^2, we need to convert from m/s^2 to mm/s^2	
+	//here the target unit is mm/s^2, we need to convert from m/s^2 to mm/s^2
 	for(int i=0;i<NUM_MOVING_AXIS;i++) {
 		maxAccelerationMMPerSquareSecond[i] = accel[i]*1000;
 	}
@@ -100,7 +100,7 @@ void PathPlanner::setPrintAcceleration(float accel[NUM_MOVING_AXIS]){
 }
 
 void PathPlanner::setTravelAcceleration(float accel[NUM_MOVING_AXIS]){
-	//here the target unit is mm/s^2, we need to convert from m/s^2 to mm/s^2	
+	//here the target unit is mm/s^2, we need to convert from m/s^2 to mm/s^2
 	for(int i=0;i<NUM_MOVING_AXIS;i++) {
 		maxTravelAccelerationMMPerSquareSecond[i] = accel[i]*1000;
 	}
@@ -113,10 +113,10 @@ void PathPlanner::setMaxJerk(float maxJerk, float maxZJerk){
 }
 
 void PathPlanner::setAxisStepsPerMeter(unsigned long stepPerM[NUM_MOVING_AXIS]) {
-	//here the target unit is step / mm, we need to convert from step / m to step / mm	
+	//here the target unit is step / mm, we need to convert from step / m to step / mm
 	for(int i=0;i<NUM_MOVING_AXIS;i++) {
 		axisStepsPerMM[i] = stepPerM[i]/1000;
-	}	
+	}
 	recomputeParameters();
 }
 
@@ -135,7 +135,7 @@ void PathPlanner::recomputeParameters() {
     minimumSpeed = accel*sqrt(2.0f/(axisStepsPerMM[X_AXIS]*accel));
     accel = std::max(maxAccelerationMMPerSquareSecond[Z_AXIS],maxTravelAccelerationMMPerSquareSecond[Z_AXIS]);
     minimumZSpeed = accel*sqrt(2.0f/(axisStepsPerMM[Z_AXIS]*accel));
-
+	
 }
 
 PathPlanner::PathPlanner() {
@@ -143,7 +143,7 @@ PathPlanner::PathPlanner() {
 	linesWritePos = 0;
 	
 	//Default settings for debug mode
-
+	
 	static_assert(NUM_EXTRUDER>0,"Invalid number of extruder");
 	
 	for(unsigned int i=0;i<NUM_EXTRUDER;i++) {
@@ -163,8 +163,9 @@ PathPlanner::PathPlanner() {
 	bzero(lines, sizeof(lines));
 }
 
-void PathPlanner::queueMove(float axis_diff[NUM_AXIS], float num_steps[NUM_AXIS], float speed, bool cancelable, bool optimize) {
-
+void PathPlanner::queueMove(float startPos[NUM_AXIS],float endPos[NUM_AXIS],float speed, bool cancelable, bool optimize) {
+    float axis_diff[NUM_AXIS]; // Axis movement in mm
+	
 #ifdef BUILD_PYTHON_EXT
 	Py_BEGIN_ALLOW_THREADS
 #endif
@@ -180,37 +181,60 @@ void PathPlanner::queueMove(float axis_diff[NUM_AXIS], float num_steps[NUM_AXIS]
 	Py_END_ALLOW_THREADS
 #endif
 	
-	if(stop) 
+	if(stop)
         return;
 	
 	Path *p = &lines[linesWritePos];
+	
+	memcpy(p->startPos, startPos, sizeof(float)*NUM_AXIS);
+	memcpy(p->endPos, endPos, sizeof(float)*NUM_AXIS);
+	
+	//Convert meters to mm
+	for(uint8_t axis=0; axis < NUM_AXIS; axis++){
+		p->startPos[axis]*=1000.0;
+		p->endPos[axis]*=1000.0;
+	}
+	
+	
+	
+	LOG("[" << linesWritePos << "]" << " Moving from " << p->startPos[0] << "," << p->startPos[1] << "," << p->startPos[2] << " to "
+		<< p->endPos[0] << "," << p->endPos[1] << "," << p->endPos[2] << std::endl);
 	
 	p->speed = speed*1000; //Speed is in m/s
     p->joinFlags = 0;
 	p->flags = 0;
 	p->setCancelable(cancelable);
+	
 	p->setWaitMS(optimize ? PRINT_MOVE_BUFFER_WAIT : 0);
+	
     p->dir = 0;
-
-	//Copy data and convert meters to mm
-	for(uint8_t axis=0; axis < NUM_AXIS; axis++){
-        axis_diff[axis] *= 1000.0;
-		p->delta[axis] = num_steps[axis];
-        
-        // Set direction
-        if(axis_diff[axis] >= 0)
+	
+    //Find direction
+    for(uint8_t axis=0; axis < NUM_AXIS; axis++){
+		p->startPos[axis] = ceil(p->startPos[axis]*axisStepsPerMM[axis]);
+		p->endPos[axis]   = ceil(p->endPos[axis]*axisStepsPerMM[axis]);
+		
+        if((p->delta[axis]=p->endPos[axis]-p->startPos[axis])>=0)
             p->setPositiveDirectionForAxis(axis);
-        // Set movement or not
-        if(p->delta[axis]) 
-            p->setMoveOfAxis(axis);
-	}
+        else
+            p->delta[axis] = -p->delta[axis];
+		
+        axis_diff[axis] = p->delta[axis] * invAxisStepsPerMM[axis];
+        if(p->delta[axis]) p->setMoveOfAxis(axis);
+		
+    }
 	
     if(p->isNoMove())
 	{
 		LOG( "Warning: no move path" << std::endl);
+		/*if(newPath) {  // need to delete dummy elements, otherwise commands can get locked.
+		 std::lock_guard<std::mutex> lk(m);
+		 linesCount = 0;
+		 linesPos.store(linesWritePos);
+		 }*/
 		return; // No steps included
 	}
-	   
+	
     //Define variables that are needed for the Bresenham algorithm. Please note that  Z is not currently included in the Bresenham algorithm.
     if(p->delta[Y_AXIS] > p->delta[X_AXIS] && p->delta[Y_AXIS] > p->delta[Z_AXIS] && p->delta[Y_AXIS] > p->delta[E_AXIS])
 		p->primaryAxis = Y_AXIS;
@@ -247,6 +271,7 @@ void PathPlanner::queueMove(float axis_diff[NUM_AXIS], float num_steps[NUM_AXIS]
         linesCount++;
     }
     lineAvailable.notify_all();
+	
 	
 	LOG( "End queuing move command" << std::endl);
 }
@@ -285,16 +310,16 @@ void PathPlanner::calculateMove(Path* p,float axis_diff[NUM_AXIS])
 {
     unsigned int axisInterval[NUM_AXIS];
 	float timeForMove = (float)(F_CPU)*p->distance / (p->isXOrYMove() ? std::max(minimumSpeed,p->speed): p->speed); // time is in ticks
-
-/*
-#define MOVE_CACHE_LOW 10
+	
+	/*
+	 #define MOVE_CACHE_LOW 10
 	 if(linesCount < MOVE_CACHE_LOW)   // Limit speed to keep cache full.
 	 {
-#define LOW_TICKS_PER_MOVE F_CPU/50
-		 
-		 timeForMove += (3 * (LOW_TICKS_PER_MOVE-timeForMove)) / (linesCount+1); // Increase time if queue gets empty. Add more time if queue gets smaller.
+	 #define LOW_TICKS_PER_MOVE F_CPU/50
+	 
+	 timeForMove += (3 * (LOW_TICKS_PER_MOVE-timeForMove)) / (linesCount+1); // Increase time if queue gets empty. Add more time if queue gets smaller.
 	 }
-*/
+	 */
 	
     p->timeInTicks = timeForMove;
 	
@@ -385,7 +410,7 @@ void PathPlanner::calculateMove(Path* p,float axis_diff[NUM_AXIS])
         p->setNominalMove();
 	
     p->vMax = F_CPU / p->fullInterval; // maximum steps per second, we can reach
-
+	
     updateTrapezoids();
     // how much steps on primary axis do we need to reach target feedrate
     //p->plateauSteps = (long) (((float)p->acceleration *0.5f / slowest_axis_plateau_time_repro + p->vMin) *1.01f/slowest_axis_plateau_time_repro);
@@ -439,7 +464,7 @@ void PathPlanner::updateTrapezoids()
     unsigned int maxfirst = linesPos; // first non fixed segment
     if(maxfirst != linesWritePos)
         nextPlannerIndex(maxfirst); // don't touch the line printing
-
+	
     // Search last fixed element
     while(first != maxfirst && !lines[first].isEndSpeedFixed())
         previousPlannerIndex(first);
@@ -546,7 +571,7 @@ void PathPlanner::backwardPlanner(unsigned int start, unsigned int last)
     {
         previousPlannerIndex(start);
         previous = &lines[start];
-				
+		
         // Avoid speed calcs if we know we can accelerate within the line
         lastJunctionSpeed = (act->isNominalMove() ? act->fullSpeed : sqrt(lastJunctionSpeed * lastJunctionSpeed + act->accelerationDistance2)); // acceleration is acceleration*distance*2! What can be reached if we try?
         // If that speed is more that the maximum junction speed allowed then ...
@@ -662,19 +687,11 @@ PathPlanner::~PathPlanner() {
 }
 
 void PathPlanner::waitUntilFinished() {
-
-#ifdef BUILD_PYTHON_EXT
-	Py_BEGIN_ALLOW_THREADS
-#endif
 	std::unique_lock<std::mutex> lk(line_mutex);
 	lineAvailable.wait(lk, [this]{
         return linesCount==0 || stop;
     });
 	
-#ifdef BUILD_PYTHON_EXT
-	Py_END_ALLOW_THREADS
-#endif
-
 	//Wait for PruTimer then
 	if(!stop) {
 		pru.waitUntilFinished();
@@ -692,7 +709,7 @@ void PathPlanner::run() {
 	while(!stop) {
 		
 		std::unique_lock<std::mutex> lk(line_mutex);
-
+		
 		lineAvailable.wait(lk, [this]{return linesCount>0 || stop;});
 		
 		Path* cur = &lines[linesPos];
@@ -733,7 +750,7 @@ void PathPlanner::run() {
 		unsigned long vMaxReached;
         unsigned long timer_accel = 0;
 		unsigned long timer_decel = 0;
-
+		
 		if(cur->isBlocked())   // This step is in computation - shouldn't happen
 		{
 			cur = NULL;
@@ -743,12 +760,12 @@ void PathPlanner::run() {
 		}
 		
 		//Only enable axis that are moving. If the axis doesn't need to move then it can stay disabled depending on configuration.
-		cur->fixStartAndEndSpeed();		
+		cur->fixStartAndEndSpeed();
 		cur_errupd = cur->delta[cur->primaryAxis];
 		if(!cur->areParameterUpToDate())  // should never happen, but with bad timings???
 		{
 			cur->updateStepsParameter();
-		}		
+		}
 		
 		vMaxReached = cur->vStart;
 		
@@ -768,7 +785,7 @@ void PathPlanner::run() {
 		directionMask|=((uint8_t)cur->isYPositiveMove() << Y_AXIS);
 		directionMask|=((uint8_t)cur->isZPositiveMove() << Z_AXIS);
 		directionMask|=((uint8_t)cur->isEPositiveMove() << currentExtruder->stepperCommandPosition);
-     
+		
 		cancellableMask = 0;
 		
 		if(cur->isCancelable()) {
@@ -843,7 +860,7 @@ void PathPlanner::run() {
 					v = cur->vEnd;
 			 	else{
 					v=vMaxReached - v;
-					if (v < cur->vEnd) 
+					if (v < cur->vEnd)
                         v = cur->vEnd; // extra steps at the end of desceleration due to rounding erros
 				}
 				
@@ -872,7 +889,7 @@ void PathPlanner::run() {
 		LOG( "Done sending with " << std::dec << linesPos << std::endl);
 		
 		removeCurrentLine();
-
+		
 		lineAvailable.notify_all();
 	}
 }
