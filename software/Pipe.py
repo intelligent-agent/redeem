@@ -23,6 +23,7 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
 """
 
 from threading import Thread
+from distutils.spawn import find_executable
 import select
 import logging
 import os
@@ -37,6 +38,12 @@ class Pipe:
 
         pipe_0 = "/dev/" + self.prot + "_0"
         pipe_1 = "/dev/" + self.prot + "_1"
+
+        # Ensure tty0tty is installed and available in the PATH
+        if find_executable("tty0tty") is None:
+            logging.error("tty0tty not found! tty0tty must be installed")
+            raise EnvironmentError("tty0tty not found")
+
         p = subprocess.Popen(["tty0tty", pipe_0, pipe_1],
                              stderr=subprocess.PIPE)
         p.stderr.readline()

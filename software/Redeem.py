@@ -24,7 +24,7 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
 Minor version tag is Arnold Schwarzenegger movies chronologically.
 """
 
-version = "0.14.0~Conan the Barbarian"
+version = "0.14.4~Conan the Barbarian"
 
 import logging
 import os
@@ -51,15 +51,16 @@ from CascadingConfigParser import CascadingConfigParser
 from Printer import Printer
 from GCodeProcessor import GCodeProcessor
 
+# Default logging level is set to debug
 logging.basicConfig(level=logging.DEBUG,
                     format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
                     datefmt='%m-%d %H:%M')
 
 
 class Redeem:
-    """ Init """
 
     def __init__(self):
+        """ Init """
         logging.info("Redeem initializing " + version)
 
         self.printer = Printer()
@@ -69,11 +70,13 @@ class Redeem:
             ['/etc/redeem/default.cfg', '/etc/redeem/printer.cfg',
              '/etc/redeem/local.cfg'])
 
-        # Get the revision from the Config file
+        # Get the revision and loglevel from the Config file
         self.revision = self.printer.config.get('System', 'revision', "A4")
+        level = self.printer.config.getint('System', 'loglevel')
+        if level > 0:
+            logging.getLogger().setLevel(level)
+	    
         logging.info("Replicape revision " + self.revision)
-
-
 
         # Init the end stops
         EndStop.callback = self.end_stop_hit
@@ -197,7 +200,7 @@ class Redeem:
         else:
             logging.info("No cold end present in path: " + path)
 
-            # Init the 3 heaters. Argument is channel number
+        # Init the 3 heaters. Argument is channel number
         if self.revision == "A3":
             mosfet_ext1 = Mosfet(3)
             mosfet_ext2 = Mosfet(5)
@@ -328,21 +331,32 @@ class Redeem:
             dirname + "/../firmware/firmware_endstops.bin",
             self.revision, self.printer.config, "/usr/bin/pasm")
 
-        self.printer.acceleration = float(
-            self.printer.config.get('Steppers', 'acceleration'))
+	self.printer.maxJerkXY = float(
+            self.printer.config.get('Steppers', 'maxJerk_xy'));
+	self.printer.maxJerkZ = float(
+            self.printer.config.get('Steppers', 'maxJerk_z'));
+	self.printer.maxJerkEH = float(
+            self.printer.config.get('Steppers', 'maxJerk_eh'));
+
+
         self.printer.path_planner = PathPlanner(self.printer, pru_firmware)
 
         travel = {}
         offset = {}
+	i = 0
         for axis in ['X', 'Y', 'Z', 'E', 'H']:
             travel[axis] = self.printer.config.getfloat('Geometry',
                                                         'travel_' + axis.lower())
             offset[axis] = self.printer.config.getfloat('Geometry',
                                                         'offset_' + axis.lower())
+	    self.printer.acceleration[i] = self.printer.config.getfloat('Steppers', 'acceleration_' + axis.lower())
+	    i += 1
+
+
 
         self.printer.path_planner.travel_length = travel
         self.printer.path_planner.center_offset = offset
-        self.printer.processor = GCodeProcessor(self.printer);
+        self.printer.processor = GCodeProcessor(self.printer)
 
         # Set up communication channels
         self.printer.comms["USB"] = USB(self.printer)
@@ -360,7 +374,8 @@ class Redeem:
         self.running = True
 
         # Start the two processes
-        p0 = Thread(target=self.loop, args=(self.printer.commands, "buffered"))
+        p0 = Thread(target=self.loop,
+                    args=(self.printer.commands, "buffered"))
         p1 = Thread(target=self.loop,
                     args=(self.printer.unbuffered_commands, "unbuffered"))
         p0.daemon = True
@@ -377,20 +392,20 @@ class Redeem:
         p1.join()
 
     def loop(self, queue, name):
-        """ When a new gcode comes in, excute it """
+        """ When a new gcode comes in, execute it """
         try:
             while self.running:
                 try:
-                    gcode = queue.get(True, 1)
+                    gcode = queue.get(block=True, timeout=1)
                 except Queue.Empty:
                     continue
 
-                #logging.debug("Executing "+gcode.code()+" from "+name)
+                logging.debug("Executing "+gcode.code()+" from "+name + " " + gcode.message)
                 self._execute(gcode)
                 self.printer.reply(gcode)
                 queue.task_done()
         except Exception:
-            logging.exception("Ooops: ")
+            logging.exception("Exception in {} loop: ".format(name))
 
     def exit(self):
         self.running = False
@@ -398,7 +413,7 @@ class Redeem:
         for name, stepper in self.printer.steppers.iteritems():
             stepper.set_disabled()
 
-            # Commit changes for the Steppers
+        # Commit changes for the Steppers
         Stepper.commit()
 
         self.printer.path_planner.force_exit()

@@ -27,6 +27,7 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
 import logging
 from Path import Path, AbsolutePath, RelativePath, G92Path
 from Printer import Printer
+import numpy as np
 
 try:
     from path_planner.PathPlannerNative import PathPlannerNative
@@ -39,9 +40,9 @@ except Exception, e:
 
 
 class PathPlanner:
-    """ Init the planner """
 
     def __init__(self, printer, pru_firmware):
+        """ Init the planner """
         self.printer = printer
         self.steppers = printer.steppers
         self.pru_firmware = pru_firmware
@@ -54,6 +55,8 @@ class PathPlanner:
 
         if pru_firmware:
             self.__init_path_planner()
+        else:
+            self.native_planner = None
 
     def __init_path_planner(self):
         self.native_planner = PathPlannerNative()
@@ -61,23 +64,21 @@ class PathPlanner:
         self.native_planner.initPRU(self.pru_firmware.get_firmware(0),
                                     self.pru_firmware.get_firmware(1))
 
-        self.native_planner.setPrintAcceleration(
-            tuple([float(self.printer.acceleration) for i in range(3)]))
-        self.native_planner.setTravelAcceleration(
-            tuple([float(self.printer.acceleration) for i in range(3)]))
+        self.native_planner.setPrintAcceleration(tuple([float(self.printer.acceleration[i]) for i in range(3)]))
+        self.native_planner.setTravelAcceleration(tuple([float(self.printer.acceleration[i]) for i in range(3)]))
         self.native_planner.setAxisStepsPerMeter(
             tuple([long(Path.steps_pr_meter[i]) for i in range(3)]))
         self.native_planner.setMaxFeedrates(
-            tuple([float(Path.max_speeds[i]) for i in range(3)]))
-        self.native_planner.setMaxJerk(20 / 1000.0, 0.3 / 1000.0)
+            tuple([float(Path.max_speeds[i]) for i in range(3)]))	
+        self.native_planner.setMaxJerk(self.printer.maxJerkXY / 1000.0, self.printer.maxJerkZ /1000.0)
 
         #Setup the extruders
         for i in range(Path.NUM_AXES - 3):
             e = self.native_planner.getExtruder(i)
             e.setMaxFeedrate(Path.max_speeds[i + 3])
-            e.setPrintAcceleration(self.printer.acceleration)
-            e.setTravelAcceleration(self.printer.acceleration)
-            e.setMaxStartFeedrate(0.04)
+            e.setPrintAcceleration(self.printer.acceleration[i + 3])
+            e.setTravelAcceleration(self.printer.acceleration[i + 3])
+            e.setMaxStartFeedrate(self.printer.maxJerkEH / 1000)
             e.setAxisStepsPerMeter(long(Path.steps_pr_meter[i + 3]))
 
         self.native_planner.setExtruder(0)
@@ -141,7 +142,7 @@ class PathPlanner:
             speed = min(speed, Path.home_speed[Path.axis_to_index(a)])
 
             # Move until endstop is hit
-        p = RelativePath(path_back, speed, self.printer.acceleration, True)
+        p = RelativePath(path_back, speed, True)
 
         self.add_path(p)
 
@@ -150,7 +151,7 @@ class PathPlanner:
         self.add_path(p)
 
         # Move to offset
-        p = AbsolutePath(path_zero, speed, self.printer.acceleration)
+        p = AbsolutePath(path_zero, speed)
         self.add_path(p)
         self.wait_until_done()
         logging.debug("homing done for " + str(axis))
@@ -301,17 +302,16 @@ if __name__ == '__main__':
     path_planner = PathPlanner(printer, pru_firmware)
 
     speed = 3000 / 60000.0
-    acceleration = 0.5
 
     path_planner.add_path(AbsolutePath(
         {
             "X": 0.01
-        }, speed, acceleration))
+        }, speed))
 
     path_planner.add_path(AbsolutePath(
         {
             "X": 0.0
-        }, speed, acceleration))
+        }, speed))
 
     path_planner.wait_until_done()
 

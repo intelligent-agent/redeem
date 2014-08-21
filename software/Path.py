@@ -60,15 +60,21 @@ class Path:
     home_speed = np.ones(NUM_AXES)
     steps_pr_meter = np.ones(NUM_AXES)
 
-    def __init__(self, axes, speed, acceleration, cancelable=False):
+    def __init__(self, axes, speed,  cancelable=False):
         """ The axes of evil, the feed rate in m/s and ABS or REL """
         self.axes = axes
         self.speed = speed
-        self.acceleration = acceleration
         self.cancelable = int(cancelable)
         self.mag = None
         self.pru_data = []
         self.next = None
+        self.prev = None
+        self.speeds = None
+        self.vec = None
+        self.start_pos = None
+        self.end_pos = None
+        self.num_steps = None
+        self.delta = None
 
     def is_G92(self):
         """ Special path, only set the global position on this """
@@ -141,8 +147,8 @@ class Path:
 
 class AbsolutePath(Path):
     """ A path segment with absolute movement """
-    def __init__(self, axes, speed, acceleration, cancelable=False):
-        Path.__init__(self, axes, speed, acceleration, cancelable)
+    def __init__(self, axes, speed, cancelable=False):
+        Path.__init__(self, axes, speed, cancelable)
         self.movement = Path.ABSOLUTE
 
     def set_prev(self, prev):
@@ -178,17 +184,15 @@ class AbsolutePath(Path):
 
 class RelativePath(Path):
     """ A path segment with Relative movement """
-    def __init__(self, axes, speed, acceleration=0.5, cancelable=False):
-        Path.__init__(self, axes, speed, acceleration, cancelable)
+    def __init__(self, axes, speed, cancelable=False):
+        Path.__init__(self, axes, speed, cancelable)
         self.movement = Path.RELATIVE
-
 
     def set_prev(self, prev):
         """ Link to previous segment """
         self.prev = prev
         prev.next = self
         self.start_pos = prev.end_pos
-
 
         # Generate the vector 
         self.vec = np.zeros(Path.NUM_AXES, dtype=Path.DTYPE)
@@ -215,15 +219,15 @@ class RelativePath(Path):
 class G92Path(Path):
     """ A reset axes path segment. No movement occurs, only global position
     setting """
-    def __init__(self, axes, speed, acceleration=0.5, cancelable=False):
-        Path.__init__(self, axes, speed, acceleration, cancelable)
+    def __init__(self, axes, speed,  cancelable=False):
+        Path.__init__(self, axes, speed, cancelable)
         self.movement = Path.G92
         self.ratios = np.ones(Path.NUM_AXES)
 
     def set_prev(self, prev):
         """ Set the previous segment """
         self.prev = prev
-        if prev != None:
+        if prev is not None:
             self.start_pos = prev.end_pos
             prev.next = self
         else:
