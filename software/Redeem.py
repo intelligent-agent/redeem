@@ -203,8 +203,8 @@ class Redeem:
         # Init the 3 heaters. Argument is channel number
         if self.revision == "A3":
             mosfet_ext1 = Mosfet(3)
-            mosfet_ext2 = Mosfet(5)
-            mosfet_hbp = Mosfet(4)
+            mosfet_ext2 = Mosfet(4)
+            mosfet_hbp = Mosfet(5)
         else:
             mosfet_ext1 = Mosfet(5)
             mosfet_ext2 = Mosfet(3)
