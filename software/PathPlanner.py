@@ -311,7 +311,7 @@ if __name__ == '__main__':
     path_planner.add_path(AbsolutePath(
         {
             "X": 0.0
-        }, speed)
+        }, speed))
 
     path_planner.wait_until_done()
 
