@@ -60,11 +60,10 @@ class Path:
     home_speed = np.ones(NUM_AXES)
     steps_pr_meter = np.ones(NUM_AXES)
 
-    def __init__(self, axes, speed, acceleration, cancelable=False):
+    def __init__(self, axes, speed,  cancelable=False):
         """ The axes of evil, the feed rate in m/s and ABS or REL """
         self.axes = axes
         self.speed = speed
-        self.acceleration = acceleration
         self.cancelable = int(cancelable)
         self.mag = None
         self.pru_data = []
@@ -148,8 +147,8 @@ class Path:
 
 class AbsolutePath(Path):
     """ A path segment with absolute movement """
-    def __init__(self, axes, speed, acceleration, cancelable=False):
-        Path.__init__(self, axes, speed, acceleration, cancelable)
+    def __init__(self, axes, speed, cancelable=False):
+        Path.__init__(self, axes, speed, cancelable)
         self.movement = Path.ABSOLUTE
 
     def set_prev(self, prev):
@@ -185,8 +184,8 @@ class AbsolutePath(Path):
 
 class RelativePath(Path):
     """ A path segment with Relative movement """
-    def __init__(self, axes, speed, acceleration=0.5, cancelable=False):
-        Path.__init__(self, axes, speed, acceleration, cancelable)
+    def __init__(self, axes, speed, cancelable=False):
+        Path.__init__(self, axes, speed, cancelable)
         self.movement = Path.RELATIVE
 
     def set_prev(self, prev):
@@ -220,8 +219,8 @@ class RelativePath(Path):
 class G92Path(Path):
     """ A reset axes path segment. No movement occurs, only global position
     setting """
-    def __init__(self, axes, speed, acceleration=0.5, cancelable=False):
-        Path.__init__(self, axes, speed, acceleration, cancelable)
+    def __init__(self, axes, speed,  cancelable=False):
+        Path.__init__(self, axes, speed, cancelable)
         self.movement = Path.G92
         self.ratios = np.ones(Path.NUM_AXES)
 

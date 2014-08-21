@@ -51,7 +51,7 @@ from CascadingConfigParser import CascadingConfigParser
 from Printer import Printer
 from GCodeProcessor import GCodeProcessor
 
-# TODO: Set logging level according to configuration file
+# Default logging level is set to debug
 logging.basicConfig(level=logging.DEBUG,
                     format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
                     datefmt='%m-%d %H:%M')
@@ -70,8 +70,12 @@ class Redeem:
             ['/etc/redeem/default.cfg', '/etc/redeem/printer.cfg',
              '/etc/redeem/local.cfg'])
 
-        # Get the revision from the Config file
+        # Get the revision and loglevel from the Config file
         self.revision = self.printer.config.get('System', 'revision', "A4")
+        level = self.printer.config.getint('System', 'loglevel')
+        if level > 0:
+            logging.getLogger().setLevel(level)
+	    
         logging.info("Replicape revision " + self.revision)
 
         # Init the end stops
@@ -327,17 +331,28 @@ class Redeem:
             dirname + "/../firmware/firmware_endstops.bin",
             self.revision, self.printer.config, "/usr/bin/pasm")
 
-        self.printer.acceleration = float(
-            self.printer.config.get('Steppers', 'acceleration'))
+	self.printer.maxJerkXY = float(
+            self.printer.config.get('Steppers', 'maxJerk_xy'));
+	self.printer.maxJerkZ = float(
+            self.printer.config.get('Steppers', 'maxJerk_z'));
+	self.printer.maxJerkEH = float(
+            self.printer.config.get('Steppers', 'maxJerk_eh'));
+
+
         self.printer.path_planner = PathPlanner(self.printer, pru_firmware)
 
         travel = {}
         offset = {}
+	i = 0
         for axis in ['X', 'Y', 'Z', 'E', 'H']:
             travel[axis] = self.printer.config.getfloat('Geometry',
                                                         'travel_' + axis.lower())
             offset[axis] = self.printer.config.getfloat('Geometry',
                                                         'offset_' + axis.lower())
+	    self.printer.acceleration[i] = self.printer.config.getfloat('Steppers', 'acceleration_' + axis.lower())
+	    i += 1
+
+
 
         self.printer.path_planner.travel_length = travel
         self.printer.path_planner.center_offset = offset
@@ -385,7 +400,7 @@ class Redeem:
                 except Queue.Empty:
                     continue
 
-                #logging.debug("Executing "+gcode.code()+" from "+name)
+                logging.debug("Executing "+gcode.code()+" from "+name + " " + gcode.message)
                 self._execute(gcode)
                 self.printer.reply(gcode)
                 queue.task_done()
