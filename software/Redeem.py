@@ -75,7 +75,7 @@ class Redeem:
         level = self.printer.config.getint('System', 'loglevel')
         if level > 0:
             logging.getLogger().setLevel(level)
-	    
+        
         logging.info("Replicape revision " + self.revision)
 
         # Init the end stops
@@ -331,11 +331,11 @@ class Redeem:
             dirname + "/../firmware/firmware_endstops.bin",
             self.revision, self.printer.config, "/usr/bin/pasm")
 
-	self.printer.maxJerkXY = float(
+        self.printer.maxJerkXY = float(
             self.printer.config.get('Steppers', 'maxJerk_xy'));
-	self.printer.maxJerkZ = float(
+        self.printer.maxJerkZ = float(
             self.printer.config.get('Steppers', 'maxJerk_z'));
-	self.printer.maxJerkEH = float(
+        self.printer.maxJerkEH = float(
             self.printer.config.get('Steppers', 'maxJerk_eh'));
 
 

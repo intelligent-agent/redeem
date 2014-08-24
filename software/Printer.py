@@ -42,10 +42,10 @@ class Printer:
         self.extrude_factor = 1.0
         self.movement = Path.ABSOLUTE
         self.feed_rate = 0.5
-	self.acceleration = [0.5, 0.5, 0.5, 0.5,  0.5]
-	self.maxJerkXY = 20
-	self.maxJerkZ = 1
-	self.maxJerkEH = 4
+        self.acceleration = [0.5, 0.5, 0.5, 0.5,  0.5]
+        self.maxJerkXY = 20
+        self.maxJerkZ = 1
+        self.maxJerkEH = 4
         self.current_tool = "E"
 
     def ensure_steppers_enabled(self):
