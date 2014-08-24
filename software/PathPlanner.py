@@ -189,7 +189,7 @@ class PathPlanner:
 
         self.prev = new
         self.prev.unlink()  # We don't want to store the entire print
-        # in memory, so we keep only the last path.
+                            # in memory, so we keep only the last path.
 
     def set_extruder(self, ext_nr):
         if ext_nr in [0, 1]:

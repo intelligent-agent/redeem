@@ -79,19 +79,19 @@ private:
     unsigned int dir;                       ///< Direction of movement. 1 = X+, 2 = Y+, 4= Z+, values can be combined.
     int delta[NUM_AXIS];                  ///< Steps we want to move.
     int error[NUM_AXIS];                  ///< Error calculation for Bresenham algorithm
-    float speedX;                   ///< Speed in x direction at fullInterval in mm/s
-    float speedY;                   ///< Speed in y direction at fullInterval in mm/s
-    float speedZ;                   ///< Speed in z direction at fullInterval in mm/s
-    float speedE;                   ///< Speed in E direction at fullInterval in mm/s
-    float speedH;                   ///< Speed in H direction at fullInterval in mm/s
-    float fullSpeed;                ///< Desired speed mm/s
-    float invFullSpeed;             ///< 1.0/fullSpeed for fatser computation
-    float accelerationDistance2;             ///< Real 2.0*distanceÜacceleration mm²/s²
-    float maxJunctionSpeed;         ///< Max. junction speed between this and next segment
-    float startSpeed;               ///< Staring speed in mm/s
-    float endSpeed;                 ///< Exit speed in mm/s
-    float minSpeed;
-    float distance;
+    FLOAT_T speedX;                   ///< Speed in x direction at fullInterval in mm/s
+    FLOAT_T speedY;                   ///< Speed in y direction at fullInterval in mm/s
+    FLOAT_T speedZ;                   ///< Speed in z direction at fullInterval in mm/s
+    FLOAT_T speedE;                   ///< Speed in E direction at fullInterval in mm/s
+    FLOAT_T speedH;                   ///< Speed in H direction at fullInterval in mm/s
+    FLOAT_T fullSpeed;                ///< Desired speed mm/s
+    FLOAT_T invFullSpeed;             ///< 1.0/fullSpeed for fatser computation
+    FLOAT_T accelerationDistance2;             ///< Real 2.0*distanceÜacceleration mm²/s²
+    FLOAT_T maxJunctionSpeed;         ///< Max. junction speed between this and next segment
+    FLOAT_T startSpeed;               ///< Staring speed in mm/s
+    FLOAT_T endSpeed;                 ///< Exit speed in mm/s
+    FLOAT_T minSpeed;
+    FLOAT_T distance;
     unsigned int fullInterval;     ///< interval at full speed in ticks/step.
     unsigned int accelSteps;        ///< How much steps does it take, to reach the plateau.
     unsigned int decelSteps;        ///< How much steps does it take, to reach the end speed.
@@ -313,10 +313,10 @@ private:
 	
 public:
 	
-	float speed; //Feedrate
+	FLOAT_T speed; //Feedrate
 	
-	float startPos[NUM_AXIS];
-	float endPos[NUM_AXIS];
+	FLOAT_T startPos[NUM_AXIS];
+	FLOAT_T endPos[NUM_AXIS];
 	
 	
 	

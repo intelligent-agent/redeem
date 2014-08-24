@@ -35,6 +35,7 @@
 #include "pruss_intc_mapping.h"
 #include <cmath>
 #include "StepperCommand.h"
+#include "config.h"
 
 #define PRU_NUM0	  0
 #define PRU_NUM1	  1
@@ -289,7 +290,7 @@ void PruTimer::push_block(uint8_t* blockMemory, size_t blockLen, unsigned int un
 	if(!ddr_write_location) return;
 	
 	//Split the block in smaller blocks if needed
-	size_t nbBlocks = ceil((blockLen+12)/(float)(ddr_size-12));
+	size_t nbBlocks = ceil((blockLen+12)/(FLOAT_T)(ddr_size-12));
 	
 	size_t blockSize = blockLen / nbBlocks;
 	
@@ -551,7 +552,7 @@ void PruTimer::run() {
 		
 		SteppersCommand * cmd = (SteppersCommand*)(currentReadingAddress+4);
 		
-		float totalWait = 0;
+		FLOAT_T totalWait = 0;
 		
 		for(int i=0;i<*nbCommand;i++) {
 			totalWait+=cmd->delay/200000.0;

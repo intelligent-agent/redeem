@@ -40,7 +40,7 @@ class Path:
     G92 = 2
 
     # Numpy array type used throughout    
-    DTYPE = np.float32
+    DTYPE = np.float64
 
     # Precalculate the H-belt matrix
     matrix_H = np.matrix('-0.5 0.5; -0.5 -0.5')
