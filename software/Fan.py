@@ -39,7 +39,7 @@ pwm.write8(PCA9685_MODE1, 0x01)    # Reset
 time.sleep(0.05)				   # Wait for reset
 
 
-class Fan:
+class Fan(object):
     @staticmethod
     def set_PWM_frequency(freq):
         """ Set the PWM frequency for all fans connected on this PWM-chip """
