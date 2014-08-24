@@ -17,11 +17,18 @@
 
 %rename(PathPlannerNative) PathPlanner;
 
+#if FLOAT_T == double
+#define FLOAT_TUPLE_LETTER "d"
+#elif FLOAT_T == float
+#define FLOAT_TUPLE_LETTER "f"
+#else
+#error Unsupported float type
+#endif
 
 // Grab a 4 element array as a Python 4-tuple
 %typemap(in) FLOAT_T[4](FLOAT_T temp[4]) {   // temp[4] becomes a local variable
   if (PyTuple_Check($input)) {
-    if (!PyArg_ParseTuple($input,"ffff",temp,temp+1,temp+2,temp+3)) {
+    if (!PyArg_ParseTuple($input,""FLOAT_TUPLE_LETTER""FLOAT_TUPLE_LETTER""FLOAT_TUPLE_LETTER""FLOAT_TUPLE_LETTER,temp,temp+1,temp+2,temp+3)) {
       PyErr_SetString(PyExc_TypeError,"tuple must have 4 elements");
       return NULL;
     }
@@ -48,7 +55,7 @@
 // Grab a 3 element array as a Python 3-tuple
 %typemap(in) FLOAT_T[3](FLOAT_T temp[3]) {   // temp[3] becomes a local variable
   if (PyTuple_Check($input)) {
-    if (!PyArg_ParseTuple($input,"fff",temp,temp+1,temp+2)) {
+    if (!PyArg_ParseTuple($input,""FLOAT_TUPLE_LETTER""FLOAT_TUPLE_LETTER""FLOAT_TUPLE_LETTER,temp,temp+1,temp+2)) {
       PyErr_SetString(PyExc_TypeError,"tuple must have 3 elements");
       return NULL;
     }
