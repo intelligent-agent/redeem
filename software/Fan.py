@@ -25,58 +25,40 @@ from Adafruit_I2C import Adafruit_I2C
 import time
 import subprocess
 
+PCA9685_MODE1 = 0x0
+PCA9685_PRESCALE = 0xFE
+
+kernel_version = subprocess.check_output(["uname", "-r"]).strip()
+if kernel_version == "3.14.14":
+    pwm = Adafruit_I2C(0x70, 2, False)  # Open device
+else:
+    pwm = Adafruit_I2C(0x70, 1, False)  # Open device
+
+
+pwm.write8(PCA9685_MODE1, 0x01)    # Reset 
+time.sleep(0.05)				   # Wait for reset
+
 
 class Fan(object):
-
-    pwm_frequency = 0
-    pwm = None
-
-    PCA9685_MODE1 = 0x0
-    PCA9685_PRESCALE = 0xFE
-
-    @staticmethod
-    def __init_pwm():
-        kernel_version = subprocess.check_output(["uname", "-r"]).strip()
-        if kernel_version == "3.14.14":
-            Fan.pwm = Adafruit_I2C(0x70, 2, False)  # Open device
-        else:
-            Fan.pwm = Adafruit_I2C(0x70, 1, False)  # Open device
-        Fan.pwm.write8(Fan.PCA9685_MODE1, 0x01)    # Reset
-        time.sleep(0.05)                   # Wait for reset
-
     @staticmethod
     def set_PWM_frequency(freq):
         """ Set the PWM frequency for all fans connected on this PWM-chip """
-
-        if Fan.pwm is None:
-            Fan.__init_pwm()
-
         prescaleval = 25000000
         prescaleval /= 4096
         prescaleval /= float(freq)
         prescaleval -= 1
         prescale = int(prescaleval + 0.5)
 
-        oldmode = Fan.pwm.readU8(Fan.PCA9685_MODE1)
+        oldmode = pwm.readU8(PCA9685_MODE1)
         newmode = (oldmode & 0x7F) | 0x10
-        Fan.pwm.write8(Fan.PCA9685_MODE1, newmode)
-        Fan.pwm.write8(Fan.PCA9685_PRESCALE, prescale)
-        Fan.pwm.write8(Fan.PCA9685_MODE1, oldmode)
+        pwm.write8(PCA9685_MODE1, newmode)
+        pwm.write8(PCA9685_PRESCALE, prescale)
+        pwm.write8(PCA9685_MODE1, oldmode)
         time.sleep(0.05)
-        Fan.pwm.write8(Fan.PCA9685_MODE1, oldmode | 0xA1)
-
-        Fan.pwm_frequency = freq
-
-    @staticmethod
-    def get_PWM_frequency(freq):
-        return Fan.pwm_frequency
+        pwm.write8(PCA9685_MODE1, oldmode | 0xA1)
 
     def __init__(self, channel):
         """ Channel is the channel that the fan is on (0-7) """
-
-        if Fan.pwm is None:
-            Fan.__init_pwm()
-        
         self.channel = channel
 
     def set_value(self, value):
@@ -84,4 +66,4 @@ class Fan(object):
         #off = min(1.0, value)
         off = int(value*4095)
         byte_list = [0x00, 0x00, off & 0xFF, off >> 8]
-        Fan.pwm.writeList(0x06+(4*self.channel), byte_list)
+        pwm.writeList(0x06+(4*self.channel), byte_list)
