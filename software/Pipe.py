@@ -48,7 +48,7 @@ class Pipe:
         pipe_1 = "/dev/" + self.prot + "_1"
 
         # Ensure tty0tty is installed and available in the PATH
-        if Pipe.check_tty0tty():
+        if not Pipe.check_tty0tty():
             logging.error("tty0tty not found! tty0tty must be installed")
             raise EnvironmentError("tty0tty not found")
 
