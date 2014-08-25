@@ -32,6 +32,14 @@ from Gcode import Gcode
 
 
 class Pipe:
+
+    @staticmethod
+    def check_tty0tty():
+        if find_executable("tty0tty") is None:
+            return False
+        else:
+            return True
+
     def __init__(self, printer, prot):
         self.printer = printer
         self.prot = prot
@@ -40,7 +48,7 @@ class Pipe:
         pipe_1 = "/dev/" + self.prot + "_1"
 
         # Ensure tty0tty is installed and available in the PATH
-        if find_executable("tty0tty") is None:
+        if Pipe.check_tty0tty():
             logging.error("tty0tty not found! tty0tty must be installed")
             raise EnvironmentError("tty0tty not found")
 

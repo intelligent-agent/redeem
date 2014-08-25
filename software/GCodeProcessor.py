@@ -75,8 +75,12 @@ class GCodeProcessor:
                 "No GCode processor for " + gcode.code() +
                 ". Message: " + gcode.message)
             return None
-
-        self.gcodes[val].execute(gcode)
+        
+        try:
+            self.gcodes[val].execute(gcode)
+        except Exception, e:
+            logging.error("Error while executing "+gcode.code()+": "+str(e))
+        
 
         return gcode
 
