@@ -182,14 +182,14 @@ class PathPlanner:
         if not new.is_G92():
             self.printer.ensure_steppers_enabled()
             #push this new segment        
-            self.native_planner.queueMove(tuple(new.delta[:4]),
-                                          tuple(new.num_steps[:4]), new.speed,
+            self.native_planner.queueMove(tuple(new.start_pos[:4]),
+                                          tuple(new.end_pos[:4]), new.speed,
                                           bool(new.cancelable),
                                           bool(new.movement != Path.RELATIVE))
 
         self.prev = new
         self.prev.unlink()  # We don't want to store the entire print
-        # in memory, so we keep only the last path.
+                            # in memory, so we keep only the last path.
 
     def set_extruder(self, ext_nr):
         if ext_nr in [0, 1]:

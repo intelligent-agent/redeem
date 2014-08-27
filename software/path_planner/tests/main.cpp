@@ -36,7 +36,7 @@ int main(int argc, const char * argv[])
 	
 	
 	
-	float start[5],end[5];
+	FLOAT_T start[5],end[5];
 	
 	bzero(start,5*4);
 	bzero(end,5*4);
@@ -53,7 +53,7 @@ int main(int argc, const char * argv[])
 	}*/
 	
 	
-	float maxFeedrate[3];
+	FLOAT_T maxFeedrate[3];
 	
 	maxFeedrate[0]=200; //m/s
 	maxFeedrate[1]=200;
@@ -65,13 +65,13 @@ int main(int argc, const char * argv[])
 	axisStepsPerM[1]=50*1000;
 	axisStepsPerM[2]=2133*1000;
 	
-	float maxAccelerationMPerSquareSecond[3];
+	FLOAT_T maxAccelerationMPerSquareSecond[3];
 	
 	maxAccelerationMPerSquareSecond[0]=0.05;
 	maxAccelerationMPerSquareSecond[1]=0.05;
 	maxAccelerationMPerSquareSecond[2]=0.05;
 	
-	float maxTravelAccelerationMPerSquareSecond[3];
+	FLOAT_T maxTravelAccelerationMPerSquareSecond[3];
 	
 	maxTravelAccelerationMPerSquareSecond[0]=0.05;
 	maxTravelAccelerationMPerSquareSecond[1]=0.05;
@@ -98,7 +98,7 @@ int main(int argc, const char * argv[])
 	G1 X41.0000934550738 Y54.6409984607654 F6000
 	G1 X62.000125628132 Y18.2679500769617 F6000*/
 	
-	float speed = 6000/60000.0;
+	FLOAT_T speed = 6000/60000.0;
 	
 	end[0]=20.5000620480408/1000.0; end[1]=19.1339750384809/1000.0;  start[0] = 62.000125628132/1000.0; start[1] = 18.2679500769617/1000.0; planner.queueMove(start,end,speed,false); start[0] = end[0]; start[1] = end[1];
 	
