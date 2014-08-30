@@ -1,3 +1,4 @@
+
 """
 Printer class holding all printer components
 
@@ -53,10 +54,6 @@ class Printer:
         else:
             self.cold_ends = cold_ends
 
-        self.heaters = heaters
-        self.end_stops = end_stops
-        self.fans = fans
-        self.cold_ends = cold_ends
         self.path_planner = path_planner
         self.coolers = []
 
