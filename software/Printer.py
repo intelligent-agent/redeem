@@ -26,9 +26,33 @@ from Path import Path
 class Printer:
     """ A command received from pronterface or whatever """
 
-    def __init__(self, steppers={}, heaters={}, end_stops={}, fans=[],
-                 cold_ends=[], path_planner=None):
-        self.steppers = steppers
+    def __init__(self, steppers=None, heaters=None, end_stops=None, fans=None,
+                 cold_ends=None, path_planner=None):
+        if steppers is None:
+            self.steppers = {}
+        else:
+            self.steppers = steppers
+
+        if heaters is None:
+            self.heaters = {}
+        else:
+            self.heaters = heaters
+
+        if end_stops is None:
+            self.end_stops = {}
+        else:
+            self.end_stops = end_stops
+
+        if fans is None:
+            self.fans = []
+        else:
+            self.fans = fans
+
+        if cold_ends is None:
+            self.cold_ends = []
+        else:
+            self.cold_ends = cold_ends
+
         self.heaters = heaters
         self.end_stops = end_stops
         self.fans = fans
@@ -59,7 +83,7 @@ class Printer:
 
     def reply(self, gcode):
         """ Send a reply through the proper channel """
-        if gcode.get_answer() != None:
+        if gcode.get_answer() is not None:
             self.send_message(gcode.prot, gcode.get_answer())
 
     def send_message(self, prot, msg):

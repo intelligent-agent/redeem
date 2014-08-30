@@ -20,3 +20,6 @@ PathPlanner/PathPlanner/*.o
 PathPlanner/PathPlanner/*.dep
 PathPlanner/PathPlanner/PathPlannerNative_wrap.cpp
 PathPlanner/PathPlanner/PathPlannerNative.py
+
+# Ignore PyCharm settings
+/.idea
