@@ -14,7 +14,11 @@ from GCodeCommand import GCodeCommand
 class M106(GCodeCommand):
 
     def execute(self, gcode):
-        fan_no = gcode.get_int_by_letter("P", 0)               
+        fan_no = gcode.get_int_by_letter("P", 0)
+
+        if fan_no >= len(self.printer.fans):
+            return
+
         value = float(gcode.get_int_by_letter("S", 255)) / 255.0
         fan = self.printer.fans[fan_no]
         fan.set_value(value)
@@ -31,7 +35,7 @@ class M106(GCodeCommand):
 class M107(GCodeCommand):
 
     def execute(self, gcode):
-        fan_no = gcode.get_int_by_letter("P", 0)               
+        fan_no = gcode.get_int_by_letter("P", 0)
         fan = self.printer.fans[fan_no]
         fan.set_value(0)
 

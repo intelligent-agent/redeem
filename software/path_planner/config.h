@@ -48,4 +48,7 @@
  */
 #define PRINT_MOVE_BUFFER_WAIT 500
 
+/* Data type for floating point */
+#define FLOAT_T double
+
 #endif
