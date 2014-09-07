@@ -1,4 +1,3 @@
-
 """
 Printer class holding all printer components
 
