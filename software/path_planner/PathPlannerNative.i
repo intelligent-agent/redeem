@@ -17,11 +17,18 @@
 
 %rename(PathPlannerNative) PathPlanner;
 
+#if FLOAT_T == double
+#define FLOAT_TUPLE_LETTER "d"
+#elif FLOAT_T == float
+#define FLOAT_TUPLE_LETTER "f"
+#else
+#error Unsupported float type
+#endif
 
 // Grab a 4 element array as a Python 4-tuple
-%typemap(in) float[4](float temp[4]) {   // temp[4] becomes a local variable
+%typemap(in) FLOAT_T[4](FLOAT_T temp[4]) {   // temp[4] becomes a local variable
   if (PyTuple_Check($input)) {
-    if (!PyArg_ParseTuple($input,"ffff",temp,temp+1,temp+2,temp+3)) {
+    if (!PyArg_ParseTuple($input,""FLOAT_TUPLE_LETTER""FLOAT_TUPLE_LETTER""FLOAT_TUPLE_LETTER""FLOAT_TUPLE_LETTER,temp,temp+1,temp+2,temp+3)) {
       PyErr_SetString(PyExc_TypeError,"tuple must have 4 elements");
       return NULL;
     }
@@ -46,9 +53,9 @@
 }
 
 // Grab a 3 element array as a Python 3-tuple
-%typemap(in) float[3](float temp[3]) {   // temp[3] becomes a local variable
+%typemap(in) FLOAT_T[3](FLOAT_T temp[3]) {   // temp[3] becomes a local variable
   if (PyTuple_Check($input)) {
-    if (!PyArg_ParseTuple($input,"fff",temp,temp+1,temp+2)) {
+    if (!PyArg_ParseTuple($input,""FLOAT_TUPLE_LETTER""FLOAT_TUPLE_LETTER""FLOAT_TUPLE_LETTER,temp,temp+1,temp+2)) {
       PyErr_SetString(PyExc_TypeError,"tuple must have 3 elements");
       return NULL;
     }
@@ -83,7 +90,7 @@ public:
    *
    * @param rates The feedrate of the extruder
    */
-  void setMaxFeedrate(float rate);
+  void setMaxFeedrate(FLOAT_T rate);
   
   /**
    * @brief Set the maximum speed at which the extruder can start
@@ -91,7 +98,7 @@ public:
    *
    * @param maxstartfeedrate the maximum speed at which the extruder can start in m/s
    */
-  void setMaxStartFeedrate(float maxstartfeedrate);
+  void setMaxStartFeedrate(FLOAT_T maxstartfeedrate);
   
   /**
    * @brief Set the number of steps required to move each axis by 1 meter
@@ -107,7 +114,7 @@ public:
    *
    * @param accel The acceleration in m/s^2
    */
-  void setPrintAcceleration(float accel);
+  void setPrintAcceleration(FLOAT_T accel);
   
   /**
    * @brief Set the max acceleration for travel moves
@@ -115,7 +122,7 @@ public:
    *
    * @param accel The acceleration in m/s^2
    */
-  void setTravelAcceleration(float accel);
+  void setTravelAcceleration(FLOAT_T accel);
   
   /**
    * @brief Return the bit that needs to be tiggled for setting direction and step pin of the stepper driver for this extruder
@@ -161,7 +168,7 @@ public:
    * @param  endPose The end position of the path in meters
    * @param speed The feedrate (aka speed) of the move in m/s
    */
-  void queueMove(float axis_diff[NUM_AXIS], float num_steps[NUM_AXIS], float speed, bool cancelable, bool optimize);
+  void queueMove(FLOAT_T startPos[NUM_AXIS], FLOAT_T endPos[NUM_AXIS], FLOAT_T speed, bool cancelable, bool optimize);
   
   /**
    * @brief Run the path planner thread
@@ -190,7 +197,7 @@ public:
    * 
    * @param rates The feedrate for each of the axis, consisting of a 3 length array.
    */
-  void setMaxFeedrates(float rates[3]);
+  void setMaxFeedrates(FLOAT_T rates[3]);
 
   /**
    * @brief Set extruder number used
@@ -223,7 +230,7 @@ public:
    * 
    * @param accel The acceleration in m/s^2
    */
-  void setPrintAcceleration(float accel[3]);
+  void setPrintAcceleration(FLOAT_T accel[3]);
 
   /**
    * @brief Set the max acceleration for travel moves
@@ -231,7 +238,7 @@ public:
    * 
    * @param accel The acceleration in m/s^2
    */
-  void setTravelAcceleration(float accel[3]);
+  void setTravelAcceleration(FLOAT_T accel[3]);
 
   /**
    * @brief Set the maximum speed that can be used when in a corner
@@ -259,7 +266,7 @@ public:
    * @param maxJerk The maximum jerk for X and Y axis in m/s
    * @param maxZJerk The maximum jerk for Z axis in m/s
    */
-  void setMaxJerk(float maxJerk, float maxZJerk);
+  void setMaxJerk(FLOAT_T maxJerk, FLOAT_T maxZJerk);
 
   void suspend();
   

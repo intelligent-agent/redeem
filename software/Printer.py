@@ -1,3 +1,4 @@
+
 """
 Printer class holding all printer components
 
@@ -26,13 +27,33 @@ from Path import Path
 class Printer:
     """ A command received from pronterface or whatever """
 
-    def __init__(self, steppers={}, heaters={}, end_stops={}, fans=[],
-                 cold_ends=[], path_planner=None):
-        self.steppers = steppers
-        self.heaters = heaters
-        self.end_stops = end_stops
-        self.fans = fans
-        self.cold_ends = cold_ends
+    def __init__(self, steppers=None, heaters=None, end_stops=None, fans=None,
+                 cold_ends=None, path_planner=None):
+        if steppers is None:
+            self.steppers = {}
+        else:
+            self.steppers = steppers
+
+        if heaters is None:
+            self.heaters = {}
+        else:
+            self.heaters = heaters
+
+        if end_stops is None:
+            self.end_stops = {}
+        else:
+            self.end_stops = end_stops
+
+        if fans is None:
+            self.fans = []
+        else:
+            self.fans = fans
+
+        if cold_ends is None:
+            self.cold_ends = []
+        else:
+            self.cold_ends = cold_ends
+
         self.path_planner = path_planner
         self.coolers = []
 
@@ -42,10 +63,10 @@ class Printer:
         self.extrude_factor = 1.0
         self.movement = Path.ABSOLUTE
         self.feed_rate = 0.5
-	self.acceleration = [0.5, 0.5, 0.5, 0.5,  0.5]
-	self.maxJerkXY = 20
-	self.maxJerkZ = 1
-	self.maxJerkEH = 4
+        self.acceleration = [0.5, 0.5, 0.5, 0.5,  0.5]
+        self.maxJerkXY = 20
+        self.maxJerkZ = 1
+        self.maxJerkEH = 4
         self.current_tool = "E"
 
     def ensure_steppers_enabled(self):
@@ -59,7 +80,7 @@ class Printer:
 
     def reply(self, gcode):
         """ Send a reply through the proper channel """
-        if gcode.get_answer() != None:
+        if gcode.get_answer() is not None:
             self.send_message(gcode.prot, gcode.get_answer())
 
     def send_message(self, prot, msg):

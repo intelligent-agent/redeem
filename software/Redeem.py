@@ -24,7 +24,7 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
 Minor version tag is Arnold Schwarzenegger movies chronologically.
 """
 
-version = "0.14.4~Conan the Barbarian"
+version = "0.15.0~Conan the Destroyer"
 
 import logging
 import os
@@ -75,7 +75,7 @@ class Redeem:
         level = self.printer.config.getint('System', 'loglevel')
         if level > 0:
             logging.getLogger().setLevel(level)
-	    
+        
         logging.info("Replicape revision " + self.revision)
 
         # Init the end stops
@@ -203,8 +203,8 @@ class Redeem:
         # Init the 3 heaters. Argument is channel number
         if self.revision == "A3":
             mosfet_ext1 = Mosfet(3)
-            mosfet_ext2 = Mosfet(5)
-            mosfet_hbp = Mosfet(4)
+            mosfet_ext2 = Mosfet(4)
+            mosfet_hbp = Mosfet(5)
         else:
             mosfet_ext1 = Mosfet(5)
             mosfet_ext2 = Mosfet(3)
@@ -331,27 +331,28 @@ class Redeem:
             dirname + "/../firmware/firmware_endstops.bin",
             self.revision, self.printer.config, "/usr/bin/pasm")
 
-	self.printer.maxJerkXY = float(
+        self.printer.maxJerkXY = float(
             self.printer.config.get('Steppers', 'maxJerk_xy'));
-	self.printer.maxJerkZ = float(
+        self.printer.maxJerkZ = float(
             self.printer.config.get('Steppers', 'maxJerk_z'));
-	self.printer.maxJerkEH = float(
+        self.printer.maxJerkEH = float(
             self.printer.config.get('Steppers', 'maxJerk_eh'));
 
 
-        self.printer.path_planner = PathPlanner(self.printer, pru_firmware)
-
         travel = {}
         offset = {}
-	i = 0
+
+        i = 0
         for axis in ['X', 'Y', 'Z', 'E', 'H']:
             travel[axis] = self.printer.config.getfloat('Geometry',
                                                         'travel_' + axis.lower())
             offset[axis] = self.printer.config.getfloat('Geometry',
                                                         'offset_' + axis.lower())
-	    self.printer.acceleration[i] = self.printer.config.getfloat('Steppers', 'acceleration_' + axis.lower())
-	    i += 1
+            self.printer.acceleration[i] = self.printer.config.getfloat('Steppers', 'acceleration_' + axis.lower())
+            i += 1
 
+
+        self.printer.path_planner = PathPlanner(self.printer, pru_firmware)
 
 
         self.printer.path_planner.travel_length = travel
@@ -361,15 +362,17 @@ class Redeem:
         # Set up communication channels
         self.printer.comms["USB"] = USB(self.printer)
         self.printer.comms["Eth"] = Ethernet(self.printer)
-        self.printer.comms["octoprint"] = Pipe(self.printer,
-                                               "octoprint")   # Pipe for Octoprint
-        self.printer.comms["toggle"] = Pipe(self.printer,
-                                            "toggle")      # Pipe for Toggle
-        self.printer.comms["testing"] = Pipe(self.printer,
-                                             "testing")     # Pipe for testing
-        self.printer.comms["testing_noret"] = Pipe(self.printer,
-                                                   "testing_noret")     # Pipe for testing
-        self.printer.comms["testing_noret"].send_response = False
+        
+        if Pipe.check_tty0tty():
+            self.printer.comms["octoprint"] = Pipe(self.printer,
+                                                   "octoprint")   # Pipe for Octoprint
+            self.printer.comms["toggle"] = Pipe(self.printer,
+                                                "toggle")      # Pipe for Toggle
+            self.printer.comms["testing"] = Pipe(self.printer,
+                                                 "testing")     # Pipe for testing
+            self.printer.comms["testing_noret"] = Pipe(self.printer,
+                                                       "testing_noret")     # Pipe for testing
+            self.printer.comms["testing_noret"].send_response = False
 
         self.running = True
 

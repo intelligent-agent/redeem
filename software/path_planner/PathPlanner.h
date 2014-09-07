@@ -40,13 +40,13 @@
 
 class Extruder {
 private:
-	float maxStartFeedrate;
-	float maxFeedrate;
+	FLOAT_T maxStartFeedrate;
+	FLOAT_T maxFeedrate;
 	unsigned long maxPrintAccelerationStepsPerSquareSecond;
 	unsigned long maxTravelAccelerationStepsPerSquareSecond;
 	unsigned long maxAccelerationMMPerSquareSecond;
 	unsigned long maxTravelAccelerationMMPerSquareSecond;
-	float invAxisStepsPerMM;
+	FLOAT_T invAxisStepsPerMM;
 	unsigned long axisStepsPerMM;
 	
 	void recomputeParameters();
@@ -61,7 +61,7 @@ public:
 	 *
 	 * @param rates The feedrate of the extruder
 	 */
-	void setMaxFeedrate(float rate);
+	void setMaxFeedrate(FLOAT_T rate);
 	
 	/**
 	 * @brief Set the maximum speed at which the extruder can start
@@ -69,7 +69,7 @@ public:
 	 *
 	 * @param maxstartfeedrate the maximum speed at which the extruder can start in m/s
 	 */
-	void setMaxStartFeedrate(float maxstartfeedrate);
+	void setMaxStartFeedrate(FLOAT_T maxstartfeedrate);
 	
 	/**
 	 * @brief Set the number of steps required to move each axis by 1 meter
@@ -85,7 +85,7 @@ public:
 	 *
 	 * @param accel The acceleration in m/s^2
 	 */
-	void setPrintAcceleration(float accel);
+	void setPrintAcceleration(FLOAT_T accel);
 	
 	/**
 	 * @brief Set the max acceleration for travel moves
@@ -93,7 +93,7 @@ public:
 	 *
 	 * @param accel The acceleration in m/s^2
 	 */
-	void setTravelAcceleration(float accel);
+	void setTravelAcceleration(FLOAT_T accel);
 	
 	/**
 	 * @brief Return the bit that needs to be tiggled for setting direction and step pin of the stepper driver for this extruder
@@ -109,14 +109,14 @@ public:
 
 class PathPlanner {
 private:
-	void calculateMove(Path* p,float axis_diff[NUM_AXIS]);
-	float safeSpeed(Path *p);
+	void calculateMove(Path* p,FLOAT_T axis_diff[NUM_AXIS]);
+	FLOAT_T safeSpeed(Path *p);
 	void updateTrapezoids();
 	void computeMaxJunctionSpeed(Path *previous,Path *current);
 	void backwardPlanner(unsigned int start,unsigned int last);
 	void forwardPlanner(unsigned int first);
 	
-	float maxFeedrate[NUM_AXIS];
+	FLOAT_T maxFeedrate[NUM_AXIS];
 	unsigned long maxPrintAccelerationStepsPerSquareSecond[NUM_AXIS];
 	unsigned long maxTravelAccelerationStepsPerSquareSecond[NUM_AXIS];
 	unsigned long maxAccelerationMMPerSquareSecond[NUM_AXIS];
@@ -126,13 +126,13 @@ private:
 	
 	Extruder* currentExtruder;
 	
-	float maxJerk;
-	float maxZJerk;
+	FLOAT_T maxJerk;
+	FLOAT_T maxZJerk;
 	
-	float minimumSpeed;
-	float minimumZSpeed;
+	FLOAT_T minimumSpeed;
+	FLOAT_T minimumZSpeed;
 			
-	float invAxisStepsPerMM[NUM_AXIS];
+	FLOAT_T invAxisStepsPerMM[NUM_AXIS];
 	unsigned long axisStepsPerMM[NUM_AXIS];
 
 	
@@ -203,8 +203,7 @@ public:
 	 * @param  endPose The end position of the path in meters
 	 * @param speed The feedrate (aka speed) of the move in m/s
 	 */
-	//void queueAbsolute(float startPos[NUM_AXIS], float endPos[NUM_AXIS], float speed, bool cancelable, bool optimize=true );
-    void queueMove(float axis_diff[NUM_AXIS], float num_steps[NUM_AXIS], float speed, bool cancelable, bool optimize);
+    void queueMove(FLOAT_T startPos[NUM_AXIS], FLOAT_T endPos[NUM_AXIS], FLOAT_T speed, bool cancelable, bool optimize=true );
 
 
 	
@@ -256,7 +255,7 @@ public:
 	 * 
 	 * @param rates The feedrate for each of the axis, consisting of a NUM_AXIS length array.
 	 */
-	void setMaxFeedrates(float rates[NUM_MOVING_AXIS]);
+	void setMaxFeedrates(FLOAT_T rates[NUM_MOVING_AXIS]);
 
 
 	/**
@@ -273,7 +272,7 @@ public:
 	 * 
 	 * @param accel The acceleration in m/s^2
 	 */
-	void setPrintAcceleration(float accel[NUM_MOVING_AXIS]);
+	void setPrintAcceleration(FLOAT_T accel[NUM_MOVING_AXIS]);
 
 	/**
 	 * @brief Set the max acceleration for travel moves
@@ -281,7 +280,7 @@ public:
 	 * 
 	 * @param accel The acceleration in m/s^2
 	 */
-	void setTravelAcceleration(float accel[NUM_MOVING_AXIS]);
+	void setTravelAcceleration(FLOAT_T accel[NUM_MOVING_AXIS]);
 
 	/**
 	 * @brief Set the maximum speed that can be used when in a corner
@@ -309,7 +308,7 @@ public:
 	 * @param maxJerk The maximum jerk for X and Y axis in m/s
 	 * @param maxZJerk The maximum jerk for Z axis in m/s
 	 */
-	void setMaxJerk(float maxJerk, float maxZJerk);
+	void setMaxJerk(FLOAT_T maxJerk, FLOAT_T maxZJerk);
 	
 	void suspend() {
 		pru.suspend();
