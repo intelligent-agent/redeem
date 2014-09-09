@@ -9,7 +9,7 @@ License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 """
 
 from GCodeCommand import GCodeCommand
-
+import math
 
 class M105(GCodeCommand):
 
@@ -32,6 +32,11 @@ class M105(GCodeCommand):
             answer += " " + format_temperature("HBP", "B")
         if "E" in self.printer.heaters:
             answer += " " + format_temperature("E", "T0")
+
+        # Append the current tool power is using PID
+        if not self.printer.heaters[current_tool].onoff_control:
+            answer += " @:" + str(math.floor(255*self.printer.heaters[current_tool].mosfet.get_power()))
+
         if "H" in self.printer.heaters:
             answer += " " + format_temperature("H", "T1")
 
