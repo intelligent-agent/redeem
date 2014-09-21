@@ -56,6 +56,7 @@ class ExtruderAPI(tornado.web.RequestHandler):
 
         self.set_header("Cache-control", "no-cache")
 
+
 class GCodeAPI(tornado.web.RequestHandler):
 
     def post(self):
@@ -96,7 +97,9 @@ class RESTServer(object):
                 (RESTServer.API_PREFIX+r"/extruder/([A-Z])", ExtruderAPI),
                 (RESTServer.API_PREFIX+r"/extruder", ExtruderAPI),
                 (RESTServer.API_PREFIX+r"/gcode", GCodeAPI),
-            ] + self.webSocketRouter.urls,debug=True)
+                (r'/', tornado.web.RedirectHandler, {"url": "/static"}),
+                (r'/static', tornado.web.RedirectHandler, {"url": "/static/index.html"}),
+            ] + self.webSocketRouter.urls,static_path = 'public_web', debug=True)
 
         current_server = self
 
