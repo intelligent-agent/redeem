@@ -1,0 +1,3 @@
+[submodule "software/public_web"]
+	path = software/public_web
+	url = https://zittix@bitbucket.org/zittix/authory.git
