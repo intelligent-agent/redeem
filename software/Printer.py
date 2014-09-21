@@ -90,4 +90,5 @@ class Printer:
 
     def send_message(self, prot, msg):
         """ Send a message back to host """
-        self.comms[prot].send_message(msg)
+        if prot in self.comms:
+            self.comms[prot].send_message(msg)

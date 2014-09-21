@@ -54,13 +54,20 @@ class ExtruderAPI(tornado.web.RequestHandler):
             else:
                 self.send_error(404)
 
-        self.set_header("Cache-control", "no-cache")
+class PrinterAPI(tornado.web.RequestHandler):
+
+    def get(self, id = None):
+        self.write({"id":0,"board_revision":current_server.printer.config.get("System","revision"), "num_extruders": 2})
+     
+
+
 
 
 class GCodeAPI(tornado.web.RequestHandler):
 
     def post(self):
-        message = self.request.body
+
+        message = tornado.escape.json_decode(self.request.body)
 
         if len(message) > 0:
             g = Gcode({"message": message, "prot": "rest"})
@@ -84,7 +91,7 @@ class PrinterUpdateConnection(SockJSConnection):
 
 class RESTServer(object):
 
-    API_PREFIX = "/api/v1.0"
+    API_PREFIX = "/api"
 
     def __init__(self, printer, port):
         global current_server
@@ -97,9 +104,11 @@ class RESTServer(object):
                 (RESTServer.API_PREFIX+r"/extruder/([A-Z])", ExtruderAPI),
                 (RESTServer.API_PREFIX+r"/extruder", ExtruderAPI),
                 (RESTServer.API_PREFIX+r"/gcode", GCodeAPI),
+                (RESTServer.API_PREFIX+r"/printer", PrinterAPI),
+                (RESTServer.API_PREFIX+r"/printer/([0-9]+)", PrinterAPI),
                 (r'/', tornado.web.RedirectHandler, {"url": "/static"}),
                 (r'/static', tornado.web.RedirectHandler, {"url": "/static/index.html"}),
-            ] + self.webSocketRouter.urls,static_path = 'public_web', debug=True)
+            ] + self.webSocketRouter.urls,static_path = 'public_web', debug=True, no_keep_alive=True)
 
         current_server = self
 
