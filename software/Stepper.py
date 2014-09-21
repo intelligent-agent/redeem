@@ -61,7 +61,8 @@ try:
     spi2_1.bpw = 8
     spi2_1.mode = 0
 except ImportError:
-    pass
+    spi2_0 = None
+    spi2_1 = None
 
 
 class Stepper:
@@ -76,6 +77,9 @@ class Stepper:
     @staticmethod
     def commit():
         """ Send the values to the serial to parallel chips """
+        if spi2_1 is None:
+            return
+
         bytes = []
         for stepper in Stepper.all_steppers:
             bytes.append(stepper.get_state())
@@ -176,6 +180,9 @@ class Stepper:
 
     def set_current_value(self, iChop):
         """ Current chopping limit (This is the value you can change) """
+        if spi2_0 is None:
+            return
+
         vRef = 3.3                   # Voltage reference on the DAC
         rSense = 0.1                 # Resistance for the
         vOut = iChop * 5.0 * rSense  # Calculated voltage out from the DAC

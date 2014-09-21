@@ -10,7 +10,7 @@
 		4EE50D991956FC4E0022CD00 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4EE50D981956FC4E0022CD00 /* main.cpp */; };
 		4EE50DA81956FC590022CD00 /* Logger.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4EE50D9C1956FC590022CD00 /* Logger.cpp */; };
 		4EE50DA91956FC590022CD00 /* PathPlanner.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4EE50D9F1956FC590022CD00 /* PathPlanner.cpp */; };
-		4EE50DAA1956FC590022CD00 /* prussdrv.c in Sources */ = {isa = PBXBuildFile; fileRef = 4EE50DA21956FC590022CD00 /* prussdrv.c */; };
+		4EE50DAA1956FC590022CD00 /* prussdrv.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4EE50DA21956FC590022CD00 /* prussdrv.cpp */; };
 		4EE50DAB1956FC590022CD00 /* PruTimer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4EE50DA41956FC590022CD00 /* PruTimer.cpp */; };
 /* End PBXBuildFile section */
 
@@ -37,7 +37,7 @@
 		4EE50D9F1956FC590022CD00 /* PathPlanner.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = PathPlanner.cpp; path = ../PathPlanner.cpp; sourceTree = "<group>"; };
 		4EE50DA01956FC590022CD00 /* PathPlanner.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PathPlanner.h; path = ../PathPlanner.h; sourceTree = "<group>"; };
 		4EE50DA11956FC590022CD00 /* pruss_intc_mapping.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = pruss_intc_mapping.h; path = ../pruss_intc_mapping.h; sourceTree = "<group>"; };
-		4EE50DA21956FC590022CD00 /* prussdrv.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = prussdrv.c; path = ../prussdrv.c; sourceTree = "<group>"; };
+		4EE50DA21956FC590022CD00 /* prussdrv.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = prussdrv.cpp; path = ../prussdrv.cpp; sourceTree = "<group>"; };
 		4EE50DA31956FC590022CD00 /* prussdrv.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = prussdrv.h; path = ../prussdrv.h; sourceTree = "<group>"; };
 		4EE50DA41956FC590022CD00 /* PruTimer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = PruTimer.cpp; path = ../PruTimer.cpp; sourceTree = "<group>"; };
 		4EE50DA51956FC590022CD00 /* PruTimer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PruTimer.h; path = ../PruTimer.h; sourceTree = "<group>"; };
@@ -67,7 +67,7 @@
 				4EE50D9F1956FC590022CD00 /* PathPlanner.cpp */,
 				4EE50DA01956FC590022CD00 /* PathPlanner.h */,
 				4EE50DA11956FC590022CD00 /* pruss_intc_mapping.h */,
-				4EE50DA21956FC590022CD00 /* prussdrv.c */,
+				4EE50DA21956FC590022CD00 /* prussdrv.cpp */,
 				4EE50DA31956FC590022CD00 /* prussdrv.h */,
 				4EE50DA41956FC590022CD00 /* PruTimer.cpp */,
 				4EE50DA51956FC590022CD00 /* PruTimer.h */,
@@ -135,7 +135,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				4EE50DAA1956FC590022CD00 /* prussdrv.c in Sources */,
+				4EE50DAA1956FC590022CD00 /* prussdrv.cpp in Sources */,
 				4EE50DA91956FC590022CD00 /* PathPlanner.cpp in Sources */,
 				4EE50DAB1956FC590022CD00 /* PruTimer.cpp in Sources */,
 				4EE50D991956FC4E0022CD00 /* main.cpp in Sources */,

@@ -50,6 +50,7 @@ from PruFirmware import PruFirmware
 from CascadingConfigParser import CascadingConfigParser
 from Printer import Printer
 from GCodeProcessor import GCodeProcessor
+from RESTServer import RESTServer
 
 # Default logging level is set to debug
 logging.basicConfig(level=logging.DEBUG,
@@ -99,7 +100,7 @@ class Redeem:
                                                    self.printer.config.getboolean(
                                                        "Endstops",
                                                        "invert_Y2"))
-            self.printer.end_stops["Z1"] = EndStop("GPIO0_31", 123, "Z1",
+            self.printer.end_stops["Z1"] = EndStop("GPIO0_31", 116, "Z1",
                                                    self.printer.config.getboolean(
                                                        "Endstops",
                                                        "invert_Z1"))
@@ -124,7 +125,7 @@ class Redeem:
                                                    self.printer.config.getboolean(
                                                        "Endstops",
                                                        "invert_Y2"))
-            self.printer.end_stops["Z1"] = EndStop("GPIO0_30", 123, "Z1",
+            self.printer.end_stops["Z1"] = EndStop("GPIO0_30", 116, "Z1",
                                                    self.printer.config.getboolean(
                                                        "Endstops",
                                                        "invert_Z1"))
@@ -373,6 +374,9 @@ class Redeem:
             self.printer.comms["testing_noret"] = Pipe(self.printer,
                                                        "testing_noret")     # Pipe for testing
             self.printer.comms["testing_noret"].send_response = False
+
+        # Set up REST Server
+        self.printer.rest_server = RESTServer(self.printer, self.printer.config.getint('System', 'rest_port'))
 
         self.running = True
 

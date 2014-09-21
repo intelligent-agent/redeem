@@ -68,6 +68,12 @@ class Printer:
         self.maxJerkEH = 4
         self.current_tool = "E"
 
+        self.rest_server = None
+
+    def send_update_rest_clients(self):
+        if self.rest_server is not None:
+            self.rest_server.send_state_update()
+
     def ensure_steppers_enabled(self):
         """
         This method is called for every move, so it should be fast/cached.
