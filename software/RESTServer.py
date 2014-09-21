@@ -125,6 +125,9 @@ class RESTServer(object):
     def send_state_update(self):
         pass
 
+    def send_message(self,message):
+        pass
+
 
 
 

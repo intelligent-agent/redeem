@@ -377,6 +377,7 @@ class Redeem:
 
         # Set up REST Server
         self.printer.rest_server = RESTServer(self.printer, self.printer.config.getint('System', 'rest_port'))
+        self.printer.comms["rest"] = self.printer.rest_server
 
         self.running = True
 
