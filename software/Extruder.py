@@ -56,6 +56,10 @@ class Heater(object):
         """ get the temperature of the thermistor"""
         return self.current_temp
 
+    def get_target_temperature(self):
+        """ get the temperature of the thermistor"""
+        return self.target_temp
+
     def is_target_temperature_reached(self):
         """ Returns true if the target temperature is reached """
         if self.target_temp == 0:
