@@ -24,7 +24,7 @@ class M104(GCodeCommand):
                 target = float(g.get_value_by_letter("S"))
                 logging.debug("setting ext 1 temp to " + str(target))
                 self.printer.heaters['H'].set_target_temperature(target)
-        if g.has_letter("T"):  # Set hotend temp based on the T-param
+        elif g.has_letter("T"):  # Set hotend temp based on the T-param
             if int(g.get_value_by_letter("T")) == 0:
                 target = float(g.get_value_by_letter("S"))
                 logging.debug("setting ext 0 temp to " + str(target))
