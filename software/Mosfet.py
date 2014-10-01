@@ -32,7 +32,7 @@ PCA9685_PRESCALE = 0xFE
 # Looks like the interface has changed..
 kernel_version = subprocess.check_output(["uname", "-r"]).strip()
 [major, minor, rev] = kernel_version.split("-")[0].split(".")
-if minor >= 14 :
+if int(minor) >= 14 :
     pwm = Adafruit_I2C(0x70, 2, False) # Open device
 else:
     pwm = Adafruit_I2C(0x70, 1, False) # Open device
