@@ -373,7 +373,8 @@ class Redeem:
             self.printer.comms["testing_noret"] = Pipe(self.printer,
                                                        "testing_noret")     # Pipe for testing
             self.printer.comms["testing_noret"].send_response = False
-
+	else:
+	    logging.warning("tty0tty is not installed! No virtual tty pipes enabled")
         self.running = True
 
         # Start the two processes
