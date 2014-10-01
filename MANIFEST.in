@@ -1,0 +1,4 @@
+include firmware/*.p
+include firmware/*.h
+include configs/*.cfg
+include redeem/path_planner/*.h
