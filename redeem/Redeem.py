@@ -26,6 +26,8 @@ Minor version tag is Arnold Schwarzenegger movies chronologically.
 
 version = "0.15.2~Conan the Destroyer"
 
+import glob
+import shutil
 import logging
 import os
 import os.path
@@ -64,6 +66,14 @@ class Redeem:
         logging.info("Redeem initializing " + version)
 
         self.printer = Printer()
+
+        # Copy/create config files if not present
+        if not os.path.exists("/etc/redeem/default.cfg"):
+            dirname = os.path.dirname(os.path.realpath(__file__))
+            logging.warning("/etc/redeem/default.cfg does not exist, copying it...")
+            for f in glob.glob(dirname+"/../configs/*.cfg"):
+                logging.warning(f)
+                shutil.copy(f, "/etc/redeem")
 
         # Parse the config files. 
         self.printer.config = CascadingConfigParser(

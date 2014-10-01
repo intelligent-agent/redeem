@@ -10,8 +10,10 @@ License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 
 from GCodeCommand import GCodeCommand
 import logging
-from Path import G92Path
-
+try:
+    from Path import G92Path
+except ImportError:
+    from redeem.Path import G92Path
 
 class G92(GCodeCommand):
 

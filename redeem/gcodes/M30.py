@@ -9,7 +9,10 @@ License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 """
 
 from GCodeCommand import GCodeCommand
-from Stepper import Stepper
+try:
+    from Stepper import Stepper
+except ImportError:
+    from redeem.Stepper import Stepper
 
 
 class M30(GCodeCommand):

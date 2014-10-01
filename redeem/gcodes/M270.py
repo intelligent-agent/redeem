@@ -11,7 +11,11 @@ License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 """
 
 from GCodeCommand import GCodeCommand
-from Path import Path
+try:
+    from Path import Path
+except ImportError:
+    from redeem.Path import Path
+
 import logging
 
 

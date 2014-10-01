@@ -32,8 +32,10 @@ class GCodeProcessor:
         self.printer = printer
 
         self.gcodes = {}
-
-        module = __import__("gcodes", locals(), globals())
+        try:
+            module = __import__("gcodes", locals(), globals())
+        except ImportError: 
+            module = __import__("redeem.gcodes", locals(), globals())
 
         self.load_classes_in_module(module)
 

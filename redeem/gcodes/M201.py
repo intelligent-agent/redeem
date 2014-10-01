@@ -8,7 +8,11 @@ License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 """
 
 from GCodeCommand import GCodeCommand
-from Path import Path
+try:
+    from redeem.Path import Path
+except ImportError:
+    from Path import Path
+
 
 class M201(GCodeCommand):
 

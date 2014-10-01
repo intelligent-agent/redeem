@@ -121,8 +121,7 @@ class PruFirmware:
             return True
 
         # Create a config file
-        configFile_0 = os.path.join(
-            os.path.dirname(self.firmware_source_file0), 'config.h')
+        configFile_0 = os.path.join("/tmp", 'config.h')
 
         with open(configFile_0, 'w') as configFile:
             if self.revision == "A3":
@@ -135,34 +134,7 @@ class PruFirmware:
                 configFile.write(
                     '#define STEPPER_' + s.upper() + '_DIRECTION\t\t' + (
                         "0" if self.config.getint('Steppers',
-                                                  'direction_' + s) > 0 else "1") + '\n')
-
-            # #Add endstop config
-
-            # #Min X
-            # (pin,bank) = self.end_stops["X1"].get_gpio_bank_and_pin()
-            # cmd.extend(['#define STEPPER_X_END_MIN_PIN\t\t'+str(pin),'#define STEPPER_X_END_MIN_BANK\t\tGPIO_'+str(bank)+'_IN']);
-
-            # #Min Y
-            # (pin,bank) = self.end_stops["Y1"].get_gpio_bank_and_pin()
-            # cmd.extend(['#define STEPPER_Y_END_MIN_PIN\t\t'+str(pin),'#define STEPPER_Y_END_MIN_BANK\t\tGPIO_'+str(bank)+'_IN']);
-
-            # #Min Z
-            # (pin,bank) = self.end_stops["Z1"].get_gpio_bank_and_pin()
-            # cmd.extend(['#define STEPPER_X_END_MIN_PIN\t\t'+str(pin),'#define STEPPER_Z_END_MIN_BANK\t\tGPIO_'+str(bank)+'_IN']);
-
-            # #Max X
-            # (pin,bank) = self.end_stops["X2"].get_gpio_bank_and_pin()
-            # cmd.extend(['#define STEPPER_X_END_MAX_PIN\t\t'+str(pin),'#define STEPPER_X_END_MAX_BANK\t\tGPIO_'+str(bank)+'_IN']);
-
-            # #Max Y
-            # (pin,bank) = self.end_stops["Y2"].get_gpio_bank_and_pin()
-            # cmd.extend(['#define STEPPER_Y_END_MAX_PIN\t\t'+str(pin),'#define STEPPER_Y_END_MAX_BANK\t\tGPIO_'+str(bank)+'_IN']);
-
-            # #Max Z
-            # (pin,bank) = self.end_stops["Z2"].get_gpio_bank_and_pin()
-            # cmd.extend(['#define STEPPER_X_END_MAX_PIN\t\t'+str(pin),'#define STEPPER_Z_END_MAX_BANK\t\tGPIO_'+str(bank)+'_IN']);
-
+                                                  'direction_' + s) > 0 else "1") + '\n')          
             # Construct the inversion mask
             inversion_mask = "#define INVERSION_MASK\t\t0b00"
             for axis in ["Z2", "Y2", "X2", "Z1", "Y1", "X1"]:
@@ -177,24 +149,34 @@ class PruFirmware:
                     "#define STEPPER_MASK_" + axis + "\t\t" + self.config.get(
                         'Endstops', 'lookup_mask_' + axis) + "\n")
 
-        configFile_1 = os.path.join(
-            os.path.dirname(self.firmware_source_file1), 'config.h')
-
-        if os.path.dirname(self.firmware_source_file0) != os.path.dirname(
-                self.firmware_source_file0):
-            shutil.copyfile(configFile_0, configFile_1)
+        if self.revision in ["A4A", "A4"]:
+            configFile_1 = os.path.join(
+                os.path.dirname(self.firmware_source_file1), 'config_00A4.h')
+        else:            
+            configFile_1 = os.path.join(
+                os.path.dirname(self.firmware_source_file1), 'config_00A3.h')
 
         cmd0 = [self.compiler, '-b', '-DHAS_CONFIG_H']
         cmd1 = [self.compiler, '-b', '-DHAS_CONFIG_H']
 
-        cmd0.extend(
-            [self.firmware_source_file0, self.binary_filename_compiler0])
-        cmd1.extend(
-            [self.firmware_source_file1, self.binary_filename_compiler1])
+        # Copy the files to tmp, cos the pasm is really picky!
+        tmp_name_0 = "/tmp/"+os.path.splitext(os.path.basename(self.firmware_source_file0))[0]
+        tmp_name_1 = "/tmp/"+os.path.splitext(os.path.basename(self.firmware_source_file1))[0]
+        shutil.copyfile(self.firmware_source_file0, tmp_name_0+".p")
+        shutil.copyfile(self.firmware_source_file1, tmp_name_1+".p")
+
+        # Copy the config file
+        shutil.copyfile(configFile_1, "/tmp/"+os.path.basename(configFile_1))
+        
+
+        cmd0.extend([tmp_name_0+".p", tmp_name_0])
+        cmd1.extend([tmp_name_1+".p", tmp_name_1])
 
         logging.debug("Compiling firmware 0 with " + ' '.join(cmd0))
         try:
             subprocess.check_output(cmd0, stderr=subprocess.STDOUT)
+            # Move the file back
+            shutil.copyfile(tmp_name_0+".bin", self.binary_filename_compiler0+".bin")
             logging.debug("Compilation succeeded.")
         except subprocess.CalledProcessError as e:
             logging.exception('Error while compiling firmware: ')
@@ -204,6 +186,8 @@ class PruFirmware:
         logging.debug("Compiling firmware 1 with " + ' '.join(cmd1))
         try:
             subprocess.check_output(cmd1, stderr=subprocess.STDOUT)
+            # Move the file back
+            shutil.copyfile(tmp_name_1+".bin", self.binary_filename_compiler1+".bin")
             logging.debug("Compilation succeeded.")
         except subprocess.CalledProcessError as e:
             logging.exception('Error while compiling firmware: ')

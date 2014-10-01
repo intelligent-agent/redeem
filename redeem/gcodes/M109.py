@@ -9,7 +9,12 @@ License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 """
 
 from GCodeCommand import GCodeCommand
-from Gcode import Gcode
+try:
+    from Gcode import Gcode
+except ImportError:
+    from redeem.Gcode import Gcode
+
+
 
 
 class M109(GCodeCommand):

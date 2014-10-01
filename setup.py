@@ -21,6 +21,20 @@ setup(
     name = "Redeem",
     version = "0.15.2",
     packages = find_packages(exclude=["redeem/path_planner"]),
+    data_files=[
+        ('firmware', [
+            'firmware/config_00A4.h', 
+            'firmware/config_00A3.h', 
+            'firmware/firmware_runtime.p', 
+            'firmware/firmware_endstops.p']),
+        ('configs', [
+            'configs/default.cfg', 
+            'configs/Thing.cfg',
+            'configs/Makerbot_cupcake.cfg', 
+            'configs/MaxCoreXY.cfg', 
+            'configs/MendelMax.cfg', 
+            'configs/Testing.cfg'])
+    ],
     # metadata for upload to PyPI
     author = "Elias Bakken",
     author_email = "elias.bakken@gmail.com",
@@ -29,7 +43,6 @@ setup(
     keywords = "3d printer firmware",
     platforms = ["BeagleBone"],
     url = "https://bitbucket.org/intelligentagent/redeem",
-    install_requires = ["swig"],
     ext_modules = [pathplanner],
     entry_points = {
         'console_scripts': [
