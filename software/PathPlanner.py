@@ -183,7 +183,7 @@ class PathPlanner:
             self.printer.ensure_steppers_enabled()
             #push this new segment        
             self.native_planner.queueMove(tuple(new.start_pos[:4]),
-                                          tuple(new.end_pos[:4]), new.speed,
+                                          tuple(new.stepper_end_pos[:4]), new.speed,
                                           bool(new.cancelable),
                                           bool(new.movement != Path.RELATIVE))
 

@@ -24,7 +24,6 @@ class M350(GCodeCommand):
             stepper = self.printer.steppers[axis]
             stepper.set_microstepping(int(g.token_value(i)))
         Stepper.commit()
-        self.printer.path_planner.make_acceleration_tables()
         logging.debug("acceleration tables recreated")
 
     def get_description(self):

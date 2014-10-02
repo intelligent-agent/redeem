@@ -173,6 +173,7 @@ class AbsolutePath(Path):
 
         # Set stepper and true posision
         self.end_pos = self.start_pos + vec
+        self.stepper_end_pos = self.start_pos + self.delta
 
         if np.isnan(vec).any():
             self.end_pos = self.start_pos
@@ -208,6 +209,7 @@ class RelativePath(Path):
 
         # Set stepper and true position
         self.end_pos = self.start_pos + vec
+        self.stepper_end_pos = self.start_pos + self.delta
 
         # Make sure the calculations are correct, or no movement occurs:
         if np.isnan(vec).any():

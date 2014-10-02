@@ -166,8 +166,10 @@ PathPlanner::PathPlanner() {
 void PathPlanner::queueMove(FLOAT_T startPos[NUM_AXIS],FLOAT_T endPos[NUM_AXIS],FLOAT_T speed, bool cancelable, bool optimize) {
     FLOAT_T axis_diff[NUM_AXIS]; // Axis movement in mm
 	
+
 #ifdef BUILD_PYTHON_EXT
-	Py_BEGIN_ALLOW_THREADS
+    PyThreadState *_save; 
+    _save = PyEval_SaveThread();
 #endif
 	
 	// wait for the worker
@@ -176,13 +178,13 @@ void PathPlanner::queueMove(FLOAT_T startPos[NUM_AXIS],FLOAT_T endPos[NUM_AXIS],
 		//LOG( "Waiting for free move command space... Current: " << linesCount << std::endl);
         lineAvailable.wait(lk, [this]{return linesCount<MOVE_CACHE_SIZE || stop;});
     }
-	
+
+	if(stop) {
 #ifdef BUILD_PYTHON_EXT
-	Py_END_ALLOW_THREADS
+        PyEval_RestoreThread(_save);
 #endif
-	
-	if(stop)
         return;
+    }
 	
 	Path *p = &lines[linesWritePos];
 	
@@ -227,6 +229,9 @@ void PathPlanner::queueMove(FLOAT_T startPos[NUM_AXIS],FLOAT_T endPos[NUM_AXIS],
     if(p->isNoMove())
 	{
 		LOG( "Warning: no move path" << std::endl);
+#ifdef BUILD_PYTHON_EXT
+        PyEval_RestoreThread(_save);
+#endif
 		return; // No steps included
 	}
 	
@@ -269,6 +274,10 @@ void PathPlanner::queueMove(FLOAT_T startPos[NUM_AXIS],FLOAT_T endPos[NUM_AXIS],
 	
 	
 	LOG( "End queuing move command" << std::endl);
+
+#ifdef BUILD_PYTHON_EXT
+        PyEval_RestoreThread(_save);
+#endif
 }
 
 FLOAT_T PathPlanner::safeSpeed(Path* p)
@@ -658,7 +667,9 @@ void PathPlanner::runThread() {
 }
 
 void PathPlanner::stopThread(bool join) {
-	
+#ifdef BUILD_PYTHON_EXT
+    Py_BEGIN_ALLOW_THREADS
+#endif
 	pru.stopThread(join);
 	
 	stop=true;
@@ -666,6 +677,9 @@ void PathPlanner::stopThread(bool join) {
 	if(join && runningThread.joinable()) {
 		runningThread.join();
 	}
+#ifdef BUILD_PYTHON_EXT
+    Py_END_ALLOW_THREADS
+#endif
 }
 
 PathPlanner::~PathPlanner() {
@@ -682,6 +696,11 @@ PathPlanner::~PathPlanner() {
 }
 
 void PathPlanner::waitUntilFinished() {
+
+#ifdef BUILD_PYTHON_EXT
+    Py_BEGIN_ALLOW_THREADS
+#endif
+    
 	std::unique_lock<std::mutex> lk(line_mutex);
 	lineAvailable.wait(lk, [this]{
         return linesCount==0 || stop;
@@ -691,6 +710,9 @@ void PathPlanner::waitUntilFinished() {
 	if(!stop) {
 		pru.waitUntilFinished();
 	}
+#ifdef BUILD_PYTHON_EXT
+    Py_END_ALLOW_THREADS
+#endif
 }
 
 void PathPlanner::reset() {

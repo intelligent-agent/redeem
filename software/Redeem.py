@@ -24,7 +24,7 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
 Minor version tag is Arnold Schwarzenegger movies chronologically.
 """
 
-version = "0.15.0~Conan the Destroyer"
+version = "0.15.2~Conan the Destroyer"
 
 import logging
 import os
@@ -99,7 +99,7 @@ class Redeem:
                                                    self.printer.config.getboolean(
                                                        "Endstops",
                                                        "invert_Y2"))
-            self.printer.end_stops["Z1"] = EndStop("GPIO0_31", 123, "Z1",
+            self.printer.end_stops["Z1"] = EndStop("GPIO0_31", 116, "Z1",
                                                    self.printer.config.getboolean(
                                                        "Endstops",
                                                        "invert_Z1"))
@@ -124,7 +124,7 @@ class Redeem:
                                                    self.printer.config.getboolean(
                                                        "Endstops",
                                                        "invert_Y2"))
-            self.printer.end_stops["Z1"] = EndStop("GPIO0_30", 123, "Z1",
+            self.printer.end_stops["Z1"] = EndStop("GPIO0_30", 116, "Z1",
                                                    self.printer.config.getboolean(
                                                        "Endstops",
                                                        "invert_Z1"))
@@ -373,7 +373,8 @@ class Redeem:
             self.printer.comms["testing_noret"] = Pipe(self.printer,
                                                        "testing_noret")     # Pipe for testing
             self.printer.comms["testing_noret"].send_response = False
-
+	else:
+	    logging.warning("tty0tty is not installed! No virtual tty pipes enabled")
         self.running = True
 
         # Start the two processes

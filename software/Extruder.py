@@ -93,7 +93,7 @@ class Heater(object):
                 else:
                     power = 0.0
             else:
-                if abs(error) > 30:  # Avoid windup
+                if abs(error) > 15:  # Avoid windup
                     if error > 0:
                         power = 1.0
                     else:
