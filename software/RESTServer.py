@@ -147,15 +147,17 @@ class RESTServer(object):
 
     def _send_state_update_internal(self):
         """ Should only be run from IOLoop """
-        logging.debug("Sending printer update to "+str(len(PrinterUpdateConnection.connections))+" websocket client.")
+       
+        if len(PrinterUpdateConnection.connections)==0:
+            return
+
         self.webSocketRouter.broadcast(PrinterUpdateConnection.connections,"update-state")
-        pass
 
     def send_state_update(self):
         tornado.ioloop.IOLoop.instance().add_callback(callback = lambda: self._send_state_update_internal())
 
     def send_message(self,message):
-        pass
+        self.webSocketRouter.broadcast(PrinterUpdateConnection.connections,message)
 
 
 
