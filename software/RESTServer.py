@@ -151,7 +151,10 @@ class RESTServer(object):
         if len(PrinterUpdateConnection.connections)==0:
             return
 
-        self.webSocketRouter.broadcast(PrinterUpdateConnection.connections,"update-state")
+        extruder = self.printer.heaters['E']
+        ret = {"id": extruder.name, "target_temperature":extruder.get_target_temperature(),"temperature":extruder.get_temperature()}
+
+        self.webSocketRouter.broadcast(PrinterUpdateConnection.connections,ret)
 
     def send_state_update(self):
         tornado.ioloop.IOLoop.instance().add_callback(callback = lambda: self._send_state_update_internal())
