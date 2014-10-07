@@ -41,7 +41,7 @@ class ExtruderAPI(tornado.web.RequestHandler):
     def produce_extruder_data(self,extruder):
         return {"id": extruder.name, "target_temperature":extruder.get_target_temperature(),"temperature":extruder.get_temperature()}
     
-    def get(self, id = None):
+    def get(self, printer_id, id = None):
         if id is None:
             ret = []
             for i in ExtruderAPI.Extruders:
@@ -61,11 +61,9 @@ class PrinterAPI(tornado.web.RequestHandler):
      
 
 
-
-
 class GCodeAPI(tornado.web.RequestHandler):
 
-    def post(self):
+    def post(self, printer_id):
 
         message = tornado.escape.json_decode(self.request.body)
 
@@ -86,44 +84,75 @@ class GCodeAPI(tornado.web.RequestHandler):
         self.set_header("Cache-control", "no-cache")
 
 class PrinterUpdateConnection(SockJSConnection):
-    def on_message(self, msg):
-        self.send(msg)
+
+    connections = set()
+
+    def on_open(self, info):
+        # Add client to the clients list
+        self.connections.add(self)
+
+    def on_message(self, message):
+        # Broadcast message
+        #self.broadcast(self.connections, message)
+        pass
+
+    def on_close(self):
+        # Remove client from the clients list
+        self.connections.remove(self)
+
 
 class RESTServer(object):
 
-    API_PREFIX = "/api"
+    API_PREFIX = "/api/v1.0"
 
-    def __init__(self, printer, port):
+    instance = None
+
+    def __new__(theClass, *args, **kargs): 
+        """ Singleton construction """
+        if theClass.instance is None:
+            theClass.instance = object.__new__(theClass, *args, **kargs)
+
+        return theClass.instance
+
+    def __init__(self, printer=None, port=None):
         global current_server
-        self.port = port
-        self.printer = printer
 
-        self.webSocketRouter = SockJSRouter(PrinterUpdateConnection, RESTServer.API_PREFIX+'/ws')
+        if printer is not None and port is not None:
+            self.port = port
+            self.printer = printer
 
-        self.app = tornado.web.Application([
-                (RESTServer.API_PREFIX+r"/extruder/([A-Z])", ExtruderAPI),
-                (RESTServer.API_PREFIX+r"/extruder", ExtruderAPI),
-                (RESTServer.API_PREFIX+r"/gcode", GCodeAPI),
-                (RESTServer.API_PREFIX+r"/printer", PrinterAPI),
-                (RESTServer.API_PREFIX+r"/printer/([0-9]+)", PrinterAPI),
-                (r'/', tornado.web.RedirectHandler, {"url": "/static"}),
-                (r'/static', tornado.web.RedirectHandler, {"url": "/static/index.html"}),
-            ] + self.webSocketRouter.urls,static_path = 'public_web', debug=True, no_keep_alive=True)
+        if not hasattr(self,'app'):
+            self.webSocketRouter = SockJSRouter(PrinterUpdateConnection, RESTServer.API_PREFIX+'/ws')
 
-        current_server = self
+            self.app = tornado.web.Application([
+                    (RESTServer.API_PREFIX+r"/printer/([0-9]+)/extruder/([A-Z])", ExtruderAPI),
+                    (RESTServer.API_PREFIX+r"/printer/([0-9]+)/extruder", ExtruderAPI),
+                    (RESTServer.API_PREFIX+r"/printer/([0-9]+)/gcode", GCodeAPI),
+                    (RESTServer.API_PREFIX+r"/printer", PrinterAPI),
+                    (RESTServer.API_PREFIX+r"/printer/([0-9]+)", PrinterAPI),
+                    (r'/', tornado.web.RedirectHandler, {"url": "/static"}),
+                    (r'/static', tornado.web.RedirectHandler, {"url": "/static/index.html"}),
+                ] + self.webSocketRouter.urls,static_path = 'public_web', debug=True, no_keep_alive=True)
 
-        self.t = Thread(target=self._run)
-        self.t.daemon = True
-        self.t.start()    
+            current_server = self
+
+            self.t = Thread(target=self._run)
+            self.t.daemon = True
+            self.t.start()    
 
     def _run(self):
         logging.info('Starting REST server on port '+str(self.port))
         self.app.listen(self.port)
         tornado.ioloop.IOLoop.instance().start()
 
+    def _send_state_update_internal(self):
+        """ Should only be run from IOLoop """
+        logging.debug("Sending printer update to "+str(len(PrinterUpdateConnection.connections))+" websocket client.")
+        self.webSocketRouter.broadcast(PrinterUpdateConnection.connections,"update-state")
+        pass
 
     def send_state_update(self):
-        pass
+        tornado.ioloop.IOLoop.instance().add_callback(callback = lambda: self._send_state_update_internal())
 
     def send_message(self,message):
         pass

@@ -23,6 +23,7 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
 from threading import Thread
 import time
 import logging
+from RESTServer import RESTServer
 
 class Heater(object):
     """
@@ -121,6 +122,9 @@ class Heater(object):
                                 str(self.current_time-self.prev_time))
             self.prev_time = self.current_time
             self.current_time = time.time()
+
+            RESTServer().send_state_update()
+
             time.sleep(1)
         self.disabled = True
 

@@ -79,6 +79,8 @@ class Redeem:
         
         logging.info("Replicape revision " + self.revision)
 
+        self.printer.rest_server = RESTServer(self.printer, self.printer.config.getint('System', 'rest_port'))
+
         # Init the end stops
         EndStop.callback = self.end_stop_hit
         EndStop.inputdev = self.printer.config.get("Endstops", "inputdev");
@@ -376,7 +378,6 @@ class Redeem:
             self.printer.comms["testing_noret"].send_response = False
 
         # Set up REST Server
-        self.printer.rest_server = RESTServer(self.printer, self.printer.config.getint('System', 'rest_port'))
         self.printer.comms["rest"] = self.printer.rest_server
 
         self.running = True
