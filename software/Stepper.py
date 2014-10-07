@@ -51,16 +51,17 @@ import logging
 from Path import Path
 
 try:
-    from spi import SPI
+    from Adafruit_BBIO.SPI import SPI
     # init the SPI for the DAC
-    spi2_0 = SPI(1, 0)	
+    spi2_0 = SPI(0, 0)	
     spi2_0.bpw = 8
     spi2_0.mode = 1
     # Init the SPI for the serial to parallel
-    spi2_1 = SPI(1, 1)	
+    spi2_1 = SPI(0, 1)	
     spi2_1.bpw = 8
     spi2_1.mode = 0
 except ImportError:
+    logging.warning("Unable to set up SPI")
     spi2_0 = None
     spi2_1 = None
 
