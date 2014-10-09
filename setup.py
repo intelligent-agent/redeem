@@ -46,7 +46,7 @@ setup(
     ext_modules = [pathplanner],
     entry_points = {
         'console_scripts': [
-            'redeem = redeem.Redeem:loop'
+            'redeem = redeem.Redeem:main'
         ]
     },
     include_package_data = True

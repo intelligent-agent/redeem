@@ -24,6 +24,7 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
 import inspect
 import logging
 import re
+import importlib
 from gcodes import GCodeCommand
 
 
@@ -35,13 +36,13 @@ class GCodeProcessor:
         try:
             module = __import__("gcodes", locals(), globals())
         except ImportError: 
-            module = __import__("redeem.gcodes", locals(), globals())
-
+            module = importlib.import_module("redeem.gcodes")
         self.load_classes_in_module(module)
 
     def load_classes_in_module(self, module):
         for module_name, obj in inspect.getmembers(module):
-            if inspect.ismodule(obj) and obj.__name__.startswith('gcodes'):
+            if inspect.ismodule(obj) and (obj.__name__.startswith('gcodes') \
+                or obj.__name__.startswith('redeem.gcodes')):
                 self.load_classes_in_module(obj)
             elif inspect.isclass(obj) and \
                     issubclass(obj, GCodeCommand.GCodeCommand) and \

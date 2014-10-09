@@ -383,8 +383,9 @@ class Redeem:
             self.printer.comms["testing_noret"] = Pipe(self.printer,
                                                        "testing_noret")     # Pipe for testing
             self.printer.comms["testing_noret"].send_response = False
-	else:
-	    logging.warning("tty0tty is not installed! No virtual tty pipes enabled")
+        else:
+            logging.warning("tty0tty is not installed! No virtual tty pipes enabled")
+
         self.running = True
 
         # Start the two processes
@@ -443,6 +444,11 @@ class Redeem:
         """ An endStop has been hit """
         logging.warning("End Stop " + endstop.name + " hit!")
 
+def main():
+    Redeem()
 
-r = Redeem()
-r.loop()
+if __name__ == '__main__':
+    main()
+
+
+
