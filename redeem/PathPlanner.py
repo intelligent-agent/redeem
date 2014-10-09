@@ -181,11 +181,20 @@ class PathPlanner:
 
         if not new.is_G92():
             self.printer.ensure_steppers_enabled()
-            #push this new segment        
-            self.native_planner.queueMove(tuple(new.start_pos[:4]),
-                                          tuple(new.stepper_end_pos[:4]), new.speed,
-                                          bool(new.cancelable),
-                                          bool(new.movement != Path.RELATIVE))
+            # Split delta segments     
+            if new.needs_splitting():
+                segments = new.get_delta_segments()
+                for i in xrange(len(segments)-1):
+                     self.native_planner.queueMove(tuple(segments[i]),
+                                                  tuple(segments[i+1]), new.speed,
+                                                  bool(new.cancelable),
+                                                  bool(new.movement != Path.RELATIVE))
+            else:
+                #push this new segment   
+                self.native_planner.queueMove(tuple(new.start_pos[:4]),
+                                              tuple(new.stepper_end_pos[:4]), new.speed,
+                                              bool(new.cancelable),
+                                              bool(new.movement != Path.RELATIVE))
 
         self.prev = new
         self.prev.unlink()  # We don't want to store the entire print

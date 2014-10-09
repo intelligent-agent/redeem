@@ -42,7 +42,7 @@ class G0(GCodeCommand):
         else:
             logging.error("invalid movement: " + str(self.printer.movement))
             return
-
+    
         # Add the path. This blocks until the path planner has capacity
         self.printer.path_planner.add_path(path)
 

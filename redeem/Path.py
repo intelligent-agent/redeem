@@ -136,6 +136,24 @@ class Path:
             ret_vec[:3] = end_xyz - start_xyz
         return ret_vec
 
+    def needs_splitting(self):
+        """ Return true if this is a delta segment and longer than 1 mm """
+        return (Path.axis_config == Path.AXIS_CONFIG_DELTA and self.get_magnitude() > 0.001)
+
+    def get_magnitude(self):
+        """ Returns the magnitde in XYZ dim """
+        if not self.mag:
+            self.mag = np.linalg.norm(self.vec[:2])
+        return self.mag
+
+    def get_delta_segments(self):
+        """ A delta segment must be split into lengths of 1 mm """
+        num_segments = np.ceil(self.get_magnitude()/0.001)
+        return np.transpose([
+                    np.linspace(self.start_pos[i], 
+                    self.stepper_end_pos[i], 
+                    num_segments) for i in xrange(4)])
+
     def __str__(self):
         """ The vector representation of this path segment """
         return "Path from " + str(self.start_pos) + " to " + str(self.end_pos)
