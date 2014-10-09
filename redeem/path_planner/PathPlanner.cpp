@@ -235,6 +235,8 @@ void PathPlanner::queueMove(FLOAT_T startPos[NUM_AXIS],FLOAT_T endPos[NUM_AXIS],
 		return; // No steps included
 	}
 	
+    LOG( "Warning: Doing the breshnam thing" << std::endl);
+
     //Define variables that are needed for the Bresenham algorithm. Please note that  Z is not currently included in the Bresenham algorithm.
     if(p->delta[Y_AXIS] > p->delta[X_AXIS] && p->delta[Y_AXIS] > p->delta[Z_AXIS] && p->delta[Y_AXIS] > p->delta[E_AXIS])
 		p->primaryAxis = Y_AXIS;

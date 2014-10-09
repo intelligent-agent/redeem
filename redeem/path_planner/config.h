@@ -33,7 +33,7 @@
 #define MOVE_CACHE_SIZE 128
 
 /* Number of extruder */
-#define NUM_EXTRUDER 2
+#define NUM_EXTRUDER 5
 
 /* The speed of the timer created by the PRU in Hz */
 #define F_CPU 200000000

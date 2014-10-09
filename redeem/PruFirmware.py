@@ -149,7 +149,7 @@ class PruFirmware:
                     "#define STEPPER_MASK_" + axis + "\t\t" + self.config.get(
                         'Endstops', 'lookup_mask_' + axis) + "\n")
 
-        if self.revision in ["A4A", "A4"]:
+        if self.revision in ["0A4A", "00A4"]:
             configFile_1 = os.path.join(
                 os.path.dirname(self.firmware_source_file1), 'config_00A4.h')
         else:            

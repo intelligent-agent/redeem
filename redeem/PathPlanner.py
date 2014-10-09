@@ -66,10 +66,8 @@ class PathPlanner:
 
         self.native_planner.setPrintAcceleration(tuple([float(self.printer.acceleration[i]) for i in range(3)]))
         self.native_planner.setTravelAcceleration(tuple([float(self.printer.acceleration[i]) for i in range(3)]))
-        self.native_planner.setAxisStepsPerMeter(
-            tuple([long(Path.steps_pr_meter[i]) for i in range(3)]))
-        self.native_planner.setMaxFeedrates(
-            tuple([float(Path.max_speeds[i]) for i in range(3)]))	
+        self.native_planner.setAxisStepsPerMeter(tuple([long(Path.steps_pr_meter[i]) for i in range(3)]))
+        self.native_planner.setMaxFeedrates(tuple([float(Path.max_speeds[i]) for i in range(3)]))	
         self.native_planner.setMaxJerk(self.printer.maxJerkXY / 1000.0, self.printer.maxJerkZ /1000.0)
 
         #Setup the extruders
@@ -201,13 +199,11 @@ class PathPlanner:
                             # in memory, so we keep only the last path.
 
     def set_extruder(self, ext_nr):
-        if ext_nr in [0, 1]:
-            if ext_nr == 0:
-                Path.steps_pr_meter[3] = self.printer.steppers[
-                    "E"].get_steps_pr_meter()
-            elif ext_nr == 1:
-                Path.steps_pr_meter[3] = self.printer.steppers[
-                    "H"].get_steps_pr_meter()
+        if ext_nr in range(Path.NUM_AXES-3):
+            logging.debug("Selecting "+str(ext_nr))
+            Path.steps_pr_meter[3] = self.printer.steppers[
+                    Path.index_to_axis(ext_nr+3)
+                    ].get_steps_pr_meter()
             self.native_planner.setExtruder(ext_nr)
 
     def queue_move(self, path):

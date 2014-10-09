@@ -21,14 +21,13 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
  along with Redeem.  If not, see <http://www.gnu.org/licenses/>.
 """
 
-import numpy as np                                                          # Needed for sqrt
+import numpy as np
 
 from Delta import Delta
 
 
 class Path:
-    AXES = "XYZEH"
-    NUM_AXES = len(AXES)
+    AXES = "XYZEHABC"
 
     AXIS_CONFIG_XY = 0
     AXIS_CONFIG_H_BELT = 1
@@ -53,12 +52,14 @@ class Path:
     matrix_XY_inv = np.linalg.inv(matrix_XY)
 
     axis_config = AXIS_CONFIG_XY # Default config is normal cartesian XY
-    max_speeds = np.ones(NUM_AXES)
-    min_speed = 0.005
-    min_speeds = np.ones(NUM_AXES) * 0.005 * 0.57735026919
 
-    home_speed = np.ones(NUM_AXES)
-    steps_pr_meter = np.ones(NUM_AXES)
+    @staticmethod
+    def set_axes(num_axes):
+        """ Set number of axes """
+        Path.NUM_AXES = num_axes
+        Path.max_speeds = np.ones(num_axes)
+        Path.home_speed = np.ones(num_axes)
+        Path.steps_pr_meter = np.ones(num_axes)
 
     def __init__(self, axes, speed,  cancelable=False):
         """ The axes of evil, the feed rate in m/s and ABS or REL """
@@ -162,6 +163,9 @@ class Path:
     def axis_to_index(axis):
         return Path.AXES.index(axis)
 
+    @staticmethod
+    def index_to_axis(index):
+        return Path.AXES[index]
 
 class AbsolutePath(Path):
     """ A path segment with absolute movement """

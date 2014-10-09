@@ -50,3 +50,21 @@ class CascadingConfigParser(ConfigParser.SafeConfigParser):
                 ts = max(ts, os.path.getmtime(config_file))
         return ts
 
+    def parse_capes(self):
+        """ Read the name and revision of each cape on the BeagleBone """
+        self.replicape_revision = None
+        self.reach_revision = None
+        for addr in ["4", "5", "6", "7"]:
+            try:
+                with open("/sys/bus/i2c/devices/2-005"+addr+"/eeprom", "rb") as f:
+                    data = f.read(100)
+                    name = data[58:74].strip()
+                    if name == "BB-BONE-REPLICAP":
+                        self.replicape_revision = data[38:42]
+                    elif name[:13] == "BB-BONE-REACH":
+                        self.reach_revision = data[38:42]
+                    else:
+                        logging.info("Found unknown cape: '"+name[:13])
+            except IOError as e:
+                pass                    
+    

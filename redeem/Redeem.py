@@ -80,68 +80,33 @@ class Redeem:
             ['/etc/redeem/default.cfg', '/etc/redeem/printer.cfg',
              '/etc/redeem/local.cfg'])
 
+        # Find out which capes are connected
+        self.printer.config.parse_capes()
+        self.revision = self.printer.config.replicape_revision
+        if self.revision:
+            logging.info("Found Replicape rev. " + self.revision)
+            Path.set_axes(8)
+        else:
+            logging.warning("Oh no! No Replicape present!")
+        if self.printer.config.reach_revision:
+            Path.set_axes(8)
+            logging.info("Found Reach rev. "+self.printer.config.reach_revision)
+
         # Get the revision and loglevel from the Config file
-        self.revision = self.printer.config.get('System', 'revision', "A4")
         level = self.printer.config.getint('System', 'loglevel')
         if level > 0:
             logging.getLogger().setLevel(level)
         
-        logging.info("Replicape revision " + self.revision)
+        
 
         # Init the end stops
         EndStop.callback = self.end_stop_hit
         EndStop.inputdev = self.printer.config.get("Endstops", "inputdev");
-
-        if self.revision == "A4" or self.revision == "A4A":
-            self.printer.end_stops["X1"] = EndStop("GPIO3_21", 112, "X1",
-                                                   self.printer.config.getboolean(
-                                                       "Endstops",
-                                                       "invert_X1"))
-            self.printer.end_stops["X2"] = EndStop("GPIO0_30", 113, "X2",
-                                                   self.printer.config.getboolean(
-                                                       "Endstops",
-                                                       "invert_X2"))
-            self.printer.end_stops["Y1"] = EndStop("GPIO1_17", 114, "Y1",
-                                                   self.printer.config.getboolean(
-                                                       "Endstops",
-                                                       "invert_Y1"))
-            self.printer.end_stops["Y2"] = EndStop("GPIO1_19", 115, "Y2",
-                                                   self.printer.config.getboolean(
-                                                       "Endstops",
-                                                       "invert_Y2"))
-            self.printer.end_stops["Z1"] = EndStop("GPIO0_31", 116, "Z1",
-                                                   self.printer.config.getboolean(
-                                                       "Endstops",
-                                                       "invert_Z1"))
-            self.printer.end_stops["Z2"] = EndStop("GPIO0_4", 117, "Z2",
-                                                   self.printer.config.getboolean(
-                                                       "Endstops",
-                                                       "invert_Z2"))
-        else:
-            self.printer.end_stops["X1"] = EndStop("GPIO0_14", 112, "X1",
-                                                   self.printer.config.getboolean(
-                                                       "Endstops",
-                                                       "invert_X1"))
-            self.printer.end_stops["X2"] = EndStop("GPIO3_21", 113, "X2",
-                                                   self.printer.config.getboolean(
-                                                       "Endstops",
-                                                       "invert_X2"))
-            self.printer.end_stops["Y1"] = EndStop("GPIO2_2", 114, "Y1",
-                                                   self.printer.config.getboolean(
-                                                       "Endstops",
-                                                       "invert_Y1"))
-            self.printer.end_stops["Y2"] = EndStop("GPIO0_31", 115, "Y2",
-                                                   self.printer.config.getboolean(
-                                                       "Endstops",
-                                                       "invert_Y2"))
-            self.printer.end_stops["Z1"] = EndStop("GPIO0_30", 116, "Z1",
-                                                   self.printer.config.getboolean(
-                                                       "Endstops",
-                                                       "invert_Z1"))
-            self.printer.end_stops["Z2"] = EndStop("GPIO0_4", 117, "Z2",
-                                                   self.printer.config.getboolean(
-                                                       "Endstops",
-                                                       "invert_Z2"))
+        for es in ["X1", "X2", "Y1", "Y2", "Z1", "Z2"]:
+            pin = self.printer.config.get("Endstops", "pin_"+es)
+            keycode = self.printer.config.get("Endstops", "keycode_"+es)
+            invert = self.printer.config.getboolean("Endstops", "invert_"+es)
+            self.printer.end_stops[es] = EndStop(pin, keycode, es, invert)
 
         if self.revision == "A3":
             Stepper.revision = "A3"
@@ -167,6 +132,14 @@ class Redeem:
                                              3, "E", None, 3, 3)
         self.printer.steppers["H"] = Stepper("GPIO1_13", "GPIO1_14", "GPIO2_3",
                                              4, "H", None, 4, 4)
+        
+        if self.printer.config.reach_revision:
+            self.printer.steppers["A"] = Stepper("GPIO2_2", "GPIO1_18", "GPIO0_14",  
+                                                5, "A", None,5,5)
+            self.printer.steppers["B"] = Stepper("GPIO1_14", "GPIO0_5", "GPIO0_14",
+                                                6, "B", None,6,6)
+            self.printer.steppers["C"] = Stepper("GPIO0_3", "GPIO3_19", "GPIO0_14",
+                                                7, "C", None,7,7)
 
         # Enable the steppers and set the current, steps pr mm and
         # microstepping
@@ -192,17 +165,7 @@ class Redeem:
         # Find the path of the thermistors
         path = "/sys/bus/iio/devices/iio:device0/in_voltage"
 
-        # init the 3 thermistors
-        therm_ext1 = Thermistor(path + "4_raw", "MOSFET Ext 1",
-                                self.printer.config.get('Heaters',
-                                                        "ext1_temp_chart"))
-        therm_hbp = Thermistor(path + "6_raw", "MOSFET HBP",
-                               self.printer.config.get('Heaters',
-                                                       "hbp_temp_chart"))
-        therm_ext2 = Thermistor(path + "5_raw", "MOSFET Ext 2",
-                                self.printer.config.get('Heaters',
-                                                        "ext2_temp_chart"))
-
+       
         path = self.printer.config.get('Cold-ends', 'path', 0)
         if os.path.exists(path):
             self.printer.cold_ends.append(ColdEnd(path, "Cold End 0"))
@@ -220,48 +183,35 @@ class Redeem:
             mosfet_ext2 = Mosfet(3)
             mosfet_hbp = Mosfet(4)
 
-        # Make extruder 1
-        self.printer.heaters['E'] = Extruder(self.printer.steppers["E"],
-                                             therm_ext1, mosfet_ext1, "Ext1",
-                                             self.printer.config.getboolean(
-                                                 'Heaters',
-                                                 'ext1_onoff_control'))
-        self.printer.heaters['E'].P = self.printer.config.getfloat('Heaters',
-                                                                   "ext1_pid_p")
-        self.printer.heaters['E'].I = self.printer.config.getfloat('Heaters',
-                                                                   "ext1_pid_i")
-        self.printer.heaters['E'].D = self.printer.config.getfloat('Heaters',
-                                                                   "ext1_pid_d")
-        self.printer.heaters['E'].ok_range = self.printer.config.getfloat(
-            'Heaters', "ext1_ok_range")
-
-        # Make Heated Build platform 
-        self.printer.heaters['HBP'] = HBP(therm_hbp, mosfet_hbp,
-                                          self.printer.config.getboolean(
-                                              'Heaters', 'hbp_onoff_control'))
-        self.printer.heaters['HBP'].P = self.printer.config.getfloat('Heaters',
-                                                                     "hbp_pid_p")
-        self.printer.heaters['HBP'].I = self.printer.config.getfloat('Heaters',
-                                                                     "hbp_pid_i")
-        self.printer.heaters['HBP'].D = self.printer.config.getfloat('Heaters',
-                                                                     "hbp_pid_d")
-        self.printer.heaters['HBP'].ok_range = self.printer.config.getfloat(
-            'Heaters', "hbp_ok_range")
-
-        # Make extruder 2.
-        self.printer.heaters['H'] = Extruder(self.printer.steppers["H"],
-                                             therm_ext2, mosfet_ext2, "Ext2",
-                                             self.printer.config.getboolean(
-                                                 'Heaters',
-                                                 'ext2_onoff_control'))
-        self.printer.heaters['H'].P = self.printer.config.getfloat('Heaters',
-                                                                   "ext2_pid_p")
-        self.printer.heaters['H'].I = self.printer.config.getfloat('Heaters',
-                                                                   "ext2_pid_i")
-        self.printer.heaters['H'].D = self.printer.config.getfloat('Heaters',
-                                                                   "ext2_pid_d")
-        self.printer.heaters['H'].ok_range = self.printer.config.getfloat(
-            'Heaters', "ext2_ok_range")
+        #Make extruders
+        heaters = ["E", "H", "HBP"]
+        if self.printer.config.reach_revision:
+            heaters.extend(["A", "B", "C"])
+        self.printer.thermistors = {}
+        self.printer.mosfets = {}
+        self.printer.heaters = {}
+        for e in heaters:
+            #Mosfets
+            channel = self.printer.config.getint("Heaters", "mosfet_"+e)
+            self.printer.mosfets[e] = Mosfet(channel)
+            # Thermistors
+            adc   = self.printer.config.get("Heaters", "path_adc_"+e)
+            chart = self.printer.config.get("Heaters", "temp_chart_"+e)
+            self.printer.thermistors[e] = Thermistor(adc, "MOSFET "+e, chart)
+    
+            # Extruders
+            onoff =  self.printer.config.getboolean('Heaters', 'onoff_'+e)
+            prefix =  self.printer.config.get('Heaters', 'prefix_'+e)
+            if e != "HBP":
+                self.printer.heaters[e] = Extruder(
+                                        self.printer.steppers[e], 
+                                        self.printer.thermistors[e], 
+                                        self.printer.mosfets[e], e, onoff)
+            else:
+                self.printer.heaters[e] = HBP(
+                                        self.printer.thermistors[e], 
+                                        self.printer.mosfets[e], onoff)
+            self.printer.heaters[e].prefix = prefix
 
         # Init the three fans. Argument is PWM channel number
         self.printer.fans = []
@@ -298,38 +248,11 @@ class Redeem:
         # Init the path planner
         Path.axis_config = int(
             self.printer.config.get('Geometry', 'axis_config'))
-        Path.max_speeds[0] = float(
-            self.printer.config.get('Steppers', 'max_speed_x'))
-        Path.max_speeds[1] = float(
-            self.printer.config.get('Steppers', 'max_speed_y'))
-        Path.max_speeds[2] = float(
-            self.printer.config.get('Steppers', 'max_speed_z'))
-        Path.max_speeds[3] = float(
-            self.printer.config.get('Steppers', 'max_speed_e'))
-        Path.max_speeds[4] = float(
-            self.printer.config.get('Steppers', 'max_speed_h'))
-
-        Path.home_speed[0] = float(
-            self.printer.config.get('Steppers', 'home_speed_x'))
-        Path.home_speed[1] = float(
-            self.printer.config.get('Steppers', 'home_speed_y'))
-        Path.home_speed[2] = float(
-            self.printer.config.get('Steppers', 'home_speed_z'))
-        Path.home_speed[3] = float(
-            self.printer.config.get('Steppers', 'home_speed_e'))
-        Path.home_speed[4] = float(
-            self.printer.config.get('Steppers', 'home_speed_h'))
-
-        Path.steps_pr_meter[0] = self.printer.steppers[
-            "X"].get_steps_pr_meter()
-        Path.steps_pr_meter[1] = self.printer.steppers[
-            "Y"].get_steps_pr_meter()
-        Path.steps_pr_meter[2] = self.printer.steppers[
-            "Z"].get_steps_pr_meter()
-        Path.steps_pr_meter[3] = self.printer.steppers[
-            "E"].get_steps_pr_meter()
-        Path.steps_pr_meter[4] = self.printer.steppers[
-            "H"].get_steps_pr_meter()
+        
+        for i, axis in enumerate(Path.AXES):
+            Path.max_speeds[i] = self.printer.config.getfloat('Steppers', 'max_speed_'+axis.lower())
+            Path.home_speed[i] = self.printer.config.getfloat('Steppers', 'home_speed_'+axis.lower())
+            Path.steps_pr_meter[i] = self.printer.steppers[axis].get_steps_pr_meter()
 
         dirname = os.path.dirname(os.path.realpath(__file__))
 
@@ -353,7 +276,7 @@ class Redeem:
         offset = {}
 
         i = 0
-        for axis in ['X', 'Y', 'Z', 'E', 'H']:
+        for axis in Path.AXES:
             travel[axis] = self.printer.config.getfloat('Geometry',
                                                         'travel_' + axis.lower())
             offset[axis] = self.printer.config.getfloat('Geometry',

@@ -9,7 +9,7 @@ License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 """
 
 from GCodeCommand import GCodeCommand
-
+import logging
 
 class T0(GCodeCommand):
 
@@ -39,3 +39,21 @@ class T2(GCodeCommand):
 
     def get_description(self):
         return "Select currently used extruder tool to be T2 (A)"
+
+class T3(GCodeCommand):
+
+    def execute(self, g):
+        self.printer.path_planner.set_extruder(3)
+        self.printer.current_tool = "B"
+
+    def get_description(self):
+        return "Select currently used extruder tool to be T3 (B)"
+
+class T4(GCodeCommand):
+
+    def execute(self, g):
+        self.printer.path_planner.set_extruder(4)
+        self.printer.current_tool = "C"
+
+    def get_description(self):
+        return "Select currently used extruder tool to be T4 (C)"

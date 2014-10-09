@@ -44,7 +44,7 @@ class Heater(object):
         self.D = 0.0                      # Derivative
         self.onoff_control = onoff_control  # If we use PID or ON/OFF control
         self.ok_range = 4.0
-
+        self.prefix = ""
         self.current_time = time.time()
         self.prev_time = time.time()
 

@@ -27,6 +27,11 @@ class M105(GCodeCommand):
         current_tool = self.printer.current_tool
         answer = "ok " + format_temperature(current_tool, "T")
 
+        # Append heaters
+        for h in self.printer.heaters:
+            prefix = self.printer.heaters[h].prefix
+            answer += " " + format_temperature(h, prefix)
+
         # Append all other readings
         if "HBP" in self.printer.heaters:
             answer += " " + format_temperature("HBP", "B")
