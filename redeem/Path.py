@@ -24,7 +24,7 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
 import numpy as np
 
 from Delta import Delta
-
+import logging
 
 class Path:
     AXES = "XYZEHABC"
@@ -144,16 +144,26 @@ class Path:
     def get_magnitude(self):
         """ Returns the magnitde in XYZ dim """
         if not self.mag:
-            self.mag = np.linalg.norm(self.vec[:2])
+            if self.rounded_vec == None:
+                logging.error("Cannot get magnitude of vector without knowing its length")
+            self.mag = np.linalg.norm(self.rounded_vec[:3])
         return self.mag
 
     def get_delta_segments(self):
         """ A delta segment must be split into lengths of 1 mm """
-        num_segments = np.ceil(self.get_magnitude()/0.001)
-        return np.transpose([
-                    np.linspace(self.start_pos[i], 
-                    self.stepper_end_pos[i], 
-                    num_segments) for i in xrange(4)])
+        logging.debug("Mag = "+str(self.get_magnitude()))
+        num_segments = np.ceil(self.get_magnitude()/0.001)+1
+        logging.debug("num segments = "+str(num_segments))
+        logging.debug("Start = "+str(self.start_pos))
+        logging.debug("End = "+str(self.end_pos))
+        vals = np.transpose([
+                    np.linspace(
+                        self.start_pos[i], 
+                        self.end_pos[i], 
+                        num_segments
+                    ) for i in xrange(4)]) 
+        dick = [dict(zip(["X", "Y", "Z", "E"], list(val))) for val in np.delete(vals, 0, axis=0)]
+        return dick
 
     def __str__(self):
         """ The vector representation of this path segment """
@@ -196,6 +206,7 @@ class AbsolutePath(Path):
         # Set stepper and true posision
         self.end_pos = self.start_pos + vec
         self.stepper_end_pos = self.start_pos + self.delta
+        self.rounded_vec = vec
 
         if np.isnan(vec).any():
             self.end_pos = self.start_pos
@@ -229,9 +240,11 @@ class RelativePath(Path):
         self.delta = np.sign(vec) * self.num_steps / Path.steps_pr_meter
         vec = self.reverse_transform_vector(self.delta, self.start_pos)
 
+
         # Set stepper and true position
         self.end_pos = self.start_pos + vec
         self.stepper_end_pos = self.start_pos + self.delta
+        self.rounded_vec = vec
 
         # Make sure the calculations are correct, or no movement occurs:
         if np.isnan(vec).any():

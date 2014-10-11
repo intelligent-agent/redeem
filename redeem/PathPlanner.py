@@ -121,7 +121,7 @@ class PathPlanner:
 
     def _home_internal(self, axis):
         """ Private method for homing a set or a single axis """
-        logging.debug("homing " + str(axis))
+        logging.debug("homing internal " + str(axis))
 
         path_back = {}
         path_center = {}
@@ -133,13 +133,17 @@ class PathPlanner:
             if not self.printer.steppers[a].has_endstop:
                 logging.debug("Skipping homing for " + str(a))
                 continue
-
+            logging.debug("Doing homing for " + str(a))
+            logging.debug(self.travel_length)
+            logging.debug(self.center_offset)
             path_back[a] = -self.travel_length[a]
             path_center[a] = -self.center_offset[a]
             path_zero[a] = 0
             speed = min(speed, Path.home_speed[Path.axis_to_index(a)])
 
-            # Move until endstop is hit
+            logging.debug("axis: "+str(a))
+
+        # Move until endstop is hit
         p = RelativePath(path_back, speed, True)
 
         self.add_path(p)
@@ -177,22 +181,21 @@ class PathPlanner:
         # Link to the previous segment in the chain
         new.set_prev(self.prev)
 
+        if new.needs_splitting():
+            logging.debug("Path needs splitting")
+            segments = new.get_delta_segments()
+            for segment in segments:
+                logging.debug("Adding "+str(segment))
+                rel = AbsolutePath(segment, self.printer.feed_rate * self.printer.factor)
+                self.add_path(rel)
+
         if not new.is_G92():
             self.printer.ensure_steppers_enabled()
-            # Split delta segments     
-            if new.needs_splitting():
-                segments = new.get_delta_segments()
-                for i in xrange(len(segments)-1):
-                     self.native_planner.queueMove(tuple(segments[i]),
-                                                  tuple(segments[i+1]), new.speed,
-                                                  bool(new.cancelable),
-                                                  bool(new.movement != Path.RELATIVE))
-            else:
-                #push this new segment   
-                self.native_planner.queueMove(tuple(new.start_pos[:4]),
-                                              tuple(new.stepper_end_pos[:4]), new.speed,
-                                              bool(new.cancelable),
-                                              bool(new.movement != Path.RELATIVE))
+            #push this new segment   
+            self.native_planner.queueMove(tuple(new.start_pos[:4]),
+                                          tuple(new.stepper_end_pos[:4]), new.speed,
+                                          bool(new.cancelable),
+                                          bool(new.movement != Path.RELATIVE))
 
         self.prev = new
         self.prev.unlink()  # We don't want to store the entire print

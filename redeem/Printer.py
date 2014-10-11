@@ -26,37 +26,18 @@ from Path import Path
 class Printer:
     """ A command received from pronterface or whatever """
 
-    def __init__(self, steppers=None, heaters=None, end_stops=None, fans=None,
-                 cold_ends=None, path_planner=None):
-        if steppers is None:
-            self.steppers = {}
-        else:
-            self.steppers = steppers
-
-        if heaters is None:
-            self.heaters = {}
-        else:
-            self.heaters = heaters
-
-        if end_stops is None:
-            self.end_stops = {}
-        else:
-            self.end_stops = end_stops
-
-        if fans is None:
-            self.fans = []
-        else:
-            self.fans = fans
-
-        if cold_ends is None:
-            self.cold_ends = []
-        else:
-            self.cold_ends = cold_ends
-
-        self.path_planner = path_planner
+    def __init__(self):
+        self.steppers = {}
+        self.heaters = {}
+        self.thermistors = {}
+        self.mosfets = {}
+        self.end_stops = {}
+        self.fans = []
+        self.cold_ends = []
         self.coolers = []
 
         self.comms = {}  # Communication channels
+        self.path_planner = None
 
         self.factor = 1.0
         self.extrude_factor = 1.0

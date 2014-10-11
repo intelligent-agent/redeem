@@ -58,14 +58,14 @@ logging.basicConfig(level=logging.DEBUG,
                     format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
                     datefmt='%m-%d %H:%M')
 
-
 class Redeem:
 
     def __init__(self):
         """ Init """
         logging.info("Redeem initializing " + version)
 
-        self.printer = Printer()
+        printer = Printer()
+        self.printer = printer
 
         # Copy/create config files if not present
         if not os.path.exists("/etc/redeem/default.cfg"):
@@ -76,7 +76,7 @@ class Redeem:
                 shutil.copy(f, "/etc/redeem")
 
         # Parse the config files. 
-        self.printer.config = CascadingConfigParser(
+        printer.config = CascadingConfigParser(
             ['/etc/redeem/default.cfg', '/etc/redeem/printer.cfg',
              '/etc/redeem/local.cfg'])
 
@@ -85,7 +85,7 @@ class Redeem:
         self.revision = self.printer.config.replicape_revision
         if self.revision:
             logging.info("Found Replicape rev. " + self.revision)
-            Path.set_axes(8)
+            Path.set_axes(5)
         else:
             logging.warning("Oh no! No Replicape present!")
         if self.printer.config.reach_revision:
@@ -96,8 +96,6 @@ class Redeem:
         level = self.printer.config.getint('System', 'loglevel')
         if level > 0:
             logging.getLogger().setLevel(level)
-        
-        
 
         # Init the end stops
         EndStop.callback = self.end_stop_hit
@@ -108,6 +106,7 @@ class Redeem:
             invert = self.printer.config.getboolean("Endstops", "invert_"+es)
             self.printer.end_stops[es] = EndStop(pin, keycode, es, invert)
 
+        # Backwards compatibility with A3
         if self.revision == "A3":
             Stepper.revision = "A3"
             Stepper.ENABLED = 6
@@ -116,56 +115,32 @@ class Redeem:
             Stepper.DECAY = 0
 
         # Init the 5 Stepper motors (step, dir, fault, DAC channel, name)
-        self.printer.steppers["X"] = Stepper("GPIO0_27", "GPIO1_29", "GPIO2_4",
-                                             0, "X",
-                                             self.printer.end_stops["X1"], 0,
-                                             0)
-        self.printer.steppers["Y"] = Stepper("GPIO1_12", "GPIO0_22", "GPIO2_5",
-                                             1, "Y",
-                                             self.printer.end_stops["Y1"], 1,
-                                             1)
-        self.printer.steppers["Z"] = Stepper("GPIO0_23", "GPIO0_26",
-                                             "GPIO0_15", 2, "Z",
-                                             self.printer.end_stops["Z1"], 2,
-                                             2)
-        self.printer.steppers["E"] = Stepper("GPIO1_28", "GPIO1_15", "GPIO2_1",
-                                             3, "E", None, 3, 3)
-        self.printer.steppers["H"] = Stepper("GPIO1_13", "GPIO1_14", "GPIO2_3",
-                                             4, "H", None, 4, 4)
+        printer.steppers["X"] = Stepper("GPIO0_27", "GPIO1_29", "GPIO2_4" , 0, "X", 0, 0)
+        printer.steppers["Y"] = Stepper("GPIO1_12", "GPIO0_22", "GPIO2_5" , 1, "Y", 1, 1)
+        printer.steppers["Z"] = Stepper("GPIO0_23", "GPIO0_26", "GPIO0_15", 2, "Z", 2, 2)
+        printer.steppers["E"] = Stepper("GPIO1_28", "GPIO1_15", "GPIO2_1" , 3, "E", 3, 3)
+        printer.steppers["H"] = Stepper("GPIO1_13", "GPIO1_14", "GPIO2_3" , 4, "H", 4, 4)
         
-        if self.printer.config.reach_revision:
-            self.printer.steppers["A"] = Stepper("GPIO2_2", "GPIO1_18", "GPIO0_14",  
-                                                5, "A", None,5,5)
-            self.printer.steppers["B"] = Stepper("GPIO1_14", "GPIO0_5", "GPIO0_14",
-                                                6, "B", None,6,6)
-            self.printer.steppers["C"] = Stepper("GPIO0_3", "GPIO3_19", "GPIO0_14",
-                                                7, "C", None,7,7)
+        if printer.config.reach_revision:
+            printer.steppers["A"] = Stepper("GPIO2_2" , "GPIO1_18", "GPIO0_14", 5, "A", 5, 5)
+            printer.steppers["B"] = Stepper("GPIO1_14", "GPIO0_5" , "GPIO0_14", 6, "B", 6, 6)
+            printer.steppers["C"] = Stepper("GPIO0_3" , "GPIO3_19", "GPIO0_14", 7, "C", 7, 7)
 
         # Enable the steppers and set the current, steps pr mm and
         # microstepping
         for name, stepper in self.printer.steppers.iteritems():
-            stepper.set_current_value(
-                self.printer.config.getfloat('Steppers', 'current_' + name))
-            stepper.in_use = self.printer.config.getboolean('Steppers',
-                                                            'in_use_' + name)
-            stepper.set_steps_pr_mm(self.printer.config.getfloat('Steppers',
-                                                                 'steps_pr_mm_' + name))
-            stepper.set_microstepping(self.printer.config.getint('Steppers',
-                                                                 'microstepping_' + name))
-            stepper.direction = self.printer.config.getint('Steppers',
-                                                           'direction_' + name)
-            stepper.set_decay(self.printer.config.getboolean("Steppers",
-                                                             "slow_decay_" + name))
-            stepper.has_endstop = self.printer.config.getboolean('Endstops',
-                                                                 'has_' + name)
+            stepper.in_use = printer.config.getboolean('Steppers', 'in_use_' + name)
+            stepper.direction   = printer.config.getint('Steppers', 'direction_' + name)
+            stepper.has_endstop = printer.config.getboolean('Endstops', 'has_' + name)
+            stepper.set_current_value(printer.config.getfloat('Steppers', 'current_' + name) )
+            stepper.set_steps_pr_mm( printer.config.getfloat('Steppers', 'steps_pr_mm_' + name) )
+            stepper.set_microstepping( printer.config.getint('Steppers', 'microstepping_' + name) )
+            stepper.set_decay( printer.config.getboolean("Steppers", "slow_decay_" + name) )
 
         # Commit changes for the Steppers
         Stepper.commit()
 
-        # Find the path of the thermistors
-        path = "/sys/bus/iio/devices/iio:device0/in_voltage"
-
-       
+        # Set up cold ends
         path = self.printer.config.get('Cold-ends', 'path', 0)
         if os.path.exists(path):
             self.printer.cold_ends.append(ColdEnd(path, "Cold End 0"))
@@ -173,23 +148,10 @@ class Redeem:
         else:
             logging.info("No cold end present in path: " + path)
 
-        # Init the 3 heaters. Argument is channel number
-        if self.revision == "A3":
-            mosfet_ext1 = Mosfet(3)
-            mosfet_ext2 = Mosfet(4)
-            mosfet_hbp = Mosfet(5)
-        else:
-            mosfet_ext1 = Mosfet(5)
-            mosfet_ext2 = Mosfet(3)
-            mosfet_hbp = Mosfet(4)
-
-        #Make extruders
+        # Make Mosfets, thermistors and extruders
         heaters = ["E", "H", "HBP"]
         if self.printer.config.reach_revision:
             heaters.extend(["A", "B", "C"])
-        self.printer.thermistors = {}
-        self.printer.mosfets = {}
-        self.printer.heaters = {}
         for e in heaters:
             #Mosfets
             channel = self.printer.config.getint("Heaters", "mosfet_"+e)
@@ -245,14 +207,14 @@ class Redeem:
         # Make a queue of commands that should not be buffered
         self.printer.unbuffered_commands = JoinableQueue(10)
 
-        # Init the path planner
-        Path.axis_config = int(
-            self.printer.config.get('Geometry', 'axis_config'))
+        # Init the Paths
+        Path.axis_config = printer.config.getint('Geometry', 'axis_config')
         
-        for i, axis in enumerate(Path.AXES):
-            Path.max_speeds[i] = self.printer.config.getfloat('Steppers', 'max_speed_'+axis.lower())
-            Path.home_speed[i] = self.printer.config.getfloat('Steppers', 'home_speed_'+axis.lower())
-            Path.steps_pr_meter[i] = self.printer.steppers[axis].get_steps_pr_meter()
+        for axis in printer.steppers.keys():
+            i = Path.axis_to_index(axis)
+            Path.max_speeds[i] = printer.config.getfloat('Steppers', 'max_speed_'+axis.lower())
+            Path.home_speed[i] = printer.config.getfloat('Steppers', 'home_speed_'+axis.lower())
+            Path.steps_pr_meter[i] = printer.steppers[axis].get_steps_pr_meter()
 
         dirname = os.path.dirname(os.path.realpath(__file__))
 
@@ -264,48 +226,32 @@ class Redeem:
             dirname + "/../firmware/firmware_endstops.bin",
             self.revision, self.printer.config, "/usr/bin/pasm")
 
-        self.printer.maxJerkXY = float(
-            self.printer.config.get('Steppers', 'maxJerk_xy'));
-        self.printer.maxJerkZ = float(
-            self.printer.config.get('Steppers', 'maxJerk_z'));
-        self.printer.maxJerkEH = float(
-            self.printer.config.get('Steppers', 'maxJerk_eh'));
+        printer.maxJerkXY = printer.config.getfloat('Steppers', 'maxJerk_xy')
+        printer.maxJerkZ = printer.config.getfloat('Steppers', 'maxJerk_z')
+        printer.maxJerkEH = printer.config.getfloat('Steppers', 'maxJerk_eh')
 
-
-        travel = {}
-        offset = {}
-
-        i = 0
-        for axis in Path.AXES:
-            travel[axis] = self.printer.config.getfloat('Geometry',
-                                                        'travel_' + axis.lower())
-            offset[axis] = self.printer.config.getfloat('Geometry',
-                                                        'offset_' + axis.lower())
-            self.printer.acceleration[i] = self.printer.config.getfloat('Steppers', 'acceleration_' + axis.lower())
-            i += 1
-
-
+        # Path planner
         self.printer.path_planner = PathPlanner(self.printer, pru_firmware)
+        for axis in printer.steppers.keys():
+            printer.path_planner.travel_length[axis] = printer.config.getfloat(
+                                                       'Geometry', 'travel_' + axis.lower())
+            printer.path_planner.center_offset[axis] = printer.config.getfloat(
+                                                       'Geometry', 'offset_' + axis.lower())
+            printer.acceleration[Path.axis_to_index(axis)] = printer.config.getfloat(
+                                                        'Steppers', 'acceleration_' + axis.lower())
 
-
-        self.printer.path_planner.travel_length = travel
-        self.printer.path_planner.center_offset = offset
         self.printer.processor = GCodeProcessor(self.printer)
 
         # Set up communication channels
-        self.printer.comms["USB"] = USB(self.printer)
-        self.printer.comms["Eth"] = Ethernet(self.printer)
+        printer.comms["USB"] = USB(self.printer)
+        printer.comms["Eth"] = Ethernet(self.printer)
         
         if Pipe.check_tty0tty():
-            self.printer.comms["octoprint"] = Pipe(self.printer,
-                                                   "octoprint")   # Pipe for Octoprint
-            self.printer.comms["toggle"] = Pipe(self.printer,
-                                                "toggle")      # Pipe for Toggle
-            self.printer.comms["testing"] = Pipe(self.printer,
-                                                 "testing")     # Pipe for testing
-            self.printer.comms["testing_noret"] = Pipe(self.printer,
-                                                       "testing_noret")     # Pipe for testing
-            self.printer.comms["testing_noret"].send_response = False
+            printer.comms["octoprint"] = Pipe(printer, "octoprint")
+            printer.comms["toggle"] = Pipe(printer, "toggle") 
+            printer.comms["testing"] = Pipe(printer, "testing")
+            printer.comms["testing_noret"] = Pipe(printer, "testing_noret") 
+            printer.comms["testing_noret"].send_response = False # Does not send "ok"
         else:
             logging.warning("tty0tty is not installed! No virtual tty pipes enabled")
 
@@ -313,9 +259,9 @@ class Redeem:
 
         # Start the two processes
         p0 = Thread(target=self.loop,
-                    args=(self.printer.commands, "buffered"))
+                    args=(printer.commands, "buffered"))
         p1 = Thread(target=self.loop,
-                    args=(self.printer.unbuffered_commands, "unbuffered"))
+                    args=(printer.unbuffered_commands, "unbuffered"))
         p0.daemon = True
         p1.daemon = True
 

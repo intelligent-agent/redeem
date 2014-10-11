@@ -16,7 +16,7 @@ class G28(GCodeCommand):
 
     def execute(self, g):
         if g.num_tokens() == 0:  # If no token is given, home all
-            g.set_tokens(["X0", "Y0", "Z0", "E0", "H0"])                
+            g.set_tokens(["X0", "Y0", "Z0", "E0", "H0"])
         
         axis_home = []
         

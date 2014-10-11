@@ -32,18 +32,9 @@ class M105(GCodeCommand):
             prefix = self.printer.heaters[h].prefix
             answer += " " + format_temperature(h, prefix)
 
-        # Append all other readings
-        if "HBP" in self.printer.heaters:
-            answer += " " + format_temperature("HBP", "B")
-        if "E" in self.printer.heaters:
-            answer += " " + format_temperature("E", "T0")
-
         # Append the current tool power is using PID
         if not self.printer.heaters[current_tool].onoff_control:
             answer += " @:" + str(math.floor(255*self.printer.heaters[current_tool].mosfet.get_power()))
-
-        if "H" in self.printer.heaters:
-            answer += " " + format_temperature("H", "T1")
 
         if len(self.printer.coolers) > 0:
             cold_end = self.printer.coolers[0].get_temperature()

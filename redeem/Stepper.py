@@ -92,7 +92,7 @@ class Stepper:
         spi2_1.writebytes(bytes[::-1])
         logging.debug(bytes[::-1])
 
-    def __init__(self, stepPin, dirPin, faultPin, dac_channel, name, endstop, internalStepPin, internalDirPin):
+    def __init__(self, stepPin, dirPin, faultPin, dac_channel, name, internalStepPin, internalDirPin):
         """ Init """
         self.dac_channel     = dac_channel  # Which channel on the dac is connected to this stepper
         self.stepPin         = stepPin
@@ -108,13 +108,9 @@ class Stepper:
         self.microsteps      = 1.0          # Well, this is the microstep number
         self.pru_num         = -1           # PRU number, if any 
         self.direction       = 1
-        self.endstop         = endstop
         self.internalStepPin = (1 << internalStepPin)
         self.internalDirPin = (1 << internalDirPin)
         Stepper.all_steppers.append(self)       # Add to list of steppers
-
-    def get_endstop(self):
-        return self.endstop
 
     def set_enabled(self, force_update=False):
         """ Sets the Stepper enabled """
