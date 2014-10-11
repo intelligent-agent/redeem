@@ -38,3 +38,7 @@ class G28(GCodeCommand):
 
     def is_buffered(self):
         return True
+
+    def get_test_gcodes(self):
+        return ["G28"]
+

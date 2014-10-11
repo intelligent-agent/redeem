@@ -32,3 +32,7 @@ class G4(GCodeCommand):
 
     def is_buffered(self):
         return True
+
+    def get_test_gcodes(self):
+        return ["G4 P100", "G4 S0.1"]
+

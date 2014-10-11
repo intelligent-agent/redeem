@@ -21,6 +21,10 @@ class T0(GCodeCommand):
         return "Select currently used extruder tool to be T0 (E)"
 
 
+    def get_test_gcodes(self):
+        return ["T0"]
+
+
 class T1(GCodeCommand):
 
     def execute(self, g):
@@ -30,6 +34,8 @@ class T1(GCodeCommand):
     def get_description(self):
         return "Select currently used extruder tool to be T1 (H)"
 
+    def get_test_gcodes(self):
+        return ["T1"]
 
 class T2(GCodeCommand):
 

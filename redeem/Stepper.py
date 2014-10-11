@@ -90,7 +90,6 @@ class Stepper:
         for stepper in Stepper.all_steppers:
             bytes.append(stepper.get_state())
         spi2_1.writebytes(bytes[::-1])
-        logging.debug(bytes[::-1])
 
     def __init__(self, stepPin, dirPin, faultPin, dac_channel, name, internalStepPin, internalDirPin):
         """ Init """

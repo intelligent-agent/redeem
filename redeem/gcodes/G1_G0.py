@@ -55,7 +55,7 @@ class G0(GCodeCommand):
     def get_test_gcodes(self):
         return [
             "G0 X0 Y0 Z0 F1000", 
-            "G0 X1 Y1 Z10"
+            "G0 X1 Y1 Z0"
         ]
 
 class G1(G0):

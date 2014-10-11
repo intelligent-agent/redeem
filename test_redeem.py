@@ -7,6 +7,7 @@ def test_redeem():
     r = Redeem()
     g = r.printer.processor
     for gcode in g.get_test_gcodes():
+        logging.info("Testing '"+gcode.message+"'")
         g.execute(gcode)
     r.exit()
     pass
