@@ -67,18 +67,13 @@ class Heater(object):
         """ Stops the heater and the PID controller """
         self.enabled = False
         # Wait for PID to stop
-        while self.disabled == False:
-            time.sleep(0.2)
-            # The PID loop has finished
+        self.t.join()
         self.mosfet.set_power(0.0)
-        self.mosfet.close()
 
     def enable(self):
         """ Start the PID controller """
         self.enabled = True
-        self.disabled = False
         self.t = Thread(target=self.keep_temperature)
-        self.t.daemon = True
         self.t.start()
 
     def keep_temperature(self):
@@ -119,7 +114,6 @@ class Heater(object):
             self.prev_time = self.current_time
             self.current_time = time.time()
             time.sleep(1)
-        self.disabled = True
 
     def _getErrorDerivative(self, current_error):
         """ Get the derivative of the error term """

@@ -255,13 +255,14 @@ class Redeem:
         else:
             logging.warning("tty0tty is not installed! No virtual tty pipes enabled")
 
+    def start(self):
+        """ Start the processes """
         self.running = True
-
         # Start the two processes
         p0 = Thread(target=self.loop,
-                    args=(printer.commands, "buffered"))
+                    args=(self.printer.commands, "buffered"))
         p1 = Thread(target=self.loop,
-                    args=(printer.unbuffered_commands, "unbuffered"))
+                    args=(self.printer.unbuffered_commands, "unbuffered"))
         p0.daemon = True
         p1.daemon = True
 
@@ -293,14 +294,21 @@ class Redeem:
 
     def exit(self):
         self.running = False
+        self.printer.path_planner.wait_until_done()
+        self.printer.path_planner.force_exit()
 
         for name, stepper in self.printer.steppers.iteritems():
             stepper.set_disabled()
-
-        # Commit changes for the Steppers
         Stepper.commit()
 
-        self.printer.path_planner.force_exit()
+        for name,heater in self.printer.heaters.iteritems():
+            logging.debug("closing "+name)
+            heater.disable()
+
+        for name, comm in self.printer.comms.iteritems():
+            logging.debug("closing "+name)
+            comm.close()
+        logging.info("Redeem exited")
 
     def _execute(self, g):
         """ Execute a G-code """
@@ -314,7 +322,8 @@ class Redeem:
         logging.warning("End Stop " + endstop.name + " hit!")
 
 def main():
-    Redeem()
+    r = Redeem()
+    r.start()
 
 if __name__ == '__main__':
     main()

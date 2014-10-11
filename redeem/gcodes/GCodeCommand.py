@@ -32,3 +32,7 @@ class GCodeCommand(object):
     def __str__(self):
         """ The class name of the gcode """
         return type(self).__name__
+    
+    def get_test_gcodes(self):
+        """ List of gcode strings for nose testing """ 
+        return []

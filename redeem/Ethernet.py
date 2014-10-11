@@ -45,33 +45,24 @@ class Ethernet:
 
         logging.info("Ethernet bound to port " + str(port))
         self.s.listen(backlog)
+        #self.s.setblocking(0)
         self.running = True
-        self.debug = 0
         self.t = Thread(target=self.get_message)
-        self.t.daemon = True
         self.t.start()		
 
     def get_message(self):
         """Loop that gets messages and pushes them on the queue"""
         while self.running:
-            logging.info("Ethernet listening")
-            self.client, self.address = self.s.accept()
+            #logging.info("Ethernet listening")
+            self.s.settimeout(1.0)
+            try:
+                self.client, self.address = self.s.accept()
+            except IOError as e:
+                continue
             logging.info("Ethernet connection accepted")
-            while True:
-                line = ''
-                while not "\n" in line:
-                    try:
-                        chunk = self.client.recv(1)
-                    except socket.error, (value, message):
-                        logging.error("Ethernet " + message)
-                        chunk = ''
-                    if chunk == '':
-                        logging.warning("Ethernet: Connection reset by Per.")
-                        self.client.close()
-                        break
-                    line = line + chunk
-                if not "\n" in line:  # Make sure the whole line was read.
-                    break
+            self.s.settimeout(1.0)
+            while self.running:
+                line = self.read_line()
                 message = line.strip("\n")
                 if len(message) > 0:
                     g = Gcode({"message": message, "prot": "Eth"})
@@ -82,13 +73,29 @@ class Ethernet:
 
     def send_message(self, message):
         """Send a message"""
-        #logging.debug("'"+message+"'")
         if message[-1] != "\n":
             message += "\n"
         try:
             self.client.send(message)
         except socket.error, (value, message):
             logging.error("Ethernet " + message)
+
+    def read_line(self):
+        """read a line from a socket"""
+        chars = []
+        while self.running:
+            try:
+                char = self.client.recv(1)
+            except socket.error, (value, message):
+                logging.error("Ethernet " + message)
+                char == ""
+            if char == "":
+                logging.warning("Ethernet: Connection reset by Per.")
+                self.client.close()
+                break
+            chars.append(char)
+            if char == "\n":
+                return "".join(chars)
 
     def close(self):
         """Stop receiving messages"""

@@ -26,6 +26,10 @@ import logging
 import re
 import importlib
 from gcodes import GCodeCommand
+try:
+    from Gcode import Gcode
+except ImportError:
+    from redeem.Gcode import Gcode
 
 
 class GCodeProcessor:
@@ -83,10 +87,14 @@ class GCodeProcessor:
             self.gcodes[val].execute(gcode)
         except Exception, e:
             logging.error("Error while executing "+gcode.code()+": "+str(e))
-        
-
         return gcode
 
+    def get_test_gcodes(self):
+        gcodes = []
+        for name,gcode in self.gcodes.iteritems():
+            for str in gcode.get_test_gcodes():
+                 gcodes.append( Gcode({"message": str, "prot": "Test"}) )
+        return gcodes
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG,

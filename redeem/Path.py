@@ -151,19 +151,15 @@ class Path:
 
     def get_delta_segments(self):
         """ A delta segment must be split into lengths of 1 mm """
-        logging.debug("Mag = "+str(self.get_magnitude()))
         num_segments = np.ceil(self.get_magnitude()/0.001)+1
-        logging.debug("num segments = "+str(num_segments))
-        logging.debug("Start = "+str(self.start_pos))
-        logging.debug("End = "+str(self.end_pos))
         vals = np.transpose([
                     np.linspace(
                         self.start_pos[i], 
                         self.end_pos[i], 
                         num_segments
                     ) for i in xrange(4)]) 
-        dick = [dict(zip(["X", "Y", "Z", "E"], list(val))) for val in np.delete(vals, 0, axis=0)]
-        return dick
+        vals = np.delete(vals, 0, axis=0)
+        return [dict(zip(["X", "Y", "Z", "E"], list(val))) for val in vals]
 
     def __str__(self):
         """ The vector representation of this path segment """
@@ -234,7 +230,7 @@ class RelativePath(Path):
             if axis in self.axes:
                 self.vec[index] = self.axes[axis]
 
-                # Compute stepper translation
+        # Compute stepper translation
         vec = self.transform_vector(self.vec, self.start_pos)
         self.num_steps = np.ceil(np.abs(vec) * Path.steps_pr_meter)
         self.delta = np.sign(vec) * self.num_steps / Path.steps_pr_meter

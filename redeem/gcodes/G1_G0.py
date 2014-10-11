@@ -14,7 +14,6 @@ try:
 except ImportError:
     from redeem.Path import Path, RelativePath, AbsolutePath
 
-
 import logging
 
 
@@ -53,6 +52,11 @@ class G0(GCodeCommand):
     def is_buffered(self):
         return True
 
+    def get_test_gcodes(self):
+        return [
+            "G0 X0 Y0 Z0 F1000", 
+            "G0 X1 Y1 Z10"
+        ]
 
 class G1(G0):
     pass

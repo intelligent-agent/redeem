@@ -18,3 +18,7 @@ class M114(GCodeCommand):
 
     def get_description(self):
         return "Get current printer head position"
+
+    def get_test_gcodes(self):
+        return ["M114"]
+

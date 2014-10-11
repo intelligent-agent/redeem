@@ -38,7 +38,6 @@ class USB:
         self.running = True
         self.debug = 0
         self.t = Thread(target=self.get_message)
-        self.t.daemon = True
         self.t.start()		
 
     def get_message(self):

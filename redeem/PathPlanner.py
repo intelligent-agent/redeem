@@ -49,8 +49,7 @@ class PathPlanner:
 
         self.travel_length = {"X": 0.0, "Y": 0.0, "Z": 0.0, "E": 0.0, "H": 0.0}
         self.center_offset = {"X": 0.0, "Y": 0.0, "Z": 0.0, "E": 0.0, "H": 0.0}
-        self.prev = G92Path({"X": 0.0, "Y": 0.0, "Z": 0.0, "E": 0.0, "H": 0.0},
-                            0)
+        self.prev = G92Path({"X": 0.0, "Y": 0.0, "Z": 0.0, "E": 0.0, "H": 0.0}, 0)
         self.prev.set_prev(None)
 
         if pru_firmware:
@@ -85,13 +84,10 @@ class PathPlanner:
 
     def get_current_pos(self):
         """ Get the current pos as a dict """
-        pos = np.zeros(Path.NUM_AXES)
-        if self.prev:
-            pos = self.prev.end_pos
+        pos = self.prev.end_pos
         pos2 = {}
-        for index, axis in enumerate(Path.AXES):
+        for index, axis in enumerate(Path.AXES[:Path.NUM_AXES]):
             pos2[axis] = pos[index]
-
         return pos2
 
     def wait_until_done(self):
@@ -186,12 +182,16 @@ class PathPlanner:
             segments = new.get_delta_segments()
             for segment in segments:
                 logging.debug("Adding "+str(segment))
-                rel = AbsolutePath(segment, self.printer.feed_rate * self.printer.factor)
-                self.add_path(rel)
+                path = AbsolutePath(segment, self.printer.feed_rate * self.printer.factor)
+                self.add_path(path)
+            # Do not add the original segment
+            new.unlink()
+            return 
 
         if not new.is_G92():
             self.printer.ensure_steppers_enabled()
             #push this new segment   
+            logging.debug("Pushing "+str(new.get_magnitude()))
             self.native_planner.queueMove(tuple(new.start_pos[:4]),
                                           tuple(new.stepper_end_pos[:4]), new.speed,
                                           bool(new.cancelable),

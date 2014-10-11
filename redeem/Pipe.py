@@ -62,7 +62,6 @@ class Pipe:
         self.running = True
         self.t = Thread(target=self.get_message)
         self.send_response = True
-        self.t.daemon = True
         self.t.start()
 
     def get_message(self):
@@ -87,7 +86,7 @@ class Pipe:
     def close(self):
         self.running = False
         self.t.join()
-        self.fifo.close()
+        os.close(self.fifo)
 
     def readline_custom(self):
         message = ""

@@ -31,7 +31,6 @@ from temp_chart import *
 
 class Thermistor:
     """ Represents a thermistor """
-    mutex = Lock()
 
     def __init__(self, pin, name, chart_name):
         """ Init """
@@ -41,7 +40,6 @@ class Thermistor:
 
     def getTemperature(self):
         """ Return the temperature in degrees celsius """
-        #Thermistor.mutex.acquire()
         voltage = 0
         acquisitions = 0
         for i in xrange(10):
@@ -51,8 +49,6 @@ class Thermistor:
                     acquisitions += 1
                 except IOError as e:
                     logging.error("Unable to get ADC value for the {2}. time ({0}): {1}".format(e.errno, e.strerror, i))
-                    #time.sleep(0.05)
-                    #Thermistor.mutex.release()
         if acquisitions == 0:
             return -1.0
         voltage /= acquisitions
