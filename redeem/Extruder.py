@@ -99,8 +99,8 @@ class Heater(object):
                 else:
                     derivative = self._getErrorDerivative(error)
                     integral = self._getErrorIntegral(error)
-                    power = self.P*(error + self.D*derivative + self.I*integral)  # The formula for the PID				
-                    power = max(min(power, 1.0), 0.0)                             # Normalize to 0,1
+                    power = self.P*error + self.D*derivative + self.I*integral  # The (right) formula for the PID				
+                    power = max(min(power, 1.0), 0.0)                           # Normalize to 0,1
 
             # If the Thermistor is disconnected or running away or something
             if self.current_temp <= 5 or self.current_temp > 250:

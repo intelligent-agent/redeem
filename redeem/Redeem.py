@@ -174,6 +174,9 @@ class Redeem:
                                         self.printer.thermistors[e], 
                                         self.printer.mosfets[e], onoff)
             self.printer.heaters[e].prefix = prefix
+            self.printer.heaters[e].P = self.printer.config.getfloat('Heaters', 'pid_p_'+e)
+            self.printer.heaters[e].I = self.printer.config.getfloat('Heaters', 'pid_i_'+e)
+            self.printer.heaters[e].D = self.printer.config.getfloat('Heaters', 'pid_d_'+e)
 
         # Init the three fans. Argument is PWM channel number
         self.printer.fans = []
@@ -215,6 +218,9 @@ class Redeem:
             Path.max_speeds[i] = printer.config.getfloat('Steppers', 'max_speed_'+axis.lower())
             Path.home_speed[i] = printer.config.getfloat('Steppers', 'home_speed_'+axis.lower())
             Path.steps_pr_meter[i] = printer.steppers[axis].get_steps_pr_meter()
+
+        logging.debug("Max speeds: "+ str(Path.max_speeds))
+
 
         dirname = os.path.dirname(os.path.realpath(__file__))
 
