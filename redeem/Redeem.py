@@ -219,9 +219,6 @@ class Redeem:
             Path.home_speed[i] = printer.config.getfloat('Steppers', 'home_speed_'+axis.lower())
             Path.steps_pr_meter[i] = printer.steppers[axis].get_steps_pr_meter()
 
-        logging.debug("Max speeds: "+ str(Path.max_speeds))
-
-
         dirname = os.path.dirname(os.path.realpath(__file__))
 
         # Create the firmware compiler
