@@ -19,21 +19,22 @@ pathplanner = Extension(
 
 setup(
     name = "Redeem",
-    version = "0.16.1",
+    version = "0.16.2",
     packages = find_packages(exclude=["redeem/path_planner"]),
     data_files=[
-        ('firmware', [
-            'firmware/config_00A4.h', 
-            'firmware/config_00A3.h', 
-            'firmware/firmware_runtime.p', 
-            'firmware/firmware_endstops.p']),
-        ('configs', [
+        ('redeem/firmware', [
+            'redeem/firmware/config_00A4.h', 
+            'redeem/firmware/config_00A3.h', 
+            'redeem/firmware/firmware_runtime.p', 
+            'redeem/firmware/firmware_endstops.p']),
+        ('redeem/configs', [
             'configs/default.cfg', 
             'configs/Thing.cfg',
             'configs/Makerbot_cupcake.cfg', 
             'configs/MaxCoreXY.cfg', 
             'configs/MendelMax.cfg', 
-            'configs/Testing.cfg'])
+            'configs/Testing.cfg', 
+            'configs/Prusa.cfg'])
     ],
     # metadata for upload to PyPI
     author = "Elias Bakken",

@@ -24,7 +24,7 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
 Minor version tag is Arnold Schwarzenegger movies chronologically.
 """
 
-version = "0.16.1~The Terminator"
+version = "0.16.2~The Terminator"
 
 import glob
 import shutil
@@ -223,10 +223,10 @@ class Redeem:
 
         # Create the firmware compiler
         pru_firmware = PruFirmware(
-            dirname + "/../firmware/firmware_runtime.p",
-            dirname + "/../firmware/firmware_runtime.bin",
-            dirname + "/../firmware/firmware_endstops.p",
-            dirname + "/../firmware/firmware_endstops.bin",
+            dirname + "/firmware/firmware_runtime.p",
+            dirname + "/firmware/firmware_runtime.bin",
+            dirname + "/firmware/firmware_endstops.p",
+            dirname + "/firmware/firmware_endstops.bin",
             self.revision, self.printer.config, "/usr/bin/pasm")
 
         printer.maxJerkXY = printer.config.getfloat('Steppers', 'maxJerk_xy')

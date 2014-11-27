@@ -2,7 +2,7 @@
 Description=The Replicape Dameon
 
 [Service]
-ExecStart=/usr/local/bin/redeem
+ExecStart=/usr/bin/redeem
 
 [Install]
 WantedBy=basic.target
