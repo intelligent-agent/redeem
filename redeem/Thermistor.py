@@ -38,7 +38,7 @@ class Thermistor:
         self.name = name
         self.temp_table = np.array(temp_chart[chart_name]).transpose()
 
-    def getTemperature(self):
+    def get_temperature(self):
         """ Return the temperature in degrees celsius """
         voltage = 0
         acquisitions = 0

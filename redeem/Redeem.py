@@ -147,6 +147,7 @@ class Redeem:
             logging.info("Found Cold end on " + path)
         else:
             logging.info("No cold end present in path: " + path)
+        
 
         # Make Mosfets, thermistors and extruders
         heaters = ["E", "H", "HBP"]
@@ -193,6 +194,17 @@ class Redeem:
 
         for f in self.printer.fans:
             f.set_value(0)
+
+        # Connect thermitors to fans
+        for t, therm in self.printer.heaters.iteritems():
+            for f, fan in enumerate(self.printer.fans):
+                if self.printer.config.getboolean('Cold-ends', "connect-therm-{}-fan-{}".format(t, f)):
+                    c = Cooler(therm, fan, "Cooler-{}-{}".format(t, f), False)
+                    c.ok_range = 4        
+                    c.set_target_temperature(60)
+                    c.enable()
+                    self.printer.coolers.append(c)
+                    logging.info("Cooler connects therm {} with fan {}".format(t, f))
 
         # Connect the cold end 0 to fan 2
         # This is very "Thing" specific, should be configurable somehow. 

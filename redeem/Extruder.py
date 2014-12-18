@@ -79,7 +79,7 @@ class Heater(object):
     def keep_temperature(self):
         """ PID Thread that keeps the temperature stable """
         while self.enabled:
-            self.current_temp = self.thermistor.getTemperature()
+            self.current_temp = self.thermistor.get_temperature()
             error = self.target_temp-self.current_temp
 
             if self.onoff_control:
