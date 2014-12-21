@@ -130,6 +130,8 @@ public:
    *
    */
   unsigned int getStepperCommandPosition();
+
+  void setStepperCommandPosition(unsigned int pose);
 };
 
 

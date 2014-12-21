@@ -104,6 +104,10 @@ public:
 		return stepperCommandPosition;
 	}
 	
+	inline void setStepperCommandPosition(unsigned int pose) {
+		stepperCommandPosition = pose;
+	}
+	
 	friend class PathPlanner;
 };
 

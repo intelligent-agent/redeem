@@ -147,7 +147,7 @@ PathPlanner::PathPlanner() {
 	static_assert(NUM_EXTRUDER>0,"Invalid number of extruder");
 	
 	for(unsigned int i=0;i<NUM_EXTRUDER;i++) {
-		extruders[i].stepperCommandPosition = i+3;
+		extruders[i].setStepperCommandPosition(i+3);
 	}
 	
 	maxJerk =20;
