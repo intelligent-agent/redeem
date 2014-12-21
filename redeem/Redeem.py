@@ -24,7 +24,7 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
 Minor version tag is Arnold Schwarzenegger movies chronologically.
 """
 
-version = "0.16.2~The Terminator"
+version = "0.16.3~The Terminator"
 
 import glob
 import shutil
