@@ -14,6 +14,8 @@ from GCodeCommand import GCodeCommand
 class T0(GCodeCommand):
 
     def execute(self, g):
+        self.printer.head_servo.set_angle(15, asynchronous=False)
+        self.printer.head_servo.turn_off()
         self.printer.path_planner.set_extruder(0)
         self.printer.current_tool = "E"
 
@@ -24,6 +26,8 @@ class T0(GCodeCommand):
 class T1(GCodeCommand):
 
     def execute(self, g):
+        self.printer.head_servo.set_angle(165, asynchronous=False)
+        self.printer.head_servo.turn_off()
         self.printer.path_planner.set_extruder(1)
         self.printer.current_tool = "H"
 

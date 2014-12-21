@@ -72,6 +72,8 @@ class PathPlanner:
             tuple([float(Path.max_speeds[i]) for i in range(3)]))	
         self.native_planner.setMaxJerk(self.printer.maxJerkXY / 1000.0, self.printer.maxJerkZ /1000.0)
 
+
+
         #Setup the extruders
         for i in range(Path.NUM_AXES - 3):
             e = self.native_planner.getExtruder(i)
@@ -80,6 +82,9 @@ class PathPlanner:
             e.setTravelAcceleration(self.printer.acceleration[i + 3])
             e.setMaxStartFeedrate(self.printer.maxJerkEH / 1000)
             e.setAxisStepsPerMeter(long(Path.steps_pr_meter[i + 3]))
+            
+            # For Mathieu's printer... One motor - two extruders
+            e.setStepperCommandPosition(3)
 
         self.native_planner.setExtruder(0)
 
