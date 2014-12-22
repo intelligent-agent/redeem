@@ -172,6 +172,14 @@ class PathPlanner:
         else:
             self._home_internal(axis)
 
+    def probe(self):
+        speed = Path.home_speed[0]
+        path_back = {"Z": -self.travel_length["Z"]}
+        # Move until endstop is hit
+        p = RelativePath(path_back, speed, True)
+
+        self.add_path(p)
+
     def add_path(self, new):
         """ Add a path segment to the path planner """
         # Link to the previous segment in the chain
