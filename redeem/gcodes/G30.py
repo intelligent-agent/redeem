@@ -33,7 +33,7 @@ class G30(GCodeCommand):
         G0 = Gcode({"message": "G0 X{} Y{}".format(point["X"], point["Y"]), "prot": g.prot})    
         self.printer.processor.execute(G0)
         self.printer.path_planner.wait_until_done()
-        height = self.printer.path_planner.probe()
+        height = self.printer.path_planner.probe(0.01) # Probe one cm
         logging.info("Found Z probe height {} at (X, Y) = ({}, {})".format(height, point["X"], point["Y"]))
         if g.has_letter("S"):
             if not g.has_letter("P"):

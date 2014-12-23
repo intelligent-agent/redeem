@@ -49,7 +49,7 @@ class Printer:
         self.maxJerkEH = 4
         self.current_tool = "E"
 
-        self.probe_points  = [{"X": 0, "Y": 0}]*3
+        self.probe_points  = [{"X": 0, "Y": 0, "Z": 0}]*3
         self.probe_heights = [0]*3
 
     def ensure_steppers_enabled(self):

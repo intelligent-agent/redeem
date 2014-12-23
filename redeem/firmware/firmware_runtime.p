@@ -80,7 +80,7 @@
 // r16: Inverted mask for GPIO1 togglable pin
 // r17: Adress for reading/writing GPIO1 OUT pins
 // r20: GPIO1_IN
-
+// r22: Counts steps remaining
 
 INIT:
     LBCO r0, C4, 4, 4                                       // Load the PRU-ICSS SYSCFG register (4 bytes) into R0
@@ -142,6 +142,8 @@ INIT:
     SBBO r9, r11, 0, 4  
     SBBO r10, r17, 0, 4 
     
+    MOV r22, 0
+
     //MOV R31.b0, PRU0_ARM_INTERRUPT+16                     // Send notification to Host that the instructions are done
     
 RESET_R4:   
@@ -241,7 +243,8 @@ NEXT_COMMAND:
     QBNE notcancel, r7.b1,0
 
     //Store the number of steps remaining
-    SBCO r1, C28, 12, 4
+    ADD r22, r22, r1
+    SBCO r22, C28, 12, 4
 
     //Remove all the command from the buffer
 start_loop_remove:
@@ -392,5 +395,6 @@ WAIT2:
     LBBO r1, r4, 0, 4                                       // Load values from external DDR Memory into R1
     QBEQ RESET_R4, r1, r3                                   // Check if the end of DDR is reached   
     QBNE PINS, r1, 0                                        // Start to process the commands stored in DDR if we have a value != of 0 stored in the current location of the DDR
+    MOV r22, 0
     QBA WAIT2                                                // Loop back to wait for new data
 

@@ -172,12 +172,13 @@ class PathPlanner:
         else:
             self._home_internal(axis)
 
-    def probe(self):
+    def probe(self, z):
         speed = Path.home_speed[0]
-        path_back = {"Z": -self.travel_length["Z"]}
+        path_back = {"Z": -z}
         # Move until endstop is hit
         p = RelativePath(path_back, speed, True)
 
+        self.wait_until_done()
         self.add_path(p)
         self.wait_until_done()
         import struct
@@ -194,9 +195,11 @@ class PathPlanner:
             ddr_mem = mmap.mmap(f.fileno(), PRU_ICSS_LEN, offset=PRU_ICSS) 
             shared = struct.unpack('LLLL', ddr_mem[RAM2_START:RAM2_START+16])
             steps_remaining = shared[3]
-            logging.info("Steps remaining: "+str(steps_remaining))
+            logging.info("Steps remaining : "+str(steps_remaining))
 
-        return 0
+        
+        steps_taken = ((Path.steps_pr_meter[2]*z)-steps_remaining)
+        return steps_taken/Path.steps_pr_meter[2]
 
     def add_path(self, new):
         """ Add a path segment to the path planner """
