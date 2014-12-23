@@ -22,14 +22,14 @@ class G30(GCodeCommand):
         if g.has_letter("P"): # Load point
             index = int(g.get_value_by_letter("P"))
             point = self.printer.probe_points[index]
+        else:
+            # If no porobe point is specified, use current pos
+            point = self.printer.path_planner.get_current_pos()
         if g.has_letter("X"): # Override X
             point["X"] = float(g.get_value_by_letter("X"))
-            # Store the new probe point coordinate
-            self.printer.probe_points[index]["X"] = X
         if g.has_letter("Y"): # Override Y
             point["Y"] = float(g.get_value_by_letter("Y"))
-            # Store the new probe point coordinate. Is this right?
-            self.printer.probe_points[index]["Y"] = Y
+
         G0 = Gcode({"message": "G0 X{} Y{}".format(point["X"], point["Y"]), "prot": g.prot})    
         self.printer.processor.execute(G0)
         self.printer.path_planner.wait_until_done()

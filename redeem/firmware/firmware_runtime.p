@@ -240,7 +240,8 @@ NEXT_COMMAND:
 
     QBNE notcancel, r7.b1,0
 
-    //Cancel the move and all the other moves
+    //Store the number of steps remaining
+    SBCO r1, C28, 12, 4
 
     //Remove all the command from the buffer
 start_loop_remove:

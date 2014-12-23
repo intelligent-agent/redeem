@@ -179,9 +179,23 @@ class PathPlanner:
         p = RelativePath(path_back, speed, True)
 
         self.add_path(p)
+        self.wait_until_done()
+        import struct
+        import mmap
 
-        # TODO: return the position found when 
-        # the Z-switch was hit. 
+        PRU_ICSS = 0x4A300000 
+        PRU_ICSS_LEN = 512*1024
+
+        RAM0_START = 0x00000000
+        RAM1_START = 0x00002000
+        RAM2_START = 0x00012000
+
+        with open("/dev/mem", "r+b") as f:	       
+            ddr_mem = mmap.mmap(f.fileno(), PRU_ICSS_LEN, offset=PRU_ICSS) 
+            shared = struct.unpack('LLLL', ddr_mem[RAM2_START:RAM2_START+16])
+            steps_remaining = shared[3]
+            logging.info("Steps remaining: "+str(steps_remaining))
+
         return 0
 
     def add_path(self, new):
