@@ -180,6 +180,10 @@ class PathPlanner:
 
         self.add_path(p)
 
+        # TODO: return the position found when 
+        # the Z-switch was hit. 
+        return 0
+
     def add_path(self, new):
         """ Add a path segment to the path planner """
         # Link to the previous segment in the chain
