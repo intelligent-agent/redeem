@@ -12,9 +12,10 @@ from GCodeCommand import GCodeCommand
 import logging
 try:
     from Gcode import Gcode
+    from Path import G92Path
 except ImportError:
     from redeem.Gcode import Gcode
-    
+    from redeem.Path import G92Path
 
 class G30(GCodeCommand):
 
@@ -33,15 +34,21 @@ class G30(GCodeCommand):
         G0 = Gcode({"message": "G0 X{} Y{}".format(point["X"], point["Y"]), "prot": g.prot})    
         self.printer.processor.execute(G0)
         self.printer.path_planner.wait_until_done()
-        height = self.printer.path_planner.probe(0.01) # Probe one cm
-        logging.info("Found Z probe height {} at (X, Y) = ({}, {})".format(height, point["X"], point["Y"]))
+        remaining_z = self.printer.path_planner.probe(0.01) # Probe one cm. TODO: get this from config
+
+        # Update the current Z-position
+        logging.info("G92 Z{:.4}".format(-remaining_z*1000))
+        G92 = Gcode({"message": "G92 Z{:.4}".format(-remaining_z*1000), "prot": g.prot})    
+        self.printer.processor.execute(G92)
+
+        logging.info("Found Z probe height {} at (X, Y) = ({}, {})".format(remaining_z, point["X"], point["Y"]))
         if g.has_letter("S"):
             if not g.has_letter("P"):
                 logging.warning("G30: S-parameter was set, but no index (P) was set.")
             else:
-                self.printer.probe_heights[index] = height
+                self.printer.probe_heights[index] = remaining_z
                 self.printer.send_message(g.prot, 
-                    "Found Z probe height {} at (X, Y) = ({}, {})".format(height, point["X"], point["Y"]))
+                    "Found Z probe height {} at (X, Y) = ({}, {})".format(remaining_z, point["X"], point["Y"]))
         
 
     def get_description(self):

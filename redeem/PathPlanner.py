@@ -187,19 +187,17 @@ class PathPlanner:
         PRU_ICSS = 0x4A300000 
         PRU_ICSS_LEN = 512*1024
 
-        RAM0_START = 0x00000000
-        RAM1_START = 0x00002000
         RAM2_START = 0x00012000
 
         with open("/dev/mem", "r+b") as f:	       
             ddr_mem = mmap.mmap(f.fileno(), PRU_ICSS_LEN, offset=PRU_ICSS) 
             shared = struct.unpack('LLLL', ddr_mem[RAM2_START:RAM2_START+16])
             steps_remaining = shared[3]
-            logging.info("Steps remaining : "+str(steps_remaining))
+        logging.info("Steps remaining : "+str(steps_remaining))
 
-        
-        steps_taken = ((Path.steps_pr_meter[2]*z)-steps_remaining)
-        return steps_taken/Path.steps_pr_meter[2]
+        # Update the current Z-position based on the probing
+        delta_z = steps_remaining/Path.steps_pr_meter[2]
+        return delta_z
 
     def add_path(self, new):
         """ Add a path segment to the path planner """

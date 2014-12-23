@@ -200,6 +200,7 @@ class Path:
         cross = Path.normalize(np.cross(P10, P21))
         plane = np.array([cross[0], cross[1], np.abs(cross[2])])
         Path.matrix_bed_comp = Path.create_look_at(plane)
+        Path.matrix_bed_comp_inv = np.linalg.inv(Path.matrix_bed_comp)
         logging.info("Updated rotation matrix: "+str(Path.matrix_bed_comp))
 
     @staticmethod
@@ -294,7 +295,6 @@ class G92Path(Path):
     def __init__(self, axes, speed,  cancelable=False):
         Path.__init__(self, axes, speed, cancelable)
         self.movement = Path.G92
-        self.ratios = np.ones(Path.NUM_AXES)
 
     def set_prev(self, prev):
         """ Set the previous segment """
