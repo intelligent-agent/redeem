@@ -255,6 +255,8 @@ start_loop_remove:
     QBA CANCEL_COMMAND_AFTER
 
 notcancel:
+    MOV r22, 0                                              // Reset the Remaining-loop
+
     AND r7, r7, 0x000000FF
     SBCO r7, C28, 8, 4
     AND pinCommand.step, pinCommand.step, r7.b0               // Mask the step pins with the end stop mask
@@ -394,7 +396,6 @@ WAIT:
 WAIT2:
     LBBO r1, r4, 0, 4                                       // Load values from external DDR Memory into R1
     QBEQ RESET_R4, r1, r3                                   // Check if the end of DDR is reached   
-    QBNE PINS, r1, 0                                        // Start to process the commands stored in DDR if we have a value != of 0 stored in the current location of the DDR
-    MOV r22, 0
+    QBNE PINS, r1, 0                                        // Start to process the commands stored in DDR if we have a value != of 0 stored in the current location of the DDR    
     QBA WAIT2                                                // Loop back to wait for new data
 
