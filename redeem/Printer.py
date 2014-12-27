@@ -51,6 +51,7 @@ class Printer:
 
         self.probe_points  = [{"X": 0, "Y": 0, "Z": 0}]*3
         self.probe_heights = [0]*3
+        self.probe_type = 0 # Servo
 
     def ensure_steppers_enabled(self):
         """
