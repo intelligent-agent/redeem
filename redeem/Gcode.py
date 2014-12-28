@@ -124,9 +124,10 @@ class Gcode:
         return self.has_crc
 
     def get_answer(self):
-        """ Get the result of the execution """
         return self.answer
 
     def set_answer(self, answer):
-        """ Set a new answer other than 'ok' """
         self.answer = answer
+
+    def is_info_command(self):
+        return (self.gcode[-1] == "?")

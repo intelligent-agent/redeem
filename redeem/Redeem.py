@@ -344,7 +344,11 @@ class Redeem:
         if g.message == "ok" or g.code() == "ok" or g.code() == "No-Gcode":
             g.set_answer(None)
             return
-        self.printer.processor.execute(g)
+        if g.is_info_command():
+            desc = self.printer.processor.get_long_description(g)
+            self.printer.send_message(g.prot, desc)
+        else:
+            self.printer.processor.execute(g)
 
     def end_stop_hit(self, endstop):
         """ An endStop has been hit """

@@ -89,6 +89,19 @@ class GCodeProcessor:
             logging.error("Error while executing "+gcode.code()+": "+str(e))
         return gcode
 
+    def get_long_description(self, gcode):
+        val = gcode.code()[:-1]        
+        if not val in self.gcodes:
+            logging.error(
+                "No GCode processor for " + gcode.code() +
+                ". Message: " + gcode.message)
+            return None
+        try:
+            return self.gcodes[val].get_long_description()
+        except Exception, e:
+            logging.error("Error while getting long description on "+gcode.code()+": "+str(e))
+        return "Error getting long decription for "+str(val)
+
     def get_test_gcodes(self):
         gcodes = []
         for name,gcode in self.gcodes.iteritems():

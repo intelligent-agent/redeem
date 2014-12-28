@@ -65,11 +65,12 @@ class Path:
         Path.home_speed = np.ones(num_axes)
         Path.steps_pr_meter = np.ones(num_axes)
 
-    def __init__(self, axes, speed,  cancelable=False):
+    def __init__(self, axes, speed,  cancelable=False, use_bed_matrix=True):
         """ The axes of evil, the feed rate in m/s and ABS or REL """
         self.axes = axes
         self.speed = speed
         self.cancelable = int(cancelable)
+        self.use_bed_matrix = int(use_bed_matrix)
         self.mag = None
         self.pru_data = []
         self.next = None
@@ -116,7 +117,8 @@ class Path:
             ret_vec[:3] = end_ABC - start_ABC
 
         # Apply Automatic bed compensation
-        ret_vec[:3] = np.dot(Path.matrix_bed_comp, ret_vec[:3])
+        if self.use_bed_matrix:
+            ret_vec[:3] = np.dot(Path.matrix_bed_comp, ret_vec[:3])
         return ret_vec
 
     def reverse_transform_vector(self, vec, cur_pos):
@@ -144,7 +146,8 @@ class Path:
             ret_vec[:3] = end_xyz - start_xyz
 
         # Apply Automatic bed compensation
-        ret_vec[:3] = np.dot(Path.matrix_bed_comp_inv, ret_vec[:3])
+        if self.use_bed_matrix:
+            ret_vec[:3] = np.dot(Path.matrix_bed_comp_inv, ret_vec[:3])
 
         return ret_vec
 
@@ -215,8 +218,8 @@ class Path:
 
 class AbsolutePath(Path):
     """ A path segment with absolute movement """
-    def __init__(self, axes, speed, cancelable=False):
-        Path.__init__(self, axes, speed, cancelable)
+    def __init__(self, axes, speed, cancelable=False, use_bed_matrix=True):
+        Path.__init__(self, axes, speed, cancelable, use_bed_matrix)
         self.movement = Path.ABSOLUTE
 
     def set_prev(self, prev):
@@ -254,8 +257,8 @@ class AbsolutePath(Path):
 
 class RelativePath(Path):
     """ A path segment with Relative movement """
-    def __init__(self, axes, speed, cancelable=False):
-        Path.__init__(self, axes, speed, cancelable)
+    def __init__(self, axes, speed, cancelable=False, use_bed_matrix=True):
+        Path.__init__(self, axes, speed, cancelable, use_bed_matrix)
         self.movement = Path.RELATIVE
 
     def set_prev(self, prev):
@@ -293,7 +296,7 @@ class G92Path(Path):
     """ A reset axes path segment. No movement occurs, only global position
     setting """
     def __init__(self, axes, speed,  cancelable=False):
-        Path.__init__(self, axes, speed, cancelable)
+        Path.__init__(self, axes, speed)
         self.movement = Path.G92
 
     def set_prev(self, prev):
