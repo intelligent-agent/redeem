@@ -24,6 +24,7 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
 import numpy as np
 
 from Delta import Delta
+from BedCompensation import BedCompensation
 import logging
 
 class Path:
@@ -188,33 +189,10 @@ class Path:
         return Path.AXES[index]
 
     @staticmethod
-    def normalize(vec):
-        return vec/np.linalg.norm(vec)
-
-    @staticmethod
     def update_autolevel_matrix(probe_points, probe_heights):
-        """ This method was based on code from Marlin, Marlin_main.cpp
-        Copyright (C) 2011 Camiel Gubbels / Erik van der Zalm """
-        P0 = np.array([probe_points[0]["X"]/1000, probe_points[0]["Y"]/1000, probe_heights[0]])
-        P1 = np.array([probe_points[1]["X"]/1000, probe_points[1]["Y"]/1000, probe_heights[1]])
-        P2 = np.array([probe_points[2]["X"]/1000, probe_points[2]["Y"]/1000, probe_heights[2]])
-        P10 = Path.normalize(P0-P1)
-        P21 = Path.normalize(P2-P1)
-        cross = Path.normalize(np.cross(P10, P21))
-        plane = np.array([cross[0], cross[1], np.abs(cross[2])])
-        Path.matrix_bed_comp = Path.create_look_at(plane)
+        mat = BedCompensation.create_rotation_matrix(probe_points, probe_heights)
+        Path.matrix_bed_comp = mat
         Path.matrix_bed_comp_inv = np.linalg.inv(Path.matrix_bed_comp)
-        logging.info("Updated rotation matrix: "+str(Path.matrix_bed_comp))
-
-    @staticmethod
-    def create_look_at(target):
-        """ This method was based on code from Marlin, vector_3.cpp
-        Copyright (c) 2012 Lars Brubaker. All right reserved. """
-        z_row = Path.normalize(target)        
-        x_row = Path.normalize(np.array([1, 0, -target[0]/target[2]]))
-        y_row = Path.normalize(np.cross(z_row, x_row))
-
-        return np.matrix([x_row, y_row, z_row])
 
 class AbsolutePath(Path):
     """ A path segment with absolute movement """

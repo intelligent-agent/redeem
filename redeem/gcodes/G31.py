@@ -1,6 +1,6 @@
 """
-GCode G32
-Undock sled
+GCode G31
+Dock sled
 
 Author: Elias Bakken
 email: elias(dot)bakken(at)gmail dot com
@@ -15,10 +15,10 @@ try:
 except ImportError:
     from redeem.Gcode import Gcode
 
-class G32(GCodeCommand):
+class G31(GCodeCommand):
 
     def execute(self, g):
-        gcodes = self.printer.config.get("Macros", "G32").split("\n")
+        gcodes = self.printer.config.get("Macros", "G31").split("\n")
         self.printer.path_planner.wait_until_done()
         for gcode in gcodes:        
             G = Gcode({"message": gcode, "prot": g.prot})
@@ -26,11 +26,11 @@ class G32(GCodeCommand):
             self.printer.path_planner.wait_until_done()
 
     def get_description(self):
-        return "Undock sled"
+        return "Dock sled"
 
     def is_buffered(self):
         return True
 
     def get_test_gcodes(self):
-        return ["G32"]
+        return ["G31"]
 

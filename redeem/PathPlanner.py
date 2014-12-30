@@ -173,14 +173,19 @@ class PathPlanner:
             self._home_internal(axis)
 
     def probe(self, z):
+        old_feedrate = self.printer.feed_rate # Save old feedrate
+
         speed = Path.home_speed[0]
         path_back = {"Z": -z}
-        # Move until endstop is hit
+        # Move until endstop is hits
         p = RelativePath(path_back, speed, True)
 
         self.wait_until_done()
         self.add_path(p)
         self.wait_until_done()
+
+        self.printer.feed_rate = old_feedrate
+
         import struct
         import mmap
 
@@ -197,6 +202,7 @@ class PathPlanner:
 
         # Update the current Z-position based on the probing
         delta_z = steps_remaining/Path.steps_pr_meter[2]
+
         return delta_z
 
     def add_path(self, new):

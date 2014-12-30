@@ -15,9 +15,9 @@ class G(GCodeCommand):
 
     def execute(self, g):
         gcodes = self.printer.processor.get_supported_commands_and_description()
-        self.printer.send_message(g.prot, "Implemented M-codes:")
+        self.printer.send_message(g.prot, "Implemented G-codes:")
         for gcode, desc in sorted(gcodes.items()):
-            if gcode[0] == "M":
+            if gcode[0] == "G":
                 self.printer.send_message(g.prot, gcode+": "+desc)
 
     def get_description(self):

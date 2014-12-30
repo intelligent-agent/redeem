@@ -10,7 +10,12 @@ License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 """
 
 from GCodeCommand import GCodeCommand
+import numpy as np
 import logging
+try:
+    from Path import Path
+except ImportError:
+    from redeem.Path import Path
 
 
 class M561(GCodeCommand):
@@ -21,3 +26,8 @@ class M561(GCodeCommand):
 
     def get_description(self):
         return "Reset bed level matrix to identity"
+    
+    def get_long_description(self):
+        return ("This cancels any bed-plane fitting as the result of probing"
+                " (or anything else) and returns the machine "
+                "to moving in the user's coordinate system.")

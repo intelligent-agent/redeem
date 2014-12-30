@@ -31,24 +31,26 @@ class G30(GCodeCommand):
         if g.has_letter("Y"): # Override Y
             point["Y"] = float(g.get_value_by_letter("Y"))
 
+        probe_length = 0.01
+
         G0 = Gcode({"message": "G0 X{} Y{}".format(point["X"], point["Y"]), "prot": g.prot})    
         self.printer.processor.execute(G0)
         self.printer.path_planner.wait_until_done()
-        remaining_z = self.printer.path_planner.probe(0.01) # Probe one cm. TODO: get this from config
-
+        remaining_z = self.printer.path_planner.probe(probe_length) # Probe one cm. TODO: get this from config
+        probe_diff = probe_length-remaining_z
         # Update the current Z-position
-        logging.info("G92 Z{:.4}".format(-remaining_z*1000))
-        G92 = Gcode({"message": "G92 Z{:.4}".format(-remaining_z*1000), "prot": g.prot})    
+        logging.info("G92 Z{:.10}".format(-probe_diff*1000.0))
+        G92 = Gcode({"message": "G92 Z{:.10}".format(-probe_diff*1000.0), "prot": g.prot})
         self.printer.processor.execute(G92)
 
-        logging.info("Found Z probe height {} at (X, Y) = ({}, {})".format(remaining_z, point["X"], point["Y"]))
+        logging.info("Found Z probe height {} at (X, Y) = ({}, {})".format(probe_diff, point["X"], point["Y"]))
         if g.has_letter("S"):
             if not g.has_letter("P"):
                 logging.warning("G30: S-parameter was set, but no index (P) was set.")
             else:
-                self.printer.probe_heights[index] = remaining_z
+                self.printer.probe_heights[index] = probe_diff
                 self.printer.send_message(g.prot, 
-                    "Found Z probe height {} at (X, Y) = ({}, {})".format(remaining_z, point["X"], point["Y"]))
+                    "Found Z probe height {} at (X, Y) = ({}, {})".format(probe_diff, point["X"], point["Y"]))
         
 
     def get_description(self):

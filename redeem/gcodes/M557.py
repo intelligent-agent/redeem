@@ -12,15 +12,30 @@ from GCodeCommand import GCodeCommand
 import logging
 
 
-class M558(GCodeCommand):
+class M557(GCodeCommand):
 
     def execute(self, g):
         if g.has_letter("P"):
-            t = int(g.get_value_by_letter("P"))
+            p = int(g.get_value_by_letter("P"))
         else:
             logging.warning("M557: Missing P-parameter")
             return         
-        self.printer.probe_type = t
+        if g.has_letter("X"):
+            X = float(g.get_value_by_letter("X"))
+        else:
+            logging.warning("M557: Missing X-parameter")
+            return
+        if g.has_letter("Y"):
+            Y = float(g.get_value_by_letter("Y"))
+        else:
+            logging.warning("M557: Missing Y-parameter")
+            return
+        if len(self.printer.probe_points) > p:
+            self.printer.probe_points[p] = {"X": X, "Y": Y}
+        else:
+            self.printer.probe_points.append({"X": X, "Y": Y})
+            self.printer.probe_heights.append(0)
+            
 
     def get_description(self):
         return "Set probe point"
