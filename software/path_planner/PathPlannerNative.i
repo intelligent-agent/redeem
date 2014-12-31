@@ -132,6 +132,8 @@ public:
   unsigned int getStepperCommandPosition();
 
   void setStepperCommandPosition(unsigned int pose);
+
+  void setDirectionInverted(bool inverted);
 };
 
 
