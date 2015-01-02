@@ -62,4 +62,5 @@ class USB:
     def close(self):
         """ Stop receiving messages """
         self.running = False
-        self.t.join()
+        if hasattr(self, 't'):
+            self.t.join()
