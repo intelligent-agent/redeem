@@ -291,4 +291,4 @@ class G92Path(Path):
             if axis in self.axes:
                 self.end_pos[index] = self.axes[axis]
         self.vec = np.zeros(Path.NUM_AXES)
-        self.rounded_vec = vec
+        self.rounded_vec = self.vec
