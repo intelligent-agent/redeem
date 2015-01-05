@@ -150,11 +150,12 @@ class Stepper:
         self.state |= (1 << Stepper.RESET)
         self.update()
 
-    def set_microstepping(self, value, force_update=False):
-        """ Microstepping (default = 0) 0 to 5 """
+    def set_microstepping(self, value, force_update=False):        
+        """ Microstepping (default = 0) 0 to 5 """        
         if not value in [0, 1, 2, 3, 4, 5]: # Full, half, 1/4, 1/8, 1/16, 1/32.
             logging.warning("Tried to set illegal microstepping value: {0} for stepper {1}".format(value, self.name))
             return
+        self.microstepping = value
         self.microsteps  = 2**value     # 2^val
         if Stepper.revision in ["A4", "A4A"]:
             # Keep bit 4, 5, 6, 7 intact but replace and reverse bit 1, 2, 3
@@ -175,6 +176,7 @@ class Stepper:
 
     def set_decay(self, value, force_update=False):
         """ Decay mode, look in the data sheet """
+        self.decay = value
         self.state &= ~(1 << Stepper.DECAY)        # bit 5
         self.state |= (value << Stepper.DECAY)
         if force_update: 
@@ -182,6 +184,7 @@ class Stepper:
 
     def set_current_value(self, iChop):
         """ Current chopping limit (This is the value you can change) """
+        self.current_value = iChop
         vRef = 3.3                   # Voltage reference on the DAC
         rSense = 0.1                 # Resistance for the
         vOut = iChop * 5.0 * rSense  # Calculated voltage out from the DAC

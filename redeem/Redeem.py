@@ -34,6 +34,7 @@ import os.path
 from threading import Thread
 from multiprocessing import JoinableQueue
 import Queue
+import numpy as np
 
 from Mosfet import Mosfet
 from Stepper import Stepper
@@ -147,7 +148,6 @@ class Redeem:
         for opt in opts:
             Delta.__dict__[opt] = printer.config.getfloat('Delta', opt)
 
-
         # Set up cold ends
         path = self.printer.config.get('Cold-ends', 'path', 0)
         if os.path.exists(path):
@@ -247,7 +247,12 @@ class Redeem:
 
         # Init the Paths
         Path.axis_config = printer.config.getint('Geometry', 'axis_config')
-        
+
+        # Bed compensation matrix
+        Path.matrix_bed_comp = printer.load_bed_compensation_matrix()
+        Path.matrix_bed_comp_inv = np.linalg.inv(Path.matrix_bed_comp)
+        logging.info("Loaded bed compensation matrix: \n"+str(Path.matrix_bed_comp))
+
         for axis in printer.steppers.keys():
             i = Path.axis_to_index(axis)
             Path.max_speeds[i] = printer.config.getfloat('Steppers', 'max_speed_'+axis.lower())

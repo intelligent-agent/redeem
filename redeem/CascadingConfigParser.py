@@ -68,3 +68,35 @@ class CascadingConfigParser(ConfigParser.SafeConfigParser):
             except IOError as e:
                 pass                    
     
+    def save(self, filename):
+        """ Save the changed settings to local.cfg """
+        current = CascadingConfigParser(self.config_files)
+
+        # Get list of changed values
+        to_save = []
+        for section in self.sections():
+            logging.debug(section)
+            for option in self.options(section):                
+                if self.get(section, option) != current.get(section, option):
+                    logging.info("'"+str(self.get(section, option))+"'")
+                    logging.info("'"+str(current.get(section, option))+"'")
+                    val = self.get(section, option)
+                    to_save.append([section, option, val])
+
+        # Update local config with changed values
+        local = ConfigParser.SafeConfigParser()
+        local.readfp(open(filename, "r"))
+        for opt in to_save:         
+            section =  opt[0]
+            option = opt[1]
+            value = opt[2]
+            if not local.has_section(section):
+                local.add_section(section)
+            local.set(section, option, value)
+            logging.info("Update setting: "+option)
+
+                    
+        # Save changed values to file
+        local.write(open(filename, "w+"))
+
+
