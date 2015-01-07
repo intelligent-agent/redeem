@@ -132,10 +132,14 @@ class PathPlanner:
             logging.debug("Doing homing for " + str(a))
             logging.debug(self.travel_length)
             logging.debug(self.center_offset)
-            path_back[a] = -self.travel_length[a]
-            path_center[a] = -self.center_offset[a]
+            if Path.home_speed[Path.axis_to_index(a)] < 0:
+                path_back[a] = self.travel_length[a]
+                path_center[a] = self.center_offset[a]
+            else:
+                path_back[a] = -self.travel_length[a]
+                path_center[a] = -self.center_offset[a]
             path_zero[a] = 0
-            speed = min(speed, Path.home_speed[Path.axis_to_index(a)])
+            speed = min(abs(speed), abs(Path.home_speed[Path.axis_to_index(a)]))
 
             logging.debug("axis: "+str(a))
 
