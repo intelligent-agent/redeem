@@ -172,7 +172,7 @@ class PathPlanner:
         # For delta, switch to cartesian when homing
         elif Path.axis_config == Path.AXIS_CONFIG_DELTA:
             if 0 < len({"X", "Y", "Z"}.intersection(set(axis))) < 3:
-                axis = list(set[axis].union({"X", "Y", "Z"})	# Deltas must home all axes.
+                axis = list(set(axis).union({"X", "Y", "Z"}))	# Deltas must home all axes.
             Path.axis_config = Path.AXIS_CONFIG_XY
             self._home_internal(axis)
             Path.axis_config = Path.AXIS_CONFIG_DELTA
