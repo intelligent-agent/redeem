@@ -45,3 +45,6 @@ class M104(GCodeCommand):
 
     def get_description(self):
         return "Set extruder temperature"
+
+    def is_buffered(self):
+        return False

@@ -34,6 +34,7 @@ import os.path
 from threading import Thread
 from multiprocessing import JoinableQueue
 import Queue
+import numpy as np
 
 from Mosfet import Mosfet
 from Stepper import Stepper
@@ -53,6 +54,7 @@ from PruFirmware import PruFirmware
 from CascadingConfigParser import CascadingConfigParser
 from Printer import Printer
 from GCodeProcessor import GCodeProcessor
+from Delta import Delta
 
 # Default logging level is set to debug
 logging.basicConfig(level=logging.DEBUG,
@@ -141,6 +143,11 @@ class Redeem:
         # Commit changes for the Steppers
         Stepper.commit()
 
+        # Delta printer setup
+        opts = ["Hez", "L", "r", "Ae", "Be", "Ce", "Aco", "Bco", "Cco"]
+        for opt in opts:
+            Delta.__dict__[opt] = printer.config.getfloat('Delta', opt)
+
         # Set up cold ends
         path = self.printer.config.get('Cold-ends', 'path', 0)
         if os.path.exists(path):
@@ -196,16 +203,18 @@ class Redeem:
         for f in self.printer.fans:
             f.set_value(0)
 
+        # Init the servos
         printer.servos = []
         servo_nr = 0
         while(printer.config.has_option("Servos", "servo_"+str(servo_nr)+"_enable")):
-            channel = printer.config.getint("Servos", "servo_"+str(servo_nr)+"_channel")
-            angle_off = printer.config.getint("Servos", "servo_"+str(servo_nr)+"_angle_off")
-            s = Servo(channel, 500, 750, angle_off)
-            s.angle_on = printer.config.getint("Servos", "servo_"+str(servo_nr)+"_angle_on")
-            s.angle_off = angle_off
-            printer.servos.append(s)
-            logging.info("Added servo "+str(servo_nr))
+            if printer.config.getboolean("Servos", "servo_"+str(servo_nr)+"_enable"):
+                channel = printer.config.getint("Servos", "servo_"+str(servo_nr)+"_channel")
+                angle_off = printer.config.getint("Servos", "servo_"+str(servo_nr)+"_angle_off")
+                s = Servo(channel, 500, 750, angle_off)
+                s.angle_on = printer.config.getint("Servos", "servo_"+str(servo_nr)+"_angle_on")
+                s.angle_off = angle_off
+                printer.servos.append(s)
+                logging.info("Added servo "+str(servo_nr))
             servo_nr += 1
         
 
@@ -238,7 +247,12 @@ class Redeem:
 
         # Init the Paths
         Path.axis_config = printer.config.getint('Geometry', 'axis_config')
-        
+
+        # Bed compensation matrix
+        Path.matrix_bed_comp = printer.load_bed_compensation_matrix()
+        Path.matrix_bed_comp_inv = np.linalg.inv(Path.matrix_bed_comp)
+        logging.info("Loaded bed compensation matrix: \n"+str(Path.matrix_bed_comp))
+
         for axis in printer.steppers.keys():
             i = Path.axis_to_index(axis)
             Path.max_speeds[i] = printer.config.getfloat('Steppers', 'max_speed_'+axis.lower())

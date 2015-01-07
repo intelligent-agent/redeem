@@ -24,3 +24,12 @@ class M909(GCodeCommand):
 
     def get_description(self):
         return "Set stepper microstepping settings"
+
+    def get_long_description(self):
+        return ("Example: M909 X3 Y5 Z2 E3"
+                "Set the microstepping value for"
+                "each of the steppers. In Redeem this is implemented"
+                "as 2^value, so M909 X2 sets microstepping "
+                "to 2^2 = 4, M909 Y3 sets microstepping to 2^3 = 8 etc. ")
+
+ 

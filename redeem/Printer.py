@@ -21,7 +21,8 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
 """
 
 from Path import Path
-
+import numpy as np
+import logging
 
 class Printer:
     """ A command received from pronterface or whatever """
@@ -70,3 +71,31 @@ class Printer:
     def send_message(self, prot, msg):
         """ Send a message back to host """
         self.comms[prot].send_message(msg)
+
+    def save_settings(self, filename):
+        for name, stepper in self.steppers.iteritems():
+            self.config.set('Steppers', 'in_use_' + name, str(stepper.in_use))
+            self.config.set('Steppers', 'direction_' + name, str(stepper.direction))
+            self.config.set('Endstops', 'has_' + name, str(stepper.has_endstop))
+            self.config.set('Steppers', 'current_' + name, str(stepper.current_value))
+            self.config.set('Steppers', 'steps_pr_mm_' + name, str(stepper.steps_pr_mm))
+            self.config.set('Steppers', 'microstepping_' + name, str(stepper.microstepping))
+            self.config.set('Steppers', 'slow_decay_' + name, str(stepper.decay))
+
+        self.save_bed_compensation_matrix()
+
+        self.config.save(filename)
+
+    def load_bed_compensation_matrix(self):
+        mat = self.config.get('Geometry', 'bed_compensation_matrix').split(",")
+        mat = np.matrix(np.array([float(i) for i in mat]).reshape(3, 3))
+        return mat
+
+    def save_bed_compensation_matrix(self):
+        mat = "\n"
+        for idx, i in enumerate(Path.matrix_bed_comp):
+            mat += "\t"+", ".join([str(j) for j in i.tolist()[0]])+("" if idx == 2 else ",\n")
+        # Only update if they are different
+        if mat.replace('\t', '') != self.config.get('Geometry', 'bed_compensation_matrix'):
+            self.config.set('Geometry', 'bed_compensation_matrix', mat)        
+
