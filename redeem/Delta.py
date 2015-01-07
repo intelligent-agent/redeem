@@ -26,28 +26,41 @@ import numpy as np  # Needed for sqrt
 
 
 class Delta:
-    Hez = 0.0    # Distance head extends below the effector.
-    L   = 0.135  # Length of the rod
-    r   = 0.144  # Radius of the columns
-    Ae  = 0.026  # Effector offset
-    Be  = 0.026
-    Ce  = 0.026
-    Aco = 0.019  # Carriage offset
-    Bco = 0.019
-    Cco = 0.019
+    Hez = 0.0601    # Distance head extends below the effector.
+    L   = 0.322     # Length of the rod
+    r   = 0.175    # Radius of the columns
+    Ae  = 0.02032  # Effector offset
+    Be  = 0.02032
+    Ce  = 0.02032
 
+    # Hijacking carriage offset to become carraige offset error.
+
+    Aco = 0.00
+    Bco = 0.00
+    Cco = 0.00
+
+    # Compensation for positional error on the columns
+    # https://github.com/hercek/Marlin/blob/Marlin_v1/calibration.wxm
+    Apxe = 0.00
+    Apye = 0.00
+    Bpxe = 0.00
+    Bpye = 0.00
+    Cpxe = 0.00
+    Cpye = 0.00
+
+    
     # Column theta
     At = np.pi / 2.0
     Bt = 7.0 * np.pi / 6.0
     Ct = 11.0 * np.pi / 6.0
 
     # Calculate the column positions
-    Apx = r*np.cos(At)
-    Apy = r*np.sin(At)
-    Bpx = r*np.cos(Bt)
-    Bpy = r*np.sin(Bt)
-    Cpx = r*np.cos(Ct)
-    Cpy = r*np.sin(Ct)
+    Apx = (Aco + r)*np.cos(At) + Apxe
+    Apy = (Aco + r)*np.sin(At) + Apye
+    Bpx = (Bco + r)*np.cos(Bt) + Bpxe
+    Bpy = (Bco + r)*np.sin(Bt) + Bpye
+    Cpx = (Cco + r)*np.cos(Ct) + Cpxe
+    Cpy = (Cco + r)*np.sin(Ct) + Cpye
 
     # Calculate the effector positions
     Aex = Ae*np.cos(At)
