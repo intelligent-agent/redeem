@@ -40,20 +40,20 @@ class Thermistor:
 
     def get_temperature(self):
         """ Return the temperature in degrees celsius """
-        voltage = 0
+        temperature = 0
         acquisitions = 0
-        for i in xrange(10):
+        for i in xrange(1):
             with open(self.pin, "r") as file:
                 try:
-                    voltage += (float(file.read().rstrip()) / 4096) * 1.8
+                    voltage = (float(file.read().rstrip()) / 4096) * 1.8
+                    res_val = self.voltage_to_resistance(voltage)  # Convert to resistance
+                    temperature += self.resistance_to_degrees(res_val) # Convert to degrees
                     acquisitions += 1
                 except IOError as e:
                     logging.error("Unable to get ADC value for the {2}. time ({0}): {1}".format(e.errno, e.strerror, i))
         if acquisitions == 0:
             return -1.0
-        voltage /= acquisitions
-        res_val = self.voltage_to_resistance(voltage)  # Convert to resistance
-        temperature = self.resistance_to_degrees(res_val) # Convert to degrees
+        temperature /= acquisitions
         #logging.debug(self.name+": voltage: %f"%(voltage))
         #logging.debug(" - thermistor res: %f - Temperature: %f deg."%(res_val, temperature))
         return temperature
