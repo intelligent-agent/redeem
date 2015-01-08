@@ -144,7 +144,7 @@ class Redeem:
         Stepper.commit()
 
         # Delta printer setup
-        opts = ["Hez", "L", "r", "Ae", "Be", "Ce", "Aco", "Bco", "Cco"]
+        opts = ["Hez", "L", "r", "Ae", "Be", "Ce", "Aco", "Bco", "Cco", "Apxe", "Apye", "Bpxe", "Bpye", "Cpxe", "Cpye" ]
         for opt in opts:
             Delta.__dict__[opt] = printer.config.getfloat('Delta', opt)
 

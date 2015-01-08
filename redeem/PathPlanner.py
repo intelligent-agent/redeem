@@ -118,6 +118,7 @@ class PathPlanner:
     def _home_internal(self, axis):
         """ Private method for homing a set or a single axis """
         logging.debug("homing internal " + str(axis))
+            
 
         path_back = {}
         path_center = {}
@@ -132,10 +133,14 @@ class PathPlanner:
             logging.debug("Doing homing for " + str(a))
             logging.debug(self.travel_length)
             logging.debug(self.center_offset)
-            path_back[a] = -self.travel_length[a]
-            path_center[a] = -self.center_offset[a]
+            if Path.home_speed[Path.axis_to_index(a)] < 0:
+                path_back[a] = self.travel_length[a]
+                path_center[a] = self.center_offset[a]
+            else:
+                path_back[a] = -self.travel_length[a]
+                path_center[a] = -self.center_offset[a]
             path_zero[a] = 0
-            speed = min(speed, Path.home_speed[Path.axis_to_index(a)])
+            speed = min(abs(speed), abs(Path.home_speed[Path.axis_to_index(a)]))
 
             logging.debug("axis: "+str(a))
 
@@ -166,6 +171,8 @@ class PathPlanner:
                 self._home_internal(a)
         # For delta, switch to cartesian when homing
         elif Path.axis_config == Path.AXIS_CONFIG_DELTA:
+            if 0 < len({"X", "Y", "Z"}.intersection(set(axis))) < 3:
+                axis = list(set(axis).union({"X", "Y", "Z"}))	# Deltas must home all axes.
             Path.axis_config = Path.AXIS_CONFIG_XY
             self._home_internal(axis)
             Path.axis_config = Path.AXIS_CONFIG_DELTA
