@@ -145,7 +145,7 @@ class PathPlanner:
             logging.debug("axis: "+str(a))
 
         # Move until endstop is hit
-        p = RelativePath(path_back, speed, True, False)
+        p = RelativePath(path_back, speed, True, False, True)
 
         self.add_path(p)
 

@@ -65,13 +65,16 @@ class Path:
         Path.max_speeds = np.ones(num_axes)
         Path.home_speed = np.ones(num_axes)
         Path.steps_pr_meter = np.ones(num_axes)
+	Path.backlash_compensation = np.zeros(num_axes)
+	Path.backlash_state = np.zeros(num_axes)
 
-    def __init__(self, axes, speed,  cancelable=False, use_bed_matrix=True):
+    def __init__(self, axes, speed,  cancelable=False, use_bed_matrix=True, use_backlash_compensation=True):
         """ The axes of evil, the feed rate in m/s and ABS or REL """
         self.axes = axes
         self.speed = speed
         self.cancelable = int(cancelable)
         self.use_bed_matrix = int(use_bed_matrix)
+        self.use_backlash_compensation = int(use_backlash_compensation)
         self.mag = None
         self.pru_data = []
         self.next = None
@@ -152,6 +155,20 @@ class Path:
 
         return ret_vec
 
+    def backlash_compensate(self):
+        """ Apply compensation to the number of steps if the direction of the axis has changed. """
+        logging.info("Backlash uncompensated: " + str(self.num_steps))
+        for index, d in enumerate(self.delta):
+            dirstate = np.sign(d)
+            if (dirstate != 0) and (dirstate != Path.backlash_state[index]):
+                # Apply backlash compensation directly to num_steps
+                self.num_steps[index] += np.ceil(Path.backlash_compensation[index] * Path.steps_pr_meter[index])
+                # Save new backlash state
+                Path.backlash_state[index] = dirstate
+        logging.info("Backlash compensated: " + str(self.num_steps))
+
+        
+
     def needs_splitting(self):
         """ Return true if this is a delta segment and longer than 1 mm """
         return (Path.axis_config == Path.AXIS_CONFIG_DELTA and self.get_magnitude() > 0.001)
@@ -196,8 +213,8 @@ class Path:
 
 class AbsolutePath(Path):
     """ A path segment with absolute movement """
-    def __init__(self, axes, speed, cancelable=False, use_bed_matrix=True):
-        Path.__init__(self, axes, speed, cancelable, use_bed_matrix)
+    def __init__(self, axes, speed, cancelable=False, use_bed_matrix=True, use_backlash_compensation=True):
+        Path.__init__(self, axes, speed, cancelable, use_bed_matrix, use_backlash_compensation)
         self.movement = Path.ABSOLUTE
 
     def set_prev(self, prev):
@@ -225,6 +242,9 @@ class AbsolutePath(Path):
         self.stepper_end_pos = self.start_pos + self.delta
         self.rounded_vec = vec
 
+        if self.use_backlash_compensation:
+            self.backlash_compensate();
+
         if np.isnan(vec).any():
             self.end_pos = self.start_pos
             self.num_steps = np.zeros(Path.NUM_AXES)
@@ -235,8 +255,8 @@ class AbsolutePath(Path):
 
 class RelativePath(Path):
     """ A path segment with Relative movement """
-    def __init__(self, axes, speed, cancelable=False, use_bed_matrix=True):
-        Path.__init__(self, axes, speed, cancelable, use_bed_matrix)
+    def __init__(self, axes, speed, cancelable=False, use_bed_matrix=True, use_backlash_compensation=True):
+        Path.__init__(self, axes, speed, cancelable, use_bed_matrix, use_backlash_compensation)
         self.movement = Path.RELATIVE
 
     def set_prev(self, prev):
@@ -262,6 +282,10 @@ class RelativePath(Path):
         self.end_pos = self.start_pos + vec
         self.stepper_end_pos = self.start_pos + self.delta
         self.rounded_vec = vec
+
+        # Backlash compensation
+        if self.use_backlash_compensation:
+            self.backlash_compensate();
 
         # Make sure the calculations are correct, or no movement occurs:
         if np.isnan(vec).any():
