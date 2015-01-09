@@ -42,7 +42,7 @@ class Thermistor:
         """ Return the temperature in degrees celsius """
         with open(self.pin, "r") as file:
             try:
-                voltage = (float(file.read().rstrip()) / 4096) * 1.8
+                voltage = (float(file.read().rstrip()) / 4095.0) * 1.8
                 res_val = self.voltage_to_resistance(voltage)  # Convert to resistance
                 return self.resistance_to_degrees(res_val) # Convert to degrees
             except IOError as e:
