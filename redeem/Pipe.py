@@ -28,6 +28,7 @@ import select
 import logging
 import os
 import subprocess
+import time
 from Gcode import Gcode
 
 
@@ -35,26 +36,37 @@ class Pipe:
 
     @staticmethod
     def check_tty0tty():
-        if find_executable("tty0tty") is None:
-            return False
-        else:
-            return True
+        return (find_executable("tty0tty") is not None)
+
+    @staticmethod
+    def check_socat():
+        return (find_executable("socat") is not None)
 
     def __init__(self, printer, prot):
         self.printer = printer
         self.prot = prot
 
-        pipe_0 = "/dev/" + self.prot + "_0"
-        pipe_1 = "/dev/" + self.prot + "_1"
+        pipe_0 = "/dev/" + prot + "_0"
+        pipe_1 = "/dev/" + prot + "_1"
 
         # Ensure tty0tty is installed and available in the PATH
-        if not Pipe.check_tty0tty():
-            logging.error("tty0tty not found! tty0tty must be installed")
-            raise EnvironmentError("tty0tty not found")
+        if not Pipe.check_tty0tty() and not Pipe.check_socat():
+            logging.error("Neither tty0tty nor socat found! tty0tty or socat must be installed")
+            raise EnvironmentError("tty0tty and socat not found")
 
-        p = subprocess.Popen(["tty0tty", pipe_0, pipe_1],
-                             stderr=subprocess.PIPE)
-        p.stderr.readline()
+        if Pipe.check_tty0tty():
+            p = subprocess.Popen(["tty0tty", pipe_0, pipe_1],
+                                 stderr=subprocess.PIPE)
+            p.stderr.readline()
+
+        elif Pipe.check_socat():
+            p = subprocess.Popen([
+                "socat", "-d", "-d", "-lf", "/var/log/redeem2"+self.prot, 
+                "pty,mode=777,raw,echo=0,link="+pipe_0,
+                "pty,mode=777,raw,echo=0,link="+pipe_1],
+                                 stderr=subprocess.PIPE)
+            while not os.path.exists(pipe_0):
+                time.sleep(0.1)
         self.fifo = os.open(pipe_0, os.O_RDWR)
         logging.info("Pipe " + self.prot + " open. Use '" + pipe_1 + "' to "
                      "communicate with it")
