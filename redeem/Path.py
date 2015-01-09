@@ -232,13 +232,16 @@ class AbsolutePath(Path):
         num_steps = np.ceil(np.abs(vec) * Path.steps_pr_meter)
         self.num_steps = num_steps
         self.delta = np.sign(vec) * num_steps / Path.steps_pr_meter
+        if self.use_backlash_compensation:
+            compensation = self.backlash_compensate();
+            self.delta += compensation
         vec = self.reverse_transform_vector(self.delta, self.start_pos)
 
-        if self.use_backlash_compensation:
-            self.delta += self.backlash_compensate();
-
         # Set stepper and true posision
-        self.end_pos = self.start_pos + vec
+        if self.use_backlash_compensation:
+            self.end_pos = self.start_pos + vec - compensation
+        else:
+            self.end_pos = self.start_pos + vec
         self.stepper_end_pos = self.start_pos + self.delta
         self.rounded_vec = vec
 
@@ -272,17 +275,18 @@ class RelativePath(Path):
         vec = self.transform_vector(self.vec, self.start_pos)
         self.num_steps = np.ceil(np.abs(vec) * Path.steps_pr_meter)
         self.delta = np.sign(vec) * self.num_steps / Path.steps_pr_meter
+        if self.use_backlash_compensation:
+            compensation = self.backlash_compensate();
+            self.delta += compensation
         vec = self.reverse_transform_vector(self.delta, self.start_pos)
 
-        # Backlash compensation
+        # Set stepper and true posision
         if self.use_backlash_compensation:
-            self.delta += self.backlash_compensate();
-
-        # Set stepper and true position
-        self.end_pos = self.start_pos + vec
+            self.end_pos = self.start_pos + vec - compensation
+        else:
+            self.end_pos = self.start_pos + vec
         self.stepper_end_pos = self.start_pos + self.delta
         self.rounded_vec = vec
-
 
         # Make sure the calculations are correct, or no movement occurs:
         if np.isnan(vec).any():
