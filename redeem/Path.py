@@ -156,14 +156,15 @@ class Path:
         return ret_vec
 
     def backlash_compensate(self):
-        """ Apply compensation to the number of steps if the direction of the axis has changed. """
+        """ Apply compensation to the distance taken if the direction of the axis has changed. """
+        ret_vec = np.zeros(Path.NUM_AXES)
         for index, d in enumerate(self.delta):
             dirstate = np.sign(d)
             if (dirstate != 0) and (dirstate != Path.backlash_state[index]):
-                # Apply backlash compensation directly to num_steps
-                self.num_steps[index] += np.ceil(Path.backlash_compensation[index] * Path.steps_pr_meter[index])
+                ret_vec[index] = dirstate * Path.backlash_compensation[index]
                 # Save new backlash state
                 Path.backlash_state[index] = dirstate
+        return ret_vec
 
     def needs_splitting(self):
         """ Return true if this is a delta segment and longer than 1 mm """
@@ -233,13 +234,13 @@ class AbsolutePath(Path):
         self.delta = np.sign(vec) * num_steps / Path.steps_pr_meter
         vec = self.reverse_transform_vector(self.delta, self.start_pos)
 
+        if self.use_backlash_compensation:
+            self.delta += self.backlash_compensate();
+
         # Set stepper and true posision
         self.end_pos = self.start_pos + vec
         self.stepper_end_pos = self.start_pos + self.delta
         self.rounded_vec = vec
-
-        if self.use_backlash_compensation:
-            self.backlash_compensate();
 
         if np.isnan(vec).any():
             self.end_pos = self.start_pos
@@ -273,15 +274,15 @@ class RelativePath(Path):
         self.delta = np.sign(vec) * self.num_steps / Path.steps_pr_meter
         vec = self.reverse_transform_vector(self.delta, self.start_pos)
 
+        # Backlash compensation
+        if self.use_backlash_compensation:
+            self.delta += self.backlash_compensate();
 
         # Set stepper and true position
         self.end_pos = self.start_pos + vec
         self.stepper_end_pos = self.start_pos + self.delta
         self.rounded_vec = vec
 
-        # Backlash compensation
-        if self.use_backlash_compensation:
-            self.backlash_compensate();
 
         # Make sure the calculations are correct, or no movement occurs:
         if np.isnan(vec).any():
