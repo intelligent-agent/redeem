@@ -157,7 +157,6 @@ class Path:
 
     def backlash_compensate(self):
         """ Apply compensation to the number of steps if the direction of the axis has changed. """
-        logging.info("Backlash uncompensated: " + str(self.num_steps))
         for index, d in enumerate(self.delta):
             dirstate = np.sign(d)
             if (dirstate != 0) and (dirstate != Path.backlash_state[index]):
@@ -165,9 +164,6 @@ class Path:
                 self.num_steps[index] += np.ceil(Path.backlash_compensation[index] * Path.steps_pr_meter[index])
                 # Save new backlash state
                 Path.backlash_state[index] = dirstate
-        logging.info("Backlash compensated: " + str(self.num_steps))
-
-        
 
     def needs_splitting(self):
         """ Return true if this is a delta segment and longer than 1 mm """
