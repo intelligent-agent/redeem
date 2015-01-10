@@ -258,6 +258,7 @@ class Redeem:
             Path.max_speeds[i] = printer.config.getfloat('Steppers', 'max_speed_'+axis.lower())
             Path.home_speed[i] = printer.config.getfloat('Steppers', 'home_speed_'+axis.lower())
             Path.steps_pr_meter[i] = printer.steppers[axis].get_steps_pr_meter()
+            Path.backlash_compensation[i] = printer.config.getfloat('Steppers', 'backlash_'+axis.lower())
 
         dirname = os.path.dirname(os.path.realpath(__file__))
 
