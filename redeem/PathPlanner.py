@@ -220,10 +220,29 @@ class PathPlanner:
         if new.needs_splitting():
             logging.debug("Path needs splitting")
             segments = new.get_delta_segments()
-            for segment in segments:
-                logging.debug("Adding "+str(segment))
-                path = AbsolutePath(segment, self.printer.feed_rate * self.printer.factor)
-                self.add_path(path)
+            path_batch = []
+            logging.debug("Received " + str(len(segments)) + " segments")
+            logging.debug("Received " + str(segments))
+            for index, segment in enumerate(segments):
+                logging.debug("Adding segment" + str(segment))
+                path_batch.append(AbsolutePath(segment, self.printer.feed_rate * self.printer.factor))
+                if index is not 0:
+                    path_batch[-1].set_prev(path_batch[-2])
+                else:
+                    path_batch[0].set_prev(self.prev)
+
+            # Queue the entire batch at once.
+            self.printer.ensure_steppers_enabled()
+            for path in path_batch:
+                logging.debug("Pushing start_pos = "+str(tuple(path.start_pos[:4]))+ " stepper_end_pos " +str(tuple(path.stepper_end_pos[:4]))+ " speed = " + str(path.speed)+" Cancelable = "+str(bool(path.cancelable))+" Absolute = "+str(bool(path.movement != Path.RELATIVE)))
+                self.native_planner.queueMove(tuple(path.start_pos[:4]),
+                                          tuple(path.stepper_end_pos[:4]), path.speed,
+                                          bool(path.cancelable),
+                                          bool(path.movement != Path.RELATIVE))
+                self.prev = path
+                self.prev.unlink()
+            
+                
             # Do not add the original segment
             new.unlink()
             return 
@@ -232,6 +251,7 @@ class PathPlanner:
             self.printer.ensure_steppers_enabled()
             #push this new segment   
             logging.debug("Pushing "+str(new.get_magnitude()))
+            logging.debug("Pushing start_pos = "+str(tuple(new.start_pos[:4]))+ " stepper_end_pos " +str(tuple(new.stepper_end_pos[:4]))+ " speed = " + str(new.speed)+" Cancelable = "+str(bool(new.cancelable))+" Absolute = "+str(bool(new.movement != Path.RELATIVE)))
             self.native_planner.queueMove(tuple(new.start_pos[:4]),
                                           tuple(new.stepper_end_pos[:4]), new.speed,
                                           bool(new.cancelable),
