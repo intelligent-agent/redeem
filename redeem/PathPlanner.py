@@ -219,17 +219,8 @@ class PathPlanner:
 
         if new.needs_splitting():
             logging.debug("Path needs splitting")
-            segments = new.get_delta_segments()
-            path_batch = []
-            logging.debug("Received " + str(len(segments)) + " segments")
-            logging.debug("Received " + str(segments))
-            for index, segment in enumerate(segments):
-                logging.debug("Adding segment" + str(segment))
-                path_batch.append(AbsolutePath(segment, self.printer.feed_rate * self.printer.factor))
-                if index is not 0:
-                    path_batch[-1].set_prev(path_batch[-2])
-                else:
-                    path_batch[0].set_prev(self.prev)
+            path_batch = new.get_delta_segments()
+            #logging.debug("Received " + str(len(path_batch)) + " segments")
 
             # Queue the entire batch at once.
             self.printer.ensure_steppers_enabled()

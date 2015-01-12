@@ -85,6 +85,7 @@ class Path:
         self.end_pos = None
         self.num_steps = None
         self.delta = None
+        self.split_size = 0.001
 
     def is_G92(self):
         """ Special path, only set the global position on this """
@@ -168,7 +169,7 @@ class Path:
 
     def needs_splitting(self):
         """ Return true if this is a delta segment and longer than 1 mm """
-        return (Path.axis_config == Path.AXIS_CONFIG_DELTA and self.get_magnitude() > 0.001)
+        return (Path.axis_config == Path.AXIS_CONFIG_DELTA and self.get_magnitude() > self.split_size)
 
     def get_magnitude(self):
         """ Returns the magnitde in XYZ dim """
@@ -179,8 +180,11 @@ class Path:
         return self.mag
 
     def get_delta_segments(self):
-        """ A delta segment must be split into lengths of 1 mm """
-        num_segments = np.ceil(self.get_magnitude()/0.001)+1
+        """ A delta segment must be split into lengths of self.split_size (default 1 mm) """
+        if not self.needs_splitting():
+            return [self]
+      
+        num_segments = np.ceil(self.get_magnitude()/self.split_size)+1
         vals = np.transpose([
                     np.linspace(
                         self.start_pos[i], 
@@ -188,7 +192,31 @@ class Path:
                         num_segments
                     ) for i in xrange(4)]) 
         vals = np.delete(vals, 0, axis=0)
-        return [dict(zip(["X", "Y", "Z", "E"], list(val))) for val in vals]
+        vec_segments = [dict(zip(["X", "Y", "Z", "E"], list(val))) for val in vals]
+        path_segments = []
+
+        #logging.info("Processing "+str(len(vec_segments))+" segments")
+        for index, segment in enumerate(vec_segments):
+            #logging.info("Processing "+str(index)+" of "+str(len(vec_segments))+" segments")
+            path = AbsolutePath(segment, self.speed, self.cancelable, self.use_bed_matrix, False)
+            if index is not 0:
+                #logging.info("Setting prev of segment "+str(index))
+                path.set_prev(path_segments[-1])
+            else:
+                #logging.info("Setting prev of first segment "+str(index))
+                path.set_prev(self.prev)
+
+            #logging.info("Requesting segments from segment "+str(index))
+            new_segments = path.get_delta_segments()
+
+            # Stitch the new elements in
+            #logging.info("Got "+str(len(new_segments))+" from segment "+str(index))
+            path_segments.extend(new_segments)
+
+        #logging.info("Finished processing "+str(len(vec_segments))+" segments")
+
+        return path_segments
+        
 
     def __str__(self):
         """ The vector representation of this path segment """
