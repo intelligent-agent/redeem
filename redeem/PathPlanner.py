@@ -214,25 +214,30 @@ class PathPlanner:
 
     def add_path(self, new):
         """ Add a path segment to the path planner """
+        """ This code, and the native planner, needs to be updated for reach. """
         # Link to the previous segment in the chain
         new.set_prev(self.prev)
 
         if new.needs_splitting():
             logging.debug("Path needs splitting")
             path_batch = new.get_delta_segments()
-            #logging.debug("Received " + str(len(path_batch)) + " segments")
+            # Construct a batch
+            batch_array = np.zeros(shape=(len(path_batch)*2*4),dtype=np.float64)     # Change this to reflect NUM_AXIS.
+         
+            for maj_index, path in enumerate(path_batch):
+                for subindex in range(4):  # this needs to be NUM_AXIS
+                    batch_array[(maj_index * 8) + subindex] = path.start_pos[subindex]
+                    batch_array[(maj_index * 8) + 4 + subindex] = path.stepper_end_pos[subindex]
+                
+                self.prev = path
+                self.prev.unlink()
+                #logging.debug( str(path.start_pos) + " to " + str(path.stepper_end_pos))
+
+
 
             # Queue the entire batch at once.
             self.printer.ensure_steppers_enabled()
-            for path in path_batch:
-                logging.debug("Pushing start_pos = "+str(tuple(path.start_pos[:4]))+ " stepper_end_pos " +str(tuple(path.stepper_end_pos[:4]))+ " speed = " + str(path.speed)+" Cancelable = "+str(bool(path.cancelable))+" Absolute = "+str(bool(path.movement != Path.RELATIVE)))
-                self.native_planner.queueMove(tuple(path.start_pos[:4]),
-                                          tuple(path.stepper_end_pos[:4]), path.speed,
-                                          bool(path.cancelable),
-                                          bool(path.movement != Path.RELATIVE))
-                self.prev = path
-                self.prev.unlink()
-            
+            self.native_planner.queueBatchMove(batch_array, new.speed, bool(new.cancelable), bool(True))
                 
             # Do not add the original segment
             new.unlink()
@@ -241,7 +246,6 @@ class PathPlanner:
         if not new.is_G92():
             self.printer.ensure_steppers_enabled()
             #push this new segment   
-            logging.debug("Pushing "+str(new.get_magnitude()))
             logging.debug("Pushing start_pos = "+str(tuple(new.start_pos[:4]))+ " stepper_end_pos " +str(tuple(new.stepper_end_pos[:4]))+ " speed = " + str(new.speed)+" Cancelable = "+str(bool(new.cancelable))+" Absolute = "+str(bool(new.movement != Path.RELATIVE)))
             self.native_planner.queueMove(tuple(new.start_pos[:4]),
                                           tuple(new.stepper_end_pos[:4]), new.speed,

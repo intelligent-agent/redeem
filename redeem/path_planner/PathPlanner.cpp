@@ -163,123 +163,156 @@ PathPlanner::PathPlanner() {
 	bzero(lines, sizeof(lines));
 }
 
-void PathPlanner::queueMove(FLOAT_T startPos[NUM_AXIS],FLOAT_T endPos[NUM_AXIS],FLOAT_T speed, bool cancelable, bool optimize) {
+void PathPlanner::queueBatchMove(FLOAT_T* batchData, int batchSize, FLOAT_T speed, bool cancelable, bool optimize /* = true */) {
     FLOAT_T axis_diff[NUM_AXIS]; // Axis movement in mm
 	
 
 #ifdef BUILD_PYTHON_EXT
-    PyThreadState *_save; 
-    _save = PyEval_SaveThread();
+	PyThreadState *_save; 
+	_save = PyEval_SaveThread();
 #endif
-	
-	// wait for the worker
-    {
-        std::unique_lock<std::mutex> lk(line_mutex);
-		//LOG( "Waiting for free move command space... Current: " << linesCount << std::endl);
-        lineAvailable.wait(lk, [this]{return linesCount<MOVE_CACHE_SIZE || stop;});
-    }
+        int numSegments = batchSize / (2 * NUM_AXIS);
+	LOG( "Batching " << numSegments << " segments." << std::endl);
 
-	if(stop) {
-#ifdef BUILD_PYTHON_EXT
-        PyEval_RestoreThread(_save);
-#endif
-        return;
-    }
-	
-	Path *p = &lines[linesWritePos];
-	
-	memcpy(p->startPos, startPos, sizeof(FLOAT_T)*NUM_AXIS);
-	memcpy(p->endPos, endPos, sizeof(FLOAT_T)*NUM_AXIS);
-	
-	//Convert meters to mm
-	for(uint8_t axis=0; axis < NUM_AXIS; axis++){
-		p->startPos[axis]*=1000.0;
-		p->endPos[axis]*=1000.0;
-	}
-	
-	
-	
-	LOG("[" << linesWritePos << "]" << " Moving from " << p->startPos[0] << "," << p->startPos[1] << "," << p->startPos[2] << " to "
-		<< p->endPos[0] << "," << p->endPos[1] << "," << p->endPos[2] << std::endl);
-	
-	p->speed = speed*1000; //Speed is in m/s
-    p->joinFlags = 0;
-	p->flags = 0;
-	p->setCancelable(cancelable);
-	
-	p->setWaitMS(optimize ? PRINT_MOVE_BUFFER_WAIT : 0);
-	
-    p->dir = 0;
-	
-    //Find direction
-    for(uint8_t axis=0; axis < NUM_AXIS; axis++){
-		p->startPos[axis] = ceil(p->startPos[axis]*axisStepsPerMM[axis]);
-		p->endPos[axis]   = ceil(p->endPos[axis]*axisStepsPerMM[axis]);
-		
-        if((p->delta[axis]=p->endPos[axis]-p->startPos[axis])>=0)
-            p->setPositiveDirectionForAxis(axis);
-        else
-            p->delta[axis] = -p->delta[axis];
-		
-        axis_diff[axis] = p->delta[axis] * invAxisStepsPerMM[axis];
-        if(p->delta[axis]) p->setMoveOfAxis(axis);
-		
-    }
-	
-    if(p->isNoMove())
+	unsigned int linesQueued = 0;
+	unsigned int linesCacheRemaining = 0;
+
+	// Process each segment
+	for(int segment_index = 0; segment_index < numSegments; segment_index++)
 	{
-		LOG( "Warning: no move path" << std::endl);
+               
+		// wait for the worker
+		if(linesCacheRemaining == 0)
+		{
+			std::unique_lock<std::mutex> lk(line_mutex);
+			LOG( "Waiting for free move command space... Current: " << MOVE_CACHE_SIZE - linesCount << std::endl);
+			lineAvailable.wait(lk, [this]{return linesCount < MOVE_CACHE_SIZE || stop;});
+			linesCacheRemaining = MOVE_CACHE_SIZE - linesCount;
+		}
+	
+		if(stop)
+		{
+	
 #ifdef BUILD_PYTHON_EXT
-        PyEval_RestoreThread(_save);
+		        PyEval_RestoreThread(_save);
 #endif
-		return; // No steps included
+			LOG( "Stopped/aborted/Cancelled while waiting for free move command space. linesCount: " << linesCount << std::endl);
+		        return;
+		}
+
+		Path *p = &lines[linesWritePos];
+                // Batch is packed into memory as a continious array.
+		// SSSSEEEESSSSEEEESSSSEEEESSSSEEEE
+		// ^0      ^8      ^16     ^24 (x sizeof(FLOAT_T))
+		memcpy(p->startPos, /* startPos */ &batchData[segment_index * 2 * NUM_AXIS], sizeof(FLOAT_T)*NUM_AXIS);
+		memcpy(p->endPos, /* endPos */ &batchData[segment_index * 2 * NUM_AXIS + NUM_AXIS], sizeof(FLOAT_T)*NUM_AXIS);
+
+		
+		//Convert meters to mm
+		for(uint8_t axis=0; axis < NUM_AXIS; axis++)
+		{
+			p->startPos[axis]*=1000.0;
+			p->endPos[axis]*=1000.0;
+		}
+		
+		p->speed = speed*1000; //Speed is in m/s
+		p->joinFlags = 0;
+		p->flags = 0;
+		p->setCancelable(cancelable);
+		
+		p->setWaitMS(optimize ? PRINT_MOVE_BUFFER_WAIT : 0);
+	
+		p->dir = 0;
+		
+		//Find direction
+		for(uint8_t axis=0; axis < NUM_AXIS; axis++)
+		{
+			p->startPos[axis] = ceil(p->startPos[axis]*axisStepsPerMM[axis]);
+			p->endPos[axis] = ceil(p->endPos[axis]*axisStepsPerMM[axis]);
+			
+		        if((p->delta[axis]=p->endPos[axis]-p->startPos[axis])>=0)
+				p->setPositiveDirectionForAxis(axis);
+			else
+				p->delta[axis] = -p->delta[axis];
+			
+			axis_diff[axis] = p->delta[axis] * invAxisStepsPerMM[axis];
+			if(p->delta[axis]) 
+				p->setMoveOfAxis(axis);
+			
+		}
+		
+		if(p->isNoMove())
+		{
+			LOG( "Warning: no move path" << std::endl);
+			continue; // No steps included
+		}
+		
+		//LOG( "Warning: Doing the breshnam thing" << std::endl);
+	
+		//Define variables that are needed for the Bresenham algorithm. Please note that  Z is not currently included in the Bresenham algorithm.
+		if(p->delta[Y_AXIS] > p->delta[X_AXIS] && p->delta[Y_AXIS] > p->delta[Z_AXIS] && p->delta[Y_AXIS] > p->delta[E_AXIS])
+			p->primaryAxis = Y_AXIS;
+		else if (p->delta[X_AXIS] > p->delta[Z_AXIS] && p->delta[X_AXIS] > p->delta[E_AXIS])
+			p->primaryAxis = X_AXIS;
+		else if (p->delta[Z_AXIS] > p->delta[E_AXIS])
+			p->primaryAxis = Z_AXIS;
+		else
+			p->primaryAxis = E_AXIS;
+		
+		p->stepsRemaining = p->delta[p->primaryAxis];
+	    
+		if(p->isXYZMove())
+		{
+			FLOAT_T xydist2 = axis_diff[X_AXIS] * axis_diff[X_AXIS] + axis_diff[Y_AXIS] * axis_diff[Y_AXIS];
+			if(p->isZMove())
+				p->distance = std::max((FLOAT_T)sqrt(xydist2 + axis_diff[Z_AXIS] * axis_diff[Z_AXIS]),(FLOAT_T)fabs(axis_diff[E_AXIS]));
+			else
+				p->distance = std::max((FLOAT_T)sqrt(xydist2),(FLOAT_T)fabs(axis_diff[E_AXIS]));
+		}
+		else
+			p->distance = fabs(axis_diff[E_AXIS]);
+		
+		calculateMove(p,axis_diff);
+		
+		linesWritePos++;
+		linesQueued++;
+		linesCacheRemaining--;
+		
+		if(linesWritePos>=MOVE_CACHE_SIZE)
+			linesWritePos = 0;
+		
+		// send data to the worker thread, when forced or when finished.
+		if((linesCacheRemaining == 0) || ((segment_index + 1) == numSegments))	// We just filled the cache, or exhausted this batch.
+		{
+			{
+		        	std::lock_guard<std::mutex> lk(line_mutex);
+		        	linesCount += linesQueued;
+			}
+			linesQueued = 0;
+			lineAvailable.notify_all();
+		}
+		//LOG( "Line finished (" << linesQueued << "lines ready)." << std::endl);
 	}
-	
-    LOG( "Warning: Doing the breshnam thing" << std::endl);
 
-    //Define variables that are needed for the Bresenham algorithm. Please note that  Z is not currently included in the Bresenham algorithm.
-    if(p->delta[Y_AXIS] > p->delta[X_AXIS] && p->delta[Y_AXIS] > p->delta[Z_AXIS] && p->delta[Y_AXIS] > p->delta[E_AXIS])
-		p->primaryAxis = Y_AXIS;
-    else if (p->delta[X_AXIS] > p->delta[Z_AXIS] && p->delta[X_AXIS] > p->delta[E_AXIS])
-		p->primaryAxis = X_AXIS;
-    else if (p->delta[Z_AXIS] > p->delta[E_AXIS])
-		p->primaryAxis = Z_AXIS;
-    else
-		p->primaryAxis = E_AXIS;
-	
-    p->stepsRemaining = p->delta[p->primaryAxis];
-    
-	if(p->isXYZMove())
-    {
-        FLOAT_T xydist2 = axis_diff[X_AXIS] * axis_diff[X_AXIS] + axis_diff[Y_AXIS] * axis_diff[Y_AXIS];
-        if(p->isZMove())
-            p->distance = std::max((FLOAT_T)sqrt(xydist2 + axis_diff[Z_AXIS] * axis_diff[Z_AXIS]),(FLOAT_T)fabs(axis_diff[E_AXIS]));
-        else
-            p->distance = std::max((FLOAT_T)sqrt(xydist2),(FLOAT_T)fabs(axis_diff[E_AXIS]));
-    }
-    else
-        p->distance = fabs(axis_diff[E_AXIS]);
-	
-    calculateMove(p,axis_diff);
-	
-	linesWritePos++;
-	
-	if(linesWritePos>=MOVE_CACHE_SIZE)
-		linesWritePos = 0;
-	
-	// send data to the worker thread
-    {
-        std::lock_guard<std::mutex> lk(line_mutex);
-        linesCount++;
-    }
-    lineAvailable.notify_all();
-	
-	
-	LOG( "End queuing move command" << std::endl);
+	//LOG( "End batch queuing move command" << std::endl);
 
 #ifdef BUILD_PYTHON_EXT
-        PyEval_RestoreThread(_save);
+	PyEval_RestoreThread(_save);
 #endif
+
+}
+
+
+void PathPlanner::queueMove(FLOAT_T startPos[NUM_AXIS],FLOAT_T endPos[NUM_AXIS],FLOAT_T speed, bool cancelable, bool optimize) {
+
+	// This seems redundant...
+	FLOAT_T temp[NUM_AXIS * 2];
+
+	memcpy(temp, startPos, sizeof(FLOAT_T)*NUM_AXIS);
+	memcpy(&temp[NUM_AXIS], endPos, sizeof(FLOAT_T)*NUM_AXIS);
+	
+	queueBatchMove( temp, NUM_AXIS*2, speed, cancelable, optimize);
+
 }
 
 FLOAT_T PathPlanner::safeSpeed(Path* p)
@@ -736,14 +769,14 @@ void PathPlanner::run() {
 		//If the buffer is half or more empty and the line to print is an optimized one , wait for 500 ms again so that we can get some other path in the path planner buffer, and we do that until the buffer is not anymore half empty.
 		if(linesCount<MOVE_CACHE_SIZE/2 && cur->getWaitMS()>0 && waitUntilFilledUp) {
 			unsigned lastCount = 0;
-			do {
-				lastCount = linesCount;
-				LOG("Waiting for buffer to fill up... " << linesCount  << ", before " << lastCount << std::endl);
-				
+			LOG("Waiting for buffer to fill up... " << linesCount  << " lines pending " << lastCount << std::endl);
+			do { 
+				lastCount = linesCount; 
 				
 				lineAvailable.wait_for(lk,  std::chrono::milliseconds(PRINT_MOVE_BUFFER_WAIT), [this,lastCount]{return linesCount>lastCount || stop;});
 				
 			} while(lastCount<linesCount && linesCount<MOVE_CACHE_SIZE/2 && !stop);
+			LOG("Done waiting for buffer to fill up... " << linesCount  << " lines ready. " << lastCount << std::endl);
 			
 			waitUntilFilledUp = false;
 		}
@@ -751,6 +784,8 @@ void PathPlanner::run() {
 		//The buffer is empty, we enable again the "wait until buffer is enough full" timing procedure.
 		if(linesCount<=1) {
 			waitUntilFilledUp = true;
+			LOG("### Move Command Buffer Empty ###" << std::endl);
+
 		}
 		
 		
@@ -901,11 +936,11 @@ void PathPlanner::run() {
 		//Wait until we need to push some lines so that the path planner can fill up
 		pru.waitUntilLowMoveTime((F_CPU/1000)*MIN_BUFFERED_MOVE_TIME); //in seconds
 		
-		LOG( "Sending " << std::dec << linesPos << ", Start speed=" << cur->startSpeed << ", end speed="<<cur->endSpeed << ", nb steps = " << cur->stepsRemaining << std::endl);
+		// LOG( "Sending " << std::dec << linesPos << ", Start speed=" << cur->startSpeed << ", end speed="<<cur->endSpeed << ", nb steps = " << cur->stepsRemaining << std::endl);
 		
 		pru.push_block((uint8_t*)cur->commands, sizeof(SteppersCommand)*cur->stepsRemaining, sizeof(SteppersCommand),linesPos,cur->timeInTicks);
 		
-		LOG( "Done sending with " << std::dec << linesPos << std::endl);
+		// LOG( "Done sending with " << std::dec << linesPos << std::endl);
 		
 		removeCurrentLine();
 		

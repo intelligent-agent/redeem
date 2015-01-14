@@ -1,4 +1,5 @@
 from setuptools import setup, find_packages, Extension
+import numpy as np
 
 pathplanner = Extension(
     '_PathPlannerNative', sources = [
@@ -8,6 +9,7 @@ pathplanner = Extension(
         'redeem/path_planner/prussdrv.c',
         'redeem/path_planner/Logger.cpp'],
     swig_opts=['-c++','-builtin'],
+    include_dirs = [np.get_include()],
     extra_compile_args = [
         '-std=c++0x',
         '-g',
