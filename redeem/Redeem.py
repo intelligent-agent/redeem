@@ -148,6 +148,8 @@ class Redeem:
         for opt in opts:
             Delta.__dict__[opt] = printer.config.getfloat('Delta', opt)
 
+        Delta.recalculate()
+
         # Set up cold ends
         path = self.printer.config.get('Cold-ends', 'path', 0)
         if os.path.exists(path):
