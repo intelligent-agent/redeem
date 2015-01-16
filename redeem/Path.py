@@ -169,8 +169,9 @@ class Path:
 
     def needs_splitting(self):
         """ Return true if this is a delta segment and longer than 1 mm """
-        # If movement is along the Z axis only, don't split.
-        return (Path.axis_config == Path.AXIS_CONFIG_DELTA and self.get_magnitude() > self.split_size)
+        return (Path.axis_config == Path.AXIS_CONFIG_DELTA 
+            and self.get_magnitude() > self.split_size
+            and np.any(self.vec[:2])) # If there is no movement along the XY axis (Z+extruders) only, don't split.
 
     def get_magnitude(self):
         """ Returns the magnitde in XYZ dim """
@@ -191,7 +192,7 @@ class Path:
                         self.start_pos[i], 
                         self.end_pos[i], 
                         num_segments
-                    ) for i in xrange(4)]) 
+                        ) for i in xrange(4)]) 
         vals = np.delete(vals, 0, axis=0)
         vec_segments = [dict(zip(["X", "Y", "Z", "E"], list(val))) for val in vals]
         path_segments = []
