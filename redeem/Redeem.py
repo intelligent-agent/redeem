@@ -253,7 +253,7 @@ class Redeem:
         # Bed compensation matrix
         Path.matrix_bed_comp = printer.load_bed_compensation_matrix()
         Path.matrix_bed_comp_inv = np.linalg.inv(Path.matrix_bed_comp)
-        logging.info("Loaded bed compensation matrix: \n"+str(Path.matrix_bed_comp))
+        logging.debug("Loaded bed compensation matrix: \n"+str(Path.matrix_bed_comp))
 
         for axis in printer.steppers.keys():
             i = Path.axis_to_index(axis)
@@ -292,14 +292,14 @@ class Redeem:
         printer.comms["USB"] = USB(self.printer)
         printer.comms["Eth"] = Ethernet(self.printer)
         
-        if Pipe.check_tty0tty():
+        if Pipe.check_tty0tty() or Pipe.check_socat():
             printer.comms["octoprint"] = Pipe(printer, "octoprint")
             printer.comms["toggle"] = Pipe(printer, "toggle") 
             printer.comms["testing"] = Pipe(printer, "testing")
             printer.comms["testing_noret"] = Pipe(printer, "testing_noret") 
             printer.comms["testing_noret"].send_response = False # Does not send "ok"
         else:
-            logging.warning("tty0tty is not installed! No virtual tty pipes enabled")
+            logging.warning("Neither tty0tty or socat is installed! No virtual tty pipes enabled")
 
     def start(self):
         """ Start the processes """

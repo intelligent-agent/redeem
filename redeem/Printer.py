@@ -82,6 +82,11 @@ class Printer:
             self.config.set('Steppers', 'microstepping_' + name, str(stepper.microstepping))
             self.config.set('Steppers', 'slow_decay_' + name, str(stepper.decay))
 
+        for name, heater in self.heaters.iteritems():
+            self.config.set('Heaters', 'pid_p_'+name, str(heater.P))
+            self.config.set('Heaters', 'pid_i_'+name, str(heater.I))
+            self.config.set('Heaters', 'pid_d_'+name, str(heater.D))
+
         self.save_bed_compensation_matrix()
 
         self.config.save(filename)

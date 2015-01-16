@@ -21,7 +21,7 @@ pathplanner = Extension(
 
 setup(
     name = "Redeem",
-    version = "0.16.3",
+    version = "0.16.4",
     packages = find_packages(exclude=["redeem/path_planner"]),
     data_files=[
         ('redeem/firmware', [
@@ -36,7 +36,9 @@ setup(
             'configs/MaxCoreXY.cfg', 
             'configs/MendelMax.cfg', 
             'configs/Testing.cfg', 
-            'configs/Prusa.cfg'])
+            'configs/Prusa.cfg',
+	    'configs/Debrew.cfg', 
+	    'configs/Delta.cfg'])
     ],
     # metadata for upload to PyPI
     author = "Elias Bakken",
