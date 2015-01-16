@@ -62,6 +62,7 @@ cp /usr/src/redeem/configs/*.cfg /etc/redeem/
 ```
 
 For communicating with octoprint etc. Redeem uses a virtual tty:
+Note: The latest develop branch uses socat as an alternative
 ```
 cd /usr/src/  
 git clone https://github.com/eliasbakken/tty0tty  

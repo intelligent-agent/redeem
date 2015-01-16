@@ -23,6 +23,7 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
 from threading import Thread
 import time
 import logging
+import numpy as np
 
 class Heater(object):
     """
@@ -47,6 +48,11 @@ class Heater(object):
         self.prefix = ""
         self.current_time = time.time()
         self.prev_time = time.time()
+        self.temperatures = []
+        self.errors = []
+        self.sleep = 0.1
+        self.avg = max(int(1.0/self.sleep), 3)
+        self.A = np.vstack([range(self.avg), np.ones(self.avg)]).T 
 
     def set_target_temperature(self, temp):
         """ Set the desired temperature of the extruder """
@@ -54,7 +60,7 @@ class Heater(object):
 
     def get_temperature(self):
         """ get the temperature of the thermistor"""
-        return self.current_temp
+        return np.average(self.temperatures[-self.avg:])
 
     def is_target_temperature_reached(self):
         """ Returns true if the target temperature is reached """
@@ -62,6 +68,16 @@ class Heater(object):
             return True
         err = abs(self.current_temp - self.target_temp)
         return err < self.ok_range
+
+    def is_temperature_stable(self, seconds=10):
+        """ Returns true if the temperature has been stable for n seconds """
+        if len(self.temperatures) < int(seconds/self.sleep):
+            return False
+        if max(self.temperatures[-int(seconds/self.sleep):]) > (self.target_temp + self.ok_range):
+            return False
+        if min(self.temperatures[-int(seconds/self.sleep):]) < (self.target_temp - self.ok_range):
+            return False
+        return True
 
     def disable(self):
         """ Stops the heater and the PID controller """
@@ -80,8 +96,20 @@ class Heater(object):
         """ PID Thread that keeps the temperature stable """
         while self.enabled:
             self.current_temp = self.thermistor.get_temperature()
+            self.temperatures.append(self.current_temp)
             error = self.target_temp-self.current_temp
+            self.errors.append(error)
 
+            # Use linear regression to find the error and derivative 
+            y = self.errors[-self.avg:]
+            if len(self.errors) >= self.avg:
+                derivative, avg_error = np.linalg.lstsq(self.A, y)[0]
+            else:
+                avg_error = error
+                derivative = 0
+
+            if self.name =="E":
+                logging.debug("Err: "+str(error)+" avg err: "+str(avg_error)+" der: "+str(derivative))
             if self.onoff_control:
                 if error > 1.0:
                     power = 1.0
@@ -97,33 +125,34 @@ class Heater(object):
                     self.error_integral = 0
                     self.last_error = error
                 else:
-                    derivative = self._getErrorDerivative(error)
+                    #derivative = self._getErrorDerivative(error)
                     integral = self._getErrorIntegral(error)
-                    power = self.P*error + self.D*derivative + self.I*integral  # The (right) formula for the PID				
+                    power = self.P*(avg_error + self.D*derivative + self.I*integral)  # The standard formula for the PID				
                     power = max(min(power, 1.0), 0.0)                           # Normalize to 0,1
 
             # If the Thermistor is disconnected or running away or something
             if self.current_temp <= 5 or self.current_temp > 250:
                 power = 0
             self.mosfet.set_power(power)
-            if self.current_time-self.prev_time > 2:
+            time_diff = self.current_time-self.prev_time
+            if time_diff > 2:
                 logging.warning("Heater time update large: " +
                                 self.name + " temp: " +
                                 str(self.current_temp) + " time delta: " +
                                 str(self.current_time-self.prev_time))
             self.prev_time = self.current_time
             self.current_time = time.time()
-            time.sleep(1)
+            time.sleep(self.sleep)
 
     def _getErrorDerivative(self, current_error):
         """ Get the derivative of the error term """
-        derivative = current_error-self.last_error		# Calculate the diff
+        derivative = (current_error-self.last_error)/self.sleep		# Calculate the diff
         self.last_error = current_error					      # Update the last error 
         return derivative
 
     def _getErrorIntegral(self, error):
         """ Calculate and return the error integral """
-        self.error_integral += error
+        self.error_integral += error*self.sleep
         return self.error_integral
 
 
@@ -132,6 +161,7 @@ class Extruder(Heater):
     def __init__(self, smd, thermistor, mosfet, name, onoff_control):
         Heater.__init__(self, thermistor, mosfet, name, onoff_control)
         self.smd = smd
+        self.sleep = 0.1
         self.enable()
 
 
@@ -139,4 +169,5 @@ class HBP(Heater):
     """ Subclass for heater, this is a Heated build platform """
     def __init__(self, thermistor, mosfet, onoff_control):
         Heater.__init__(self, thermistor, mosfet, "HBP", onoff_control)
+        self.sleep = 0.5 # Heaters have more thermal mass
         self.enable()
