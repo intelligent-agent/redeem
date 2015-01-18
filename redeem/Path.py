@@ -85,6 +85,7 @@ class Path:
         self.end_pos = None
         self.num_steps = None
         self.delta = None
+        self.compensation = None
         self.split_size = 0.001
 
     def is_G92(self):
@@ -156,15 +157,21 @@ class Path:
 
         return ret_vec
 
+    @staticmethod
+    def backlash_reset():
+	Path.backlash_state = np.zeros(Path.NUM_AXES)
+
     def backlash_compensate(self):
         """ Apply compensation to the distance taken if the direction of the axis has changed. """
         ret_vec = np.zeros(Path.NUM_AXES)
-        for index, d in enumerate(self.delta):
-            dirstate = np.sign(d)
-            if (dirstate != 0) and (dirstate != Path.backlash_state[index]):
-                ret_vec[index] = dirstate * Path.backlash_compensation[index]
-                # Save new backlash state
-                Path.backlash_state[index] = dirstate
+        if self.use_backlash_compensation:
+            for index, d in enumerate(self.delta):
+                dirstate = np.sign(d)
+                #Compensate only if the direction has changed
+                if (dirstate != 0) and (dirstate != Path.backlash_state[index]):
+                    ret_vec[index] = dirstate * Path.backlash_compensation[index]
+                    # Save new backlash state
+                    Path.backlash_state[index] = dirstate
         return ret_vec
 
     def needs_splitting(self):
@@ -253,16 +260,11 @@ class AbsolutePath(Path):
         num_steps = np.ceil(np.abs(vec) * Path.steps_pr_meter)
         self.num_steps = num_steps
         self.delta = np.sign(vec) * num_steps / Path.steps_pr_meter
-        if self.use_backlash_compensation:
-            compensation = self.backlash_compensate();
-            self.delta += compensation
+        self.compensation = self.backlash_compensate();
         vec = self.reverse_transform_vector(self.delta, self.start_pos)
 
         # Set stepper and true posision
-        if self.use_backlash_compensation:
-            self.end_pos = self.start_pos + vec - compensation
-        else:
-            self.end_pos = self.start_pos + vec
+        self.end_pos = self.start_pos + vec
         self.stepper_end_pos = self.start_pos + self.delta
         self.rounded_vec = vec
 
@@ -296,16 +298,11 @@ class RelativePath(Path):
         vec = self.transform_vector(self.vec, self.start_pos)
         self.num_steps = np.ceil(np.abs(vec) * Path.steps_pr_meter)
         self.delta = np.sign(vec) * self.num_steps / Path.steps_pr_meter
-        if self.use_backlash_compensation:
-            compensation = self.backlash_compensate();
-            self.delta += compensation
+        self.compensation = self.backlash_compensate();
         vec = self.reverse_transform_vector(self.delta, self.start_pos)
 
         # Set stepper and true posision
-        if self.use_backlash_compensation:
-            self.end_pos = self.start_pos + vec - compensation
-        else:
-            self.end_pos = self.start_pos + vec
+        self.end_pos = self.start_pos + vec
         self.stepper_end_pos = self.start_pos + self.delta
         self.rounded_vec = vec
 
@@ -338,3 +335,31 @@ class G92Path(Path):
                 self.end_pos[index] = self.axes[axis]
         self.vec = np.zeros(Path.NUM_AXES)
         self.rounded_vec = self.vec
+
+class CompensationPath(Path):
+    """ A path segment with relative movement and resets axes """
+    def __init__(self, axes, speed, cancelable=False, use_bed_matrix=True, use_backlash_compensation=True):
+        Path.__init__(self, axes, speed, cancelable, use_bed_matrix, use_backlash_compensation)
+        self.movement = Path.RELATIVE
+
+    def set_prev(self, prev):
+        """ Link to previous segment """
+        self.prev = prev
+        prev.next = self
+        self.start_pos = prev.end_pos
+
+        # Generate the vector 
+        self.vec = np.zeros(Path.NUM_AXES, dtype=Path.DTYPE)
+        for index, axis in enumerate(Path.AXES):
+            if axis in self.axes:
+                self.vec[index] = self.axes[axis]
+
+        # Compute stepper translation
+        self.num_steps = np.ceil(np.abs(self.vec) * Path.steps_pr_meter)
+        self.delta = np.sign(self.vec) * self.num_steps / Path.steps_pr_meter
+
+        # Set stepper and true posision
+        self.end_pos = self.start_pos
+        self.stepper_end_pos = self.start_pos + self.delta
+        self.rounded_vec = self.vec
+

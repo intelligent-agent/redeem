@@ -25,7 +25,7 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
 """
 
 import logging
-from Path import Path, AbsolutePath, RelativePath, G92Path
+from Path import Path, CompensationPath, AbsolutePath, RelativePath, G92Path
 from Printer import Printer
 import numpy as np
 
@@ -154,9 +154,13 @@ class PathPlanner:
         self.add_path(p)
 
         # Move to offset
-        p = AbsolutePath(path_zero, speed)
+        p = AbsolutePath(path_zero, speed, True, False, False)
         self.add_path(p)
         self.wait_until_done()
+
+        # Reset backlash compensation
+        Path.backlash_reset()
+
         logging.debug("homing done for " + str(axis))
 
     def home(self, axis):
@@ -218,6 +222,11 @@ class PathPlanner:
         # Link to the previous segment in the chain
         new.set_prev(self.prev)
 
+        if new.compensation is not None:
+            # Apply a backlash compensation move
+            self.add_path(CompensationPath(new.compensation, new.speed, False, False, False))
+            new.compensation = None
+
         if new.needs_splitting():
             logging.debug("Path needs splitting")
             path_batch = new.get_delta_segments()
@@ -232,7 +241,6 @@ class PathPlanner:
                 self.prev = path
                 self.prev.unlink()
                 #logging.debug( str(path.start_pos) + " to " + str(path.stepper_end_pos))
-
 
 
             # Queue the entire batch at once.
