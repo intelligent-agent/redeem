@@ -108,8 +108,8 @@ class Heater(object):
                 avg_error = error
                 derivative = 0
 
-            if self.name =="E":
-                logging.debug("Err: "+str(error)+" avg err: "+str(avg_error)+" der: "+str(derivative))
+            #if self.name =="E":
+            #    logging.debug("Err: "+str(error)+" avg err: "+str(avg_error)+" der: "+str(derivative))
             if self.onoff_control:
                 if error > 1.0:
                     power = 1.0
