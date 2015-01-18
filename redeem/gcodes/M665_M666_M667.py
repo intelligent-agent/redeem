@@ -28,7 +28,7 @@ class M665(GCodeCommand):
 	    Delta.L = float(g.get_value_by_letter("L"))
 
 	if g.has_letter("R"):
-            Delta.R = float(g.get_value_by_letter("R"))
+            Delta.r = float(g.get_value_by_letter("R"))
  
         if g.has_letter("S"):
                 logging.info("M665 S (segments/second) specified, but not implemented.")

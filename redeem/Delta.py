@@ -23,6 +23,7 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
 
 # Helper functions for kinematics for Delta printers
 import numpy as np  # Needed for sqrt
+import logging
 
 
 class Delta:
@@ -48,35 +49,43 @@ class Delta:
     Cpxe = 0.00
     Cpye = 0.00
 
+    @staticmethod
+    def recalculate():
     
-    # Column theta
-    At = np.pi / 2.0
-    Bt = 7.0 * np.pi / 6.0
-    Ct = 11.0 * np.pi / 6.0
+        # Column theta
+        At = np.pi / 2.0
+        Bt = 7.0 * np.pi / 6.0
+        Ct = 11.0 * np.pi / 6.0
 
-    # Calculate the column positions
-    Apx = (Aco + r)*np.cos(At) + Apxe
-    Apy = (Aco + r)*np.sin(At) + Apye
-    Bpx = (Bco + r)*np.cos(Bt) + Bpxe
-    Bpy = (Bco + r)*np.sin(Bt) + Bpye
-    Cpx = (Cco + r)*np.cos(Ct) + Cpxe
-    Cpy = (Cco + r)*np.sin(Ct) + Cpye
+        # Calculate the column positions 
+        Apx = (Delta.Aco + Delta.r)*np.cos(At) + Delta.Apxe
+        Apy = (Delta.Aco + Delta.r)*np.sin(At) + Delta.Apye
+        Bpx = (Delta.Bco + Delta.r)*np.cos(Bt) + Delta.Bpxe
+        Bpy = (Delta.Bco + Delta.r)*np.sin(Bt) + Delta.Bpye
+        Cpx = (Delta.Cco + Delta.r)*np.cos(Ct) + Delta.Cpxe
+        Cpy = (Delta.Cco + Delta.r)*np.sin(Ct) + Delta.Cpye
 
-    # Calculate the effector positions
-    Aex = Ae*np.cos(At)
-    Aey = Ae*np.sin(At)
-    Bex = Be*np.cos(Bt)
-    Bey = Be*np.sin(Bt)
-    Cex = Ce*np.cos(Ct)
-    Cey = Ce*np.sin(Ct)
+        # Calculate the effector positions
+        Aex = Delta.Ae*np.cos(At)
+        Aey = Delta.Ae*np.sin(At)
+        Bex = Delta.Be*np.cos(Bt)
+        Bey = Delta.Be*np.sin(Bt)
+        Cex = Delta.Ce*np.cos(Ct)
+        Cey = Delta.Ce*np.sin(Ct)
 
-    # Calculate the virtual column positions
-    Avx = Apx - Aex
-    Avy = Apy - Aey
-    Bvx = Bpx - Bex
-    Bvy = Bpy - Bey
-    Cvx = Cpx - Cex
-    Cvy = Cpy - Cey
+        # Calculate the virtual column positions
+        Delta.Avx = Apx - Aex
+        Delta.Avy = Apy - Aey
+        Delta.Bvx = Bpx - Bex
+        Delta.Bvy = Bpy - Bey
+        Delta.Cvx = Cpx - Cex
+        Delta.Cvy = Cpy - Cey
+
+        logging.info("Delta calibration calculated. Current settings:")
+        logging.info("Column A(X): Acoe="+str(Delta.Aco)+" Apxe="+str(Delta.Apxe)+" Apye="+str(Delta.Apye))
+        logging.info("Column B(X): Bcoe="+str(Delta.Bco)+" Bpxe="+str(Delta.Bpxe)+" Bpye="+str(Delta.Bpye))
+        logging.info("Column C(X): Ccoe="+str(Delta.Cco)+" Cpxe="+str(Delta.Cpxe)+" Cpye="+str(Delta.Cpye))
+        logging.info("Radius (r) ="+str(Delta.r)+" Rod Length (L)="+str(Delta.L))
 
     @staticmethod
     def inverse_kinematics(X, Y, Z):

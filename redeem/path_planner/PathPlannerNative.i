@@ -1,6 +1,13 @@
 %module PathPlannerNative
 
 
+%{
+#define SWIG_FILE_WITH_INIT
+%}
+%include "numpy.i"
+%init %{
+import_array();
+%}
 %include "typemaps.i"
 %include "std_string.i"
 %include <std_vector.i>
@@ -79,7 +86,9 @@
   }
 }
 
-
+%apply (FLOAT_T* IN_ARRAY1, int DIM1 ) { (FLOAT_T* value, int othervalue) }
+%apply (FLOAT_T* IN_ARRAY1, int DIM1 ) { (FLOAT_T* batchData, int batchSize) }
+// %apply (int DIM1, FLOAT_T* IN_ARRAY1, FLOAT_T NONZERO, bool INPUT, bool INPUT) { (int batchSize, FLOAT_T* batchData, FLOAT_T speed, bool cancelable, bool optimize) }
 
 class Extruder {
 public:
@@ -156,19 +165,38 @@ public:
     return pru.initPRU(firmware_stepper, firmware_endstops);
   }
 
-  /**
-   * @brief Queue a line move for execution
-   * @details Queue a line move execution in the path planner. Note that the path planner 
-   * has no internal state in term of printer head position. Therefore you have 
-   * to pass the correct start and end position everytime.
-   * 
+  /**                                                           
+   * @brief Queue a line move for execution          
+   * @details Queue a line move execution in the path planner. Note that the path planner
+   * has no internal state in term of printer head position. Therefore you have
+   * to pass the correct start and end position everytime.     
+   *                                                        
    * The coordinates unit is in meters. As a general rule, every public method of this class use SI units.
-   * 
+   *
    * @param startPos The starting position of the path in meters
-   * @param  endPose The end position of the path in meters
+   * @param endPos The end position of the path in meters
    * @param speed The feedrate (aka speed) of the move in m/s
+   * @param cancelable flags the move as cancelable.
+   * @param optimize Wait for additional commands to fill the buffer, to optimize speed.
    */
   void queueMove(FLOAT_T startPos[NUM_AXIS], FLOAT_T endPos[NUM_AXIS], FLOAT_T speed, bool cancelable, bool optimize);
+
+
+ /**
+   * @brief Queue a batch of line moves for execution
+   * @details Queue a batch of line moves for execution in the path planner. Note that the path planner
+   * has no internal state in term of printer head position. Therefore you have
+   * to pass the correct start and end position everytime.
+   *         
+   * The coordinates unit is in meters. As a general rule, every public method of this class use SI units.
+   *       
+   * @param numSegments number of line moves being queued
+   * @param segments Block of FLOAT_T* line segments with startPos, endPos, and speed, for each segment
+   * @param speed The feedrate (aka speed) of the move in m/s
+   * @param cancelable flags the entire group of moves as cancelable.
+   * @param optimize Waits upto PRINT_MOVE_BUFFER_WAIT to perform speed optimization on an entire group of moves.
+   */          
+  void queueBatchMove(FLOAT_T* batchData, int batchSize, FLOAT_T NONZERO, bool cancelable, bool optimize);
   
   /**
    * @brief Run the path planner thread

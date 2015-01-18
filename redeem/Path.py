@@ -65,13 +65,16 @@ class Path:
         Path.max_speeds = np.ones(num_axes)
         Path.home_speed = np.ones(num_axes)
         Path.steps_pr_meter = np.ones(num_axes)
+	Path.backlash_compensation = np.zeros(num_axes)
+	Path.backlash_state = np.zeros(num_axes)
 
-    def __init__(self, axes, speed,  cancelable=False, use_bed_matrix=True):
+    def __init__(self, axes, speed,  cancelable=False, use_bed_matrix=True, use_backlash_compensation=True):
         """ The axes of evil, the feed rate in m/s and ABS or REL """
         self.axes = axes
         self.speed = speed
         self.cancelable = int(cancelable)
         self.use_bed_matrix = int(use_bed_matrix)
+        self.use_backlash_compensation = int(use_backlash_compensation)
         self.mag = None
         self.pru_data = []
         self.next = None
@@ -82,6 +85,7 @@ class Path:
         self.end_pos = None
         self.num_steps = None
         self.delta = None
+        self.split_size = 0.001
 
     def is_G92(self):
         """ Special path, only set the global position on this """
@@ -152,9 +156,22 @@ class Path:
 
         return ret_vec
 
+    def backlash_compensate(self):
+        """ Apply compensation to the distance taken if the direction of the axis has changed. """
+        ret_vec = np.zeros(Path.NUM_AXES)
+        for index, d in enumerate(self.delta):
+            dirstate = np.sign(d)
+            if (dirstate != 0) and (dirstate != Path.backlash_state[index]):
+                ret_vec[index] = dirstate * Path.backlash_compensation[index]
+                # Save new backlash state
+                Path.backlash_state[index] = dirstate
+        return ret_vec
+
     def needs_splitting(self):
         """ Return true if this is a delta segment and longer than 1 mm """
-        return (Path.axis_config == Path.AXIS_CONFIG_DELTA and self.get_magnitude() > 0.001)
+        return (Path.axis_config == Path.AXIS_CONFIG_DELTA 
+            and self.get_magnitude() > self.split_size
+            and np.any(self.vec[:2])) # If there is no movement along the XY axis (Z+extruders) only, don't split.
 
     def get_magnitude(self):
         """ Returns the magnitde in XYZ dim """
@@ -165,16 +182,34 @@ class Path:
         return self.mag
 
     def get_delta_segments(self):
-        """ A delta segment must be split into lengths of 1 mm """
-        num_segments = np.ceil(self.get_magnitude()/0.001)+1
+        """ A delta segment must be split into lengths of self.split_size (default 1 mm) """
+        if not self.needs_splitting():
+            return [self]
+
+        num_segments = np.ceil(self.get_magnitude()/self.split_size)+1
         vals = np.transpose([
                     np.linspace(
                         self.start_pos[i], 
                         self.end_pos[i], 
                         num_segments
-                    ) for i in xrange(4)]) 
+                        ) for i in xrange(4)]) 
         vals = np.delete(vals, 0, axis=0)
-        return [dict(zip(["X", "Y", "Z", "E"], list(val))) for val in vals]
+        vec_segments = [dict(zip(["X", "Y", "Z", "E"], list(val))) for val in vals]
+        path_segments = []
+
+        for index, segment in enumerate(vec_segments):
+            path = AbsolutePath(segment, self.speed, self.cancelable, self.use_bed_matrix, False)
+            if index is not 0:
+                path.set_prev(path_segments[-1])
+            else:
+                path.set_prev(self.prev)
+            new_segments = path.get_delta_segments()
+
+            # Stitch the new elements in
+            path_segments.extend(new_segments)
+
+        return path_segments
+        
 
     def __str__(self):
         """ The vector representation of this path segment """
@@ -196,8 +231,8 @@ class Path:
 
 class AbsolutePath(Path):
     """ A path segment with absolute movement """
-    def __init__(self, axes, speed, cancelable=False, use_bed_matrix=True):
-        Path.__init__(self, axes, speed, cancelable, use_bed_matrix)
+    def __init__(self, axes, speed, cancelable=False, use_bed_matrix=True, use_backlash_compensation=True):
+        Path.__init__(self, axes, speed, cancelable, use_bed_matrix, use_backlash_compensation)
         self.movement = Path.ABSOLUTE
 
     def set_prev(self, prev):
@@ -218,10 +253,16 @@ class AbsolutePath(Path):
         num_steps = np.ceil(np.abs(vec) * Path.steps_pr_meter)
         self.num_steps = num_steps
         self.delta = np.sign(vec) * num_steps / Path.steps_pr_meter
+        if self.use_backlash_compensation:
+            compensation = self.backlash_compensate();
+            self.delta += compensation
         vec = self.reverse_transform_vector(self.delta, self.start_pos)
 
         # Set stepper and true posision
-        self.end_pos = self.start_pos + vec
+        if self.use_backlash_compensation:
+            self.end_pos = self.start_pos + vec - compensation
+        else:
+            self.end_pos = self.start_pos + vec
         self.stepper_end_pos = self.start_pos + self.delta
         self.rounded_vec = vec
 
@@ -235,8 +276,8 @@ class AbsolutePath(Path):
 
 class RelativePath(Path):
     """ A path segment with Relative movement """
-    def __init__(self, axes, speed, cancelable=False, use_bed_matrix=True):
-        Path.__init__(self, axes, speed, cancelable, use_bed_matrix)
+    def __init__(self, axes, speed, cancelable=False, use_bed_matrix=True, use_backlash_compensation=True):
+        Path.__init__(self, axes, speed, cancelable, use_bed_matrix, use_backlash_compensation)
         self.movement = Path.RELATIVE
 
     def set_prev(self, prev):
@@ -255,11 +296,16 @@ class RelativePath(Path):
         vec = self.transform_vector(self.vec, self.start_pos)
         self.num_steps = np.ceil(np.abs(vec) * Path.steps_pr_meter)
         self.delta = np.sign(vec) * self.num_steps / Path.steps_pr_meter
+        if self.use_backlash_compensation:
+            compensation = self.backlash_compensate();
+            self.delta += compensation
         vec = self.reverse_transform_vector(self.delta, self.start_pos)
 
-
-        # Set stepper and true position
-        self.end_pos = self.start_pos + vec
+        # Set stepper and true posision
+        if self.use_backlash_compensation:
+            self.end_pos = self.start_pos + vec - compensation
+        else:
+            self.end_pos = self.start_pos + vec
         self.stepper_end_pos = self.start_pos + self.delta
         self.rounded_vec = vec
 

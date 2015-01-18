@@ -148,6 +148,8 @@ class Redeem:
         for opt in opts:
             Delta.__dict__[opt] = printer.config.getfloat('Delta', opt)
 
+        Delta.recalculate()
+
         # Set up cold ends
         path = self.printer.config.get('Cold-ends', 'path', 0)
         if os.path.exists(path):
@@ -258,6 +260,7 @@ class Redeem:
             Path.max_speeds[i] = printer.config.getfloat('Steppers', 'max_speed_'+axis.lower())
             Path.home_speed[i] = printer.config.getfloat('Steppers', 'home_speed_'+axis.lower())
             Path.steps_pr_meter[i] = printer.steppers[axis].get_steps_pr_meter()
+            Path.backlash_compensation[i] = printer.config.getfloat('Steppers', 'backlash_'+axis.lower())
 
         dirname = os.path.dirname(os.path.realpath(__file__))
 
