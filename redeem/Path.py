@@ -164,6 +164,7 @@ class Path:
     def backlash_compensate(self):
         """ Apply compensation to the distance taken if the direction of the axis has changed. """
         ret_vec = np.zeros(Path.NUM_AXES)
+        comp_applied = False
         if self.use_backlash_compensation:
             for index, d in enumerate(self.delta):
                 dirstate = np.sign(d)
@@ -172,6 +173,9 @@ class Path:
                     ret_vec[index] = dirstate * Path.backlash_compensation[index]
                     # Save new backlash state
                     Path.backlash_state[index] = dirstate
+                    comp_applied = True               
+            if comp_applied is True:
+                self.compensation = ret_vec;
         return ret_vec
 
     def needs_splitting(self):
@@ -260,8 +264,10 @@ class AbsolutePath(Path):
         num_steps = np.ceil(np.abs(vec) * Path.steps_pr_meter)
         self.num_steps = num_steps
         self.delta = np.sign(vec) * num_steps / Path.steps_pr_meter
-        self.compensation = self.backlash_compensate();
         vec = self.reverse_transform_vector(self.delta, self.start_pos)
+
+        # Calculate compensation
+        self.backlash_compensate()
 
         # Set stepper and true posision
         self.end_pos = self.start_pos + vec
@@ -298,8 +304,31 @@ class RelativePath(Path):
         vec = self.transform_vector(self.vec, self.start_pos)
         self.num_steps = np.ceil(np.abs(vec) * Path.steps_pr_meter)
         self.delta = np.sign(vec) * self.num_steps / Path.steps_pr_meter
-        self.compensation = self.backlash_compensate();
         vec = self.reverse_transform_vector(self.delta, self.start_pos)
+
+        # Calculate compensation
+        self.backlash_compensate()
+
+        # Set stepper and true posision
+        self.end_pos = self.start_pos + vec
+        self.stepper_end_pos = self.start_pos + self.delta
+        self.rounded_vec = vec
+
+        if np.isnan(vec).any():
+            self.end_pos = self.start_pos
+            self.num_steps = np.zeros(Path.NUM_AXES)
+            self.delta = np.zeros(Path.NUM_AXES)
+
+        prev.next = self
+
+
+class RelativePath(Path):
+    """ A path segment with Relative movement """
+    def __init__(self, axes, speed, cancelable=False, use_bed_matrix=True, use_backlash_compensation=True):
+        Path.__init__(self, axes, speed, cancelable, use_bed_matrix, use_backlash_compensation)
+        self.movement = Path.RELATIVE
+
+    def set_prev(self, prev):
 
         # Set stepper and true posision
         self.end_pos = self.start_pos + vec
