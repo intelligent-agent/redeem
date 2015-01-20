@@ -225,10 +225,8 @@ class PathPlanner:
         if new.compensation is not None:
             # Apply a backlash compensation move
             self.add_path(CompensationPath(new.compensation, new.speed, False, False, False))
-            new.compensation = None
 
         if new.needs_splitting():
-            logging.debug("Path needs splitting")
             path_batch = new.get_delta_segments()
             # Construct a batch
             batch_array = np.zeros(shape=(len(path_batch)*2*4),dtype=np.float64)     # Change this to reflect NUM_AXIS.
@@ -240,8 +238,6 @@ class PathPlanner:
                 
                 self.prev = path
                 self.prev.unlink()
-                #logging.debug( str(path.start_pos) + " to " + str(path.stepper_end_pos))
-
 
             # Queue the entire batch at once.
             self.printer.ensure_steppers_enabled()
@@ -254,7 +250,6 @@ class PathPlanner:
         if not new.is_G92():
             self.printer.ensure_steppers_enabled()
             #push this new segment   
-            logging.debug("Pushing start_pos = "+str(tuple(new.start_pos[:4]))+ " stepper_end_pos " +str(tuple(new.stepper_end_pos[:4]))+ " speed = " + str(new.speed)+" Cancelable = "+str(bool(new.cancelable))+" Absolute = "+str(bool(new.movement != Path.RELATIVE)))
             self.native_planner.queueMove(tuple(new.start_pos[:4]),
                                           tuple(new.stepper_end_pos[:4]), new.speed,
                                           bool(new.cancelable),

@@ -338,28 +338,30 @@ class G92Path(Path):
 
 class CompensationPath(Path):
     """ A path segment with relative movement and resets axes """
-    def __init__(self, axes, speed, cancelable=False, use_bed_matrix=True, use_backlash_compensation=True):
+    def __init__(self, axes, speed, cancelable=False, use_bed_matrix=False, use_backlash_compensation=False):
         Path.__init__(self, axes, speed, cancelable, use_bed_matrix, use_backlash_compensation)
         self.movement = Path.RELATIVE
+
+    def needs_splitting(self):
+        return False
 
     def set_prev(self, prev):
         """ Link to previous segment """
         self.prev = prev
         prev.next = self
-        self.start_pos = prev.end_pos
+        self.start_pos = np.zeros(Path.NUM_AXES, dtype=Path.DTYPE)
 
         # Generate the vector 
         self.vec = np.zeros(Path.NUM_AXES, dtype=Path.DTYPE)
         for index, axis in enumerate(Path.AXES):
-            if axis in self.axes:
-                self.vec[index] = self.axes[axis]
+            self.vec = self.axes
 
         # Compute stepper translation
         self.num_steps = np.ceil(np.abs(self.vec) * Path.steps_pr_meter)
         self.delta = np.sign(self.vec) * self.num_steps / Path.steps_pr_meter
 
         # Set stepper and true posision
-        self.end_pos = self.start_pos
-        self.stepper_end_pos = self.start_pos + self.delta
+        self.end_pos = np.copy(prev.end_pos)
+        self.stepper_end_pos = self.delta
         self.rounded_vec = self.vec
 
