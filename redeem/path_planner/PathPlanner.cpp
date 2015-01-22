@@ -172,7 +172,7 @@ void PathPlanner::queueBatchMove(FLOAT_T* batchData, int batchSize, FLOAT_T spee
 	_save = PyEval_SaveThread();
 #endif
         int numSegments = batchSize / (2 * NUM_AXIS);
-	LOG( "Batching " << numSegments << " segments." << std::endl);
+	//LOG( "Batching " << numSegments << " segments." << std::endl);
 
 	unsigned int linesQueued = 0;
 	unsigned int linesCacheRemaining = 0;
@@ -185,7 +185,7 @@ void PathPlanner::queueBatchMove(FLOAT_T* batchData, int batchSize, FLOAT_T spee
 		if(linesCacheRemaining == 0)
 		{
 			std::unique_lock<std::mutex> lk(line_mutex);
-			LOG( "Waiting for free move command space... Current: " << MOVE_CACHE_SIZE - linesCount << std::endl);
+			//LOG( "Waiting for free move command space... Current: " << MOVE_CACHE_SIZE - linesCount << std::endl);
 			lineAvailable.wait(lk, [this]{return linesCount < MOVE_CACHE_SIZE || stop;});
 			linesCacheRemaining = MOVE_CACHE_SIZE - linesCount;
 		}
@@ -350,15 +350,16 @@ void PathPlanner::calculateMove(Path* p,FLOAT_T axis_diff[NUM_AXIS])
     unsigned int axisInterval[NUM_AXIS];
 	FLOAT_T timeForMove = (FLOAT_T)(F_CPU)*p->distance / (p->isXOrYMove() ? std::max(minimumSpeed,p->speed): p->speed); // time is in ticks
 	
-	/*
-	 #define MOVE_CACHE_LOW 10
+/*
+	 #define MOVE_CACHE_LOW 512
 	 if(linesCount < MOVE_CACHE_LOW)   // Limit speed to keep cache full.
 	 {
 	 #define LOW_TICKS_PER_MOVE F_CPU/50
 	 
 	 timeForMove += (3 * (LOW_TICKS_PER_MOVE-timeForMove)) / (linesCount+1); // Increase time if queue gets empty. Add more time if queue gets smaller.
 	 }
-	 */
+*/
+
 	
     p->timeInTicks = timeForMove;
 	
@@ -767,7 +768,7 @@ void PathPlanner::run() {
 		Path* cur = &lines[linesPos];
 		
 		//If the buffer is half or more empty and the line to print is an optimized one , wait for 500 ms again so that we can get some other path in the path planner buffer, and we do that until the buffer is not anymore half empty.
-		if(linesCount<MOVE_CACHE_SIZE/2 && cur->getWaitMS()>0 && waitUntilFilledUp) {
+		if(linesCount<MOVE_CACHE_SIZE/8 && cur->getWaitMS()>0 && waitUntilFilledUp) {
 			unsigned lastCount = 0;
 			LOG("Waiting for buffer to fill up... " << linesCount  << " lines pending " << lastCount << std::endl);
 			do { 
@@ -775,7 +776,7 @@ void PathPlanner::run() {
 				
 				lineAvailable.wait_for(lk,  std::chrono::milliseconds(PRINT_MOVE_BUFFER_WAIT), [this,lastCount]{return linesCount>lastCount || stop;});
 				
-			} while(lastCount<linesCount && linesCount<MOVE_CACHE_SIZE/2 && !stop);
+			} while(lastCount<linesCount && linesCount<MOVE_CACHE_SIZE && !stop);
 			LOG("Done waiting for buffer to fill up... " << linesCount  << " lines ready. " << lastCount << std::endl);
 			
 			waitUntilFilledUp = false;

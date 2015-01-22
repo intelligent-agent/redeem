@@ -534,7 +534,7 @@ void PruTimer::waitUntilFinished() {
 
 void PruTimer::waitUntilLowMoveTime(unsigned long lowMoveTimeTicks) {
 	std::unique_lock<std::mutex> lk(mutex_memory);
-	blockAvailable.wait(lk, [this,lowMoveTimeTicks]{ LOG("Current wait " << totalQueuedMovesTime << "/" << lowMoveTimeTicks <<  std::endl); return totalQueuedMovesTime<lowMoveTimeTicks || stop; });
+	blockAvailable.wait(lk, [this,lowMoveTimeTicks]{ /* LOG("Current wait " << totalQueuedMovesTime << "/" << lowMoveTimeTicks <<  std::endl); */ return totalQueuedMovesTime<lowMoveTimeTicks || stop; });
 }
 
 void PruTimer::run() {
@@ -605,7 +605,7 @@ void PruTimer::run() {
 				
 				assert(ddr_mem_used<ddr_size);
 				
-				LOG( "Block of size " << std::dec << front.size << " and time " << front.totalTime << " done." << std::endl);
+				// LOG( "Block of size " << std::dec << front.size << " and time " << front.totalTime << " done." << std::endl);
 
 				blocksID.pop();
 				
