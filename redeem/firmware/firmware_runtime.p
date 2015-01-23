@@ -9,9 +9,8 @@
 #define CYCLE_TO_NS         1000000000/PRU_SPEED      //Number of cycles in 1 ns
 #define NS_TO_CYCLE         PRU_SPEED/1000000000      //Number of ns in one cycle
 
-#define PRU0_ARM_INTERRUPT  32
-#define EVTOUT0             3
-#define EVTOUT1             4
+#define PRU0_ARM_INTERRUPT  35
+#define PRU1_ARM_INTERRUPT  36
 #define GPIO_DATAOUT        0x13c               // This is the register for setting data 
 #define GPIO_DATAIN         0x138               // This is the register for reading data 
 #define GPIO0               0x44E07000          // The adress of the GPIO0 bank
@@ -146,7 +145,7 @@ INIT:
     
     MOV r22, 0
 
-    //MOV R31.b0, PRU0_ARM_INTERRUPT+EVTOUT0                    // Send notification to Host that the instructions are done
+    //MOV R31.b0, PRU0_ARM_INTERRUPT	                    // Send notification to Host that the instructions are done
     
 RESET_R4:   
     MOV  r0, 0  
@@ -385,7 +384,7 @@ SELFSUSPEND:
 
 SYNCHRONIZE:
 
-    MOV R31.b0, PRU0_ARM_INTERRUPT+EVTOUT1                       // Send sync event to Host
+    MOV R31.b0, PRU1_ARM_INTERRUPT	                    // Send sync event to Host
 
 SUSPENDED:
     LBBO r0, r27, 0, 4                                      //Check if we are suspended or not
@@ -397,7 +396,7 @@ CANCEL_COMMAND_AFTER:
             
     ADD r5, r5, 1                                           // r5++, r5 is the event_counter.
     SBBO r5, r6, 0, 4                                       // store the number of interrupts that have occured in the second reg of DRAM
-    MOV R31.b0, PRU0_ARM_INTERRUPT+EVTOUT0                  // Send notification to Host that the instructions are done
+    MOV R31.b0, PRU0_ARM_INTERRUPT		            // Send notification to Host that the instructions are done
             
     MOV  r3, DDR_MAGIC                                      // Load the fancy word into r3
     LBBO r2, r4, 0, 4                                       // Load the next data into r2

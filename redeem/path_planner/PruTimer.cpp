@@ -582,11 +582,11 @@ void PruTimer::run() {
 		
 		*ddr_nr_events=(*ddr_nr_events)+1;
 #else
-		unsigned int nbWaitedEvent = prussdrv_pru_wait_event (PRU_EVTOUT_0,1000); //250ms timeout
+		unsigned int nbWaitedEvent = prussdrv_pru_wait_event (PRU_EVTOUT_0,1000); // 250ms timeout
 #endif
 		if(stop) break;
 		
-		//LOG( ("\tINFO: PRU0 completed transfer.\r\n"));
+//		LOG( ("\tINFO: PRU0 completed transfer.\r\n"));
 		
 #ifndef DEMO_PRU
 		if(nbWaitedEvent)
@@ -602,7 +602,7 @@ void PruTimer::run() {
 		{
 			std::lock_guard<std::mutex> lk(mutex_memory);
 			
-			//LOG( "NB event " << nb << " / " << currentNbEvents << "\t\tRead event from UIO = " << nbWaitedEvent << ", block in the queue: " << ddr_used.size() << std::endl);
+//			LOG( "NB event " << nb << " / " << currentNbEvents << "\t\tRead event from UIO = " << nbWaitedEvent << ", block in the queue: " << ddr_mem_used << std::endl);
 
 			while(currentNbEvents!=nb && !blocksID.empty()) { //We use != to handle the overflow case
 				
@@ -613,7 +613,7 @@ void PruTimer::run() {
 				
 				assert(ddr_mem_used<ddr_size);
 				
-				// LOG( "Block of size " << std::dec << front.size << " and time " << front.totalTime << " done." << std::endl);
+//				LOG( "Block of size " << std::dec << front.size << " and time " << front.totalTime << " done." << std::endl);
 
 				blocksID.pop();
 				
@@ -625,8 +625,8 @@ void PruTimer::run() {
 		
 		
 		
-		//LOG( "NB event after " << std::dec << nb << " / " << currentNbEvents << std::endl);
-		//LOG( std::dec <<ddr_mem_used << " bytes used, free: " <<std::dec <<  ddr_size-ddr_mem_used<< "." << std::endl);
+//		LOG( "NB event after " << std::dec << nb << " / " << currentNbEvents << std::endl);
+//		LOG( std::dec <<ddr_mem_used << " bytes used, free: " <<std::dec <<  ddr_size-ddr_mem_used<< "." << std::endl);
 		
 		blockAvailable.notify_all();
 	}
@@ -635,7 +635,7 @@ void PruTimer::run() {
 void PruTimer::waitUntilSync() {
 	// Wait until the PRU sends a sync event.
 	prussdrv_pru_wait_event(PRU_EVTOUT_1, 0); 
-	prussdrv_pru_clear_event(PRU_EVTOUT_1, PRU0_ARM_INTERRUPT); 
+	prussdrv_pru_clear_event(PRU_EVTOUT_1, PRU1_ARM_INTERRUPT); 
 }
 
 void PruTimer::suspend() {
