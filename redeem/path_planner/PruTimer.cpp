@@ -95,6 +95,14 @@ bool PruTimer::initPRU(const std::string &firmware_stepper, const std::string &f
         LOG( "prussdrv_open failed" << std::endl);
         return false;
     }
+
+    /* Open PRU sync Interrupt */
+    ret = prussdrv_open(PRU_EVTOUT_1);
+    if (ret)
+    {
+        LOG( "prussdrv_open failed (sync interrupt)" << std::endl);
+        return false;
+    }
 	
     /* Get the interrupt initialized */
     prussdrv_pruintc_init(&pruss_intc_initdata);
@@ -622,6 +630,12 @@ void PruTimer::run() {
 		
 		blockAvailable.notify_all();
 	}
+}
+
+void PruTimer::waitUntilSync() {
+	// Wait until the PRU sends a sync event.
+	prussdrv_pru_wait_event(PRU_EVTOUT_1, 0); 
+	prussdrv_pru_clear_event(PRU_EVTOUT_1, PRU0_ARM_INTERRUPT); 
 }
 
 void PruTimer::suspend() {

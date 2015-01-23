@@ -163,6 +163,68 @@ PathPlanner::PathPlanner() {
 	bzero(lines, sizeof(lines));
 }
 
+bool PathPlanner::queueSyncEvent(bool isBlocking /* = true */)
+{
+#ifdef BUILD_PYTHON_EXT
+	PyThreadState *_save; 
+	_save = PyEval_SaveThread();
+#endif
+	// If the move command buffer isn't empty, make the last line a sync event
+	{	
+		std::unique_lock<std::mutex> lk(line_mutex);
+		if(linesCount > 0)
+		{
+			unsigned int lastLine = (linesWritePos == 0) ? MOVE_CACHE_SIZE - 1 : linesWritePos - 1;
+
+			Path *p = &lines[lastLine];
+			p->setSyncEvent(isBlocking);
+#ifdef BUILD_PYTHON_EXT
+			PyEval_RestoreThread(_save);
+#endif
+			return true;
+		}
+	}
+
+#ifdef BUILD_PYTHON_EXT
+	PyEval_RestoreThread(_save);
+#endif
+	return false;	// If the move command buffer is completly empty, it's too late.
+
+}
+
+void PathPlanner::waitUntilSyncEvent()
+{
+#ifdef BUILD_PYTHON_EXT
+	PyThreadState *_save; 
+	_save = PyEval_SaveThread();
+#endif
+
+	// Wait for a sync event on the stepper PRU
+	pru.waitUntilSync();
+
+#ifdef BUILD_PYTHON_EXT
+	PyEval_RestoreThread(_save);
+#endif
+}
+                     
+void PathPlanner::clearSyncEvent()
+{
+
+#ifdef BUILD_PYTHON_EXT
+	PyThreadState *_save; 
+	_save = PyEval_SaveThread();
+#endif
+
+	// Clear the sync event on the stepper PRU and resume operation.
+	pru.resume();
+
+
+#ifdef BUILD_PYTHON_EXT
+	PyEval_RestoreThread(_save);
+#endif
+
+}
+
 void PathPlanner::queueBatchMove(FLOAT_T* batchData, int batchSize, FLOAT_T speed, bool cancelable, bool optimize /* = true */) {
     FLOAT_T axis_diff[NUM_AXIS]; // Axis movement in mm
 	
@@ -859,7 +921,17 @@ void PathPlanner::run() {
 			SteppersCommand& cmd = cur->commands[stepNumber];
 			cmd.direction = directionMask;
 			cmd.cancellableMask = cancellableMask;
-			cmd.options = 0;
+			
+			if((stepNumber == cur->stepsRemaining - 1) && cur->isSyncEvent())
+			{
+				if(cur->isSyncWaitEvent())
+					cmd.options = STEPPER_COMMAND_OPTION_SYNCWAIT_EVENT;
+				else
+					cmd.options = STEPPER_COMMAND_OPTION_SYNC_EVENT;
+			}
+			else 
+				cmd.options = 0;
+
 			cmd.step = 0;
 			if(cur->isEMove())
 			{
@@ -931,6 +1003,7 @@ void PathPlanner::run() {
 			assert(interval < F_CPU*4);
 			cmd.delay = (uint32_t)interval;
 		} // stepsRemaining
+
 		
 		//LOG("Current move time " << pru.getTotalQueuedMovesTime() / (double) F_CPU << std::endl);
 		

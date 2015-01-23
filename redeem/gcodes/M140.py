@@ -23,4 +23,4 @@ class M140(GCodeCommand):
         return "Set heated bed temperature"
 
     def is_buffered(self):
-        return False
+        return True
