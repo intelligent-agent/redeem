@@ -31,7 +31,7 @@ import shutil
 import logging
 import os
 import os.path
-from threading import Thread, Event
+from threading import Thread
 from multiprocessing import JoinableQueue
 import Queue
 import numpy as np
