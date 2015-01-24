@@ -48,10 +48,7 @@ class USB:
                 message = self.tty.readline().strip("\n")
                 if len(message) > 0:
                     g = Gcode({"message": message, "prot": "USB"})
-                    if self.printer.processor.is_buffered(g):
-                        self.printer.commands.put(g)
-                    else:
-                        self.printer.unbuffered_commands.put(g)
+                    self.printer.processor.enqueue(g)
 
     def send_message(self, message):
         """ Send a message """

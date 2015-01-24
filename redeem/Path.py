@@ -164,7 +164,6 @@ class Path:
     def backlash_compensate(self):
         """ Apply compensation to the distance taken if the direction of the axis has changed. """
         ret_vec = np.zeros(Path.NUM_AXES)
-        comp_applied = False
         if self.use_backlash_compensation:
             for index, d in enumerate(self.delta):
                 dirstate = np.sign(d)
@@ -173,9 +172,10 @@ class Path:
                     ret_vec[index] = dirstate * Path.backlash_compensation[index]
                     # Save new backlash state
                     Path.backlash_state[index] = dirstate
-                    comp_applied = True               
-            if comp_applied is True:
+
+            if np.any(ret_vec):
                 self.compensation = ret_vec;
+
         return ret_vec
 
     def needs_splitting(self):
@@ -322,26 +322,6 @@ class RelativePath(Path):
         prev.next = self
 
 
-class RelativePath(Path):
-    """ A path segment with Relative movement """
-    def __init__(self, axes, speed, cancelable=False, use_bed_matrix=True, use_backlash_compensation=True):
-        Path.__init__(self, axes, speed, cancelable, use_bed_matrix, use_backlash_compensation)
-        self.movement = Path.RELATIVE
-
-    def set_prev(self, prev):
-
-        # Set stepper and true posision
-        self.end_pos = self.start_pos + vec
-        self.stepper_end_pos = self.start_pos + self.delta
-        self.rounded_vec = vec
-
-        # Make sure the calculations are correct, or no movement occurs:
-        if np.isnan(vec).any():
-            self.end_pos = self.start_pos
-            self.num_steps = np.zeros(Path.NUM_AXES)
-            self.delta = np.zeros(Path.NUM_AXES)
-
-
 class G92Path(Path):
     """ A reset axes path segment. No movement occurs, only global position
     setting """
@@ -393,4 +373,10 @@ class CompensationPath(Path):
         self.end_pos = np.copy(prev.end_pos)
         self.stepper_end_pos = self.delta
         self.rounded_vec = self.vec
+
+        if np.isnan(self.vec).any():
+            logging.error("Compensation Path Invalid: "+str(self.start_pos)+" to "+str(self.axes))
+            self.end_pos = prev.end_pos
+            self.num_steps = np.zeros(Path.NUM_AXES)
+            self.delta = np.zeros(Path.NUM_AXES)
 

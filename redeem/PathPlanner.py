@@ -94,6 +94,18 @@ class PathPlanner:
         """ Wait until the queue is empty """
         self.native_planner.waitUntilFinished()
 
+    def wait_until_sync_event(self):
+        """ Blocks until a PRU sync event occurs """
+        self.native_planner.waitUntilSyncEvent()
+
+    def clear_sync_event(self):
+        """ Resumes/Clears a pending sync event """
+        self.native_planner.clearSyncEvent()
+
+    def queue_sync_event(self, isBlocking):
+       """ Returns True if a sync event has been queued. False on failure.(use wait_until_done() instead) """
+       return self.native_planner.queueSyncEvent(isBlocking)
+
     def force_exit(self):
         self.native_planner.stopThread(True)
 
@@ -224,7 +236,11 @@ class PathPlanner:
 
         if new.compensation is not None:
             # Apply a backlash compensation move
-            self.add_path(CompensationPath(new.compensation, new.speed, False, False, False))
+#           CompensationPath(new.compensation, new.speed, False, False, False))
+            self.native_planner.queueMove(tuple(np.zeros(Path.NUM_AXES)[:4]),
+                                          tuple(new.compensation[:4]), new.speed,
+                                          bool(new.cancelable),
+                                          False)
 
         if new.needs_splitting():
             path_batch = new.get_delta_segments()
