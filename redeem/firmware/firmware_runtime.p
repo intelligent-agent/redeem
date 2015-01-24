@@ -61,7 +61,7 @@
     .u8     step                //Steppers are defined as 0b000HEZYX - A 1 for a stepper means we will do a step for this stepper
     .u8     direction           //Steppers are defined as 0b000HEZYX - Direction for each stepper
     .u8     cancellableMask     //If the endstop match the mask, all the move commands are canceled. 
-    .u8     options              //Options for the move, not yet used.
+    .u8     options              //Options for the move, bit 0 indicates that a sync interrupt is required. bit 1 indicates that after the sync, suspend.
     .u32    delay               //number of cycle to wait (this is the # of PRU click cycles)
 .ends
 
@@ -105,7 +105,7 @@ INIT:
     MOV  r0, 8                                              // Load the address of the pru_control, written by the host system
     LBBO r27, r0, 0, 4                                      // Put it in R27
     
-    //This parts read the GPIO IN Pins in all banks and return them to the hosts so that it can now the initial states of the end-stops.
+    //This parts read the GPIO IN Pins in all banks and return them to the hosts so that it can know the initial states of the end-stops.
 
     //Load GPIO0,1,2,3 read register content to the DDR
     MOV  r0, 0                                              // Address in DDR, starts at 0
@@ -113,7 +113,7 @@ INIT:
     ADD  r2, r2, 4  
         
     MOV  GPIO_0_IN, GPIO0 | GPIO_DATAIN                     // Load Address
-    LBBO r1, GPIO_0_IN, 0, 4                                      // Read GPIO0 INPUT content
+    LBBO r1, GPIO_0_IN, 0, 4                                // Read GPIO0 INPUT content
     SBBO r1, r2, 0, 4                                       // Put GPIO INPUT content into local RAM
     ADD  r2, r2, 4  
     
@@ -122,13 +122,13 @@ INIT:
     SBBO r1, r2, 0, 4                                       // Put GPIO INPUT content into local RAM
     ADD  r2, r2, 4  
     
-    MOV  GPIO_2_IN, GPIO2 | GPIO_DATAIN                           // Load Address
-    LBBO r1, GPIO_2_IN, 0, 4                                      // Read GPIO2 INPUT content
+    MOV  GPIO_2_IN, GPIO2 | GPIO_DATAIN                     // Load Address
+    LBBO r1, GPIO_2_IN, 0, 4                                // Read GPIO2 INPUT content
     SBBO r1, r2, 0, 4                                       // Put GPIO INPUT content into local RAM
     ADD  r2, r2, 4  
     
-    MOV  GPIO_3_IN, GPIO3 | GPIO_DATAIN                       // Load Address
-    LBBO r1, GPIO_3_IN, 0, 4                                  // Read GPIO3 INPUT content
+    MOV  GPIO_3_IN, GPIO3 | GPIO_DATAIN                      // Load Address
+    LBBO r1, GPIO_3_IN, 0, 4                                 // Read GPIO3 INPUT content
     SBBO r1, r2, 0, 4                                        // Put GPIO INPUT content into local RAM
     
     //Set all the stepper pins to 0 

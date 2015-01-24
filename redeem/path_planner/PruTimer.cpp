@@ -552,41 +552,37 @@ void PruTimer::run() {
 	while(!stop) {
 #ifdef DEMO_PRU
 		
-		
 		unsigned int* nbCommand = (unsigned int *)currentReadingAddress;
 		
 		if(!nbCommand || stop || !*nbCommand)
 			continue;
-		
 		SteppersCommand * cmd = (SteppersCommand*)(currentReadingAddress+4);
-		
 		FLOAT_T totalWait = 0;
-		
 		for(int i=0;i<*nbCommand;i++) {
 			totalWait+=cmd->delay/200000.0;
-			
-			
 			cmd++;
 		}
 		
 		std::this_thread::sleep_for( std::chrono::milliseconds((unsigned)totalWait) );
-		
-		
 		currentReadingAddress+=(*nbCommand)*8+4;
-		
 		nbCommand = (unsigned int *)currentReadingAddress;
-		
 		if(*nbCommand == DDR_MAGIC) {
 			currentReadingAddress = ddr_mem;
 		}
-		
 		*ddr_nr_events=(*ddr_nr_events)+1;
 #else
 		unsigned int nbWaitedEvent = prussdrv_pru_wait_event (PRU_EVTOUT_0,1000); // 250ms timeout
 #endif
+
 		if(stop) break;
 		
-//		LOG( ("\tINFO: PRU0 completed transfer.\r\n"));
+		/*
+		if (nbWaitedEvent)
+			LOG( ("\tINFO: PRU0 completed transfer.\r\n"));
+		else
+			LOG( ("\tINFO: PRU0 transfer timeout.\r\n"));
+		*/
+		
 		
 #ifndef DEMO_PRU
 		if(nbWaitedEvent)
@@ -594,7 +590,6 @@ void PruTimer::run() {
 #endif
 		
 		msync(ddr_nr_events, 4, MS_SYNC);
-		
 		uint32_t nb = *ddr_nr_events;
 		
 		
@@ -621,8 +616,8 @@ void PruTimer::run() {
 			}
 			
 			currentNbEvents = nb;
+			LOG( "NB Event: Queued Time = " << totalQueuedMovesTime << std::endl);
 		}
-		
 		
 		
 //		LOG( "NB event after " << std::dec << nb << " / " << currentNbEvents << std::endl);
