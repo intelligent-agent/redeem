@@ -25,7 +25,7 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
 """
 
 import logging
-from Path import Path, AbsolutePath, RelativePath, G92Path
+from Path import Path, CompensationPath, AbsolutePath, RelativePath, G92Path
 from Printer import Printer
 import numpy as np
 
@@ -94,6 +94,18 @@ class PathPlanner:
         """ Wait until the queue is empty """
         self.native_planner.waitUntilFinished()
 
+    def wait_until_sync_event(self):
+        """ Blocks until a PRU sync event occurs """
+        self.native_planner.waitUntilSyncEvent()
+
+    def clear_sync_event(self):
+        """ Resumes/Clears a pending sync event """
+        self.native_planner.clearSyncEvent()
+
+    def queue_sync_event(self, isBlocking):
+       """ Returns True if a sync event has been queued. False on failure.(use wait_until_done() instead) """
+       return self.native_planner.queueSyncEvent(isBlocking)
+
     def force_exit(self):
         self.native_planner.stopThread(True)
 
@@ -154,9 +166,13 @@ class PathPlanner:
         self.add_path(p)
 
         # Move to offset
-        p = AbsolutePath(path_zero, speed)
+        p = AbsolutePath(path_zero, speed, True, False, False)
         self.add_path(p)
         self.wait_until_done()
+
+        # Reset backlash compensation
+        Path.backlash_reset()
+
         logging.debug("homing done for " + str(axis))
 
     def home(self, axis):
@@ -218,8 +234,15 @@ class PathPlanner:
         # Link to the previous segment in the chain
         new.set_prev(self.prev)
 
+        if new.compensation is not None:
+            # Apply a backlash compensation move
+#           CompensationPath(new.compensation, new.speed, False, False, False))
+            self.native_planner.queueMove(tuple(np.zeros(Path.NUM_AXES)[:4]),
+                                          tuple(new.compensation[:4]), new.speed,
+                                          bool(new.cancelable),
+                                          False)
+
         if new.needs_splitting():
-            logging.debug("Path needs splitting")
             path_batch = new.get_delta_segments()
             # Construct a batch
             batch_array = np.zeros(shape=(len(path_batch)*2*4),dtype=np.float64)     # Change this to reflect NUM_AXIS.
@@ -231,9 +254,6 @@ class PathPlanner:
                 
                 self.prev = path
                 self.prev.unlink()
-                #logging.debug( str(path.start_pos) + " to " + str(path.stepper_end_pos))
-
-
 
             # Queue the entire batch at once.
             self.printer.ensure_steppers_enabled()
@@ -246,7 +266,6 @@ class PathPlanner:
         if not new.is_G92():
             self.printer.ensure_steppers_enabled()
             #push this new segment   
-            logging.debug("Pushing start_pos = "+str(tuple(new.start_pos[:4]))+ " stepper_end_pos " +str(tuple(new.stepper_end_pos[:4]))+ " speed = " + str(new.speed)+" Cancelable = "+str(bool(new.cancelable))+" Absolute = "+str(bool(new.movement != Path.RELATIVE)))
             self.native_planner.queueMove(tuple(new.start_pos[:4]),
                                           tuple(new.stepper_end_pos[:4]), new.speed,
                                           bool(new.cancelable),

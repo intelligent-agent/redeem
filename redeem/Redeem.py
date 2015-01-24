@@ -245,6 +245,7 @@ class Redeem:
         self.printer.commands = JoinableQueue(10)
 
         # Make a queue of commands that should not be buffered
+        self.printer.sync_commands = JoinableQueue()
         self.printer.unbuffered_commands = JoinableQueue(10)
 
         # Init the Paths
@@ -309,11 +310,15 @@ class Redeem:
                     args=(self.printer.commands, "buffered"))
         p1 = Thread(target=self.loop,
                     args=(self.printer.unbuffered_commands, "unbuffered"))
+        p2 = Thread(target=self.eventloop,
+                    args=(self.printer.sync_commands, "sync"))
         p0.daemon = True
         p1.daemon = True
+        p2.daemon = True
 
         p0.start()
         p1.start()
+        p2.start()
 
         # Signal everything ready
         logging.info("Redeem ready")
@@ -321,6 +326,7 @@ class Redeem:
         # Wait for exit signal
         p0.join()
         p1.join()
+        p2.join()
 
     def loop(self, queue, name):
         """ When a new gcode comes in, execute it """
@@ -332,11 +338,33 @@ class Redeem:
                     continue
 
                 logging.debug("Executing "+gcode.code()+" from "+name + " " + gcode.message)
+
                 self._execute(gcode)
+
                 self.printer.reply(gcode)
+                    
                 queue.task_done()
         except Exception:
             logging.exception("Exception in {} loop: ".format(name))
+
+    def eventloop(self, queue, name):
+        """ When a new event comes in, execute the pending gcode """
+        try:
+
+            while self.running:
+                self.printer.path_planner.wait_until_sync_event()
+                try:
+                    gcode = queue.get(block=True, timeout=1)
+                except Queue.Empty:
+                    logging.error("Unsolicited Sync event occured.")
+                    continue
+
+                self._synchronize(gcode)
+                logging.info("Event handled for "+gcode.code()+" from "+name + " " + gcode.message)
+                queue.task_done()
+        except Exception:
+            logging.exception("Exception in {} eventloop: ".format(name))
+
 
     def exit(self):
         self.running = False
@@ -366,6 +394,10 @@ class Redeem:
             self.printer.send_message(g.prot, desc)
         else:
             self.printer.processor.execute(g)
+
+    def _synchronize(self, g):
+        """ Syncrhonized execution of a G-code """
+        self.printer.processor.synchronize(g)
 
     def end_stop_hit(self, endstop):
         """ An endStop has been hit """
