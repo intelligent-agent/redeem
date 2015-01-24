@@ -616,7 +616,6 @@ void PruTimer::run() {
 			}
 			
 			currentNbEvents = nb;
-			LOG( "NB Event: Queued Time = " << totalQueuedMovesTime << std::endl);
 		}
 		
 		
