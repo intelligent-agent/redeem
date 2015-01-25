@@ -63,6 +63,8 @@ class Ethernet:
             self.s.settimeout(1.0)
             while self.running:
                 line = self.read_line()
+                if line is None:
+                    break
                 message = line.strip("\n")
                 if len(message) > 0:
                     g = Gcode({"message": message, "prot": "Eth"})
@@ -85,9 +87,9 @@ class Ethernet:
                 char = self.client.recv(1)
             except socket.error, (value, message):
                 logging.error("Ethernet " + message)
-                char == ""
+                char = ""
             if char == "":
-                logging.warning("Ethernet: Connection reset by Per.")
+                logging.warning("Ethernet: Connection reset by peer.")
                 self.client.close()
                 break
             chars.append(char)
