@@ -30,8 +30,7 @@
 #define NUM_AXIS 4
 
 /* Number of move to cache to execute the path planner on. */
-#define MOVE_CACHE_SIZE 128
-
+#define MOVE_CACHE_SIZE 16384
 /* Number of extruder */
 #define NUM_EXTRUDER 5
 
@@ -47,7 +46,6 @@
  * but it will increase the startup time of the print.
  */
 #define PRINT_MOVE_BUFFER_WAIT 500
-
 /* Data type for floating point */
 #define FLOAT_T double
 

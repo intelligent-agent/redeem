@@ -51,15 +51,15 @@ class M666(GCodeCommand):
     def execute(self, g):
         if g.has_letter("X"):
 	   # Apply to X offset
-           printer.path_planner.center_offset["X"] = float(g.get_value_by_letter("X"))
+           self.printer.path_planner.center_offset["X"] = float(g.get_value_by_letter("X"))
 
         if g.has_letter("Y"):
 	   # Apply to Y offset
-           printer.path_planner.center_offset["Y"] = float(g.get_value_by_letter("Y"))
+           self.printer.path_planner.center_offset["Y"] = float(g.get_value_by_letter("Y"))
  
         if g.has_letter("Z"):
 	   # Apply to Z offset
-           printer.path_planner.center_offset["Z"] = float(g.get_value_by_letter("Z"))
+           self.printer.path_planner.center_offset["Z"] = float(g.get_value_by_letter("Z"))
 
 
     def get_description(self):

@@ -163,6 +163,68 @@ PathPlanner::PathPlanner() {
 	bzero(lines, sizeof(lines));
 }
 
+bool PathPlanner::queueSyncEvent(bool isBlocking /* = true */)
+{
+#ifdef BUILD_PYTHON_EXT
+	PyThreadState *_save; 
+	_save = PyEval_SaveThread();
+#endif
+	// If the move command buffer isn't empty, make the last line a sync event
+	{	
+		std::unique_lock<std::mutex> lk(line_mutex);
+		if(linesCount > 0)
+		{
+			unsigned int lastLine = (linesWritePos == 0) ? MOVE_CACHE_SIZE - 1 : linesWritePos - 1;
+
+			Path *p = &lines[lastLine];
+			p->setSyncEvent(isBlocking);
+#ifdef BUILD_PYTHON_EXT
+			PyEval_RestoreThread(_save);
+#endif
+			return true;
+		}
+	}
+
+#ifdef BUILD_PYTHON_EXT
+	PyEval_RestoreThread(_save);
+#endif
+	return false;	// If the move command buffer is completly empty, it's too late.
+
+}
+
+void PathPlanner::waitUntilSyncEvent()
+{
+#ifdef BUILD_PYTHON_EXT
+	PyThreadState *_save; 
+	_save = PyEval_SaveThread();
+#endif
+
+	// Wait for a sync event on the stepper PRU
+	pru.waitUntilSync();
+
+#ifdef BUILD_PYTHON_EXT
+	PyEval_RestoreThread(_save);
+#endif
+}
+                     
+void PathPlanner::clearSyncEvent()
+{
+
+#ifdef BUILD_PYTHON_EXT
+	PyThreadState *_save; 
+	_save = PyEval_SaveThread();
+#endif
+
+	// Clear the sync event on the stepper PRU and resume operation.
+	pru.resume();
+
+
+#ifdef BUILD_PYTHON_EXT
+	PyEval_RestoreThread(_save);
+#endif
+
+}
+
 void PathPlanner::queueBatchMove(FLOAT_T* batchData, int batchSize, FLOAT_T speed, bool cancelable, bool optimize /* = true */) {
     FLOAT_T axis_diff[NUM_AXIS]; // Axis movement in mm
 	
@@ -172,7 +234,7 @@ void PathPlanner::queueBatchMove(FLOAT_T* batchData, int batchSize, FLOAT_T spee
 	_save = PyEval_SaveThread();
 #endif
         int numSegments = batchSize / (2 * NUM_AXIS);
-	LOG( "Batching " << numSegments << " segments." << std::endl);
+	//LOG( "Batching " << numSegments << " segments." << std::endl);
 
 	unsigned int linesQueued = 0;
 	unsigned int linesCacheRemaining = 0;
@@ -185,7 +247,7 @@ void PathPlanner::queueBatchMove(FLOAT_T* batchData, int batchSize, FLOAT_T spee
 		if(linesCacheRemaining == 0)
 		{
 			std::unique_lock<std::mutex> lk(line_mutex);
-			LOG( "Waiting for free move command space... Current: " << MOVE_CACHE_SIZE - linesCount << std::endl);
+			//LOG( "Waiting for free move command space... Current: " << MOVE_CACHE_SIZE - linesCount << std::endl);
 			lineAvailable.wait(lk, [this]{return linesCount < MOVE_CACHE_SIZE || stop;});
 			linesCacheRemaining = MOVE_CACHE_SIZE - linesCount;
 		}
@@ -350,15 +412,16 @@ void PathPlanner::calculateMove(Path* p,FLOAT_T axis_diff[NUM_AXIS])
     unsigned int axisInterval[NUM_AXIS];
 	FLOAT_T timeForMove = (FLOAT_T)(F_CPU)*p->distance / (p->isXOrYMove() ? std::max(minimumSpeed,p->speed): p->speed); // time is in ticks
 	
-	/*
-	 #define MOVE_CACHE_LOW 10
+/*
+	 #define MOVE_CACHE_LOW 512
 	 if(linesCount < MOVE_CACHE_LOW)   // Limit speed to keep cache full.
 	 {
 	 #define LOW_TICKS_PER_MOVE F_CPU/50
 	 
 	 timeForMove += (3 * (LOW_TICKS_PER_MOVE-timeForMove)) / (linesCount+1); // Increase time if queue gets empty. Add more time if queue gets smaller.
 	 }
-	 */
+*/
+
 	
     p->timeInTicks = timeForMove;
 	
@@ -767,7 +830,7 @@ void PathPlanner::run() {
 		Path* cur = &lines[linesPos];
 		
 		//If the buffer is half or more empty and the line to print is an optimized one , wait for 500 ms again so that we can get some other path in the path planner buffer, and we do that until the buffer is not anymore half empty.
-		if(linesCount<MOVE_CACHE_SIZE/2 && cur->getWaitMS()>0 && waitUntilFilledUp) {
+		if(linesCount<MOVE_CACHE_SIZE/8 && cur->getWaitMS()>0 && waitUntilFilledUp) {
 			unsigned lastCount = 0;
 			LOG("Waiting for buffer to fill up... " << linesCount  << " lines pending " << lastCount << std::endl);
 			do { 
@@ -775,7 +838,7 @@ void PathPlanner::run() {
 				
 				lineAvailable.wait_for(lk,  std::chrono::milliseconds(PRINT_MOVE_BUFFER_WAIT), [this,lastCount]{return linesCount>lastCount || stop;});
 				
-			} while(lastCount<linesCount && linesCount<MOVE_CACHE_SIZE/2 && !stop);
+			} while(lastCount<linesCount && linesCount<MOVE_CACHE_SIZE && !stop);
 			LOG("Done waiting for buffer to fill up... " << linesCount  << " lines ready. " << lastCount << std::endl);
 			
 			waitUntilFilledUp = false;
@@ -858,7 +921,17 @@ void PathPlanner::run() {
 			SteppersCommand& cmd = cur->commands[stepNumber];
 			cmd.direction = directionMask;
 			cmd.cancellableMask = cancellableMask;
-			cmd.options = 0;
+			
+			if((stepNumber == cur->stepsRemaining - 1) && cur->isSyncEvent())
+			{
+				if(cur->isSyncWaitEvent())
+					cmd.options = STEPPER_COMMAND_OPTION_SYNCWAIT_EVENT;
+				else
+					cmd.options = STEPPER_COMMAND_OPTION_SYNC_EVENT;
+			}
+			else 
+				cmd.options = 0;
+
 			cmd.step = 0;
 			if(cur->isEMove())
 			{
@@ -930,6 +1003,7 @@ void PathPlanner::run() {
 			assert(interval < F_CPU*4);
 			cmd.delay = (uint32_t)interval;
 		} // stepsRemaining
+
 		
 		//LOG("Current move time " << pru.getTotalQueuedMovesTime() / (double) F_CPU << std::endl);
 		

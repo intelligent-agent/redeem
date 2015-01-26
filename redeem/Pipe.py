@@ -84,10 +84,7 @@ class Pipe:
                 message = self.readline_custom()
                 if len(message) > 0:
                     g = Gcode({"message": message, "prot": self.prot})
-                    if self.printer.processor.is_buffered(g):
-                        self.printer.commands.put(g)
-                    else:
-                        self.printer.unbuffered_commands.put(g)
+                    self.printer.processor.enqueue(g)
 
     def send_message(self, message):
         if self.send_response:
