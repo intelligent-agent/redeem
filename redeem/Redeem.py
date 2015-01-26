@@ -24,7 +24,7 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
 Minor version tag is Arnold Schwarzenegger movies chronologically.
 """
 
-version = "0.16.2~The Terminator"
+version = "0.16.5~The Terminator"
 
 import glob
 import shutil
@@ -139,6 +139,10 @@ class Redeem:
             stepper.set_steps_pr_mm( printer.config.getfloat('Steppers', 'steps_pr_mm_' + name) )
             stepper.set_microstepping( printer.config.getint('Steppers', 'microstepping_' + name) )
             stepper.set_decay( printer.config.getboolean("Steppers", "slow_decay_" + name) )
+            # Add soft end stops
+            Path.soft_min[Path.axis_to_index(name)] = printer.config.getfloat('Endstops', 'soft_end_stop_min_' + name)
+            Path.soft_max[Path.axis_to_index(name)] = printer.config.getfloat('Endstops', 'soft_end_stop_max_' + name)
+            
 
         # Commit changes for the Steppers
         Stepper.commit()
@@ -241,7 +245,7 @@ class Redeem:
             self.printer.coolers[0].set_target_temperature(60)
             self.printer.coolers[0].enable()
 
-            # Make a queue of commands
+        # Make a queue of commands
         self.printer.commands = JoinableQueue(10)
 
         # Make a queue of commands that should not be buffered

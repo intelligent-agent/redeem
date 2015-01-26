@@ -65,8 +65,10 @@ class Path:
         Path.max_speeds = np.ones(num_axes)
         Path.home_speed = np.ones(num_axes)
         Path.steps_pr_meter = np.ones(num_axes)
-	Path.backlash_compensation = np.zeros(num_axes)
-	Path.backlash_state = np.zeros(num_axes)
+        Path.backlash_compensation = np.zeros(num_axes)
+        Path.backlash_state = np.zeros(num_axes)
+        Path.soft_min = -np.ones(num_axes)
+        Path.soft_max = np.ones(num_axes)
 
     def __init__(self, axes, speed,  cancelable=False, use_bed_matrix=True, use_backlash_compensation=True):
         """ The axes of evil, the feed rate in m/s and ABS or REL """
@@ -246,6 +248,9 @@ class AbsolutePath(Path):
             if axis in self.axes:
                 self.end_pos[index] = self.axes[axis]
 
+        # Soft end stops
+        self.end_pos = np.clip(self.end_pos, Path.soft_min, Path.soft_max)
+
         self.vec = self.end_pos - self.start_pos
 
         # Compute stepper translation
@@ -291,6 +296,11 @@ class RelativePath(Path):
         for index, axis in enumerate(Path.AXES):
             if axis in self.axes:
                 self.vec[index] = self.axes[axis]
+
+        # Soft end stops
+        self.end_pos = self.start_pos + self.vec
+        self.end_pos = np.clip(self.end_pos, Path.soft_min, Path.soft_max)
+        self.vec = self.end_pos - self.start_pos
 
         # Compute stepper translation
         vec = self.transform_vector(self.vec, self.start_pos)
