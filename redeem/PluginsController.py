@@ -25,6 +25,7 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
 import inspect
 import logging
 import re
+import importlib
 from plugins import AbstractPlugin
 
 
@@ -65,7 +66,11 @@ class PluginsController:
 
     @staticmethod
     def get_plugin_classes():
-        module = __import__("plugins", locals(), globals())
+        try:
+            module = __import__("plugins", locals(), globals())
+        except ImportError: 
+            module = importlib.import_module("redeem.plugins")
+
         pluginClasses = {}
 
         PluginsController.load_classes_in_module(module, pluginClasses)
@@ -74,7 +79,8 @@ class PluginsController:
     @staticmethod
     def load_classes_in_module(module, classes):
         for module_name, obj in inspect.getmembers(module):
-            if inspect.ismodule(obj) and obj.__name__.startswith('plugins'):
+            if inspect.ismodule(obj) and (obj.__name__.startswith('plugins')
+                or obj.__name__.startswith('redeem.plugins')):
                 PluginsController.load_classes_in_module(obj, classes)
             elif inspect.isclass(obj) and \
                     issubclass(obj, AbstractPlugin.AbstractPlugin) and \
