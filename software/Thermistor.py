@@ -24,7 +24,7 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
 import numpy as np
 import logging
 from threading import Lock
-
+import time
 # Import the temp chart. 
 from temp_chart import *
 
@@ -42,20 +42,23 @@ class Thermistor:
     def getTemperature(self):
         """ Return the temperature in degrees celsius """
         #Thermistor.mutex.acquire()
-        voltage = 0
-        acquisitions = 0
+        measures = []
         for i in xrange(10):
             with open(self.pin, "r") as file:
                 try:
-                    voltage += (float(file.read().rstrip()) / 4096) * 1.8
-                    acquisitions += 1
+                    measures.append((float(file.read().rstrip()) / 4096) * 1.8)
                 except IOError as e:
                     logging.error("Unable to get ADC value for the {2}. time ({0}): {1}".format(e.errno, e.strerror, i))
                     #time.sleep(0.05)
                     #Thermistor.mutex.release()
-        if acquisitions == 0:
+                time.sleep(0.01)
+        if len(measures) == 0:
             return -1.0
-        voltage /= acquisitions
+
+        # Median filter
+        measures.sort()
+        voltage = measures[int(len(measures)/2.0)]
+        
         res_val = self.voltage_to_resistance(voltage)  # Convert to resistance
         temperature = self.resistance_to_degrees(res_val) # Convert to degrees
         #logging.debug(self.name+": voltage: %f"%(voltage))

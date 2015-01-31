@@ -52,9 +52,9 @@ class Pipe:
             logging.error("tty0tty not found! tty0tty must be installed")
             raise EnvironmentError("tty0tty not found")
 
-        p = subprocess.Popen(["tty0tty", pipe_0, pipe_1],
-                             stderr=subprocess.PIPE)
-        p.stderr.readline()
+        #p = subprocess.Popen(["tty0tty", pipe_0, pipe_1],
+        #                     stderr=subprocess.PIPE)
+        #p.stderr.readline()
         self.fifo = os.open(pipe_0, os.O_RDWR)
         logging.info("Pipe " + self.prot + " open. Use '" + pipe_1 + "' to "
                      "communicate with it")

@@ -21,7 +21,7 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
 """
 
 from Path import Path
-
+from Servo import Servo
 
 class Printer:
     """ A command received from pronterface or whatever """
@@ -69,6 +69,8 @@ class Printer:
         self.current_tool = "E"
 
         self.rest_server = None
+
+        self.head_servo = Servo(1,500,750,90,10) 
 
     def send_update_rest_clients(self):
         if self.rest_server is not None:

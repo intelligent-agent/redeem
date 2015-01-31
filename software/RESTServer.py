@@ -57,7 +57,7 @@ class ExtruderAPI(tornado.web.RequestHandler):
 class PrinterAPI(tornado.web.RequestHandler):
 
     def get(self, id = None):
-        self.write({"id":0,"board_revision":current_server.printer.config.get("System","revision"), "num_extruders": 2})
+        self.write({printer: {"id":0,"board_revision":current_server.printer.config.get("System","revision"), "num_extruders": 2}})
      
 
 

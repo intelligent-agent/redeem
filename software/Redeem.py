@@ -51,6 +51,7 @@ from CascadingConfigParser import CascadingConfigParser
 from Printer import Printer
 from GCodeProcessor import GCodeProcessor
 from RESTServer import RESTServer
+from Servo import Servo
 
 # Default logging level is set to debug
 logging.basicConfig(level=logging.DEBUG,
@@ -369,13 +370,13 @@ class Redeem:
         if Pipe.check_tty0tty():
             self.printer.comms["octoprint"] = Pipe(self.printer,
                                                    "octoprint")   # Pipe for Octoprint
-            self.printer.comms["toggle"] = Pipe(self.printer,
-                                                "toggle")      # Pipe for Toggle
-            self.printer.comms["testing"] = Pipe(self.printer,
-                                                 "testing")     # Pipe for testing
-            self.printer.comms["testing_noret"] = Pipe(self.printer,
-                                                       "testing_noret")     # Pipe for testing
-            self.printer.comms["testing_noret"].send_response = False
+            # self.printer.comms["toggle"] = Pipe(self.printer,
+            #                                     "toggle")      # Pipe for Toggle
+            # self.printer.comms["testing"] = Pipe(self.printer,
+            #                                      "testing")     # Pipe for testing
+            # self.printer.comms["testing_noret"] = Pipe(self.printer,
+            #                                            "testing_noret")     # Pipe for testing
+            # self.printer.comms["testing_noret"].send_response = False
         else:
             logging.warning("tty0tty is not installed! No virtual tty pipes enabled")
 

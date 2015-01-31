@@ -76,6 +76,9 @@ class Heater(object):
             time.sleep(0.2)
             # The PID loop has finished
         self.mosfet.set_power(0.0)
+        self.last_error = 0.0
+        self.error_integral = 0.0
+        self.error_integral_limit = 100.0
 
     def enable(self):
         """ Start the PID controller """
@@ -97,7 +100,7 @@ class Heater(object):
                 else:
                     power = 0.0
             else:
-                if abs(error) > 15:  # Avoid windup
+                if abs(error) > 20:  # Avoid windup
                     if error > 0:
                         power = 1.0
                     else:
@@ -125,7 +128,7 @@ class Heater(object):
 
             RESTServer().send_state_update()
 
-            time.sleep(1)
+            time.sleep(0.5)
         self.disabled = True
 
     def _getErrorDerivative(self, current_error):

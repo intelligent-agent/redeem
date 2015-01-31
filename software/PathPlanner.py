@@ -82,9 +82,10 @@ class PathPlanner:
             e.setTravelAcceleration(self.printer.acceleration[i + 3])
             e.setMaxStartFeedrate(self.printer.maxJerkEH / 1000)
             e.setAxisStepsPerMeter(long(Path.steps_pr_meter[i + 3]))
-            
+
             # For Mathieu's printer... One motor - two extruders
             e.setStepperCommandPosition(3)
+            e.setDirectionInverted(True if i==1 else False)
 
         self.native_planner.setExtruder(0)
 
@@ -186,11 +187,13 @@ class PathPlanner:
 
         if not new.is_G92():
             self.printer.ensure_steppers_enabled()
-            #push this new segment        
+            #push this new segment     
+
+            #dirty hack for reversing stepper when T1 is used
             self.native_planner.queueMove(tuple(new.start_pos[:4]),
-                                          tuple(new.stepper_end_pos[:4]), new.speed,
-                                          bool(new.cancelable),
-                                          bool(new.movement != Path.RELATIVE))
+                                      tuple(new.stepper_end_pos[:4]), new.speed,
+                                      bool(new.cancelable),
+                                      bool(new.movement != Path.RELATIVE))
 
         self.prev = new
         self.prev.unlink()  # We don't want to store the entire print

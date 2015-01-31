@@ -89,6 +89,13 @@ class Fan(object):
         byte_list = [0x00, 0x00, off & 0xFF, off >> 8]
         Fan.pwm.writeList(0x06+(4*self.channel), byte_list)
 
+    def set_on_off_time(self, on, off):
+        "Set the amount of ON and OFF time for the fan PWM from 0..1"
+        off = int(off*4095)
+        on = int(on*4095)
+        byte_list = [on & 0xFF, on >> 8, off & 0xFF, off >> 8]
+        Fan.pwm.writeList(0x06+(4*self.channel), byte_list)
+
 if __name__ == '__main__':
     import os
     import logging
