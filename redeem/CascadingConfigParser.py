@@ -64,10 +64,16 @@ class CascadingConfigParser(ConfigParser.SafeConfigParser):
                             self.replicape_revision = data[38:42]
                         elif name[:13] == "BB-BONE-REACH":
                             self.reach_revision = data[38:42]
-                        else:
-                            logging.info("Found unknown cape: '"+name[:13])
+
+                        if self.replicape_revision != None and self.reach_revision != None:
+                            break
                 except IOError as e:
-                    pass                    
+                    pass
+
+            if self.replicape_revision != None and self.reach_revision != None:
+                    break
+
+
     
     def save(self, filename):
         """ Save the changed settings to local.cfg """
