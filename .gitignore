@@ -23,3 +23,6 @@ PathPlanner/PathPlanner/PathPlannerNative.py
 
 # Ignore PyCharm settings
 /.idea
+dist/
+Redeem.egg-info/
+build/
