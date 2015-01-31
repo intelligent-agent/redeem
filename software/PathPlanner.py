@@ -47,6 +47,8 @@ class PathPlanner:
         self.steppers = printer.steppers
         self.pru_firmware = pru_firmware
 
+        self.printer.path_planner = self
+
         self.travel_length = {"X": 0.0, "Y": 0.0, "Z": 0.0, "E": 0.0, "H": 0.0}
         self.center_offset = {"X": 0.0, "Y": 0.0, "Z": 0.0, "E": 0.0, "H": 0.0}
         self.prev = G92Path({"X": 0.0, "Y": 0.0, "Z": 0.0, "E": 0.0, "H": 0.0},
@@ -73,7 +75,6 @@ class PathPlanner:
         self.native_planner.setMaxJerk(self.printer.maxJerkXY / 1000.0, self.printer.maxJerkZ /1000.0)
 
 
-
         #Setup the extruders
         for i in range(Path.NUM_AXES - 3):
             e = self.native_planner.getExtruder(i)
@@ -83,11 +84,9 @@ class PathPlanner:
             e.setMaxStartFeedrate(self.printer.maxJerkEH / 1000)
             e.setAxisStepsPerMeter(long(Path.steps_pr_meter[i + 3]))
 
-            # For Mathieu's printer... One motor - two extruders
-            e.setStepperCommandPosition(3)
-            e.setDirectionInverted(True if i==1 else False)
-
         self.native_planner.setExtruder(0)
+
+        self.printer.plugins.path_planner_initialized(self)
 
         self.native_planner.runThread()
 

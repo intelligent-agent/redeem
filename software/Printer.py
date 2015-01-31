@@ -21,7 +21,7 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
 """
 
 from Path import Path
-from Servo import Servo
+
 
 class Printer:
     """ A command received from pronterface or whatever """
@@ -67,8 +67,6 @@ class Printer:
         self.maxJerkZ = 1
         self.maxJerkEH = 4
         self.current_tool = "E"
-
-        self.head_servo = Servo(1,500,750,90,10) 
 
     def ensure_steppers_enabled(self):
         """

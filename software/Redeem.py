@@ -50,6 +50,7 @@ from PruFirmware import PruFirmware
 from CascadingConfigParser import CascadingConfigParser
 from Printer import Printer
 from GCodeProcessor import GCodeProcessor
+from PluginsController import PluginsController
 from Servo import Servo
 
 # Default logging level is set to debug
@@ -352,14 +353,15 @@ class Redeem:
             self.printer.acceleration[i] = self.printer.config.getfloat('Steppers', 'acceleration_' + axis.lower())
             i += 1
 
+        self.printer.processor = GCodeProcessor(self.printer)
+        self.printer.plugins = PluginsController(self.printer)
 
         self.printer.path_planner = PathPlanner(self.printer, pru_firmware)
 
 
         self.printer.path_planner.travel_length = travel
         self.printer.path_planner.center_offset = offset
-        self.printer.processor = GCodeProcessor(self.printer)
-
+       
         # Set up communication channels
         self.printer.comms["USB"] = USB(self.printer)
         self.printer.comms["Eth"] = Ethernet(self.printer)
