@@ -95,7 +95,7 @@ class Redeem:
             Path.set_axes(5)
         else:
             logging.warning("Oh no! No Replicape present!")
-            self.revision = "A4A"
+            self.revision = "0A4A"
             # We set it to 5 axis by default
             Path.set_axes(5)
         if self.printer.config.reach_revision:
@@ -120,7 +120,7 @@ class Redeem:
             self.printer.end_stops[es] = EndStop(pin, keycode, es, invert)
 
         # Backwards compatibility with A3
-        if self.revision == "A3":
+        if self.revision == "00A3":
             Stepper.revision = "A3"
             Stepper.ENABLED = 6
             Stepper.SLEEP = 5
@@ -207,7 +207,7 @@ class Redeem:
 
         # Init the three fans. Argument is PWM channel number
         self.printer.fans = []
-        if self.revision == "A3":
+        if self.revision == "00A3":
             self.printer.fans.append(Fan(0))
             self.printer.fans.append(Fan(1))
             self.printer.fans.append(Fan(2))

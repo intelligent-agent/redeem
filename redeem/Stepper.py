@@ -87,6 +87,8 @@ class Stepper:
         if spi2_1 is None:
             return
 
+        print "Stepper rev "+Stepper.revision
+        
         bytes = []
         for stepper in Stepper.all_steppers:
             bytes.append(stepper.get_state())
