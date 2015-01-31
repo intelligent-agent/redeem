@@ -426,8 +426,6 @@ def main():
 
     # Launch Redeem
     r.start()
-    r.exit()
-
 
     # Wait for end of process signal
     signal.pause()
