@@ -31,6 +31,8 @@ import shutil
 import logging
 import os
 import os.path
+import signal
+import sys
 from threading import Thread
 from multiprocessing import JoinableQueue
 import Queue
@@ -93,6 +95,7 @@ class Redeem:
         else:
             logging.warning("Oh no! No Replicape present!")
             self.revision = "A4A"
+            Path.set_axes(5) # We set it to 5 axis by default
         if self.printer.config.reach_revision:
             Path.set_axes(8)
             logging.info("Found Reach rev. "+self.printer.config.reach_revision)
@@ -331,10 +334,6 @@ class Redeem:
         # Signal everything ready
         logging.info("Redeem ready")
 
-        # Wait for exit signal
-        p0.join()
-        p1.join()
-        p2.join()
 
     def loop(self, queue, name):
         """ When a new gcode comes in, execute it """
@@ -411,9 +410,23 @@ class Redeem:
         """ An endStop has been hit """
         logging.warning("End Stop " + endstop.name + " hit!")
 
+
 def main():
+    # Create Redeem
     r = Redeem()
+
+    def signal_handler(signal, frame):
+        r.exit()
+
+    # Register signal handler to allow interrupt with CTRL-C
+    signal.signal(signal.SIGINT, signal_handler)
+
+    # Launch Redeem
     r.start()
+
+    # Wait for end of process signal
+    signal.pause()
+
 
 if __name__ == '__main__':
     main()
