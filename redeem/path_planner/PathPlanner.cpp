@@ -147,7 +147,7 @@ PathPlanner::PathPlanner() {
 	static_assert(NUM_EXTRUDER>0,"Invalid number of extruder");
 	
 	for(unsigned int i=0;i<NUM_EXTRUDER;i++) {
-		extruders[i].stepperCommandPosition = i+3;
+		extruders[i].setStepperCommandPosition(i+3);
 	}
 	
 	maxJerk =20;
@@ -903,7 +903,7 @@ void PathPlanner::run() {
 		directionMask|=((uint8_t)cur->isXPositiveMove() << X_AXIS);
 		directionMask|=((uint8_t)cur->isYPositiveMove() << Y_AXIS);
 		directionMask|=((uint8_t)cur->isZPositiveMove() << Z_AXIS);
-		directionMask|=((uint8_t)cur->isEPositiveMove() << currentExtruder->stepperCommandPosition);
+		directionMask|=((uint8_t)(cur->isEPositiveMove() ^ currentExtruder->directionInverted) << currentExtruder->stepperCommandPosition);
 		
 		cancellableMask = 0;
 		

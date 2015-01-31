@@ -48,6 +48,7 @@ private:
 	unsigned long maxTravelAccelerationMMPerSquareSecond;
 	FLOAT_T invAxisStepsPerMM;
 	unsigned long axisStepsPerMM;
+	bool directionInverted;
 	
 	void recomputeParameters();
 	
@@ -102,6 +103,14 @@ public:
 	 */
 	inline unsigned int getStepperCommandPosition() {
 		return stepperCommandPosition;
+	}
+	
+	inline void setStepperCommandPosition(unsigned int pose) {
+		stepperCommandPosition = pose;
+	}
+	
+	inline void setDirectionInverted(bool inverted) {
+		directionInverted = inverted;
 	}
 	
 	friend class PathPlanner;

@@ -54,6 +54,7 @@ from PruFirmware import PruFirmware
 from CascadingConfigParser import CascadingConfigParser
 from Printer import Printer
 from GCodeProcessor import GCodeProcessor
+from PluginsController import PluginsController
 from Delta import Delta
 
 # Default logging level is set to debug
@@ -282,6 +283,9 @@ class Redeem:
         printer.maxJerkZ = printer.config.getfloat('Steppers', 'maxJerk_z')
         printer.maxJerkEH = printer.config.getfloat('Steppers', 'maxJerk_eh')
 
+        self.printer.processor = GCodeProcessor(self.printer)
+        self.printer.plugins = PluginsController(self.printer)
+
         # Path planner
         self.printer.path_planner = PathPlanner(self.printer, pru_firmware)
         for axis in printer.steppers.keys():
@@ -292,7 +296,6 @@ class Redeem:
             printer.acceleration[Path.axis_to_index(axis)] = printer.config.getfloat(
                                                         'Steppers', 'acceleration_' + axis.lower())
 
-        self.printer.processor = GCodeProcessor(self.printer)
 
         # Set up communication channels
         printer.comms["USB"] = USB(self.printer)
