@@ -55,6 +55,13 @@ class GCodeProcessor:
                 logging.debug("Loading GCode handler " + module_name + "...")
                 self.gcodes[module_name] = obj(self.printer)
 
+    def override_command(self, gcode, gcodeClassInstance):
+        """
+        This methods allow a plugin to replace a GCode command
+        with its own provided class.
+        """
+        self.gcodes[gcode] = gcodeClassInstance
+
     def get_supported_commands(self):
         ret = []
         for gcode in self.gcodes:

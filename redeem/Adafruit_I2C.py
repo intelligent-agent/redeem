@@ -2,8 +2,6 @@
 # NOTE!! This code is from the Adafruit Learning System articles on the Raspberry Pi (http://learn.adafruit.com/) 
 # The original version of the code can be found in the Adafruit Raspberry Pi Python Library on Github at  https://github.com/adafruit/Adafruit-Raspberry-Pi-Python-Code
 
-import smbus
-
 # ===========================================================================
 # Adafruit_I2C Base Class
 # ===========================================================================
@@ -11,8 +9,13 @@ import smbus
 class Adafruit_I2C :
 
   def __init__(self, address, busnum = 3, debug=False):
+    try:
+      import smbus
+      self.bus = smbus.SMBus(busnum)
+    except ImportError:
+      self.bus=None
+
     self.address = address
-    self.bus = smbus.SMBus(busnum)
     self.debug = debug
 
   def reverseByteOrder(self, data):
@@ -29,6 +32,10 @@ class Adafruit_I2C :
 
   def write8(self, reg, value):
     "Writes an 8-bit value to the specified register/address"
+
+    if self.bus is None:
+      return -1
+
     try:
       self.bus.write_byte_data(self.address, reg, value)
       if (self.debug):
@@ -39,6 +46,10 @@ class Adafruit_I2C :
 
   def writeList(self, reg, list):
     "Writes an array of bytes using I2C format"
+
+    if self.bus is None:
+      return -1
+
     try:
       if (self.debug):
         print "I2C: Writing list to register 0x%02X:" % reg
@@ -50,6 +61,10 @@ class Adafruit_I2C :
 
   def readList(self, reg, length):
     "Read a list of bytes from the I2C device"
+
+    if self.bus is None:
+      return -1
+
     results = []
     try:
       results = self.bus.read_i2c_block_data(self.address, reg, length)
@@ -63,6 +78,10 @@ class Adafruit_I2C :
 
   def readU8(self, reg):
     "Read an unsigned byte from the I2C device"
+
+    if self.bus is None:
+      return -1
+
     try:
       result = self.bus.read_byte_data(self.address, reg)
       if (self.debug):
@@ -74,6 +93,10 @@ class Adafruit_I2C :
 
   def readS8(self, reg):
     "Reads a signed byte from the I2C device"
+
+    if self.bus is None:
+      return -1
+
     try:
       result = self.bus.read_byte_data(self.address, reg)
       if (self.debug):
@@ -88,6 +111,10 @@ class Adafruit_I2C :
 
   def readU16(self, reg):
     "Reads an unsigned 16-bit value from the I2C device"
+
+    if self.bus is None:
+      return -1
+
     try:
       hibyte = self.bus.read_byte_data(self.address, reg)
       result = (hibyte << 8) + self.bus.read_byte_data(self.address, reg+1)
@@ -100,6 +127,10 @@ class Adafruit_I2C :
 
   def readS16(self, reg):
     "Reads a signed 16-bit value from the I2C device"
+
+    if self.bus is None:
+      return -1
+
     try:
       hibyte = self.bus.read_byte_data(self.address, reg)
       if (hibyte > 127):
