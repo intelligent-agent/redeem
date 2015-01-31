@@ -24,15 +24,12 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
 Minor version tag is Arnold Schwarzenegger movies chronologically.
 """
 
-version = "0.16.5~The Terminator"
-
 import glob
 import shutil
 import logging
 import os
 import os.path
 import signal
-import sys
 from threading import Thread
 from multiprocessing import JoinableQueue
 import Queue
@@ -59,10 +56,14 @@ from GCodeProcessor import GCodeProcessor
 from PluginsController import PluginsController
 from Delta import Delta
 
+
+version = "0.16.5~The Terminator"
+
 # Default logging level is set to debug
 logging.basicConfig(level=logging.DEBUG,
                     format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
                     datefmt='%m-%d %H:%M')
+
 
 class Redeem:
 
@@ -81,7 +82,7 @@ class Redeem:
                 logging.warning(f)
                 shutil.copy(f, "/etc/redeem")
 
-        # Parse the config files. 
+        # Parse the config files.
         printer.config = CascadingConfigParser(
             ['/etc/redeem/default.cfg', '/etc/redeem/printer.cfg',
              '/etc/redeem/local.cfg'])
@@ -95,7 +96,8 @@ class Redeem:
         else:
             logging.warning("Oh no! No Replicape present!")
             self.revision = "A4A"
-            Path.set_axes(5) # We set it to 5 axis by default
+            # We set it to 5 axis by default
+            Path.set_axes(5)
         if self.printer.config.reach_revision:
             Path.set_axes(8)
             logging.info("Found Reach rev. "+self.printer.config.reach_revision)
@@ -110,7 +112,7 @@ class Redeem:
 
         # Init the end stops
         EndStop.callback = self.end_stop_hit
-        EndStop.inputdev = self.printer.config.get("Endstops", "inputdev");
+        EndStop.inputdev = self.printer.config.get("Endstops", "inputdev")
         for es in ["X1", "X2", "Y1", "Y2", "Z1", "Z2"]:
             pin = self.printer.config.get("Endstops", "pin_"+es)
             keycode = self.printer.config.getint("Endstops", "keycode_"+es)
@@ -131,7 +133,7 @@ class Redeem:
         printer.steppers["Z"] = Stepper("GPIO0_23", "GPIO0_26", "GPIO0_15", 2, "Z", 2, 2)
         printer.steppers["E"] = Stepper("GPIO1_28", "GPIO1_15", "GPIO2_1" , 3, "E", 3, 3)
         printer.steppers["H"] = Stepper("GPIO1_13", "GPIO1_14", "GPIO2_3" , 4, "H", 4, 4)
-        
+
         if printer.config.reach_revision:
             printer.steppers["A"] = Stepper("GPIO2_2" , "GPIO1_18", "GPIO0_14", 5, "A", 5, 5)
             printer.steppers["B"] = Stepper("GPIO1_14", "GPIO0_5" , "GPIO0_14", 6, "B", 6, 6)
@@ -141,23 +143,25 @@ class Redeem:
         # microstepping
         for name, stepper in self.printer.steppers.iteritems():
             stepper.in_use = printer.config.getboolean('Steppers', 'in_use_' + name)
-            stepper.direction   = printer.config.getint('Steppers', 'direction_' + name)
+            stepper.direction = printer.config.getint('Steppers', 'direction_' + name)
             stepper.has_endstop = printer.config.getboolean('Endstops', 'has_' + name)
-            stepper.set_current_value(printer.config.getfloat('Steppers', 'current_' + name) )
-            stepper.set_steps_pr_mm( printer.config.getfloat('Steppers', 'steps_pr_mm_' + name) )
-            stepper.set_microstepping( printer.config.getint('Steppers', 'microstepping_' + name) )
-            stepper.set_decay( printer.config.getboolean("Steppers", "slow_decay_" + name) )
+            stepper.set_current_value(printer.config.getfloat('Steppers', 'current_' + name))
+            stepper.set_steps_pr_mm(printer.config.getfloat('Steppers', 'steps_pr_mm_' + name))
+            stepper.set_microstepping(printer.config.getint('Steppers', 'microstepping_' + name))
+            stepper.set_decay(printer.config.getboolean("Steppers", "slow_decay_" + name))
             # Add soft end stops
             Path.soft_min[Path.axis_to_index(name)] = printer.config.getfloat('Endstops', 'soft_end_stop_min_' + name)
             Path.soft_max[Path.axis_to_index(name)] = printer.config.getfloat('Endstops', 'soft_end_stop_max_' + name)
-            
 
         # Commit changes for the Steppers
         Stepper.commit()
 
         # Delta printer setup
         if Path.axis_config == Path.AXIS_CONFIG_DELTA:
-            opts = ["Hez", "L", "r", "Ae", "Be", "Ce", "Aco", "Bco", "Cco", "Apxe", "Apye", "Bpxe", "Bpye", "Cpxe", "Cpye" ]
+            opts = ["Hez", "L", "r", "Ae", "Be", "Ce", "Aco",
+                    "Bco", "Cco", "Apxe", "Apye", "Bpxe", "Bpye",
+                    "Cpxe", "Cpye"]
+
             for opt in opts:
                 Delta.__dict__[opt] = printer.config.getfloat('Delta', opt)
 
@@ -170,32 +174,31 @@ class Redeem:
             logging.info("Found Cold end on " + path)
         else:
             logging.info("No cold end present in path: " + path)
-        
 
         # Make Mosfets, thermistors and extruders
         heaters = ["E", "H", "HBP"]
         if self.printer.config.reach_revision:
             heaters.extend(["A", "B", "C"])
         for e in heaters:
-            #Mosfets
+            # Mosfets
             channel = self.printer.config.getint("Heaters", "mosfet_"+e)
             self.printer.mosfets[e] = Mosfet(channel)
             # Thermistors
-            adc   = self.printer.config.get("Heaters", "path_adc_"+e)
+            adc = self.printer.config.get("Heaters", "path_adc_"+e)
             chart = self.printer.config.get("Heaters", "temp_chart_"+e)
             self.printer.thermistors[e] = Thermistor(adc, "MOSFET "+e, chart)
-    
+
             # Extruders
-            onoff =  self.printer.config.getboolean('Heaters', 'onoff_'+e)
+            onoff = self.printer.config.getboolean('Heaters', 'onoff_'+e)
             prefix =  self.printer.config.get('Heaters', 'prefix_'+e)
             if e != "HBP":
                 self.printer.heaters[e] = Extruder(
-                                        self.printer.steppers[e], 
+                                        self.printer.steppers[e],
                                         self.printer.thermistors[e], 
                                         self.printer.mosfets[e], e, onoff)
             else:
                 self.printer.heaters[e] = HBP(
-                                        self.printer.thermistors[e], 
+                                        self.printer.thermistors[e],
                                         self.printer.mosfets[e], onoff)
             self.printer.heaters[e].prefix = prefix
             self.printer.heaters[e].P = self.printer.config.getfloat('Heaters', 'pid_p_'+e)
@@ -231,21 +234,20 @@ class Redeem:
                 printer.servos.append(s)
                 logging.info("Added servo "+str(servo_nr))
             servo_nr += 1
-        
 
         # Connect thermitors to fans
         for t, therm in self.printer.heaters.iteritems():
             for f, fan in enumerate(self.printer.fans):
                 if self.printer.config.getboolean('Cold-ends', "connect-therm-{}-fan-{}".format(t, f)):
                     c = Cooler(therm, fan, "Cooler-{}-{}".format(t, f), False)
-                    c.ok_range = 4        
+                    c.ok_range = 4
                     c.set_target_temperature(60)
                     c.enable()
                     self.printer.coolers.append(c)
                     logging.info("Cooler connects therm {} with fan {}".format(t, f))
 
         # Connect the cold end 0 to fan 2
-        # This is very "Thing" specific, should be configurable somehow. 
+        # This is very "Thing" specific, should be configurable somehow.
         if len(self.printer.cold_ends):
             self.printer.coolers.append(
                 Cooler(self.printer.cold_ends[0], self.printer.fans[2],
@@ -304,13 +306,14 @@ class Redeem:
         # Set up communication channels
         printer.comms["USB"] = USB(self.printer)
         printer.comms["Eth"] = Ethernet(self.printer)
-        
+
         if Pipe.check_tty0tty() or Pipe.check_socat():
             printer.comms["octoprint"] = Pipe(printer, "octoprint")
-            printer.comms["toggle"] = Pipe(printer, "toggle") 
+            printer.comms["toggle"] = Pipe(printer, "toggle")
             printer.comms["testing"] = Pipe(printer, "testing")
-            printer.comms["testing_noret"] = Pipe(printer, "testing_noret") 
-            printer.comms["testing_noret"].send_response = False # Does not send "ok"
+            printer.comms["testing_noret"] = Pipe(printer, "testing_noret")
+            # Does not send "ok"
+            printer.comms["testing_noret"].send_response = False
         else:
             logging.warning("Neither tty0tty or socat is installed! No virtual tty pipes enabled")
 
@@ -335,7 +338,6 @@ class Redeem:
         # Signal everything ready
         logging.info("Redeem ready")
 
-
     def loop(self, queue, name):
         """ When a new gcode comes in, execute it """
         try:
@@ -350,7 +352,7 @@ class Redeem:
                 self._execute(gcode)
 
                 self.printer.reply(gcode)
-                    
+
                 queue.task_done()
         except Exception:
             logging.exception("Exception in {} loop: ".format(name))
@@ -361,7 +363,7 @@ class Redeem:
 
             while self.running:
                 # Returns False on timeout, else True
-                if self.printer.path_planner.wait_until_sync_event():                    
+                if self.printer.path_planner.wait_until_sync_event():
                     try:
                         gcode = queue.get(block=True, timeout=1)
                     except Queue.Empty:
@@ -369,11 +371,10 @@ class Redeem:
                         continue
 
                     self._synchronize(gcode)
-                    logging.info("Event handled for "+gcode.code()+" from "+name + " " + gcode.message)
+                    logging.info("Event handled for " + gcode.code() + " from " + name + " " + gcode.message)
                     queue.task_done()
         except Exception:
             logging.exception("Exception in {} eventloop: ".format(name))
-
 
     def exit(self):
         logging.info("Redeem starting exit")
@@ -385,7 +386,7 @@ class Redeem:
             stepper.set_disabled()
         Stepper.commit()
 
-        for name,heater in self.printer.heaters.iteritems():
+        for name, heater in self.printer.heaters.iteritems():
             logging.debug("closing "+name)
             heater.disable()
 
@@ -433,6 +434,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
-
-
