@@ -86,8 +86,6 @@ class Stepper:
         """ Send the values to the serial to parallel chips """
         if spi2_1 is None:
             return
-
-        print "Stepper rev "+Stepper.revision
         
         bytes = []
         for stepper in Stepper.all_steppers:
