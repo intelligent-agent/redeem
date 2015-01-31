@@ -105,6 +105,9 @@ class Redeem:
         if level > 0:
             logging.getLogger().setLevel(level)
 
+        # Init the Paths
+        Path.axis_config = printer.config.getint('Geometry', 'axis_config')
+
         # Init the end stops
         EndStop.callback = self.end_stop_hit
         EndStop.inputdev = self.printer.config.get("Endstops", "inputdev");
@@ -153,11 +156,12 @@ class Redeem:
         Stepper.commit()
 
         # Delta printer setup
-        opts = ["Hez", "L", "r", "Ae", "Be", "Ce", "Aco", "Bco", "Cco", "Apxe", "Apye", "Bpxe", "Bpye", "Cpxe", "Cpye" ]
-        for opt in opts:
-            Delta.__dict__[opt] = printer.config.getfloat('Delta', opt)
+        if Path.axis_config == Path.AXIS_CONFIG_DELTA:
+            opts = ["Hez", "L", "r", "Ae", "Be", "Ce", "Aco", "Bco", "Cco", "Apxe", "Apye", "Bpxe", "Bpye", "Cpxe", "Cpye" ]
+            for opt in opts:
+                Delta.__dict__[opt] = printer.config.getfloat('Delta', opt)
 
-        Delta.recalculate()
+            Delta.recalculate()
 
         # Set up cold ends
         path = self.printer.config.get('Cold-ends', 'path', 0)
@@ -256,9 +260,6 @@ class Redeem:
         # Make a queue of commands that should not be buffered
         self.printer.sync_commands = JoinableQueue()
         self.printer.unbuffered_commands = JoinableQueue(10)
-
-        # Init the Paths
-        Path.axis_config = printer.config.getint('Geometry', 'axis_config')
 
         # Bed compensation matrix
         Path.matrix_bed_comp = printer.load_bed_compensation_matrix()
