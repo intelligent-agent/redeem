@@ -56,6 +56,11 @@ class PluginsController:
         for pluginName in self.plugins:
             self.plugins[pluginName].path_planner_initialized(path_planner)
 
+    def exit(self):
+        """ Shutdown all plugins for exiting Redeem """
+        for pluginName in self.plugins:
+            self.plugins[pluginName].exit()
+
     def get_plugin(self, pluginName):
         """ Return the plugin loaded instance named pluginName """
         return self.plugins[pluginName]

@@ -382,6 +382,9 @@ class Redeem:
         self.printer.path_planner.wait_until_done()
         self.printer.path_planner.force_exit()
 
+        # Stops plugins
+        self.printer.plugins.exit()
+
         for name, stepper in self.printer.steppers.iteritems():
             stepper.set_disabled()
         Stepper.commit()

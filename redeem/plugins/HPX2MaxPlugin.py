@@ -68,6 +68,9 @@ class HPX2MaxPlugin(AbstractPlugin):
         self.printer.processor.override_command('T0', T0_HPX2Max(self.printer))
         self.printer.processor.override_command('T1', T1_HPX2Max(self.printer))
 
+    def exit(self):
+        self.head_servo.stop()
+
     def path_planner_initialized(self, path_planner):
         # Configure the path planner so that the motor direction
         # is reversed when selecting T1 or T0 (depending on the angle)
@@ -90,6 +93,8 @@ class HPX2MaxPlugin(AbstractPlugin):
             else:
                 e.setDirectionInverted(True if self.t1_angle <= 90 else False)
 
+        # Select tool 0 as this is the default tool
+        self.head_servo.set_angle(self.printer.plugins[__PLUGIN_NAME__].t0_angle, asynchronous=True)
 
 class T0_HPX2Max(GCodeCommand):
 

@@ -75,27 +75,30 @@ class Servo(Fan):
     def turn_off(self):
         self.set_value(0)
 
+    def stop(self):
+        self.running = False
+        self.t.join()
+        self.turn_off()
+
     def _wait_for_event(self):
-        try:
-            while self.running:
-                try:
-                    ev = self.queue.get(block=True, timeout=1)
-                except Queue.Empty:
-                    if self.turnoff_timeout>0 and self.lastCommandTime>0 and time.time()-self.lastCommandTime>self.turnoff_timeout:
-                        self.lastCommandTime = 0
-                        self.turn_off()
-                    continue
+        while self.running:
+            try:
+                ev = self.queue.get(block=True, timeout=1)
+            except Queue.Empty:
+                if self.turnoff_timeout>0 and self.lastCommandTime>0 and time.time()-self.lastCommandTime>self.turnoff_timeout:
+                    self.lastCommandTime = 0
+                    self.turn_off()
+                continue
+            except Exception:
+                # To avoid exception printed on output
+                pass
 
-                self.current_pulse_width = ev[0]
-                self.set_value(self.current_pulse_width/4095.0)
-                self.lastCommandTime = time.time()
-                time.sleep(ev[1])
+            self.current_pulse_width = ev[0]
+            self.set_value(self.current_pulse_width/4095.0)
+            self.lastCommandTime = time.time()
+            time.sleep(ev[1])
 
-                self.queue.task_done()
-
-        except Exception:
-            logging.exception("Exception in loop: ")
-
+            self.queue.task_done()
 
 if __name__ == '__main__':
     import os
