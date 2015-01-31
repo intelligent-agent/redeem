@@ -45,10 +45,10 @@ class Ethernet:
 
         logging.info("Ethernet bound to port " + str(port))
         self.s.listen(backlog)
-        #self.s.setblocking(0)
+        self.client = None
         self.running = True
         self.t = Thread(target=self.get_message)
-        self.t.start()		
+        self.t.start()
 
     def get_message(self):
         """Loop that gets messages and pushes them on the queue"""
@@ -99,4 +99,9 @@ class Ethernet:
     def close(self):
         """Stop receiving messages"""
         self.running = False
+        if self.client is not None:
+            self.client.shutdown(socket.SHUT_RDWR)
+            self.client.close()
+        self.s.shutdown(socket.SHUT_RDWR)
+        self.s.close()
         self.t.join()

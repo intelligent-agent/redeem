@@ -31,6 +31,8 @@ import shutil
 import logging
 import os
 import os.path
+import signal
+import sys
 from threading import Thread
 from multiprocessing import JoinableQueue
 import Queue
@@ -93,6 +95,7 @@ class Redeem:
         else:
             logging.warning("Oh no! No Replicape present!")
             self.revision = "A4A"
+            Path.set_axes(5) # We set it to 5 axis by default
         if self.printer.config.reach_revision:
             Path.set_axes(8)
             logging.info("Found Reach rev. "+self.printer.config.reach_revision)
@@ -101,6 +104,9 @@ class Redeem:
         level = self.printer.config.getint('System', 'loglevel')
         if level > 0:
             logging.getLogger().setLevel(level)
+
+        # Init the Paths
+        Path.axis_config = printer.config.getint('Geometry', 'axis_config')
 
         # Init the end stops
         EndStop.callback = self.end_stop_hit
@@ -150,11 +156,12 @@ class Redeem:
         Stepper.commit()
 
         # Delta printer setup
-        opts = ["Hez", "L", "r", "Ae", "Be", "Ce", "Aco", "Bco", "Cco", "Apxe", "Apye", "Bpxe", "Bpye", "Cpxe", "Cpye" ]
-        for opt in opts:
-            Delta.__dict__[opt] = printer.config.getfloat('Delta', opt)
+        if Path.axis_config == Path.AXIS_CONFIG_DELTA:
+            opts = ["Hez", "L", "r", "Ae", "Be", "Ce", "Aco", "Bco", "Cco", "Apxe", "Apye", "Bpxe", "Bpye", "Cpxe", "Cpye" ]
+            for opt in opts:
+                Delta.__dict__[opt] = printer.config.getfloat('Delta', opt)
 
-        Delta.recalculate()
+            Delta.recalculate()
 
         # Set up cold ends
         path = self.printer.config.get('Cold-ends', 'path', 0)
@@ -254,9 +261,6 @@ class Redeem:
         self.printer.sync_commands = JoinableQueue()
         self.printer.unbuffered_commands = JoinableQueue(10)
 
-        # Init the Paths
-        Path.axis_config = printer.config.getint('Geometry', 'axis_config')
-
         # Bed compensation matrix
         Path.matrix_bed_comp = printer.load_bed_compensation_matrix()
         Path.matrix_bed_comp_inv = np.linalg.inv(Path.matrix_bed_comp)
@@ -331,10 +335,6 @@ class Redeem:
         # Signal everything ready
         logging.info("Redeem ready")
 
-        # Wait for exit signal
-        p0.join()
-        p1.join()
-        p2.join()
 
     def loop(self, queue, name):
         """ When a new gcode comes in, execute it """
@@ -413,10 +413,22 @@ class Redeem:
         """ An endStop has been hit """
         logging.warning("End Stop " + endstop.name + " hit!")
 
+
 def main():
+    # Create Redeem
     r = Redeem()
+
+    def signal_handler(signal, frame):
+        r.exit()
+
+    # Register signal handler to allow interrupt with CTRL-C
+    signal.signal(signal.SIGINT, signal_handler)
+
+    # Launch Redeem
     r.start()
-    r.exit()
+
+    # Wait for end of process signal
+    signal.pause()
 
 
 if __name__ == '__main__':

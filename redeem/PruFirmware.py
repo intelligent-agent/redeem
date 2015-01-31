@@ -124,7 +124,7 @@ class PruFirmware:
         configFile_0 = os.path.join("/tmp", 'config.h')
 
         with open(configFile_0, 'w') as configFile:
-            if self.revision == "A3":
+            if self.revision in ["00A3"]:
                 configFile.write("#define REV_A3\n")
             else:
                 configFile.write("#define REV_A4\n")

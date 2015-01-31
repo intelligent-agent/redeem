@@ -62,8 +62,13 @@ class PathPlanner:
     def __init_path_planner(self):
         self.native_planner = PathPlannerNative()
 
-        self.native_planner.initPRU(self.pru_firmware.get_firmware(0),
-                                    self.pru_firmware.get_firmware(1))
+        fw0 = self.pru_firmware.get_firmware(0)
+        fw1 = self.pru_firmware.get_firmware(1)
+
+        if fw0 is None or fw1 is None:
+            return
+
+        self.native_planner.initPRU(fw0, fw1)
 
         self.native_planner.setPrintAcceleration(tuple([float(self.printer.acceleration[i]) for i in range(3)]))
         self.native_planner.setTravelAcceleration(tuple([float(self.printer.acceleration[i]) for i in range(3)]))
