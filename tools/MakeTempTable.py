@@ -10,7 +10,7 @@ temp_high = 260
 
 Tk   = 273.15
 T0	 = 25 + Tk 		# Temperature 
-B	 = 3497			# Beta value 
+B	 = 4267			# Beta value 
 R0 	 = 10000		# Resistance at room temperature
 
 print 'temp_chart["B57561G0103F000"] = ['

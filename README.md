@@ -34,15 +34,22 @@ For Debian, install swig, python-smbus:
 
 Compile the native path planner module:  
 ```
-cd /usr/src/redeem/software/path_planner  
+cd /usr/src/redeem/
 python setup.py install  
-chmod +x /usr/src/redeem/software/Redeem.py
 ```
-Get and compile the device tree overlay. Notice that there has been a change in the dt interace between 3.8 and 3.12:  
+Get and compile the device tree overlay. Notice that there has been a change in the DT intefrace between 3.8 and 3.12:  
+For Kernel 3.8:
 ```
 wget https://bitbucket.org/intelligentagent/replicape/raw/7bd19bb1be34aa4c32953e8175177d130c6dca10/Device_tree/3.8/BB-BONE-REPLICAP-0A4A.dts
 dtc -O dtb -o /lib/firmware/BB-BONE-REPLICAP-0A4A.dtbo -b 0 -@ BB-BONE-REPLICAP-0A4A.dts
 ```
+For kernel 3.12 +:  
+```
+wget https://bitbucket.org/intelligentagent/replicape/raw/7bd19bb1be34aa4c32953e8175177d130c6dca10/Device_tree/3.12/BB-BONE-REPLICAP-0A4A.dts
+dtc -O dtb -o /lib/firmware/BB-BONE-REPLICAP-0A4A.dtbo -b 0 -@ BB-BONE-REPLICAP-0A4A.dts
+```
+
+
 Disable HDMI with sound (will load HDMI without sound):  
 `nano /boot/uboot/uEnv.txt`  
 Add this line:  
@@ -54,12 +61,6 @@ Add this line:
 `CAPE=BB-BONE-REPLICAP:0A4A`  
 After a reboot, you should see a the cape firmware load:  
 `dmesg | grep -i replic`  
-
-Copy the config files: 
-```
-mkdir -p /etc/redeem
-cp /usr/src/redeem/configs/*.cfg /etc/redeem/
-```
 
 For communicating with octoprint etc. Redeem uses a virtual tty:
 ```

@@ -1,0 +1,4 @@
+include redeem/firmware/*.p
+include redeem/firmware/*.h
+include configs/*.cfg
+include redeem/path_planner/*.h
