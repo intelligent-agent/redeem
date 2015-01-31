@@ -44,6 +44,9 @@ class G29(GCodeCommand):
     def get_description(self):
         return "Probe the bed at three points"
 
+    def get_long_description(self):
+        return "Probe the bed at specified points and update the bed compensation matrix based on the found points."
+
     def is_buffered(self):
         return True
 

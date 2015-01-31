@@ -91,6 +91,7 @@ class Redeem:
             Path.set_axes(5)
         else:
             logging.warning("Oh no! No Replicape present!")
+            self.revision = "A4A"
         if self.printer.config.reach_revision:
             Path.set_axes(8)
             logging.info("Found Reach rev. "+self.printer.config.reach_revision)
@@ -105,7 +106,7 @@ class Redeem:
         EndStop.inputdev = self.printer.config.get("Endstops", "inputdev");
         for es in ["X1", "X2", "Y1", "Y2", "Z1", "Z2"]:
             pin = self.printer.config.get("Endstops", "pin_"+es)
-            keycode = self.printer.config.get("Endstops", "keycode_"+es)
+            keycode = self.printer.config.getint("Endstops", "keycode_"+es)
             invert = self.printer.config.getboolean("Endstops", "invert_"+es)
             self.printer.end_stops[es] = EndStop(pin, keycode, es, invert)
 
