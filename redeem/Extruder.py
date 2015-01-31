@@ -62,6 +62,10 @@ class Heater(object):
         """ get the temperature of the thermistor"""
         return np.average(self.temperatures[-self.avg:])
 
+    def get_target_temperature(self):
+        """ get the temperature of the thermistor"""
+        return self.target_temp
+
     def is_target_temperature_reached(self):
         """ Returns true if the target temperature is reached """
         if self.target_temp == 0:
@@ -85,6 +89,9 @@ class Heater(object):
         # Wait for PID to stop
         self.t.join()
         self.mosfet.set_power(0.0)
+        self.last_error = 0.0
+        self.error_integral = 0.0
+        self.error_integral_limit = 100.0
 
     def enable(self):
         """ Start the PID controller """
@@ -116,7 +123,7 @@ class Heater(object):
                 else:
                     power = 0.0
             else:
-                if abs(error) > 15:  # Avoid windup
+                if abs(error) > 20:  # Avoid windup
                     if error > 0:
                         power = 1.0
                     else:

@@ -51,28 +51,20 @@ import logging
 from Path import Path
 
 try:
-    from spi import SPI
+    from Adafruit_BBIO.SPI import SPI
     # init the SPI for the DAC
-    spi2_0 = SPI(1, 0)	
+    spi2_0 = SPI(0, 0)	
     spi2_0.bpw = 8
     spi2_0.mode = 1
     # Init the SPI for the serial to parallel
-    spi2_1 = SPI(1, 1)	
+    spi2_1 = SPI(0, 1)	
     spi2_1.bpw = 8
     spi2_1.mode = 0
 except ImportError:
-    try:
-        from Adafruit_BBIO.SPI import SPI
-        # init the SPI for the DAC
-        spi2_0 = SPI(0, 0)
-        spi2_0.bpw = 8
-        spi2_0.mode = 1
-        # Init the SPI for the serial to parallel
-        spi2_1 = SPI(0, 1)
-        spi2_1.bpw = 8
-        spi2_1.mode = 0
-    except ImportError:
-        logging.warning("Unable to set up SPI")
+    logging.warning("Unable to set up SPI")
+    spi2_0 = None
+    spi2_1 = None
+
 
 class Stepper:
 
@@ -86,6 +78,9 @@ class Stepper:
     @staticmethod
     def commit():
         """ Send the values to the serial to parallel chips """
+        if spi2_1 is None:
+            return
+
         bytes = []
         for stepper in Stepper.all_steppers:
             bytes.append(stepper.get_state())
@@ -185,6 +180,9 @@ class Stepper:
     def set_current_value(self, iChop):
         """ Current chopping limit (This is the value you can change) """
         self.current_value = iChop
+        if spi2_0 is None:
+            return
+
         vRef = 3.3                   # Voltage reference on the DAC
         rSense = 0.1                 # Resistance for the
         vOut = iChop * 5.0 * rSense  # Calculated voltage out from the DAC

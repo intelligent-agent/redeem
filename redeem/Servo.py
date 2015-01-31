@@ -27,32 +27,37 @@ import time
 import math
 import Queue
 from multiprocessing import JoinableQueue
-
-class ServoCommand(object):
-    def __init__(self, pulse_width, wait_time):
-        self.pulse_width = pulse_width
-        self.wait_time = wait_time
-
+import logging
 
 class Servo(Fan):
-    def __init__(self, channel, pulse_width_start, pulse_width_stop, init_angle):
-        """ Channel is the channel that the fan is on (0-7) """
+    def __init__(self, channel, pulse_width_start, pulse_width_stop, init_angle, turnoff_timeout=0):
+        """Define a new software controllable servo with adjustable speed control
+
+        Keyword arguments:
+        pulse_width_start -- The minimum pulse width defining the lowest angle
+        pulse_width_stop -- The maximum pulse width defining the biggest angle
+        init_angle -- Initial angle that the servo should take when it is powered on. Range is 0 to 180deg
+        turnoff_timeout -- number of seconds after which the servo is turned off if no command is received. 0 = never turns off
+        """
+
         super(Servo, self).__init__(channel)
 
         self.pulse_width_start = pulse_width_start
         self.pulse_width_stop = pulse_width_stop
+        self.turnoff_timeout = turnoff_timeout
 
         self.current_pulse_width = int(init_angle*(self.pulse_width_stop-self.pulse_width_start)/180.0+self.pulse_width_start)
         self.last_pulse_width = self.current_pulse_width
 
         self.queue = JoinableQueue(1000)
+        self.lastCommandTime = 0
 
         self.t = Thread(target=self._wait_for_event)
         self.t.daemon = True
         self.running = True
         self.t.start()
 
-    def set_angle(self,angle, speed = 50, asynchronous = True):
+    def set_angle(self,angle, speed = 60, asynchronous = True):
         ''' Set the servo angle to the given value, in degree, with the given speed in deg / sec '''
         pulse_width = int(angle*(self.pulse_width_stop-self.pulse_width_start)/180.0+self.pulse_width_start)
         last_angle = int((self.last_pulse_width-self.pulse_width_start)/float(self.pulse_width_stop-self.pulse_width_start)*180.0)
@@ -60,7 +65,7 @@ class Servo(Fan):
         t = (math.fabs(angle-last_angle)/speed) / math.fabs(angle-last_angle)
 
         for w in xrange(self.last_pulse_width, pulse_width, 1 if pulse_width>=self.last_pulse_width else -1):
-            self.queue.put(ServoCommand(w,t))
+            self.queue.put((w,t))
 
         self.last_pulse_width = pulse_width
         
@@ -76,11 +81,15 @@ class Servo(Fan):
                 try:
                     ev = self.queue.get(block=True, timeout=1)
                 except Queue.Empty:
+                    if self.turnoff_timeout>0 and self.lastCommandTime>0 and time.time()-self.lastCommandTime>self.turnoff_timeout:
+                        self.lastCommandTime = 0
+                        self.turn_off()
                     continue
 
-                self.current_pulse_width = ev.pulse_width
+                self.current_pulse_width = ev[0]
                 self.set_value(self.current_pulse_width/4095.0)
-                time.sleep(ev.wait_time)
+                self.lastCommandTime = time.time()
+                time.sleep(ev[1])
 
                 self.queue.task_done()
 
@@ -90,14 +99,13 @@ class Servo(Fan):
 
 if __name__ == '__main__':
     import os
-    import logging
 
     logging.basicConfig(level=logging.DEBUG,
                         format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
                         datefmt='%m-%d %H:%M')
 
    
-    fan = Servo(13,500,750,90) 
+    fan = Servo(1,500,750,90) 
 
     Servo.set_PWM_frequency(100)
     while True:
@@ -110,4 +118,5 @@ if __name__ == '__main__':
             fan.turn_off()
             print ""
             break
+
 

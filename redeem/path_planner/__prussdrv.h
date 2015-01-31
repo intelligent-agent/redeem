@@ -63,7 +63,7 @@
 
 #define DISABLE_L3RAM_SUPPORT
 
-#define	PAGE_SIZE                     4096
+#define PAGE_SIZE                     4096
 
 #define PRUSS_V1_STR                  "AM18XX"
 #define PRUSS_V2_STR                  "AM33XX"
@@ -86,12 +86,12 @@
 #define AM33XX_PRU0IRAM_PHYS_BASE            0x4a334000
 #define AM33XX_PRU1IRAM_PHYS_BASE            0x4a338000
 #define AM33XX_PRUSS_SHAREDRAM_BASE          0x4a310000
-#define	AM33XX_PRUSS_CFG_BASE                0x4a326000
-#define	AM33XX_PRUSS_UART_BASE               0x4a328000
-#define	AM33XX_PRUSS_IEP_BASE                0x4a32e000
-#define	AM33XX_PRUSS_ECAP_BASE               0x4a330000
-#define	AM33XX_PRUSS_MIIRT_BASE              0x4a332000
-#define	AM33XX_PRUSS_MDIO_BASE               0x4a332400
+#define AM33XX_PRUSS_CFG_BASE                0x4a326000
+#define AM33XX_PRUSS_UART_BASE               0x4a328000
+#define AM33XX_PRUSS_IEP_BASE                0x4a32e000
+#define AM33XX_PRUSS_ECAP_BASE               0x4a330000
+#define AM33XX_PRUSS_MIIRT_BASE              0x4a332000
+#define AM33XX_PRUSS_MDIO_BASE               0x4a332400
 
 #define AM18XX_PRUSS_IRAM_SIZE               4096
 #define AM18XX_PRUSS_MMAP_SIZE               0x7C00
@@ -161,7 +161,7 @@
 #define PRU_INTC_HIER_REG    0x1500
 
 
-#define MAX_HOSTS_SUPPORTED	10
+#define MAX_HOSTS_SUPPORTED 10
 
 //UIO driver expects user space to map PRUSS_UIO_MAP_OFFSET_XXX to
 //access corresponding memory regions - region offset is N*PAGE_SIZE
@@ -193,25 +193,25 @@
 typedef struct __prussdrv {
     int version;
     int fd[NUM_PRU_HOSTIRQS];
-    void *pru0_dataram_base;
-    void *pru1_dataram_base;
-    void *intc_base;
-    void *pru0_control_base;
-    void *pru0_debug_base;
-    void *pru1_control_base;
-    void *pru1_debug_base;
-    void *pru0_iram_base;
-    void *pru1_iram_base;
-    void *l3ram_base;
-    void *extram_base;
+    char *pru0_dataram_base;
+    char *pru1_dataram_base;
+    char *intc_base;
+    char *pru0_control_base;
+    char *pru0_debug_base;
+    char *pru1_control_base;
+    char *pru1_debug_base;
+    char *pru0_iram_base;
+    char *pru1_iram_base;
+    char *l3ram_base;
+    char *extram_base;
     int mmap_fd;
-    void *pruss_sharedram_base;
-    void *pruss_cfg_base;
-    void *pruss_uart_base;
-    void *pruss_iep_base;
-    void *pruss_ecap_base;
-    void *pruss_miirt_base;
-    void *pruss_mdio_base;
+    char *pruss_sharedram_base;
+    char *pruss_cfg_base;
+    char *pruss_uart_base;
+    char *pruss_iep_base;
+    char *pruss_ecap_base;
+    char *pruss_miirt_base;
+    char *pruss_mdio_base;
     unsigned int pru0_dataram_phy_base;
     unsigned int pru1_dataram_phy_base;
     unsigned int intc_phy_base;
@@ -256,8 +256,8 @@ int __pruss_detect_hw_version(unsigned int *pruss_io)
     }
 }
 
-void __prussintc_set_cmr(unsigned int *pruintc_io, unsigned short sysevt,
-                         unsigned short channel)
+void __prussintc_set_cmr(volatile unsigned int *pruintc_io, 
+                         unsigned short sysevt, unsigned short channel)
 {
     pruintc_io[(PRU_INTC_CMR1_REG + (sysevt & ~(0x3))) >> 2] |=
         ((channel & 0xF) << ((sysevt & 0x3) << 3));
@@ -265,8 +265,8 @@ void __prussintc_set_cmr(unsigned int *pruintc_io, unsigned short sysevt,
 }
 
 
-void __prussintc_set_hmr(unsigned int *pruintc_io, unsigned short channel,
-                         unsigned short host)
+void __prussintc_set_hmr(volatile unsigned int *pruintc_io, 
+                         unsigned short channel, unsigned short host)
 {
     pruintc_io[(PRU_INTC_HMR1_REG + (channel & ~(0x3))) >> 2] =
         pruintc_io[(PRU_INTC_HMR1_REG +
