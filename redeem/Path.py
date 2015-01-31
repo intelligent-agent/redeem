@@ -70,13 +70,14 @@ class Path:
         Path.soft_min = -np.ones(num_axes)
         Path.soft_max = np.ones(num_axes)
 
-    def __init__(self, axes, speed,  cancelable=False, use_bed_matrix=True, use_backlash_compensation=True):
+    def __init__(self, axes, speed,  cancelable=False, use_bed_matrix=True, use_backlash_compensation=True, enable_soft_endstops=True):
         """ The axes of evil, the feed rate in m/s and ABS or REL """
         self.axes = axes
         self.speed = speed
         self.cancelable = int(cancelable)
         self.use_bed_matrix = int(use_bed_matrix)
         self.use_backlash_compensation = int(use_backlash_compensation)
+        self.enable_soft_endstops = enable_soft_endstops
         self.mag = None
         self.pru_data = []
         self.next = None
@@ -244,8 +245,8 @@ class Path:
 
 class AbsolutePath(Path):
     """ A path segment with absolute movement """
-    def __init__(self, axes, speed, cancelable=False, use_bed_matrix=True, use_backlash_compensation=True):
-        Path.__init__(self, axes, speed, cancelable, use_bed_matrix, use_backlash_compensation)
+    def __init__(self, axes, speed, cancelable=False, use_bed_matrix=True, use_backlash_compensation=True, enable_soft_endstops=True):
+        Path.__init__(self, axes, speed, cancelable, use_bed_matrix, use_backlash_compensation, enable_soft_endstops)
         self.movement = Path.ABSOLUTE
 
     def set_prev(self, prev):
@@ -260,7 +261,8 @@ class AbsolutePath(Path):
                 self.end_pos[index] = self.axes[axis]
 
         # Soft end stops
-        self.end_pos = np.clip(self.end_pos, Path.soft_min, Path.soft_max)
+        if self.enable_soft_endstops:
+            self.end_pos = np.clip(self.end_pos, Path.soft_min, Path.soft_max)
 
         self.vec = self.end_pos - self.start_pos
 
@@ -289,8 +291,8 @@ class AbsolutePath(Path):
 
 class RelativePath(Path):
     """ A path segment with Relative movement """
-    def __init__(self, axes, speed, cancelable=False, use_bed_matrix=True, use_backlash_compensation=True):
-        Path.__init__(self, axes, speed, cancelable, use_bed_matrix, use_backlash_compensation)
+    def __init__(self, axes, speed, cancelable=False, use_bed_matrix=True, use_backlash_compensation=True, enable_soft_endstops=True):
+        Path.__init__(self, axes, speed, cancelable, use_bed_matrix, use_backlash_compensation, enable_soft_endstops)
         self.movement = Path.RELATIVE
 
     def set_prev(self, prev):
@@ -299,15 +301,18 @@ class RelativePath(Path):
         prev.next = self
         self.start_pos = prev.end_pos
 
-        # Generate the vector 
+        # Generate the vector
         self.vec = np.zeros(Path.NUM_AXES, dtype=Path.DTYPE)
         for index, axis in enumerate(Path.AXES):
             if axis in self.axes:
                 self.vec[index] = self.axes[axis]
 
-        # Soft end stops
         self.end_pos = self.start_pos + self.vec
-        self.end_pos = np.clip(self.end_pos, Path.soft_min, Path.soft_max)
+
+        # Soft end stops
+        if self.enable_soft_endstops:
+            self.end_pos = np.clip(self.end_pos, Path.soft_min, Path.soft_max)
+
         self.vec = self.end_pos - self.start_pos
 
         # Compute stepper translation

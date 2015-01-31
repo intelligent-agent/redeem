@@ -171,7 +171,7 @@ class PathPlanner:
             logging.debug("axis: "+str(a))
 
         # Move until endstop is hit
-        p = RelativePath(path_back, speed, True, False, True)
+        p = RelativePath(path_back, speed, True, False, True, False)
 
         self.add_path(p)
 
@@ -180,7 +180,7 @@ class PathPlanner:
         self.add_path(p)
 
         # Move to offset
-        p = AbsolutePath(path_zero, speed, True, False, False)
+        p = AbsolutePath(path_zero, speed, True, False, False, False)
         self.add_path(p)
         self.wait_until_done()
 
