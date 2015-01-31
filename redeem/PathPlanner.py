@@ -96,7 +96,7 @@ class PathPlanner:
 
     def wait_until_sync_event(self):
         """ Blocks until a PRU sync event occurs """
-        self.native_planner.waitUntilSyncEvent()
+        return (self.native_planner.waitUntilSyncEvent() == 0)
 
     def clear_sync_event(self):
         """ Resumes/Clears a pending sync event """
@@ -105,6 +105,10 @@ class PathPlanner:
     def queue_sync_event(self, isBlocking):
        """ Returns True if a sync event has been queued. False on failure.(use wait_until_done() instead) """
        return self.native_planner.queueSyncEvent(isBlocking)
+
+    def fire_sync_event(self):
+        """ Unclogs any threads waiting for a sync """
+        
 
     def force_exit(self):
         self.native_planner.stopThread(True)

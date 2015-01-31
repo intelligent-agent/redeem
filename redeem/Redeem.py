@@ -357,21 +357,23 @@ class Redeem:
         try:
 
             while self.running:
-                self.printer.path_planner.wait_until_sync_event()
-                try:
-                    gcode = queue.get(block=True, timeout=1)
-                except Queue.Empty:
-                    logging.error("Unsolicited Sync event occured.")
-                    continue
+                # Returns False on timeout, else True
+                if self.printer.path_planner.wait_until_sync_event():                    
+                    try:
+                        gcode = queue.get(block=True, timeout=1)
+                    except Queue.Empty:
+                        logging.error("Unsolicited Sync event occured.")
+                        continue
 
-                self._synchronize(gcode)
-                logging.info("Event handled for "+gcode.code()+" from "+name + " " + gcode.message)
-                queue.task_done()
+                    self._synchronize(gcode)
+                    logging.info("Event handled for "+gcode.code()+" from "+name + " " + gcode.message)
+                    queue.task_done()
         except Exception:
             logging.exception("Exception in {} eventloop: ".format(name))
 
 
     def exit(self):
+        logging.info("Redeem starting exit")
         self.running = False
         self.printer.path_planner.wait_until_done()
         self.printer.path_planner.force_exit()
@@ -411,6 +413,8 @@ class Redeem:
 def main():
     r = Redeem()
     r.start()
+    r.exit()
+
 
 if __name__ == '__main__':
     main()

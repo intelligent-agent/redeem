@@ -192,19 +192,21 @@ bool PathPlanner::queueSyncEvent(bool isBlocking /* = true */)
 
 }
 
-void PathPlanner::waitUntilSyncEvent()
+int PathPlanner::waitUntilSyncEvent()
 {
+    int ret;
 #ifdef BUILD_PYTHON_EXT
 	PyThreadState *_save; 
 	_save = PyEval_SaveThread();
 #endif
 
 	// Wait for a sync event on the stepper PRU
-	pru.waitUntilSync();
+	ret = pru.waitUntilSync();
 
 #ifdef BUILD_PYTHON_EXT
 	PyEval_RestoreThread(_save);
 #endif
+    return ret;
 }
                      
 void PathPlanner::clearSyncEvent()
