@@ -50,7 +50,6 @@ from PruFirmware import PruFirmware
 from CascadingConfigParser import CascadingConfigParser
 from Printer import Printer
 from GCodeProcessor import GCodeProcessor
-from RESTServer import RESTServer
 from Servo import Servo
 
 # Default logging level is set to debug
@@ -79,8 +78,6 @@ class Redeem:
             logging.getLogger().setLevel(level)
         
         logging.info("Replicape revision " + self.revision)
-
-        self.printer.rest_server = RESTServer(self.printer, self.printer.config.getint('System', 'rest_port'))
 
         # Init the end stops
         EndStop.callback = self.end_stop_hit
@@ -379,9 +376,6 @@ class Redeem:
             # self.printer.comms["testing_noret"].send_response = False
         else:
             logging.warning("tty0tty is not installed! No virtual tty pipes enabled")
-
-        # Set up REST Server
-        self.printer.comms["rest"] = self.printer.rest_server
 
         self.running = True
 

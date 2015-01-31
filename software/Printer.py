@@ -68,13 +68,7 @@ class Printer:
         self.maxJerkEH = 4
         self.current_tool = "E"
 
-        self.rest_server = None
-
         self.head_servo = Servo(1,500,750,90,10) 
-
-    def send_update_rest_clients(self):
-        if self.rest_server is not None:
-            self.rest_server.send_state_update()
 
     def ensure_steppers_enabled(self):
         """
