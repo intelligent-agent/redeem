@@ -25,6 +25,10 @@ class AbstractPlugin(object):
     def __init__(self, printer):
         self.printer = printer
 
+    @abstractmethod
+    def exit(self):
+        pass
+
     @abstractstatic
     def get_description():
         return ""

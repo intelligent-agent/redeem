@@ -44,7 +44,7 @@ class PruFirmware:
             Full path to the file where to store the final firmware file
             without the extension (without .bin)
         revision : string
-            The revision of the board (A3 or A4)
+            The revision of the board (00A3 or 00A4)
         config_parser : ConfigParser
             The config parser with the config file already loaded
         compiler : string
