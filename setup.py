@@ -7,8 +7,7 @@ pathplanner = Extension(
         'redeem/path_planner/PathPlanner.cpp',
         'redeem/path_planner/PruTimer.cpp',
         'redeem/path_planner/prussdrv.c',
-        'redeem/path_planner/Logger.cpp', 
-	'redeem/path_planner/numpy.i'],
+        'redeem/path_planner/Logger.cpp'],
     swig_opts=['-c++','-builtin'],
     include_dirs = [np.get_include()],
     extra_compile_args = [
