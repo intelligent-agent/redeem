@@ -49,10 +49,12 @@ class Heater(object):
         self.current_time = time.time()
         self.prev_time = time.time()
         self.temperatures = []
-        self.errors = []
         self.sleep = 0.1
         self.avg = max(int(1.0/self.sleep), 3)
-        self.A = np.vstack([range(self.avg), np.ones(self.avg)]).T 
+        self.error = 0
+        self.errors = [0]*self.avg
+        self.average = 0
+        self.averages = [0]*self.avg
 
     def set_target_temperature(self, temp):
         """ Set the desired temperature of the extruder """
@@ -104,27 +106,23 @@ class Heater(object):
         while self.enabled:
             self.current_temp = self.thermistor.get_temperature()
             self.temperatures.append(self.current_temp)
-            error = self.target_temp-self.current_temp
-            self.errors.append(error)
-
-            # Use linear regression to find the error and derivative 
-            y = self.errors[-self.avg:]
-            if len(self.errors) >= self.avg:
-                derivative, avg_error = np.linalg.lstsq(self.A, y)[0]
-            else:
-                avg_error = error
-                derivative = 0
+            self.error = self.target_temp-self.current_temp
+            self.errors.append(self.error)
+            self.errors.pop(0)
+            self.average = sum(self.errors)/self.avg
+            self.averages.append(self.average)
+            self.averages.pop(0)
 
             #if self.name =="E":
             #    logging.debug("Err: "+str(error)+" avg err: "+str(avg_error)+" der: "+str(derivative))
             if self.onoff_control:
-                if error > 1.0:
+                if self.error > 1.0:
                     power = 1.0
                 else:
                     power = 0.0
             else:
-                if abs(error) > 20:  # Avoid windup
-                    if error > 0:
+                if abs(self.error) > 20:  # Avoid windup
+                    if self.error > 0:
                         power = 1.0
                     else:
                         power = 0.0
@@ -132,9 +130,9 @@ class Heater(object):
                     self.error_integral = 0
                     self.last_error = error
                 else:
-                    #derivative = self._getErrorDerivative(error)
-                    integral = self._getErrorIntegral(error)
-                    power = self.P*(avg_error + self.D*derivative + self.I*integral)  # The standard formula for the PID				
+                    derivative = self.get_error_derivative()
+                    integral = self.get_error_integral()
+                    power = self.P*(self.average + self.D*derivative + self.I*integral)  # The standard formula for the PID
                     power = max(min(power, 1.0), 0.0)                           # Normalize to 0,1
 
             # If the Thermistor is disconnected or running away or something
@@ -151,15 +149,13 @@ class Heater(object):
             self.current_time = time.time()
             time.sleep(self.sleep)
 
-    def _getErrorDerivative(self, current_error):
+    def get_error_derivative(self):
         """ Get the derivative of the error term """
-        derivative = (current_error-self.last_error)/self.sleep		# Calculate the diff
-        self.last_error = current_error					      # Update the last error 
-        return derivative
+        return (self.average-self.averages[-2])/self.sleep		# Calculate the diff
 
-    def _getErrorIntegral(self, error):
+    def get_error_integral(self):
         """ Calculate and return the error integral """
-        self.error_integral += error*self.sleep
+        self.error_integral += self.error*self.sleep
         return self.error_integral
 
 
@@ -168,7 +164,7 @@ class Extruder(Heater):
     def __init__(self, smd, thermistor, mosfet, name, onoff_control):
         Heater.__init__(self, thermistor, mosfet, name, onoff_control)
         self.smd = smd
-        self.sleep = 0.1
+        self.sleep = 0.25
         self.enable()
 
 

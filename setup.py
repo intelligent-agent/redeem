@@ -7,7 +7,8 @@ pathplanner = Extension(
         'redeem/path_planner/PathPlanner.cpp',
         'redeem/path_planner/PruTimer.cpp',
         'redeem/path_planner/prussdrv.c',
-        'redeem/path_planner/Logger.cpp'],
+        'redeem/path_planner/Logger.cpp', 
+	'redeem/path_planner/numpy.i'],
     swig_opts=['-c++','-builtin'],
     include_dirs = [np.get_include()],
     extra_compile_args = [
@@ -21,7 +22,7 @@ pathplanner = Extension(
 
 setup(
     name = "Redeem",
-    version = "0.16.5",
+    version = "0.16.6",
     packages = find_packages(exclude=["redeem/path_planner"]),
     data_files=[
         ('redeem/firmware', [

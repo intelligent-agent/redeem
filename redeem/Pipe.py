@@ -26,9 +26,9 @@ from threading import Thread
 from distutils.spawn import find_executable
 import select
 import logging
-import os
 import subprocess
 import time
+import os
 from Gcode import Gcode
 
 
@@ -67,7 +67,8 @@ class Pipe:
                                  stderr=subprocess.PIPE)
             while not os.path.exists(pipe_0):
                 time.sleep(0.1)
-        self.fifo = os.open(pipe_0, os.O_RDWR)
+        self.rd = open(pipe_0, "r")
+        self.wr = os.open(pipe_0, os.O_WRONLY)
         logging.info("Pipe " + self.prot + " open. Use '" + pipe_1 + "' to "
                      "communicate with it")
 
@@ -79,9 +80,9 @@ class Pipe:
     def get_message(self):
         """ Loop that gets messages and pushes them on the queue """
         while self.running:
-            ret = select.select([self.fifo], [], [], 1.0)
-            if ret[0] == [self.fifo]:
-                message = self.readline_custom()
+            r, w, x = select.select([self.rd], [], [], 1.0)
+            if r:
+                message = self.rd.readline().rstrip()
                 if len(message) > 0:
                     g = Gcode({"message": message, "prot": self.prot})
                     self.printer.processor.enqueue(g)
@@ -90,19 +91,13 @@ class Pipe:
         if self.send_response:
             if message[-1] != "\n":
                 message += "\n"
-                os.write(self.fifo, message)
+                try:
+                    os.write(self.wr, message)
+                except OSError:
+                    logging.warning("Unable to write to file. Closing down?")
 
     def close(self):
         self.running = False
         self.t.join()
-        os.close(self.fifo)
-
-    def readline_custom(self):
-        message = ""
-
-        while True:
-            cur_char = os.read(self.fifo, 1)
-            #Check for newline char    
-            if cur_char == '\n' or cur_char == "":
-                return message;
-            message += cur_char
+        self.rd.close()
+        os.close(self.wr)

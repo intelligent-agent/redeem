@@ -24,7 +24,7 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
 # Helper functions for kinematics for Delta printers
 import numpy as np  # Needed for sqrt
 import logging
-
+import math
 
 class Delta:
     Hez = 0.0601    # Distance head extends below the effector.
@@ -81,6 +81,11 @@ class Delta:
         Delta.Cvx = Cpx - Cex
         Delta.Cvy = Cpy - Cey
 
+        Delta.p1 = np.array([Delta.Avx, Delta.Avy, 0])
+        Delta.p2 = np.array([Delta.Bvx, Delta.Bvy, 0])
+        Delta.p3 = np.array([Delta.Cvx, Delta.Cvy, 0])
+
+
         logging.info("Delta calibration calculated. Current settings:")
         logging.info("Column A(X): Acoe="+str(Delta.Aco)+" Apxe="+str(Delta.Apxe)+" Apye="+str(Delta.Apye))
         logging.info("Column B(X): Bcoe="+str(Delta.Bco)+" Bpxe="+str(Delta.Bpxe)+" Bpye="+str(Delta.Bpye))
@@ -104,6 +109,25 @@ class Delta:
         Bz = Z + Bcz + Delta.Hez
         Cz = Z + Ccz + Delta.Hez
         
+        return np.array([Az, Bz, Cz])
+
+    @staticmethod
+    def inverse_kinematics2(X, Y, Z):
+        """
+        Inverse kinematics for Delta bot. Returns position for column
+        A, B, and C
+         """
+
+        # Calculate the translation in carriage position
+        Acz = math.sqrt(Delta.L**2 - (X - Delta.Avx)**2 - (Y - Delta.Avy)**2)
+        Bcz = math.sqrt(Delta.L**2 - (X - Delta.Bvx)**2 - (Y - Delta.Bvy)**2)
+        Ccz = math.sqrt(Delta.L**2 - (X - Delta.Cvx)**2 - (Y - Delta.Cvy)**2)
+
+        # Calculate the position of the carriages
+        Az = Z + Acz + Delta.Hez
+        Bz = Z + Bcz + Delta.Hez
+        Cz = Z + Ccz + Delta.Hez
+
         return np.array([Az, Bz, Cz])
 
     @staticmethod
@@ -139,3 +163,84 @@ class Delta:
         XYZ = p1 + x*ex + y*ey + -z*ez
 
         return XYZ
+
+    @staticmethod
+    def forward_kinematics2(Az, Bz, Cz):
+        """
+        Forward kinematics for Delta Bot. Returns the X, Y, Z point given
+        column translations
+        """
+        Delta.p1[2] = Az
+        Delta.p2[2] = Bz
+        Delta.p3[2] = Cz
+        p1 = Delta.p1
+        p2 = Delta.p2
+        p3 = Delta.p3
+
+        p12 = p2 - p1
+
+        ex = p12 / Delta.norm(p12)
+        p13 = p3 - p1
+        i = np.dot(ex, p13)
+        iex = i * ex
+        p13iex = p13 - iex
+        ey = (p13iex) / Delta.norm(p13iex)
+        ez = Delta.cross(ex, ey)
+
+        d = Delta.norm(p12)
+
+        j = Delta.dot(ey, p13)  # Signed magnitude of the Y component
+
+        D = Delta.L
+
+        x = d / 2
+        y = ((i ** 2 + j ** 2) / 2 - i * x) / j
+        z = math.sqrt(D ** 2 - x ** 2 - y ** 2)
+
+        # Construct the final point
+        XYZ = p1 + x*ex + y*ey + -z*ez
+
+        return XYZ
+
+    @staticmethod
+    def norm(p):
+        return math.sqrt(p[0]**2+p[1]**2+p[2]**2)
+
+    @staticmethod
+    def cross(a, b):
+        c = np.array([a[1]*b[2] - a[2]*b[1],
+             a[2]*b[0] - a[0]*b[2],
+             a[0]*b[1] - a[1]*b[0]])
+        return c
+
+    @staticmethod
+    def dot(a, b):
+        return a[0]*b[0]+a[1]*b[1]+a[2]*b[2]
+
+if __name__ == '__main__':
+    import sys
+
+    if len(sys.argv) > 1:
+        if sys.argv[1] == "timeit":
+            import timeit
+            print timeit.timeit('Delta.inverse_kinematics(0.1, 0.1, 0.1)', number=1000, setup='from Delta import Delta; Delta.recalculate()')
+            print timeit.timeit('Delta.inverse_kinematics2(0.1, 0.1, 0.1)', number=1000, setup='from Delta import Delta; Delta.recalculate()')
+            print timeit.timeit('Delta.forward_kinematics(0.1, 0.1, 0.1)', number=1000, setup='from Delta import Delta; Delta.recalculate()')
+            print timeit.timeit('Delta.forward_kinematics2(0.1, 0.1, 0.1)', number=1000, setup='from Delta import Delta; Delta.recalculate()')
+
+
+        elif sys.argv[1] == "yappi":
+            import yappi
+            Delta.recalculate()
+            yappi.start()
+            for i in xrange(100):
+                Delta.forward_kinematics(0.1, 0.1, 0.1)
+            for i in xrange(100):
+                Delta.forward_kinematics2(0.1, 0.1, 0.1)
+            yappi.get_func_stats().print_all()
+    else:
+        Delta.recalculate()
+        print Delta.inverse_kinematics(0.1, 0.1, 0.1)
+        print Delta.inverse_kinematics2(0.1, 0.1, 0.1)
+        print Delta.forward_kinematics(0.1, 0.1, 0.1)
+        print Delta.forward_kinematics2(0.1, 0.1, 0.1)

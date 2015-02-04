@@ -115,14 +115,17 @@ class Path:
             X = np.dot(Path.matrix_XY, vec[0:2])
             ret_vec[:2] = X[0]
         if Path.axis_config == Path.AXIS_CONFIG_DELTA:
-        # Subtract the current column positions
-            start_ABC = Delta.inverse_kinematics(cur_pos[0], cur_pos[1],
+            # Subtract the current column positions
+            if hasattr(self.prev, "end_ABC"):
+                self.start_ABC = self.prev.end_ABC
+            else:
+                self.start_ABC = Delta.inverse_kinematics2(cur_pos[0], cur_pos[1],
                                                  cur_pos[2])
             # Find the next column positions
-            end_ABC = Delta.inverse_kinematics(cur_pos[0] + vec[0],
+            self.end_ABC = Delta.inverse_kinematics2(cur_pos[0] + vec[0],
                                                cur_pos[1] + vec[1],
                                                cur_pos[2] + vec[2])
-            ret_vec[:3] = end_ABC - start_ABC
+            ret_vec[:3] = self.end_ABC - self.start_ABC
 
         # Apply Automatic bed compensation
         if self.use_bed_matrix:
@@ -139,18 +142,15 @@ class Path:
             X = np.dot(Path.matrix_XY_inv, vec[0:2])
             ret_vec[:2] = X[0]
         if Path.axis_config == Path.AXIS_CONFIG_DELTA:
-            # Subtract the current column positions
-            start_ABC = Delta.inverse_kinematics(cur_pos[0], cur_pos[1],
-                                                 cur_pos[2])
             # Find the next column positions
-            end_ABC = start_ABC + vec[:3]
+            self.end_ABC = self.start_ABC + vec[:3]
 
             # We have the column translations and need to find what that
             # represents in cartesian.
-            start_xyz = Delta.forward_kinematics(start_ABC[0], start_ABC[1],
-                                                 start_ABC[2])
-            end_xyz = Delta.forward_kinematics(end_ABC[0], end_ABC[1],
-                                               end_ABC[2])
+            start_xyz = Delta.forward_kinematics2(self.start_ABC[0], self.start_ABC[1],
+                                                 self.start_ABC[2])
+            end_xyz = Delta.forward_kinematics2(self.end_ABC[0], self.end_ABC[1],
+                                               self.end_ABC[2])
             ret_vec[:3] = end_xyz - start_xyz
 
         # Apply Automatic bed compensation

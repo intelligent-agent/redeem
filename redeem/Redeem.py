@@ -34,6 +34,7 @@ from threading import Thread
 from multiprocessing import JoinableQueue
 import Queue
 import numpy as np
+import sys
 
 from Mosfet import Mosfet
 from Stepper import Stepper
@@ -57,7 +58,7 @@ from PluginsController import PluginsController
 from Delta import Delta
 
 
-version = "0.16.5~The Terminator"
+version = "0.16.6~The Terminator"
 
 # Default logging level is set to debug
 logging.basicConfig(level=logging.DEBUG,
@@ -432,5 +433,15 @@ def main():
     signal.pause()
 
 
-if __name__ == '__main__':
+
+def profile():
+    import yappi
+    yappi.start()
     main()
+    yappi.get_func_stats().print_all()
+
+if __name__ == '__main__':
+    if len(sys.argv) > 1 and sys.argv[1] == "profile":
+        profile()
+    else:
+        main()
