@@ -121,6 +121,7 @@ private:
 	void calculateMove(Path* p,FLOAT_T axis_diff[NUM_AXIS]);
 	FLOAT_T safeSpeed(Path *p);
 	void updateTrapezoids();
+	void batchUpdateTrapezoids();
 	void computeMaxJunctionSpeed(Path *previous,Path *current);
 	void backwardPlanner(unsigned int start,unsigned int last);
 	void forwardPlanner(unsigned int first);

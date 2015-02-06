@@ -337,7 +337,8 @@ void PathPlanner::queueBatchMove(FLOAT_T* batchData, int batchSize, FLOAT_T spee
 			p->distance = fabs(axis_diff[E_AXIS]);
 		
 		calculateMove(p,axis_diff);
-		
+		batchUpdateTrapezoids();
+
 		linesWritePos++;
 		linesQueued++;
 		linesCacheRemaining--;
@@ -513,9 +514,7 @@ void PathPlanner::calculateMove(Path* p,FLOAT_T axis_diff[NUM_AXIS])
     if (p->startSpeed * p->startSpeed + p->accelerationDistance2 >= p->fullSpeed * p->fullSpeed)
         p->setNominalMove();
 	
-    p->vMax = F_CPU / p->fullInterval; // maximum steps per second, we can reach
-	
-    updateTrapezoids();
+    p->vMax = F_CPU / p->fullInterval; // maximum steps per second, we can reach   
     // how much steps on primary axis do we need to reach target feedrate
     //p->plateauSteps = (long) (((FLOAT_T)p->acceleration *0.5f / slowest_axis_plateau_time_repro + p->vMin) *1.01f/slowest_axis_plateau_time_repro);
 	
@@ -627,6 +626,90 @@ void PathPlanner::updateTrapezoids()
         nextPlannerIndex(first);
         lines[first].block();
         //END_INTERRUPT_PROTECTED;
+    }
+    while(first!=linesWritePos);
+    act->updateStepsParameter();
+    act->unblock();
+}
+
+
+void PathPlanner::batchUpdateTrapezoids()
+{
+	unsigned int first = linesWritePos;
+    //LOG("batchUpdateTrapezoids line "<< first << std::endl);
+    Path *firstLine;
+    Path *act = &lines[linesWritePos];
+    unsigned int maxfirst = linesPos; // first non fixed segment
+    //LOG("maxFirst =  "<< maxfirst << std::endl);
+    
+    /*if(maxfirst != linesWritePos){
+        LOG("Increae" << std::endl);
+        nextPlannerIndex(maxfirst); // don't touch the line printing
+    }*/
+	
+    // Search last fixed element
+    while(first != maxfirst && !lines[first].isEndSpeedFixed()){
+        //LOG("previousPlannerIndex" << std::endl);
+        previousPlannerIndex(first);
+    }
+    if(first != linesWritePos && lines[first].isEndSpeedFixed()){
+        //LOG("nextPlannerIndex 2" << std::endl);
+        nextPlannerIndex(first);
+    }
+    if(first == linesWritePos)   // Nothing to plan
+    {
+        //LOG("Nothing to plan, he says." << std::endl);
+        act->block();
+        act->setStartSpeedFixed(true);
+        act->updateStepsParameter();
+        act->unblock();
+        return;
+    }
+    //LOG("Planning line "<< first << std::endl);
+
+    // now we have at least one additional move for optimization
+    // that is not a wait move
+    // First is now the new element or the first element with non fixed end speed.
+    // anyhow, the start speed of first is fixed
+    firstLine = &lines[first];
+    firstLine->block(); // don't let printer touch this or following segments during update
+	// END_INTERRUPT_PROTECTED;
+    unsigned int previousIndex = linesWritePos;
+    previousPlannerIndex(previousIndex);
+    Path *previous = &lines[previousIndex];
+	
+    // filters z-move<->not z-move
+    /*if((previous->primaryAxis == Z_AXIS && act->primaryAxis != Z_AXIS) || (previous->primaryAxis != Z_AXIS && act->primaryAxis == Z_AXIS))
+    {
+        LOG("This is a Z-move -> returning! "<< std::endl);
+        previous->setEndSpeedFixed(true);
+        act->setStartSpeedFixed(true);
+        act->updateStepsParameter();
+        firstLine->unblock();
+        return;
+    }*/
+	
+	
+    computeMaxJunctionSpeed(previous,act); // Set maximum junction speed if we have a real move before
+    if(previous->isEOnlyMove() != act->isEOnlyMove())
+    {
+        previous->setEndSpeedFixed(true);
+        act->setStartSpeedFixed(true);
+        act->updateStepsParameter();
+        firstLine->unblock();
+        return;
+    }
+    backwardPlanner(linesWritePos,first);
+    // Reduce speed to reachable speeds
+    forwardPlanner(first);
+	
+    // Update precomputed data
+    do
+    {
+        lines[first].updateStepsParameter();
+        lines[first].unblock();  // Flying block to release next used segment as early as possible
+        nextPlannerIndex(first);
+        lines[first].block();
     }
     while(first!=linesWritePos);
     act->updateStepsParameter();
@@ -1012,7 +1095,7 @@ void PathPlanner::run() {
 		//Wait until we need to push some lines so that the path planner can fill up
 		pru.waitUntilLowMoveTime((F_CPU/1000)*MIN_BUFFERED_MOVE_TIME); //in seconds
 		
-		// LOG( "Sending " << std::dec << linesPos << ", Start speed=" << cur->startSpeed << ", end speed="<<cur->endSpeed << ", nb steps = " << cur->stepsRemaining << std::endl);
+		//LOG( "Sending " << std::dec << linesPos << ", Start speed=" << cur->startSpeed << ", end speed="<<cur->endSpeed << ", nb steps = " << cur->stepsRemaining << std::endl);
 		
 		pru.push_block((uint8_t*)cur->commands, sizeof(SteppersCommand)*cur->stepsRemaining, sizeof(SteppersCommand),linesPos,cur->timeInTicks);
 		
