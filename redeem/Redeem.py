@@ -58,7 +58,7 @@ from PluginsController import PluginsController
 from Delta import Delta
 
 
-version = "0.16.6~The Terminator"
+version = "0.16.7~The Terminator"
 
 # Default logging level is set to debug
 logging.basicConfig(level=logging.DEBUG,

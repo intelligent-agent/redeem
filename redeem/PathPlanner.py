@@ -76,7 +76,6 @@ class PathPlanner:
         self.native_planner.setMaxFeedrates(tuple([float(Path.max_speeds[i]) for i in range(3)]))	
         self.native_planner.setMaxJerk(self.printer.maxJerkXY / 1000.0, self.printer.maxJerkZ /1000.0)
 
-
         #Setup the extruders
         for i in range(Path.NUM_AXES - 3):
             e = self.native_planner.getExtruder(i)
@@ -87,6 +86,8 @@ class PathPlanner:
             e.setAxisStepsPerMeter(long(Path.steps_pr_meter[i + 3]))
 
         self.native_planner.setExtruder(0)
+        self.native_planner.setDriveSystem(Path.axis_config)
+        logging.info("Setting drive system to "+str(Path.axis_config))
 
         self.printer.plugins.path_planner_initialized(self)
 

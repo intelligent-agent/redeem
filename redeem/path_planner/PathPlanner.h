@@ -121,7 +121,6 @@ private:
 	void calculateMove(Path* p,FLOAT_T axis_diff[NUM_AXIS]);
 	FLOAT_T safeSpeed(Path *p);
 	void updateTrapezoids();
-	void batchUpdateTrapezoids();
 	void computeMaxJunctionSpeed(Path *previous,Path *current);
 	void backwardPlanner(unsigned int start,unsigned int last);
 	void forwardPlanner(unsigned int first);
@@ -145,7 +144,8 @@ private:
 	FLOAT_T invAxisStepsPerMM[NUM_AXIS];
 	unsigned long axisStepsPerMM[NUM_AXIS];
 
-	
+    int driveSystem;
+
 	std::atomic_uint_fast32_t linesPos; // Position for executing line movement
 	std::atomic_uint_fast32_t linesWritePos; // Position where we write the next cached line move
 	std::atomic_uint_fast32_t linesCount;      ///< Number of lines cached 0 = nothing to do.
@@ -370,6 +370,14 @@ public:
 	}
 
 	
+	/**
+	 * @brief Set current drive system (Cartesian, H-belt, CoreXY, Delta)
+	 * @details Set current drive system (Cartesian, H-belt, CoreXY, Delta)
+	 * 
+	 * @param driveSystem the drive system used
+	 */
+    void setDriveSystem(int driveSystem);
+
 	void reset();
 	
 	virtual ~PathPlanner();

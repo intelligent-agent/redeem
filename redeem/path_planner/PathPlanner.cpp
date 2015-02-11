@@ -138,6 +138,11 @@ void PathPlanner::recomputeParameters() {
 	
 }
 
+void PathPlanner::setDriveSystem(int driveSystem){
+    this->driveSystem = driveSystem;
+}	
+
+
 PathPlanner::PathPlanner() {
 	linesPos = 0;
 	linesWritePos = 0;
@@ -152,12 +157,14 @@ PathPlanner::PathPlanner() {
 	
 	maxJerk =20;
 	maxZJerk= 0.3;
+
 	
 	recomputeParameters();
 	
 	linesCount = 0;
 	
 	currentExtruder = &extruders[0];
+    driveSystem = 0; 
 	
 	stop = false;
 	bzero(lines, sizeof(lines));
@@ -337,7 +344,7 @@ void PathPlanner::queueBatchMove(FLOAT_T* batchData, int batchSize, FLOAT_T spee
 			p->distance = fabs(axis_diff[E_AXIS]);
 		
 		calculateMove(p,axis_diff);
-		batchUpdateTrapezoids();
+		updateTrapezoids();
 
 		linesWritePos++;
 		linesQueued++;
@@ -565,9 +572,7 @@ void PathPlanner::updateTrapezoids()
     Path *act = &lines[linesWritePos];
     //BEGIN_INTERRUPT_PROTECTED;
     unsigned int maxfirst = linesPos; // first non fixed segment
-    if(maxfirst != linesWritePos)
-        nextPlannerIndex(maxfirst); // don't touch the line printing
-	
+
     // Search last fixed element
     while(first != maxfirst && !lines[first].isEndSpeedFixed())
         previousPlannerIndex(first);
@@ -594,7 +599,7 @@ void PathPlanner::updateTrapezoids()
     Path *previous = &lines[previousIndex];
 	
     // filters z-move<->not z-move
-    if((previous->primaryAxis == Z_AXIS && act->primaryAxis != Z_AXIS) || (previous->primaryAxis != Z_AXIS && act->primaryAxis == Z_AXIS))
+    if(driveSystem != 3 && ((previous->primaryAxis == Z_AXIS && act->primaryAxis != Z_AXIS) || (previous->primaryAxis != Z_AXIS && act->primaryAxis == Z_AXIS)) )
     {
         previous->setEndSpeedFixed(true);
         act->setStartSpeedFixed(true);
@@ -632,103 +637,19 @@ void PathPlanner::updateTrapezoids()
     act->unblock();
 }
 
-
-void PathPlanner::batchUpdateTrapezoids()
-{
-	unsigned int first = linesWritePos;
-    //LOG("batchUpdateTrapezoids line "<< first << std::endl);
-    Path *firstLine;
-    Path *act = &lines[linesWritePos];
-    unsigned int maxfirst = linesPos; // first non fixed segment
-    //LOG("maxFirst =  "<< maxfirst << std::endl);
-    
-    /*if(maxfirst != linesWritePos){
-        LOG("Increae" << std::endl);
-        nextPlannerIndex(maxfirst); // don't touch the line printing
-    }*/
-	
-    // Search last fixed element
-    while(first != maxfirst && !lines[first].isEndSpeedFixed()){
-        //LOG("previousPlannerIndex" << std::endl);
-        previousPlannerIndex(first);
-    }
-    if(first != linesWritePos && lines[first].isEndSpeedFixed()){
-        //LOG("nextPlannerIndex 2" << std::endl);
-        nextPlannerIndex(first);
-    }
-    if(first == linesWritePos)   // Nothing to plan
-    {
-        //LOG("Nothing to plan, he says." << std::endl);
-        act->block();
-        act->setStartSpeedFixed(true);
-        act->updateStepsParameter();
-        act->unblock();
-        return;
-    }
-    //LOG("Planning line "<< first << std::endl);
-
-    // now we have at least one additional move for optimization
-    // that is not a wait move
-    // First is now the new element or the first element with non fixed end speed.
-    // anyhow, the start speed of first is fixed
-    firstLine = &lines[first];
-    firstLine->block(); // don't let printer touch this or following segments during update
-	// END_INTERRUPT_PROTECTED;
-    unsigned int previousIndex = linesWritePos;
-    previousPlannerIndex(previousIndex);
-    Path *previous = &lines[previousIndex];
-	
-    // filters z-move<->not z-move
-    /*if((previous->primaryAxis == Z_AXIS && act->primaryAxis != Z_AXIS) || (previous->primaryAxis != Z_AXIS && act->primaryAxis == Z_AXIS))
-    {
-        LOG("This is a Z-move -> returning! "<< std::endl);
-        previous->setEndSpeedFixed(true);
-        act->setStartSpeedFixed(true);
-        act->updateStepsParameter();
-        firstLine->unblock();
-        return;
-    }*/
-	
-	
-    computeMaxJunctionSpeed(previous,act); // Set maximum junction speed if we have a real move before
-    if(previous->isEOnlyMove() != act->isEOnlyMove())
-    {
-        previous->setEndSpeedFixed(true);
-        act->setStartSpeedFixed(true);
-        act->updateStepsParameter();
-        firstLine->unblock();
-        return;
-    }
-    backwardPlanner(linesWritePos,first);
-    // Reduce speed to reachable speeds
-    forwardPlanner(first);
-	
-    // Update precomputed data
-    do
-    {
-        lines[first].updateStepsParameter();
-        lines[first].unblock();  // Flying block to release next used segment as early as possible
-        nextPlannerIndex(first);
-        lines[first].block();
-    }
-    while(first!=linesWritePos);
-    act->updateStepsParameter();
-    act->unblock();
-}
-
 void PathPlanner::computeMaxJunctionSpeed(Path *previous,Path *current)
 {
     // First we compute the normalized jerk for speed 1
     FLOAT_T dx = current->speedX-previous->speedX;
     FLOAT_T dy = current->speedY-previous->speedY;
+    FLOAT_T dz = current->speedZ-previous->speedZ;
     FLOAT_T factor = 1;
-    FLOAT_T jerk = sqrt(dx*dx + dy*dy);
+    FLOAT_T jerk = sqrt(dx*dx + dy*dy + dz*dz);
     if(jerk>maxJerk)
         factor = maxJerk / jerk;
 	
-    if((previous->dir | current->dir) & 64)
+    if(driveSystem != 3 && ((previous->dir | current->dir) & 64))
     {
-        FLOAT_T dz = fabs(current->speedZ - previous->speedZ);
         if(dz>maxZJerk)
             factor = std::min(factor,maxZJerk / dz);
     }
@@ -966,6 +887,7 @@ void PathPlanner::run() {
 		cur_errupd = cur->delta[cur->primaryAxis];
 		if(!cur->areParameterUpToDate())  // should never happen, but with bad timings???
 		{
+            LOG( "Path planner thread: Need to update paramters! This should not happen!" << std::endl);
 			cur->updateStepsParameter();
 		}
 		

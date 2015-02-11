@@ -330,6 +330,16 @@ public:
   
   void resume();
 
+
+   /**
+	* @brief Set current drive system (Cartesian, H-belt, CoreXY, Delta)
+	* @details Set current drive system (Cartesian, H-belt, CoreXY, Delta)
+	* 
+	* @param driveSystem the drive system used
+	*/
+   void setDriveSystem(int driveSystem);
+
+
   void reset();
   
   virtual ~PathPlanner();
