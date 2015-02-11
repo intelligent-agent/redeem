@@ -128,7 +128,7 @@ class Heater(object):
                         power = 0.0
 
                     self.error_integral = 0
-                    self.last_error = error
+                    self.last_error = self.error
                 else:
                     derivative = self.get_error_derivative()
                     integral = self.get_error_integral()
