@@ -11,8 +11,10 @@ License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 from GCodeCommand import GCodeCommand
 try:
     from Stepper import Stepper
+    from Path import Path
 except ImportError:
     from redeem.Stepper import Stepper
+    from redeem.Path import Path
 
 
 class M909(GCodeCommand):
@@ -21,6 +23,7 @@ class M909(GCodeCommand):
         for i in range(g.num_tokens()):
             self.printer.steppers[g.token_letter(i)].set_microstepping(int(g.token_value(i)))
         Stepper.commit()
+        self.printer.path_planner.native_planner.setAxisStepsPerMeter(tuple([long(Path.steps_pr_meter[i]) for i in range(3)]))
 
     def get_description(self):
         return "Set stepper microstepping settings"
