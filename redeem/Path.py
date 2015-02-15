@@ -67,8 +67,8 @@ class Path:
         Path.steps_pr_meter = np.ones(num_axes)
         Path.backlash_compensation = np.zeros(num_axes)
         Path.backlash_state = np.zeros(num_axes)
-        Path.soft_min = -np.ones(num_axes)
-        Path.soft_max = np.ones(num_axes)
+        Path.soft_min = -np.ones(num_axes)*1000.0
+        Path.soft_max = np.ones(num_axes)*1000.0
 
     def __init__(self, axes, speed,  cancelable=False, use_bed_matrix=True, use_backlash_compensation=True, enable_soft_endstops=True):
         """ The axes of evil, the feed rate in m/s and ABS or REL """
