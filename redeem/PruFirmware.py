@@ -153,9 +153,8 @@ class PruFirmware:
                         continue
                     #direction should be 1 for normal operation and -1 to invert the stepper.
                     direction = 1 if self.config.getint('Steppers', 'direction_' + stepper[0]) > 0 else -1
-                    logging.info("direction "+stepper[0]+str(direction))
                     cur = (1 << ("xyzehabc".index(stepper[0])))
-                    if (stepper[2:5] == "cc" and direction == 1) or direction == -1:
+                    if (stepper[2:5] == "cw" and direction == -1) or direction == 1:
                         cur <<= 8
                     mask += cur
                 bin_mask = "0b"+(bin(mask)[2:]).zfill(16)
