@@ -143,11 +143,23 @@ class PruFirmware:
 
             configFile.write(inversion_mask + "\n");
 
-            # Construct the endstop lookup table. 
-            for axis in ["X1", "X2", "Y1", "Y2", "Z1", "Z2"]:
-                configFile.write(
-                    "#define STEPPER_MASK_" + axis + "\t\t" + self.config.get(
-                        'Endstops', 'lookup_mask_' + axis) + "\n")
+            # Construct the endstop lookup table.
+            for axis in ["X1","Y1","Z1","X2","Y2","Z2"]:
+                mask = 0
+                # stepper name is x_cw or x_ccw
+                for stepper in self.config.get('Endstops', 'end_stop_' + axis + '_stops').split(","):
+                    stepper = stepper.strip()
+                    if stepper == "":
+                        continue
+                    #direction should be 1 for normal operation and -1 to invert the stepper.
+                    direction = 1 if self.config.getint('Steppers', 'direction_' + stepper[0]) > 0 else -1
+                    logging.info("direction "+stepper[0]+str(direction))
+                    cur = (1 << ("xyzehabc".index(stepper[0])))
+                    if (stepper[2:5] == "cc" and direction == 1) or direction == -1:
+                        cur <<= 8
+                    mask += cur
+                bin_mask = "0b"+(bin(mask)[2:]).zfill(16)
+                configFile.write("#define STEPPER_MASK_" + axis + "\t\t" + bin_mask + "\n")
 
         if self.revision in ["0A4A", "00A4"]:
             configFile_1 = os.path.join(
