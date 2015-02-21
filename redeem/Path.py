@@ -86,6 +86,8 @@ class Path:
         self.vec = None
         self.start_pos = None
         self.end_pos = None
+        self.stepper_end_pos = None
+        self.ideal_end_pos = None
         self.num_steps = None
         self.delta = None
         self.compensation = None
@@ -204,7 +206,7 @@ class Path:
         vals = np.transpose([
                     np.linspace(
                         self.start_pos[i], 
-                        self.end_pos[i], 
+                        self.ideal_end_pos[i], 
                         num_segments
                         ) for i in xrange(4)]) 
         vals = np.delete(vals, 0, axis=0)
@@ -252,22 +254,24 @@ class AbsolutePath(Path):
     def set_prev(self, prev):
         """ Set the previous path element """
         self.prev = prev
+        prev.next = self
         self.start_pos = prev.end_pos
 
         # Make the start, end and path vectors. 
         self.end_pos = np.copy(self.start_pos)
+        self.ideal_end_pos = np.copy(prev.ideal_end_pos)
         for index, axis in enumerate(Path.AXES):
             if axis in self.axes:
-                self.end_pos[index] = self.axes[axis]
+                self.ideal_end_pos[index] = self.axes[axis]
 
         # Soft end stops
         if self.enable_soft_endstops:
-            self.end_pos = np.clip(self.end_pos, Path.soft_min, Path.soft_max)
+            self.ideal_end_pos = np.clip(self.ideal_end_pos, Path.soft_min, Path.soft_max)
 
-        self.vec = self.end_pos - self.start_pos
+        self.vec = self.ideal_end_pos - self.start_pos
 
         # Compute stepper translation
-        vec = self.transform_vector(self.vec, self.start_pos)
+        vec = self.transform_vector(self.vec, self.start_pos) # stepper coords
         num_steps = np.ceil(np.abs(vec) * Path.steps_pr_meter)
         self.num_steps = num_steps
         self.delta = np.sign(vec) * num_steps / Path.steps_pr_meter
@@ -283,10 +287,9 @@ class AbsolutePath(Path):
 
         if np.isnan(vec).any():
             self.end_pos = self.start_pos
+            self.ideal_end_pos = np.copy(prev.ideal_end_pos)
             self.num_steps = np.zeros(Path.NUM_AXES)
             self.delta = np.zeros(Path.NUM_AXES)
-
-        prev.next = self
 
 
 class RelativePath(Path):
@@ -307,13 +310,13 @@ class RelativePath(Path):
             if axis in self.axes:
                 self.vec[index] = self.axes[axis]
 
-        self.end_pos = self.start_pos + self.vec
+        self.ideal_end_pos = prev.ideal_end_pos + self.vec
 
         # Soft end stops
         if self.enable_soft_endstops:
-            self.end_pos = np.clip(self.end_pos, Path.soft_min, Path.soft_max)
+            self.ideal_end_pos = np.clip(self.ideal_end_pos, Path.soft_min, Path.soft_max)
 
-        self.vec = self.end_pos - self.start_pos
+        self.vec = self.ideal_end_pos - self.start_pos
 
         # Compute stepper translation
         vec = self.transform_vector(self.vec, self.start_pos)
@@ -334,8 +337,6 @@ class RelativePath(Path):
             self.num_steps = np.zeros(Path.NUM_AXES)
             self.delta = np.zeros(Path.NUM_AXES)
 
-        prev.next = self
-
 
 class G92Path(Path):
     """ A reset axes path segment. No movement occurs, only global position
@@ -349,16 +350,19 @@ class G92Path(Path):
         self.prev = prev
         if prev is not None:
             self.start_pos = prev.end_pos
+            self.ideal_end_pos = np.copy(prev.ideal_end_pos)
             prev.next = self
         else:
             self.start_pos = np.zeros(Path.NUM_AXES, dtype=Path.DTYPE)
+            self.ideal_end_pos = np.copy(self.start_pos)
 
         self.end_pos = np.copy(self.start_pos)
         for index, axis in enumerate(Path.AXES):
             if axis in self.axes:
-                self.end_pos[index] = self.axes[axis]
+                self.end_pos[index] = self.ideal_end_pos[index] = self.axes[axis]
         self.vec = np.zeros(Path.NUM_AXES)
         self.rounded_vec = self.vec
+
 
 class CompensationPath(Path):
     """ A path segment with relative movement and resets axes """
@@ -373,25 +377,25 @@ class CompensationPath(Path):
         """ Link to previous segment """
         self.prev = prev
         prev.next = self
-        self.start_pos = np.zeros(Path.NUM_AXES, dtype=Path.DTYPE)
+
+        # We are not moving to anywhere, really.
+        self.start_pos = np.copy(prev.end_pos)
+        self.ideal_end_pos = np.copy(prev.ideal_end_pos)
+        self.end_pos = np.copy(prev.end_pos)
+
+        # Set stepper and true posision
+        self.stepper_end_pos = np.copy(prev.stepper_end_pos)
+        self.rounded_vec = np.zeros(Path.NUM_AXES, dtype=Path.DTYPE)
 
         # Generate the vector 
-        self.vec = np.zeros(Path.NUM_AXES, dtype=Path.DTYPE)
-        for index, axis in enumerate(Path.AXES):
-            self.vec = self.axes
+        self.vec = self.axes
 
         # Compute stepper translation
         self.num_steps = np.ceil(np.abs(self.vec) * Path.steps_pr_meter)
         self.delta = np.sign(self.vec) * self.num_steps / Path.steps_pr_meter
 
-        # Set stepper and true posision
-        self.end_pos = np.copy(prev.end_pos)
-        self.stepper_end_pos = self.delta
-        self.rounded_vec = self.vec
-
         if np.isnan(self.vec).any():
             logging.error("Compensation Path Invalid: "+str(self.start_pos)+" to "+str(self.axes))
-            self.end_pos = prev.end_pos
             self.num_steps = np.zeros(Path.NUM_AXES)
             self.delta = np.zeros(Path.NUM_AXES)
 
