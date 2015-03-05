@@ -26,8 +26,6 @@ ssh root@192.168.7.2
 cd /usr/src  
 git clone https://intelligentagent@bitbucket.org/intelligentagent/redeem.git  
 ```
-Make sure gcc, swig, python-dev, binutils and g++ is installed before compiling the native path planner.  
-`opkg install swig python-dev gcc binutils g++`
 
 For Debian, install swig, python-smbus:  
 `apt-get install swig python-smbus`
@@ -36,6 +34,8 @@ Compile the native path planner module:
 ```
 cd /usr/src/redeem/
 python setup.py install  
+mkdir /etc/redeem
+cp configs/* /etc/redeem
 ```
 Get and compile the device tree overlay. Notice that there has been a change in the DT intefrace between 3.8 and 3.12:  
 For Kernel 3.8:
