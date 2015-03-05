@@ -12,7 +12,7 @@ your 3D-printer. It's similar to Marlin and Teacup, only it's taylor made for Re
 Software features:  
 - Accelleration with corner speed prediction.  
 - Printer settings loaded from file  
-- Controllable via ethernet, USB, printer display.   
+- Controllable via ethernet, USB, Manga Screen (Toggle on 4.3" LCD).   
 
 Wiki: (http://wiki.thing-printer.com/index.php?title=Redeem)
 
