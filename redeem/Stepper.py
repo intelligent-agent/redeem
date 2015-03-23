@@ -71,8 +71,8 @@ try:
 #         spi2_1 = SPI(0, 1)
 #         spi2_1.bpw = 8
 #         spi2_1.mode = 0
-#     except ImportError:
-#         logging.warning("Unable to set up SPI")
+except ImportError:
+    logging.warning("Unable to set up SPI")
 
 class Stepper:
 
