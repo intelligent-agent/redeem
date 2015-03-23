@@ -3,7 +3,7 @@ Description=The Replicape Dameon
 
 [Service]
 ExecStart=/usr/bin/redeem
-ExecStartPost=/bin/sh -c 'sleep 5; chmod 660 `readlink /dev/octoprint_1`'
+ExecStartPost=/bin/sh -c 'sleep 20; chmod 660 `readlink /dev/octoprint_1`'
 
 [Install]
 WantedBy=basic.target
