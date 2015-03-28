@@ -148,7 +148,10 @@ class PathPlanner:
         logging.debug("homing internal " + str(axis))
             
 
-        path_back = {}
+        path_search = {}
+        path_backoff = {}
+        path_fine_search = {}
+
         path_center = {}
         path_zero = {}
 
@@ -159,29 +162,55 @@ class PathPlanner:
                 logging.debug("Skipping homing for " + str(a))
                 continue
             logging.debug("Doing homing for " + str(a))
-            logging.debug(self.travel_length)
-            logging.debug(self.center_offset)
+            
+            backoff_length = min(self.travel_length[a] * 0.5, 0.010)
             if Path.home_speed[Path.axis_to_index(a)] < 0:
-                path_back[a] = self.travel_length[a]
+                # Search to positive ends
+                path_search[a] = self.travel_length[a]
                 path_center[a] = self.center_offset[a]
+                backoff_length *= -1
             else:
-                path_back[a] = -self.travel_length[a]
+                # Search to negative ends
+                path_search[a] = -self.travel_length[a]
                 path_center[a] = -self.center_offset[a]
-            path_zero[a] = self.home_pos[a]
-            speed = min(abs(speed), abs(Path.home_speed[Path.axis_to_index(a)]))
 
+            path_backoff[a] = backoff_length;
+            path_fine_search[a] = -backoff_length * 1.2;
+
+            path_zero[a] = self.home_pos[a]
+
+            speed = min(abs(speed), abs(Path.home_speed[Path.axis_to_index(a)]))
             logging.debug("axis: "+str(a))
+        
+        logging.debug("Search: %s" % path_search)
+        logging.debug("Backoff to: %s" % path_backoff)
+        logging.debug("Fine search: %s" % path_fine_search)
+        logging.debug("Center: %s" % path_center)
+        logging.debug("Zero: %s" % path_zero)
+
+        fine_search_speed = speed / 10;
 
         # Move until endstop is hit
-        p = RelativePath(path_back, speed, True, False, True, False)
-
+        p = RelativePath(path_search, speed, True, False, True, False)
         self.add_path(p)
 
         # Reset position to offset
         p = G92Path(path_center, speed)
         self.add_path(p)
 
-        # Move to offset
+        # Back off a bit
+        p = RelativePath(path_backoff, speed, True, False, True, False)
+        self.add_path(p)
+
+        # Hit the endstop slowly
+        p = RelativePath(path_fine_search, fine_search_speed, True, False, True, False)
+        self.add_path(p)
+
+        # Reset (final) position to offset
+        p = G92Path(path_center, speed)
+        self.add_path(p)
+
+        # Move to home position
         p = AbsolutePath(path_zero, speed, True, False, False, False)
         self.add_path(p)
         self.wait_until_done()
