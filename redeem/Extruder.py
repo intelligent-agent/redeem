@@ -105,7 +105,10 @@ class Heater(object):
         """ PID Thread that keeps the temperature stable """
         while self.enabled:
             self.current_temp = self.thermistor.get_temperature()
+            
             self.temperatures.append(self.current_temp)
+            self.temperatures[:-max(int(60/self.sleep), self.avg)] = [] # Keep only this much history
+
             self.error = self.target_temp-self.current_temp
             self.errors.append(self.error)
             self.errors.pop(0)
