@@ -153,15 +153,21 @@ class PruFirmware:
                     stepper = stepper.strip()
                     if stepper == "":
                         continue
-                    m = re.search('^([xyzehabc])_(ccw|cw)$', stepper)
+                    m = re.search('^([xyzehabc])_(ccw|cw|pos|neg)$', stepper)
                     if (m == None):
                         raise RuntimeError("'" + stepper + "' is invalid for " + option)
 
                     # direction should be 1 for normal operation and -1 to invert the stepper.
-                    direction = 1 if self.config.getint('Steppers', 'direction_' + stepper[0]) > 0 else -1
+                    if (m.group(2) == "pos"):
+                        direction = -1
+                    elif (m.group(2) == "neg"):
+                        direction = 1
+                    else:
+                        direction = 1 if self.config.getint('Steppers', 'direction_' + stepper[0]) > 0 else -1
+                        if (m.group(2) == "ccw"): 
+                            direction *= -1
+
                     cur = 1 << ("xyzehabc".index(m.group(1)))
-                    if (m.group(2) == "ccw"): 
-                        direction *= -1
                     if (direction == -1):
                         cur <<= 8
                     mask += cur
