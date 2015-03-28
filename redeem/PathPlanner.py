@@ -51,6 +51,7 @@ class PathPlanner:
 
         self.travel_length = {"X": 0.0, "Y": 0.0, "Z": 0.0, "E": 0.0, "H": 0.0}
         self.center_offset = {"X": 0.0, "Y": 0.0, "Z": 0.0, "E": 0.0, "H": 0.0}
+        self.home_pos = {"X": 0.0, "Y": 0.0, "Z": 0.0, "E": 0.0, "H": 0.0}
         self.prev = G92Path({"X": 0.0, "Y": 0.0, "Z": 0.0, "E": 0.0, "H": 0.0}, 0)
         self.prev.set_prev(None)
 
@@ -166,7 +167,7 @@ class PathPlanner:
             else:
                 path_back[a] = -self.travel_length[a]
                 path_center[a] = -self.center_offset[a]
-            path_zero[a] = 0
+            path_zero[a] = self.home_pos[a]
             speed = min(abs(speed), abs(Path.home_speed[Path.axis_to_index(a)]))
 
             logging.debug("axis: "+str(a))

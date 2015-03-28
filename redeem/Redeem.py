@@ -296,10 +296,25 @@ class Redeem:
         # Path planner
         self.printer.path_planner = PathPlanner(self.printer, pru_firmware)
         for axis in printer.steppers.keys():
-            printer.path_planner.travel_length[axis] = printer.config.getfloat(
-                                                       'Geometry', 'travel_' + axis.lower())
-            printer.path_planner.center_offset[axis] = printer.config.getfloat(
-                                                       'Geometry', 'offset_' + axis.lower())
+            i = Path.axis_to_index(axis)
+
+            # Sometimes soft_end_stop aren't defined to be at the exact hardware boundary.
+            # Adding 100mm for searching buffer.
+            printer.path_planner.travel_length[axis] = \
+                printer.config.getfloat('Geometry', 'travel_' + axis.lower()) \
+                if printer.config.has_option('Geometry', 'travel_' + axis.lower()) \
+                else (Path.soft_max[i] - Path.soft_min[i]) + .1            
+            
+            printer.path_planner.center_offset[axis] = \
+                printer.config.getfloat('Geometry', 'offset_' + axis.lower()) \
+                if printer.config.has_option('Geometry', 'offset_' + axis.lower()) \
+                else (Path.soft_min[i] if Path.home_speed[i] > 0 else Path.soft_max[i])
+
+            printer.path_planner.home_pos[axis] = \
+                printer.config.getfloat('Geometry', 'home_' + axis.lower()) \
+                if printer.config.has_option('Geometry', 'home_' + axis.lower()) \
+                else printer.path_planner.center_offset[axis]
+
             printer.acceleration[Path.axis_to_index(axis)] = printer.config.getfloat(
                                                         'Steppers', 'acceleration_' + axis.lower())
 
