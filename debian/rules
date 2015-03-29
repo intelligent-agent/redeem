@@ -1,4 +1,4 @@
-#!/usr/bin/python setup.py
+#!/usr/bin/python setup.py build
 
 %:
 
