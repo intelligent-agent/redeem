@@ -1,0 +1,11 @@
+Source: redeem
+Maintainer: Chris Roadfeldt <chris@roadfeldt.com>
+Section: misc
+Priority: optional
+Standards-Version: 1.0
+Build-Depends: build-essentials debhelper (>= 9) swig python-smbus
+
+Package: redeem
+Architecture: armv7l
+Depends: swig python python-smbus
+Description: Redeem software package for use with Replicape CNC and 3D printer cape.

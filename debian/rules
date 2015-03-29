@@ -1,0 +1,5 @@
+#!/usr/bin/python setup.py
+
+%:
+
+	dh $@
