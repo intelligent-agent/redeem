@@ -247,18 +247,25 @@ void PathPlanner::queueBatchMove(FLOAT_T* batchData, int batchSize, FLOAT_T spee
 
 	unsigned int linesQueued = 0;
 	unsigned int linesCacheRemaining = 0;
+    long linesTicksRemaining = 0;
+    long linesTicksQueued = 0;
 
 	// Process each segment
 	for(int segment_index = 0; segment_index < numSegments; segment_index++)
 	{
                
 		// wait for the worker
-		if(linesCacheRemaining == 0)
+		if(linesCacheRemaining == 0 || linesTicksRemaining == 0)
 		{
 			std::unique_lock<std::mutex> lk(line_mutex);
 			//LOG( "Waiting for free move command space... Current: " << MOVE_CACHE_SIZE - linesCount << std::endl);
-			lineAvailable.wait(lk, [this]{return linesCount < MOVE_CACHE_SIZE || stop;});
+			lineAvailable.wait(lk, [this]{
+                return 
+                    stop || 
+                    (linesCount < MOVE_CACHE_SIZE && !isLinesBufferFilled());
+            });
 			linesCacheRemaining = MOVE_CACHE_SIZE - linesCount;
+            linesTicksRemaining = MAX_BUFFERED_MOVE_TIME - linesTicksCount;
 		}
 	
 		if(stop)
@@ -347,20 +354,29 @@ void PathPlanner::queueBatchMove(FLOAT_T* batchData, int batchSize, FLOAT_T spee
 		updateTrapezoids();
 
 		linesWritePos++;
+
 		linesQueued++;
 		linesCacheRemaining--;
+
+        linesTicksQueued += p->timeInTicks;
+        linesTicksRemaining -= p->timeInTicks;
 		
-		if(linesWritePos>=MOVE_CACHE_SIZE)
+		if (linesWritePos>=MOVE_CACHE_SIZE)
 			linesWritePos = 0;
 		
-		// send data to the worker thread, when forced or when finished.
-		if((linesCacheRemaining == 0) || ((segment_index + 1) == numSegments))	// We just filled the cache, or exhausted this batch.
+		// Notify the run() thread to work
+        //   when queue is full, or at the end of this batch.
+		if((linesCacheRemaining == 0) || 
+            ((segment_index + 1) == numSegments) ||
+            linesTicksRemaining <= 0)	
 		{
 			{
-		        	std::lock_guard<std::mutex> lk(line_mutex);
-		        	linesCount += linesQueued;
+                std::lock_guard<std::mutex> lk(line_mutex);
+                linesCount += linesQueued;
+                linesTicksCount += linesTicksQueued;
 			}
 			linesQueued = 0;
+            linesTicksQueued = 0;
 			lineAvailable.notify_all();
 		}
 		//LOG( "Line finished (" << linesQueued << "lines ready)." << std::endl);
@@ -836,7 +852,7 @@ void PathPlanner::run() {
 		Path* cur = &lines[linesPos];
 		
 		//If the buffer is half or more empty and the line to print is an optimized one , wait for 500 ms again so that we can get some other path in the path planner buffer, and we do that until the buffer is not anymore half empty.
-		if(linesCount<MOVE_CACHE_SIZE/8 && cur->getWaitMS()>0 && waitUntilFilledUp) {
+		if(!isLinesBufferFilled() && cur->getWaitMS()>0 && waitUntilFilledUp) {
 			unsigned lastCount = 0;
 			LOG("Waiting for buffer to fill up... " << linesCount  << " lines pending " << lastCount << std::endl);
 			do { 
