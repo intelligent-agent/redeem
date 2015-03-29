@@ -142,7 +142,7 @@ class GCodeProcessor:
             logging.error(
                 "No GCode processor for " + gcode.code() +
                 ". Message: " + gcode.message)
-            return None
+            return "GCode " + gcode.code() + " is not implemented"
         try:
             return self.gcodes[val].get_long_description()
         except Exception, e:

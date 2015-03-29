@@ -62,6 +62,7 @@ class Mosfet:
     def __init__(self, channel):
         """ Channel is the channel that the thing is on (0-15) """
         self.channel = channel
+        self.power = 0
 
     def set_power(self, value):
         """Set duty cycle between 0 and 1"""

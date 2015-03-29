@@ -50,8 +50,19 @@ import time
 import logging
 from Path import Path
 
+spi2_0 = None
+spi2_1 = None
+
+# Load SPI module
 try:
     from Adafruit_BBIO.SPI import SPI
+except ImportError:
+    try:
+        from spi import SPI
+    except ImportError:
+        pass
+
+if 'SPI' in globals():
     # init the SPI for the DAC
     try:
         spi2_0 = SPI(0, 0)
@@ -66,11 +77,10 @@ try:
         spi2_1 = SPI(1, 1)
     spi2_1.bpw = 8
     spi2_1.mode = 0
-except ImportError:
+else:
     logging.warning("Unable to set up SPI")
     spi2_0 = None
     spi2_1 = None
-
 
 class Stepper:
 
