@@ -32,4 +32,3 @@ set +x
 
 # Enable redeem.service
 systemctl enable redeem.service
-systemctl start redeem.service
