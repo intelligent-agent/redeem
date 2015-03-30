@@ -49,16 +49,64 @@ wget https://bitbucket.org/intelligentagent/replicape/raw/7bd19bb1be34aa4c32953e
 dtc -O dtb -o /lib/firmware/BB-BONE-REPLICAP-0A4A.dtbo -b 0 -@ BB-BONE-REPLICAP-0A4A.dts
 ```
 
-
 Disable HDMI with sound (will load HDMI without sound):  
+
+For pre uboot v2014.07/v2014.10/v2015.01 images
+
 `nano /boot/uboot/uEnv.txt`  
 Add this line:  
 `optargs=capemgr.disable_partno=BB-BONELT-HDMI`
-    
+
+For post uboot v2014.07/v2014.10/v2015.01 images
+
+`nano /boot/uEnv.txt`  
+
+Change this line:  
+`#cape_disable=capemgr.disable_partno=BB-BONELT-HDMI`
+to
+`cape_disable=capemgr.disable_partno=BB-BONELT-HDMI`
+
 The capemgr does not work with Debian, so the cape has to be enabled manually:  
 `nano /etc/default/capemgr`  
 Add this line:  
 `CAPE=BB-BONE-REPLICAP:0A4A`  
+
+Enable Adafruit SPI0 overlay on boot - needed for at least March 1st 2015 Debian image for BBB, possibly for everything post uboot v2014.07/v2014.10/v2015.1 images.
+
+`nano /boot/uEnv.txt`  
+
+Add this line:  
+`cape_enable=capemgr.enable_partno=ADAFRUIT-SPI0`
+
+Also need to rebuild the initrd image so it includes the Adafruit SPI0 overlay, this will insert all overylays in /lib/firmware. Useful if you need to add future overlays for boot time application. Copied and updated from https://github.com/notro/fbtft/wiki/BeagleBone-Black
+
+Create /etc/initramfs-tools/hooks/dtbo
+
+```
+#!/bin/sh
+
+set -e
+
+. /usr/share/initramfs-tools/hook-functions
+
+# Copy Device Tree fragments
+mkdir -p "${DESTDIR}/lib/firmware"
+cp -p /lib/firmware/*.dtbo "${DESTDIR}/lib/firmware/"
+```
+
+Make executable
+
+`$ sudo chmod +x /etc/initramfs-tools/hooks/dtbo`
+Backup initrd:
+
+`$ sudo cp /boot/initrd.img-\`uname - r\` /boot/uboot/initrd.img-\`uname -r\`.bak`
+
+Create/update initramfs:
+
+`$ sudo /usr/sbin/update-initramfs`
+
+Reboot
+
 After a reboot, you should see a the cape firmware load:  
 `dmesg | grep -i replic`  
 
@@ -71,6 +119,18 @@ make
 make install  
 ```  
 Enable the redeem service:  
+
+First modify the redeem.service file to update redeem 'binary' location.
+
+`nano /usr/src/redeem/systemd/redeem.service`
+
+Edit line
+`ExecStart=/usr/bin/redeem`
+to
+`ExecStart=/usr/local/bin/redeem`
+
+Copy redeem systemd startup script into place, enable it for startup on boot and start it now.
+
 ```
 cp /usr/src/redeem/systemd/redeem.service /lib/systemd/system/redeem.service  
 systemctl enable redeem.service  
