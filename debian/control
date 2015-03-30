@@ -3,7 +3,8 @@ Maintainer: Chris Roadfeldt <chris@roadfeldt.com>
 Section: misc
 Priority: optional
 Standards-Version: 0.16.3
-Build-Depends: build-essential, debhelper (>= 9), swig, python-smbus, python-all, dh-python, python-dev
+Build-Depends: build-essential, debhelper (>= 9), swig, python-smbus, python, dh-python, python-dev
+X-Python-Version: 2.7
 
 Package: redeem
 Architecture: armhf
