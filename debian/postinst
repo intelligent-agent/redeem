@@ -23,7 +23,7 @@ echo "cape_enable=capemgr.enable_partno=ADAFRUIT-SPI0" >> /boot/uEnv.txt
 echo "Adding all overlays in /lib/firmware to initramfs. Needed to include Adafruit SPI0 overlay"
 set -x
 cp -p /boot/initrd.img-`uname -r` /boot/initrd.img`uname -r`.bak
-/usr/sbin/update-initramfs
+/usr/sbin/update-initramfs -u
 set +x
 
 # Enable redeem.service
