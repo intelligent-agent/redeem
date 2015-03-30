@@ -1,5 +1,9 @@
 #!/bin/sh
 
+# Set perms on files that need to change from install.
+chmod 755 /etc/initramfs-tools/hooks/dtbo
+chmod 755 /lib/systemd/system/redeem.service
+
 # Install the Device Overlay for the replicape.
 echo "Installing Replicape Device Overlay"
 set -x
