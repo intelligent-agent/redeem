@@ -3,7 +3,7 @@
 
 PYTHON=`which python`
 DESTDIR=/
-BUILDIR=$(CURDIR)/debian/myprojectname
+BUILDIR=$(CURDIR)/debian/redeem
 PROJECT=myprojectname
 VERSION=0.2.0
 
@@ -19,6 +19,11 @@ source:
 
 install:
 	$(PYTHON) setup.py install --root $(DESTDIR) $(COMPILE)
+	mkdir -p $(prefix)/etc/redeem
+	install 644 configs/* $(prefix)/etc/redeem/
+	install 755 scripts/dtbo $(prefix)/etc/initramfs-tools/hooks/
+	mkdir
+	install 755 systemd/redeem.service $(prefix)/lib/systemd/system/
 
 buildrpm:
 	$(PYTHON) setup.py bdist_rpm --post-install=rpm/postinstall --pre-uninstall=rpm/preuninstall

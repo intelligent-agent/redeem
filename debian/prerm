@@ -1,0 +1,21 @@
+#!/bin/sh
+
+# Shutdown and remove redeem.service
+systemctl stop redeem.service
+systemctl disable redeem.service
+
+# Remove Replicape Overlay file
+echo "Removing /lib/firmware/BB-BONE-REPLICAP-0A4A.dtbo"
+rm -f /lib/firmware/BB-BONE-REPLICAP-0A4A.dtbo
+
+# Notify user they can renable HDMI Sound
+echo "Re-enable HDMI sound by adding a # in front of cape_disable=capemgr.disable_partno=BB-BONELT-HDMI in /boot/uEnv.txt"
+
+# Remove Replicape Overlay in capemgr
+echo "Removing CAPE=BB-BONE-REPLICAP:0A4A from /etc/default/capemgr"
+sed -i '/CAPE=BB-BONE-REPLICAP:0A4A/d' /etc/default/capemgr
+
+# Remove Adafruit overly from /boot/uEnv.txt
+echo "Removing cape_enable=capemgr.enable_partno=ADAFRUIT-SPI0 from /boot/uEnv.txt"
+sed -i '/cape_enable=capemgr.enable_partno=ADAFRUIT-SPI0/d'/boot/uEnv.txt
+
