@@ -103,51 +103,58 @@ class Heater(object):
 
     def keep_temperature(self):
         """ PID Thread that keeps the temperature stable """
-        while self.enabled:
-            self.current_temp = self.thermistor.get_temperature()
-            self.temperatures.append(self.current_temp)
-            self.error = self.target_temp-self.current_temp
-            self.errors.append(self.error)
-            self.errors.pop(0)
-            self.average = sum(self.errors)/self.avg
-            self.averages.append(self.average)
-            self.averages.pop(0)
+        try:
+            while self.enabled:
+                self.current_temp = self.thermistor.get_temperature()
+                
+                self.temperatures.append(self.current_temp)
+                self.temperatures[:-max(int(60/self.sleep), self.avg)] = [] # Keep only this much history
 
-            #if self.name =="E":
-            #    logging.debug("Err: "+str(error)+" avg err: "+str(avg_error)+" der: "+str(derivative))
-            if self.onoff_control:
-                if self.error > 1.0:
-                    power = 1.0
-                else:
-                    power = 0.0
-            else:
-                if abs(self.error) > 20:  # Avoid windup
-                    if self.error > 0:
+                self.error = self.target_temp-self.current_temp
+                self.errors.append(self.error)
+                self.errors.pop(0)
+                self.average = sum(self.errors)/self.avg
+                self.averages.append(self.average)
+                self.averages.pop(0)
+
+                #if self.name =="E":
+                #    logging.debug("Err: "+str(error)+" avg err: "+str(avg_error)+" der: "+str(derivative))
+                if self.onoff_control:
+                    if self.error > 1.0:
                         power = 1.0
                     else:
                         power = 0.0
-
-                    self.error_integral = 0
-                    self.last_error = self.error
                 else:
-                    derivative = self.get_error_derivative()
-                    integral = self.get_error_integral()
-                    power = self.P*(self.average + self.D*derivative + self.I*integral)  # The standard formula for the PID
-                    power = max(min(power, 1.0), 0.0)                           # Normalize to 0,1
+                    if abs(self.error) > 20:  # Avoid windup
+                        if self.error > 0:
+                            power = 1.0
+                        else:
+                            power = 0.0
 
-            # If the Thermistor is disconnected or running away or something
-            if self.current_temp <= 5 or self.current_temp > 250:
-                power = 0
-            self.mosfet.set_power(power)
-            time_diff = self.current_time-self.prev_time
-            if time_diff > 2:
-                logging.warning("Heater time update large: " +
-                                self.name + " temp: " +
-                                str(self.current_temp) + " time delta: " +
-                                str(self.current_time-self.prev_time))
-            self.prev_time = self.current_time
-            self.current_time = time.time()
-            time.sleep(self.sleep)
+                        self.error_integral = 0
+                        self.last_error = self.error
+                    else:
+                        derivative = self.get_error_derivative()
+                        integral = self.get_error_integral()
+                        power = self.P*(self.average + self.D*derivative + self.I*integral)  # The standard formula for the PID
+                        power = max(min(power, 1.0), 0.0)                           # Normalize to 0,1
+
+                # If the Thermistor is disconnected or running away or something
+                if self.current_temp <= 5 or self.current_temp > 250:
+                    power = 0
+                self.mosfet.set_power(power)
+                time_diff = self.current_time-self.prev_time
+                if time_diff > 2:
+                    logging.warning("Heater time update large: " +
+                                    self.name + " temp: " +
+                                    str(self.current_temp) + " time delta: " +
+                                    str(self.current_time-self.prev_time))
+                self.prev_time = self.current_time
+                self.current_time = time.time()
+                time.sleep(self.sleep)
+        finally:
+            # Disable this mosfet if anything goes wrong
+            self.mosfet.set_power(0)
 
     def get_error_derivative(self):
         """ Get the derivative of the error term """
