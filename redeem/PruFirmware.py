@@ -27,6 +27,7 @@ import os
 import logging
 import subprocess
 import shutil
+import re
 
 
 class PruFirmware:
@@ -147,14 +148,27 @@ class PruFirmware:
             for axis in ["X1","Y1","Z1","X2","Y2","Z2"]:
                 mask = 0
                 # stepper name is x_cw or x_ccw
-                for stepper in self.config.get('Endstops', 'end_stop_' + axis + '_stops').split(","):
+                option = 'end_stop_' + axis + '_stops'
+                for stepper in self.config.get('Endstops', option).split(","):
                     stepper = stepper.strip()
                     if stepper == "":
                         continue
-                    #direction should be 1 for normal operation and -1 to invert the stepper.
-                    direction = 1 if self.config.getint('Steppers', 'direction_' + stepper[0]) > 0 else -1
-                    cur = (1 << ("xyzehabc".index(stepper[0])))
-                    if (stepper[2:4] == "cw" and direction == 1) or direction == -1:
+                    m = re.search('^([xyzehabc])_(ccw|cw|pos|neg)$', stepper)
+                    if (m == None):
+                        raise RuntimeError("'" + stepper + "' is invalid for " + option)
+
+                    # direction should be 1 for normal operation and -1 to invert the stepper.
+                    if (m.group(2) == "pos"):
+                        direction = -1
+                    elif (m.group(2) == "neg"):
+                        direction = 1
+                    else:
+                        direction = 1 if self.config.getint('Steppers', 'direction_' + stepper[0]) > 0 else -1
+                        if (m.group(2) == "ccw"): 
+                            direction *= -1
+
+                    cur = 1 << ("xyzehabc".index(m.group(1)))
+                    if (direction == -1):
                         cur <<= 8
                     mask += cur
                 bin_mask = "0b"+(bin(mask)[2:]).zfill(16)

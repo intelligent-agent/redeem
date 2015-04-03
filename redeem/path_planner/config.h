@@ -45,7 +45,14 @@
  * Increasing this time will reduce the slow downs due to the path planner not having enough path in the buffer 
  * but it will increase the startup time of the print.
  */
-#define PRINT_MOVE_BUFFER_WAIT 500
+#define PRINT_MOVE_BUFFER_WAIT 250
+
+/* Only buffer this much for print command processing, expressed in milliseconds.
+ * Too long, a lot of gcode will be consumed and will take a long time for comamnded pause
+ * Too short, it might not have enough path segments for speed computation.
+ */
+#define MAX_BUFFERED_MOVE_TIME (PRINT_MOVE_BUFFER_WAIT * 6)
+
 /* Data type for floating point */
 #define FLOAT_T double
 
