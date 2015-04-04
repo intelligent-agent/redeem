@@ -1,0 +1,34 @@
+#!/bin/sh
+
+# Set perms on files that need to change from install.
+chmod 755 /etc/initramfs-tools/hooks/dtbo
+chmod 755 /lib/systemd/system/redeem.service
+
+# Install the Device Overlay for the replicape.
+echo "Installing Replicape Device Overlay"
+set -x
+wget https://bitbucket.org/intelligentagent/replicape/raw/7bd19bb1be34aa4c32953e8175177d130c6dca10/Device_tree/3.8/BB-BONE-REPLICAP-0A4A.dts
+dtc -O dtb -o /lib/firmware/BB-BONE-REPLICAP-0A4A.dtbo -b 0 -@ BB-BONE-REPLICAP-0A4A.dts
+set +x
+
+# Disable HDMI sound
+echo "Disabling HDMI sound via /boot/uEnv.txt"
+sed -i.bak 's/^\#cape_disable=capemgr.disable_partno=BB-BONELT-HDMI/cape_disable=capemgr.disable_partno=BB-BONELT-HDMI/' /boot/uEnv.txt
+
+# Enable Replicape overlay in capemgr
+echo "Adding Replicape Overlay install to /etc/default/capemgr"
+echo "CAPE=BB-BONE-REPLICAP:0A4A" >> /etc/default/capemgr
+
+# Enable Adafruit SPI0 overlay on boot
+echo "Enabling Adafruit SPI0 overlay on boot to /boot/uEnv.txt"
+echo "cape_enable=capemgr.enable_partno=ADAFRUIT-SPI0" >> /boot/uEnv.txt
+
+# Rebuild initramfs to include Adafruit SPI0 overlay on boot.
+echo "Adding all overlays in /lib/firmware to initramfs. Needed to include Adafruit SPI0 overlay"
+set -x
+cp -p /boot/initrd.img-`uname -r` /boot/initrd.img`uname -r`.bak
+/usr/sbin/update-initramfs -u
+set +x
+
+# Enable redeem.service
+systemctl enable redeem.service

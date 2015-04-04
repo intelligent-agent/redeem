@@ -50,37 +50,29 @@ import time
 import logging
 from Path import Path
 
-spi2_0 = None
-spi2_1 = None
-
-# Load SPI module
 try:
-    from Adafruit_BBIO.SPI import SPI
-except ImportError:
-    try:
-        from spi import SPI
-    except ImportError:
-        pass
-
-if 'SPI' in globals():
+    from spi import SPI
     # init the SPI for the DAC
-    try:
-        spi2_0 = SPI(0, 0)
-    except IOError:
-        spi2_0 = SPI(1, 0)
+    spi2_0 = SPI(1, 0)	
     spi2_0.bpw = 8
     spi2_0.mode = 1
     # Init the SPI for the serial to parallel
-    try:
-        spi2_1 = SPI(0, 1)
-    except IOError:
-        spi2_1 = SPI(1, 1)
+    spi2_1 = SPI(1, 1)	
     spi2_1.bpw = 8
     spi2_1.mode = 0
-else:
-    logging.warning("Unable to set up SPI")
-    spi2_0 = None
-    spi2_1 = None
+except ImportError:
+    try:
+        from Adafruit_BBIO.SPI import SPI
+        # init the SPI for the DAC
+        spi2_0 = SPI(1, 0)
+        spi2_0.bpw = 8
+        spi2_0.mode = 1
+        # Init the SPI for the serial to parallel
+        spi2_1 = SPI(1, 1)
+        spi2_1.bpw = 8
+        spi2_1.mode = 0
+    except ImportError:
+        logging.warning("Unable to set up SPI")
 
 class Stepper:
 
@@ -94,9 +86,6 @@ class Stepper:
     @staticmethod
     def commit():
         """ Send the values to the serial to parallel chips """
-        if spi2_1 is None:
-            return
-        
         bytes = []
         for stepper in Stepper.all_steppers:
             bytes.append(stepper.get_state())
