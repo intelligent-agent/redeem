@@ -5,6 +5,7 @@ pathplanner = Extension(
     '_PathPlannerNative', sources = [
         'redeem/path_planner/PathPlannerNative.i',
         'redeem/path_planner/PathPlanner.cpp',
+        'redeem/path_planner/Path.cpp',
         'redeem/path_planner/PruTimer.cpp',
         'redeem/path_planner/prussdrv.c',
         'redeem/path_planner/Logger.cpp'],

@@ -61,7 +61,7 @@ class PathPlanner:
             self.native_planner = None
 
     def __init_path_planner(self):
-        self.native_planner = PathPlannerNative()
+        self.native_planner = PathPlannerNative(int(self.printer.move_cache_size))
 
         fw0 = self.pru_firmware.get_firmware(0)
         fw1 = self.pru_firmware.get_firmware(1)
@@ -76,6 +76,10 @@ class PathPlanner:
         self.native_planner.setAxisStepsPerMeter(tuple([long(Path.steps_pr_meter[i]) for i in range(3)]))
         self.native_planner.setMaxFeedrates(tuple([float(Path.max_speeds[i]) for i in range(3)]))	
         self.native_planner.setMaxJerk(self.printer.maxJerkXY / 1000.0, self.printer.maxJerkZ /1000.0)
+        self.native_planner.setPrintMoveBufferWait(int(self.printer.print_move_buffer_wait))
+        self.native_planner.setMinBufferedMoveTime(int(self.printer.min_buffered_move_time))
+        self.native_planner.setMaxBufferedMoveTime(int(self.printer.max_buffered_move_time))
+        
 
         #Setup the extruders
         for i in range(Path.NUM_AXES - 3):
@@ -85,6 +89,7 @@ class PathPlanner:
             e.setTravelAcceleration(self.printer.acceleration[i + 3])
             e.setMaxStartFeedrate(self.printer.maxJerkEH / 1000)
             e.setAxisStepsPerMeter(long(Path.steps_pr_meter[i + 3]))
+            e.setDirectionInverted(self.steppers[Path.index_to_axis(i+3)].direction == -1)
 
         self.native_planner.setExtruder(0)
         self.native_planner.setDriveSystem(Path.axis_config)

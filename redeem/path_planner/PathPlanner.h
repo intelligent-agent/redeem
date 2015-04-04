@@ -30,6 +30,7 @@
 #include <iostream>
 #include <atomic>
 #include <thread>
+#include <vector>
 #include <mutex>
 #include <string.h>
 #include <strings.h>
@@ -151,28 +152,36 @@ private:
 	std::atomic_uint_fast32_t linesCount;      ///< Number of lines cached 0 = nothing to do.
     std::atomic<long> linesTicksCount;
 
-	Path lines[MOVE_CACHE_SIZE];
+	unsigned int moveCacheSize; // set on init
+
+	int printMoveBufferWait;
+	int minBufferedMoveTime;
+	int maxBufferedMoveTime;
+
+
+
+    std::vector<Path> lines;
 
 	inline void previousPlannerIndex(unsigned int &p)
     {
-        p = (p ? p-1 : MOVE_CACHE_SIZE-1);
+        p = (p ? p-1 : moveCacheSize-1);
     }
 	inline void nextPlannerIndex(unsigned int& p)
     {
-        p = (p == MOVE_CACHE_SIZE - 1 ? 0 : p + 1);
+        p = (p == moveCacheSize - 1 ? 0 : p + 1);
     }
-	
+
 	inline void removeCurrentLine()
     {
         linesTicksCount -= lines[linesPos].timeInTicks;
         linesPos++;
-        if(linesPos>=MOVE_CACHE_SIZE) linesPos=0;
+        if(linesPos>=moveCacheSize) linesPos=0;
         --linesCount;
     }
 
     inline bool isLinesBufferFilled()
     {
-        return linesTicksCount >= (F_CPU/1000)*MAX_BUFFERED_MOVE_TIME;
+        return linesTicksCount >= (F_CPU/1000)*maxBufferedMoveTime;
     }
 	
 	std::mutex line_mutex;
@@ -190,8 +199,9 @@ public:
 	/**
 	 * @brief Create a new path planner that is used to compute paths parameters and send it to the PRU for execution
 	 * @details Create a new path planner that is used to compute paths parameters and send it to the PRU for execution
+	 * @param cacheSize Size of the movement planner cache
 	 */
-	PathPlanner();
+	PathPlanner(unsigned int cacheSize);
 	
 	/**
 	 * @brief  Init the internal PRU co-processors
@@ -304,6 +314,33 @@ public:
 		assert(extNr<NUM_EXTRUDER);
 		return extruders[extNr];
 	}
+
+	/**
+	 * @brief Set the print move buffer wait time
+	 * @details Time to wait before processing a print command if the buffer is not full enough, expressed in milliseconds.
+     * Increasing this time will reduce the slow downs due to the path planner not having enough path in the buffer
+     * but it will increase the startup time of the print.
+     * @param dt time to wait before processing commands
+     */
+    void setPrintMoveBufferWait(int dt);
+
+
+    /**
+     * @brief Set the minimum buffered move time
+     * @details Minimum of move buffered in the PRU (in term of move time in milliseconds) before we stop sending moves to the PRU.
+     * Should be as low as possible so that we can keep some moves in the PathPlanner buffer for proper speed computations
+     * @param dt minimum buffered move time
+     */
+    void setMinBufferedMoveTime(int dt);
+
+    /**
+    * @brief Set the maximum buffered move time
+    * @details Time to wait before processing a print command if the buffer is not full enough, expressed in milliseconds.
+    * Increasing this time will reduce the slow downs due to the path planner not having enough path in the buffer
+    * but it will increase the startup time of the print.
+    * @param dt maximum buffered move time
+    */
+	void setMaxBufferedMoveTime(int dt);
 
 	/**
 	 * @brief Set the maximum feedrates of the different axis X,Y,Z

@@ -77,9 +77,11 @@ class Redeem:
 
         # Copy/create config files if not present
         if not os.path.exists("/etc/redeem/default.cfg"):
+            if not os.path.isdir("/etc/redeem"):
+                os.makedirs("/etc/redeem/")
             dirname = os.path.dirname(os.path.realpath(__file__))
             logging.warning("/etc/redeem/default.cfg does not exist, copying it...")
-            for f in glob.glob(dirname+"/../configs/*.cfg"):
+            for f in glob.glob(dirname+"/configs/*.cfg"):
                 logging.warning(f)
                 shutil.copy(f, "/etc/redeem")
 
@@ -289,6 +291,11 @@ class Redeem:
         printer.maxJerkXY = printer.config.getfloat('Steppers', 'maxJerk_xy')
         printer.maxJerkZ = printer.config.getfloat('Steppers', 'maxJerk_z')
         printer.maxJerkEH = printer.config.getfloat('Steppers', 'maxJerk_eh')
+        
+        printer.move_cache_size = printer.config.getfloat('Steppers', 'move_cache_size')
+        printer.print_move_buffer_wait = printer.config.getfloat('Steppers', 'print_move_buffer_wait')
+        printer.min_buffered_move_time = printer.config.getfloat('Steppers', 'min_buffered_move_time')
+        printer.max_buffered_move_time = printer.config.getfloat('Steppers', 'max_buffered_move_time')
 
         self.printer.processor = GCodeProcessor(self.printer)
         self.printer.plugins = PluginsController(self.printer)

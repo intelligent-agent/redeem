@@ -49,6 +49,10 @@ class Printer:
         self.maxJerkZ = 1
         self.maxJerkEH = 4
         self.current_tool = "E"
+        self.move_cache_size = 128
+        self.print_move_buffer_wait = 250
+        self.min_buffered_move_time = 100
+        self.max_buffered_move_time = 1000
 
         self.probe_points  = [{"X": 0, "Y": 0, "Z": 0}]*3
         self.probe_heights = [0]*3
