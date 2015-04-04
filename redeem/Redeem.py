@@ -275,6 +275,8 @@ class Redeem:
             i = Path.axis_to_index(axis)
             Path.max_speeds[i] = printer.config.getfloat('Planner', 'max_speed_'+axis.lower())
             Path.home_speed[i] = printer.config.getfloat('Homing', 'home_speed_'+axis.lower())
+            Path.home_backoff_speed[i] = printer.config.getfloat('Homing', 'home_backoff_speed_'+axis.lower())
+            Path.home_backoff_offset[i] = printer.config.getfloat('Homing', 'home_backoff_offset_'+axis.lower())
             Path.steps_pr_meter[i] = printer.steppers[axis].get_steps_pr_meter()
             Path.backlash_compensation[i] = printer.config.getfloat('Steppers', 'backlash_'+axis.lower())
 
@@ -317,13 +319,10 @@ class Redeem:
                 if printer.config.has_option('Geometry', 'offset_' + axis.lower()) \
                 else (Path.soft_min[i] if Path.home_speed[i] > 0 else Path.soft_max[i])
 
-            printer.path_planner.home_pos[axis] = \
-                printer.config.getfloat('Geometry', 'home_' + axis.lower()) \
-                if printer.config.has_option('Geometry', 'home_' + axis.lower()) \
-                else printer.path_planner.center_offset[axis]
-
             printer.acceleration[Path.axis_to_index(axis)] = printer.config.getfloat(
                                                         'Planner', 'acceleration_' + axis.lower())
+        
+        
 
 
         # Set up communication channels

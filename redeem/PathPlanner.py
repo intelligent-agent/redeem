@@ -51,7 +51,6 @@ class PathPlanner:
 
         self.travel_length = {"X": 0.0, "Y": 0.0, "Z": 0.0, "E": 0.0, "H": 0.0}
         self.center_offset = {"X": 0.0, "Y": 0.0, "Z": 0.0, "E": 0.0, "H": 0.0}
-        self.home_pos = {"X": 0.0, "Y": 0.0, "Z": 0.0, "E": 0.0, "H": 0.0}
         self.prev = G92Path({"X": 0.0, "Y": 0.0, "Z": 0.0, "E": 0.0, "H": 0.0}, 0)
         self.prev.set_prev(None)
 
@@ -167,23 +166,20 @@ class PathPlanner:
                 logging.debug("Skipping homing for " + str(a))
                 continue
             logging.debug("Doing homing for " + str(a))
-            
-            backoff_length = min(self.travel_length[a] * 0.5, 0.010)
             if Path.home_speed[Path.axis_to_index(a)] < 0:
                 # Search to positive ends
                 path_search[a] = self.travel_length[a]
                 path_center[a] = self.center_offset[a]
-                backoff_length *= -1
             else:
                 # Search to negative ends
                 path_search[a] = -self.travel_length[a]
                 path_center[a] = -self.center_offset[a]
 
+            backoff_length = -np.sign(path_search[a]) * Path.home_backoff_offset[Path.axis_to_index(a)]
             path_backoff[a] = backoff_length;
             path_fine_search[a] = -backoff_length * 1.2;
-
-            path_zero[a] = self.home_pos[a]
-
+            
+            fine_search_speed =  min(abs(speed), abs(Path.home_backoff_speed[Path.axis_to_index(a)]))
             speed = min(abs(speed), abs(Path.home_speed[Path.axis_to_index(a)]))
             logging.debug("axis: "+str(a))
         
@@ -191,17 +187,16 @@ class PathPlanner:
         logging.debug("Backoff to: %s" % path_backoff)
         logging.debug("Fine search: %s" % path_fine_search)
         logging.debug("Center: %s" % path_center)
-        logging.debug("Zero: %s" % path_zero)
-
-        fine_search_speed = speed / 10;
 
         # Move until endstop is hit
         p = RelativePath(path_search, speed, True, False, True, False)
         self.add_path(p)
+        self.wait_until_done()
 
         # Reset position to offset
         p = G92Path(path_center, speed)
         self.add_path(p)
+        self.wait_until_done()
 
         # Back off a bit
         p = RelativePath(path_backoff, speed, True, False, True, False)
@@ -212,10 +207,13 @@ class PathPlanner:
         self.add_path(p)
 
         # Reset (final) position to offset
+        # If homing based on maximum travel endstops then offset = max - min
+        # If homing based on minimum travel endstops then offset = 0
         p = G92Path(path_center, speed)
         self.add_path(p)
 
-        # Move to home position
+        # Move to home position - this should always be the origin i.e. zero position
+        path_zero = {"X": 0.0, "Y": 0.0, "Z": 0.0, "E": 0.0, "H": 0.0}
         p = AbsolutePath(path_zero, speed, True, False, False, False)
         self.add_path(p)
         self.wait_until_done()
@@ -332,43 +330,6 @@ class PathPlanner:
                     Path.index_to_axis(ext_nr+3)
                     ].get_steps_pr_meter()
             self.native_planner.setExtruder(ext_nr)
-
-    def queue_move(self, path):
-        """ start of Python impl of queue_move """
-        # Not working!
-        path.primay_axis = np.max(path.delta)
-        path.diff = path.delta * (1.0 / path.steps_pr_meter)
-
-        path.steps_remaining = path.delta[path.primary_axis]
-        path.xyz_dist = np.sqrt(np.dot(path.delta[:3], path.delta[:3]))
-        path.distance = np.max(path.xyz_dist, path.diff[4])
-
-        calculate_move(path)
-
-    def calculate_move(self, path):
-        """ Start of Python impl of calculate move """
-        # Not working!
-        axis_interval[4];
-        speed = max(minimumSpeed,
-                    path.speed) if path.is_x_or_y_move() else path.speed
-        # time is in ticks
-        path.time_in_ticks = time_for_move = F_CPU * path.distance / speed
-
-        # Compute the slowest allowed interval (ticks/step), so maximum
-        # feedrate is not violated
-        axis_interval = abs(
-            path.diff) * F_CPU / Path.max_speeds * path.steps_remaining
-        limit_interval = max(np.max(axis_interval),
-                             time_for_move / path.steps_remaining)
-
-        path.full_interval = limit_interval
-
-        # new time at full speed = limitInterval*p->stepsRemaining [ticks]
-        time_for_move = limit_interval * path.steps_remaining;
-        inv_time_s = F_CPU / time_for_move;
-
-        axis_interval = time_for_move / path.delta;
-        path.speed = sign(path.delta) * axis_diff * inv_time_s;
 
 
 if __name__ == '__main__':

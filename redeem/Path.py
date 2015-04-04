@@ -64,6 +64,8 @@ class Path:
         Path.NUM_AXES = num_axes
         Path.max_speeds = np.ones(num_axes)
         Path.home_speed = np.ones(num_axes)
+        Path.home_backoff_speed = np.ones(num_axes)
+        Path.home_backoff_offset = np.zeros(num_axes)
         Path.steps_pr_meter = np.ones(num_axes)
         Path.backlash_compensation = np.zeros(num_axes)
         Path.backlash_state = np.zeros(num_axes)
