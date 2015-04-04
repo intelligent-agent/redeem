@@ -273,8 +273,8 @@ class Redeem:
 
         for axis in printer.steppers.keys():
             i = Path.axis_to_index(axis)
-            Path.max_speeds[i] = printer.config.getfloat('Steppers', 'max_speed_'+axis.lower())
-            Path.home_speed[i] = printer.config.getfloat('Steppers', 'home_speed_'+axis.lower())
+            Path.max_speeds[i] = printer.config.getfloat('Planner', 'max_speed_'+axis.lower())
+            Path.home_speed[i] = printer.config.getfloat('Homing', 'home_speed_'+axis.lower())
             Path.steps_pr_meter[i] = printer.steppers[axis].get_steps_pr_meter()
             Path.backlash_compensation[i] = printer.config.getfloat('Steppers', 'backlash_'+axis.lower())
 
@@ -288,14 +288,14 @@ class Redeem:
             dirname + "/firmware/firmware_endstops.bin",
             self.revision, self.printer.config, "/usr/bin/pasm")
 
-        printer.maxJerkXY = printer.config.getfloat('Steppers', 'maxJerk_xy')
-        printer.maxJerkZ = printer.config.getfloat('Steppers', 'maxJerk_z')
-        printer.maxJerkEH = printer.config.getfloat('Steppers', 'maxJerk_eh')
+        printer.maxJerkXY = printer.config.getfloat('Planner', 'maxJerk_xy')
+        printer.maxJerkZ = printer.config.getfloat('Planner', 'maxJerk_z')
+        printer.maxJerkEH = printer.config.getfloat('Planner', 'maxJerk_eh')
         
-        printer.move_cache_size = printer.config.getfloat('Steppers', 'move_cache_size')
-        printer.print_move_buffer_wait = printer.config.getfloat('Steppers', 'print_move_buffer_wait')
-        printer.min_buffered_move_time = printer.config.getfloat('Steppers', 'min_buffered_move_time')
-        printer.max_buffered_move_time = printer.config.getfloat('Steppers', 'max_buffered_move_time')
+        printer.move_cache_size = printer.config.getfloat('Planner', 'move_cache_size')
+        printer.print_move_buffer_wait = printer.config.getfloat('Planner', 'print_move_buffer_wait')
+        printer.min_buffered_move_time = printer.config.getfloat('Planner', 'min_buffered_move_time')
+        printer.max_buffered_move_time = printer.config.getfloat('Planner', 'max_buffered_move_time')
 
         self.printer.processor = GCodeProcessor(self.printer)
         self.printer.plugins = PluginsController(self.printer)
@@ -323,7 +323,7 @@ class Redeem:
                 else printer.path_planner.center_offset[axis]
 
             printer.acceleration[Path.axis_to_index(axis)] = printer.config.getfloat(
-                                                        'Steppers', 'acceleration_' + axis.lower())
+                                                        'Planner', 'acceleration_' + axis.lower())
 
 
         # Set up communication channels
@@ -390,7 +390,6 @@ class Redeem:
                     try:
                         gcode = queue.get(block=True, timeout=1)
                     except Queue.Empty:
-                        logging.error("Unsolicited Sync event occured.")
                         continue
 
                     self._synchronize(gcode)
@@ -438,7 +437,7 @@ class Redeem:
 
     def end_stop_hit(self, endstop):
         """ An endStop has been hit """
-        logging.warning("End Stop " + endstop.name + " hit!")
+        logging.info("End Stop " + endstop.name + " hit!")
 
 
 def main():
