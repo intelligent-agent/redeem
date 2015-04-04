@@ -1,0 +1,3 @@
+configs/* etc/redeem/
+scripts/dtbo etc/initramfs-tools/hooks/
+systemd/redeem.service lib/systemd/system/
