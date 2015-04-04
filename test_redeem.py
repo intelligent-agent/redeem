@@ -50,21 +50,7 @@ def test4():
             g.execute( Gcode({"message": line, "prot": "Test"}) )
         
     r.exit()
-    
-def test5():
-    test_str = """
-        G1 E50 F1000
-        """
-    r = Redeem()
-    g = r.printer.processor
-    for line in test_str.splitlines():
-        if line:
-            print line
-            g.execute( Gcode({"message": line, "prot": "Test"}) )
-        
-    r.exit()
 
 if __name__ == "__main__":
-    test4()
-
+    test_redeem()
 
