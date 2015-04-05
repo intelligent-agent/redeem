@@ -5,6 +5,7 @@ pathplanner = Extension(
     '_PathPlannerNative', sources = [
         'redeem/path_planner/PathPlannerNative.i',
         'redeem/path_planner/PathPlanner.cpp',
+        'redeem/path_planner/Path.cpp',
         'redeem/path_planner/PruTimer.cpp',
         'redeem/path_planner/prussdrv.c',
         'redeem/path_planner/Logger.cpp'],
@@ -37,8 +38,14 @@ setup(
             'configs/MendelMax.cfg', 
             'configs/Testing.cfg', 
             'configs/Prusa.cfg',
-	    'configs/Debrew.cfg', 
-	    'configs/Delta.cfg'])
+	        'configs/Debrew.cfg', 
+	        'configs/Delta.cfg']),
+        ('redeem/data',[
+            'data/B57540G0104F000.cht',
+            'data/B57560G104F.cht',
+            'data/B57561G0103F000.cht',
+            'data/QU-BD.cht',
+            'data/SEMITEC-104GT-2.cht']),
     ],
     # metadata for upload to PyPI
     author = "Elias Bakken",

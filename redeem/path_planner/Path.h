@@ -28,7 +28,9 @@
 #define __PathPlanner__Path__
 
 #include <stdint.h>
+#include<stddef.h>
 #include <atomic>
+#include <vector>
 #include "config.h"
 #include "StepperCommand.h"
 
@@ -102,9 +104,10 @@ private:
     unsigned int vStart;            ///< Starting speed in steps/s.
     unsigned int vEnd;              ///< End speed in steps/s
     unsigned int stepsRemaining;            ///< Remaining steps, until move is finished
-	
-	
-	
+
+    std::vector<SteppersCommand> commands;
+
+
 	inline bool areParameterUpToDate()
     {
         return joinFlags & FLAG_JOIN_STEPPARAMS_COMPUTED;
@@ -319,21 +322,18 @@ private:
 	
 	
 	void updateStepsParameter();
-	
-	
-	SteppersCommand *commands;
-	size_t commandBufferSize;
-	
+
 public:
 	
 	FLOAT_T speed; //Feedrate
 	
 	FLOAT_T startPos[NUM_AXIS];
 	FLOAT_T endPos[NUM_AXIS];
-	
-	
-	
-	
+
+
+	Path();
+	Path(const Path& path);
+
 	friend class PathPlanner;
 };
 

@@ -26,6 +26,7 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
 
 import logging
 from Path import Path, CompensationPath, AbsolutePath, RelativePath, G92Path
+from Delta import Delta
 from Printer import Printer
 import numpy as np
 
@@ -61,7 +62,7 @@ class PathPlanner:
             self.native_planner = None
 
     def __init_path_planner(self):
-        self.native_planner = PathPlannerNative()
+        self.native_planner = PathPlannerNative(int(self.printer.move_cache_size))
 
         fw0 = self.pru_firmware.get_firmware(0)
         fw1 = self.pru_firmware.get_firmware(1)
@@ -76,6 +77,10 @@ class PathPlanner:
         self.native_planner.setAxisStepsPerMeter(tuple([long(Path.steps_pr_meter[i]) for i in range(3)]))
         self.native_planner.setMaxFeedrates(tuple([float(Path.max_speeds[i]) for i in range(3)]))	
         self.native_planner.setMaxJerk(self.printer.maxJerkXY / 1000.0, self.printer.maxJerkZ /1000.0)
+        self.native_planner.setPrintMoveBufferWait(int(self.printer.print_move_buffer_wait))
+        self.native_planner.setMinBufferedMoveTime(int(self.printer.min_buffered_move_time))
+        self.native_planner.setMaxBufferedMoveTime(int(self.printer.max_buffered_move_time))
+        
 
         #Setup the extruders
         for i in range(Path.NUM_AXES - 3):
@@ -85,6 +90,7 @@ class PathPlanner:
             e.setTravelAcceleration(self.printer.acceleration[i + 3])
             e.setMaxStartFeedrate(self.printer.maxJerkEH / 1000)
             e.setAxisStepsPerMeter(long(Path.steps_pr_meter[i + 3]))
+            e.setDirectionInverted(self.steppers[Path.index_to_axis(i+3)].direction == -1)
 
         self.native_planner.setExtruder(0)
         self.native_planner.setDriveSystem(Path.axis_config)
@@ -162,41 +168,38 @@ class PathPlanner:
                 logging.debug("Skipping homing for " + str(a))
                 continue
             logging.debug("Doing homing for " + str(a))
-            
-            backoff_length = min(self.travel_length[a] * 0.5, 0.010)
             if Path.home_speed[Path.axis_to_index(a)] < 0:
                 # Search to positive ends
                 path_search[a] = self.travel_length[a]
                 path_center[a] = self.center_offset[a]
-                backoff_length *= -1
             else:
                 # Search to negative ends
                 path_search[a] = -self.travel_length[a]
                 path_center[a] = -self.center_offset[a]
 
+            backoff_length = -np.sign(path_search[a]) * Path.home_backoff_offset[Path.axis_to_index(a)]
             path_backoff[a] = backoff_length;
             path_fine_search[a] = -backoff_length * 1.2;
-
-            path_zero[a] = self.home_pos[a]
-
+            
             speed = min(abs(speed), abs(Path.home_speed[Path.axis_to_index(a)]))
+            fine_search_speed =  min(abs(speed), abs(Path.home_backoff_speed[Path.axis_to_index(a)]))
+            
             logging.debug("axis: "+str(a))
         
         logging.debug("Search: %s" % path_search)
         logging.debug("Backoff to: %s" % path_backoff)
         logging.debug("Fine search: %s" % path_fine_search)
         logging.debug("Center: %s" % path_center)
-        logging.debug("Zero: %s" % path_zero)
-
-        fine_search_speed = speed / 10;
 
         # Move until endstop is hit
         p = RelativePath(path_search, speed, True, False, True, False)
         self.add_path(p)
+        self.wait_until_done()
 
         # Reset position to offset
         p = G92Path(path_center, speed)
         self.add_path(p)
+        self.wait_until_done()
 
         # Back off a bit
         p = RelativePath(path_backoff, speed, True, False, True, False)
@@ -205,20 +208,37 @@ class PathPlanner:
         # Hit the endstop slowly
         p = RelativePath(path_fine_search, fine_search_speed, True, False, True, False)
         self.add_path(p)
+        self.wait_until_done()
 
         # Reset (final) position to offset
         p = G92Path(path_center, speed)
         self.add_path(p)
 
+        return path_center, speed
+        
+    def _go_to_home(self, axis):
+        """
+        go to the designated home position
+        do this as a separate call from _home_internal due to delta platforms 
+        performing home in cartesian mode
+        """
+        
+        path_home = {}
+        
+        speed = Path.home_speed[0]
+
+        for a in axis:
+            path_home[a] = self.home_pos[a]
+            speed = min(abs(speed), abs(Path.home_speed[Path.axis_to_index(a)]))
+            
+        logging.debug("Home: %s" % path_home)
+            
         # Move to home position
-        p = AbsolutePath(path_zero, speed, True, False, False, False)
+        p = AbsolutePath(path_home, speed, True, False, False, False)
         self.add_path(p)
         self.wait_until_done()
-
-        # Reset backlash compensation
-        Path.backlash_reset()
-
-        logging.debug("homing done for " + str(axis))
+        
+        return
 
     def home(self, axis):
         """ Home the given axis using endstops (min) """
@@ -235,10 +255,37 @@ class PathPlanner:
             if 0 < len({"X", "Y", "Z"}.intersection(set(axis))) < 3:
                 axis = list(set(axis).union({"X", "Y", "Z"}))	# Deltas must home all axes.
             Path.axis_config = Path.AXIS_CONFIG_XY
-            self._home_internal(axis)
+            path_center, speed = self._home_internal(axis)
             Path.axis_config = Path.AXIS_CONFIG_DELTA
+
+            # homing was performed in cartesian mode
+            # need to convert back to delta
+
+            Az = path_center['X']
+            Bz = path_center['Y']
+            Cz = path_center['Z']
+            
+            z_offset = Delta.vertical_offset(Az,Bz,Cz) # vertical offset
+            xyz = Delta.forward_kinematics2(Az, Bz, Cz) # effector position
+            xyz[2] += z_offset
+            path = {'X':xyz[0], 'Y':xyz[1], 'Z':xyz[2]}
+            
+            p = G92Path(path, speed)
+            self.add_path(p)
+            self.wait_until_done()
+            
         else:
             self._home_internal(axis)
+            
+        # go to the designated home position
+        self._go_to_home(axis)
+
+        # Reset backlash compensation
+        Path.backlash_reset()
+
+        logging.debug("homing done for " + str(axis))
+            
+        return
 
     def probe(self, z):
         old_feedrate = self.printer.feed_rate # Save old feedrate
@@ -327,43 +374,6 @@ class PathPlanner:
                     Path.index_to_axis(ext_nr+3)
                     ].get_steps_pr_meter()
             self.native_planner.setExtruder(ext_nr)
-
-    def queue_move(self, path):
-        """ start of Python impl of queue_move """
-        # Not working!
-        path.primay_axis = np.max(path.delta)
-        path.diff = path.delta * (1.0 / path.steps_pr_meter)
-
-        path.steps_remaining = path.delta[path.primary_axis]
-        path.xyz_dist = np.sqrt(np.dot(path.delta[:3], path.delta[:3]))
-        path.distance = np.max(path.xyz_dist, path.diff[4])
-
-        calculate_move(path)
-
-    def calculate_move(self, path):
-        """ Start of Python impl of calculate move """
-        # Not working!
-        axis_interval[4];
-        speed = max(minimumSpeed,
-                    path.speed) if path.is_x_or_y_move() else path.speed
-        # time is in ticks
-        path.time_in_ticks = time_for_move = F_CPU * path.distance / speed
-
-        # Compute the slowest allowed interval (ticks/step), so maximum
-        # feedrate is not violated
-        axis_interval = abs(
-            path.diff) * F_CPU / Path.max_speeds * path.steps_remaining
-        limit_interval = max(np.max(axis_interval),
-                             time_for_move / path.steps_remaining)
-
-        path.full_interval = limit_interval
-
-        # new time at full speed = limitInterval*p->stepsRemaining [ticks]
-        time_for_move = limit_interval * path.steps_remaining;
-        inv_time_s = F_CPU / time_for_move;
-
-        axis_interval = time_for_move / path.delta;
-        path.speed = sign(path.delta) * axis_diff * inv_time_s;
 
 
 if __name__ == '__main__':

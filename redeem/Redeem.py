@@ -74,15 +74,12 @@ class Redeem:
 
         printer = Printer()
         self.printer = printer
-
-        # Copy/create config files if not present
+        
+        # check for config files
         if not os.path.exists("/etc/redeem/default.cfg"):
-            dirname = os.path.dirname(os.path.realpath(__file__))
-            logging.warning("/etc/redeem/default.cfg does not exist, copying it...")
-            for f in glob.glob(dirname+"/../configs/*.cfg"):
-                logging.warning(f)
-                shutil.copy(f, "/etc/redeem")
-
+            logging.error("/etc/redeem/default.cfg does not exist, this file is required for operation")
+            sys.exit() # maybe use something more graceful?
+            
         # Parse the config files.
         printer.config = CascadingConfigParser(
             ['/etc/redeem/default.cfg', '/etc/redeem/printer.cfg',
@@ -159,10 +156,7 @@ class Redeem:
 
         # Delta printer setup
         if Path.axis_config == Path.AXIS_CONFIG_DELTA:
-            opts = ["Hez", "L", "r", "Ae", "Be", "Ce", "Aco",
-                    "Bco", "Cco", "Apxe", "Apye", "Bpxe", "Bpye",
-                    "Cpxe", "Cpye"]
-
+            opts = ["Hez", "L", "r", "Ae", "Be", "Ce", "A_radial", "B_radial", "C_radial", "A_tangential", "B_tangential", "C_tangential" ]
             for opt in opts:
                 Delta.__dict__[opt] = printer.config.getfloat('Delta', opt)
 
@@ -271,8 +265,10 @@ class Redeem:
 
         for axis in printer.steppers.keys():
             i = Path.axis_to_index(axis)
-            Path.max_speeds[i] = printer.config.getfloat('Steppers', 'max_speed_'+axis.lower())
-            Path.home_speed[i] = printer.config.getfloat('Steppers', 'home_speed_'+axis.lower())
+            Path.max_speeds[i] = printer.config.getfloat('Planner', 'max_speed_'+axis.lower())
+            Path.home_speed[i] = printer.config.getfloat('Homing', 'home_speed_'+axis.lower())
+            Path.home_backoff_speed[i] = printer.config.getfloat('Homing', 'home_backoff_speed_'+axis.lower())
+            Path.home_backoff_offset[i] = printer.config.getfloat('Homing', 'home_backoff_offset_'+axis.lower())
             Path.steps_pr_meter[i] = printer.steppers[axis].get_steps_pr_meter()
             Path.backlash_compensation[i] = printer.config.getfloat('Steppers', 'backlash_'+axis.lower())
 
@@ -286,38 +282,77 @@ class Redeem:
             dirname + "/firmware/firmware_endstops.bin",
             self.revision, self.printer.config, "/usr/bin/pasm")
 
-        printer.maxJerkXY = printer.config.getfloat('Steppers', 'maxJerk_xy')
-        printer.maxJerkZ = printer.config.getfloat('Steppers', 'maxJerk_z')
-        printer.maxJerkEH = printer.config.getfloat('Steppers', 'maxJerk_eh')
+        printer.maxJerkXY = printer.config.getfloat('Planner', 'maxJerk_xy')
+        printer.maxJerkZ = printer.config.getfloat('Planner', 'maxJerk_z')
+        printer.maxJerkEH = printer.config.getfloat('Planner', 'maxJerk_eh')
+        
+        printer.move_cache_size = printer.config.getfloat('Planner', 'move_cache_size')
+        printer.print_move_buffer_wait = printer.config.getfloat('Planner', 'print_move_buffer_wait')
+        printer.min_buffered_move_time = printer.config.getfloat('Planner', 'min_buffered_move_time')
+        printer.max_buffered_move_time = printer.config.getfloat('Planner', 'max_buffered_move_time')
 
         self.printer.processor = GCodeProcessor(self.printer)
         self.printer.plugins = PluginsController(self.printer)
 
         # Path planner
+        travel_default = False
+        center_default = False
+        home_default = False
         self.printer.path_planner = PathPlanner(self.printer, pru_firmware)
         for axis in printer.steppers.keys():
             i = Path.axis_to_index(axis)
-
+            
+            printer.acceleration[Path.axis_to_index(axis)] = printer.config.getfloat(
+                                                        'Planner', 'acceleration_' + axis.lower())
+                                                        
             # Sometimes soft_end_stop aren't defined to be at the exact hardware boundary.
             # Adding 100mm for searching buffer.
-            printer.path_planner.travel_length[axis] = \
-                printer.config.getfloat('Geometry', 'travel_' + axis.lower()) \
-                if printer.config.has_option('Geometry', 'travel_' + axis.lower()) \
-                else (Path.soft_max[i] - Path.soft_min[i]) + .1            
+            if printer.config.has_option('Geometry', 'travel_' + axis.lower()):
+                printer.path_planner.travel_length[axis] = printer.config.getfloat('Geometry', 'travel_' + axis.lower())
+            else:
+                printer.path_planner.travel_length[axis] = (Path.soft_max[i] - Path.soft_min[i]) + .1
+                if axis in ['X','Y','Z']:                
+                    travel_default = True
             
-            printer.path_planner.center_offset[axis] = \
-                printer.config.getfloat('Geometry', 'offset_' + axis.lower()) \
-                if printer.config.has_option('Geometry', 'offset_' + axis.lower()) \
-                else (Path.soft_min[i] if Path.home_speed[i] > 0 else Path.soft_max[i])
+            if printer.config.has_option('Geometry', 'offset_' + axis.lower()):
+                printer.path_planner.center_offset[axis] = printer.config.getfloat('Geometry', 'offset_' + axis.lower())
+            else:
+                printer.path_planner.center_offset[axis] =(Path.soft_min[i] if Path.home_speed[i] > 0 else Path.soft_max[i])
+                if axis in ['X','Y','Z']:                
+                    center_default = True
 
-            printer.path_planner.home_pos[axis] = \
-                printer.config.getfloat('Geometry', 'home_' + axis.lower()) \
-                if printer.config.has_option('Geometry', 'home_' + axis.lower()) \
-                else printer.path_planner.center_offset[axis]
-
-            printer.acceleration[Path.axis_to_index(axis)] = printer.config.getfloat(
-                                                        'Steppers', 'acceleration_' + axis.lower())
-
+            if printer.config.has_option('Homing', 'home_' + axis.lower()):
+                printer.path_planner.home_pos[axis] = printer.config.getfloat('Homing', 'home_' + axis.lower())
+            else:
+                printer.path_planner.home_pos[axis] = printer.path_planner.center_offset[axis]
+                if axis in ['X','Y','Z']:                   
+                    home_default = True
+                
+        if Path.axis_config == Path.AXIS_CONFIG_DELTA:
+            if travel_default:
+                logging.warning("Axis travel (travel_*) set by soft limits, manual setup is recommended for a delta")
+            if center_default:
+                logging.warning("Axis offsets (offset_*) set by soft limits, manual setup is recommended for a delta")
+            if home_default:
+                logging.warning("Home position (home_*) set by soft limits or offset_*")
+                logging.info("Home position will be recalculated...")
+        
+                # convert home_pos to effector space
+                Az = printer.path_planner.home_pos['X']
+                Bz = printer.path_planner.home_pos['Y']
+                Cz = printer.path_planner.home_pos['Z']
+                
+                z_offset = Delta.vertical_offset(Az,Bz,Cz) # vertical offset
+                xyz = Delta.forward_kinematics2(Az, Bz, Cz) # effector position
+                
+                # The default home_pos, provided above, is based on effector space 
+                # coordinates for carriage positions. We need to transform these to 
+                # get where the effector actually is.
+                xyz[2] += z_offset
+                for i, a in enumerate(['X','Y','Z']):
+                    printer.path_planner.home_pos[a] = xyz[i]
+                
+                logging.info("Home position = %s"%str(printer.path_planner.home_pos))
 
         # Set up communication channels
         printer.comms["USB"] = USB(self.printer)
@@ -383,7 +418,6 @@ class Redeem:
                     try:
                         gcode = queue.get(block=True, timeout=1)
                     except Queue.Empty:
-                        logging.error("Unsolicited Sync event occured.")
                         continue
 
                     self._synchronize(gcode)
@@ -431,7 +465,7 @@ class Redeem:
 
     def end_stop_hit(self, endstop):
         """ An endStop has been hit """
-        logging.warning("End Stop " + endstop.name + " hit!")
+        logging.info("End Stop " + endstop.name + " hit!")
 
 
 def main():

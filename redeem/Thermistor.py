@@ -24,6 +24,7 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
 import numpy as np
 import logging
 from threading import Lock
+import sys
 
 # Import the temp chart. 
 from temp_chart import *
@@ -36,7 +37,12 @@ class Thermistor:
         """ Init """
         self.pin = pin
         self.name = name
-        self.temp_table = np.array(temp_chart[chart_name]).transpose()
+        
+        try:
+            self.temp_table = np.array(temp_chart[chart_name]).transpose()
+        except:
+            logging.error("unable to load temperature chart %s, this file is required for operation"%chart_name)
+            sys.exit() # maybe use something more graceful?
 
     def get_temperature(self):
         """ Return the temperature in degrees celsius """

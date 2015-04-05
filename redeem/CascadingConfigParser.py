@@ -106,4 +106,4 @@ class CascadingConfigParser(ConfigParser.SafeConfigParser):
         # Save changed values to file
         local.write(open(filename, "w+"))
 
-
+    

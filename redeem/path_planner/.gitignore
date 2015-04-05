@@ -1,8 +1,9 @@
 build
 tests/PathPlanner.xcodeproj/project.xcworkspace
 tests/PathPlanner.xcodeproj/xcuserdata
-build
 *.o
 *.dep
 PathPlannerNative_wrap.cpp
 PathPlannerNative.py
+*.so
+*.geany

@@ -84,6 +84,18 @@ void PathPlanner::setExtruder(int extNr){
 	axisStepsPerMM[E_AXIS] = currentExtruder->axisStepsPerMM;
 }
 
+void PathPlanner::setPrintMoveBufferWait(int dt) {
+    printMoveBufferWait = dt;
+}
+
+void PathPlanner::setMinBufferedMoveTime(int dt) {
+    minBufferedMoveTime = dt;
+}
+
+void PathPlanner::setMaxBufferedMoveTime(int dt) {
+    maxBufferedMoveTime = dt;
+}
+
 void PathPlanner::setMaxFeedrates(FLOAT_T rates[NUM_MOVING_AXIS]){
 	//here the target unit is mm/s, we need to convert from m/s to mm/s
 	for(int i=0;i<NUM_MOVING_AXIS;i++) {
@@ -143,10 +155,13 @@ void PathPlanner::setDriveSystem(int driveSystem){
 }	
 
 
-PathPlanner::PathPlanner() {
+PathPlanner::PathPlanner(unsigned int cacheSize) {
 	linesPos = 0;
 	linesWritePos = 0;
-	
+
+	moveCacheSize = cacheSize;
+	lines.resize(moveCacheSize);
+
 	//Default settings for debug mode
 	
 	static_assert(NUM_EXTRUDER>0,"Invalid number of extruder");
@@ -158,16 +173,20 @@ PathPlanner::PathPlanner() {
 	maxJerk =20;
 	maxZJerk= 0.3;
 
-	
+	printMoveBufferWait = 250;
+	minBufferedMoveTime = 100;
+	maxBufferedMoveTime = 6*printMoveBufferWait;
+
+
 	recomputeParameters();
 	
 	linesCount = 0;
-	
+	linesTicksCount = 0;
+
 	currentExtruder = &extruders[0];
     driveSystem = 0; 
 	
 	stop = false;
-	bzero(lines, sizeof(lines));
 }
 
 bool PathPlanner::queueSyncEvent(bool isBlocking /* = true */)
@@ -181,7 +200,7 @@ bool PathPlanner::queueSyncEvent(bool isBlocking /* = true */)
 		std::unique_lock<std::mutex> lk(line_mutex);
 		if(linesCount > 0)
 		{
-			unsigned int lastLine = (linesWritePos == 0) ? MOVE_CACHE_SIZE - 1 : linesWritePos - 1;
+			unsigned int lastLine = (linesWritePos == 0) ? moveCacheSize - 1 : linesWritePos - 1;
 
 			Path *p = &lines[lastLine];
 			p->setSyncEvent(isBlocking);
@@ -258,14 +277,14 @@ void PathPlanner::queueBatchMove(FLOAT_T* batchData, int batchSize, FLOAT_T spee
 		if(linesCacheRemaining == 0 || linesTicksRemaining == 0)
 		{
 			std::unique_lock<std::mutex> lk(line_mutex);
-			//LOG( "Waiting for free move command space... Current: " << MOVE_CACHE_SIZE - linesCount << std::endl);
+			//LOG( "Waiting for free move command space... Current: " << moveCacheSize - linesCount << std::endl);
 			lineAvailable.wait(lk, [this]{
                 return 
                     stop || 
-                    (linesCount < MOVE_CACHE_SIZE && !isLinesBufferFilled());
+                    (linesCount < moveCacheSize && !isLinesBufferFilled());
             });
-			linesCacheRemaining = MOVE_CACHE_SIZE - linesCount;
-            linesTicksRemaining = MAX_BUFFERED_MOVE_TIME - linesTicksCount;
+			linesCacheRemaining = moveCacheSize - linesCount;
+            linesTicksRemaining = maxBufferedMoveTime - linesTicksCount;
 		}
 	
 		if(stop)
@@ -298,7 +317,7 @@ void PathPlanner::queueBatchMove(FLOAT_T* batchData, int batchSize, FLOAT_T spee
 		p->flags = 0;
 		p->setCancelable(cancelable);
 		
-		p->setWaitMS(optimize ? PRINT_MOVE_BUFFER_WAIT : 0);
+		p->setWaitMS(optimize ? printMoveBufferWait : 0);
 	
 		p->dir = 0;
 		
@@ -361,7 +380,7 @@ void PathPlanner::queueBatchMove(FLOAT_T* batchData, int batchSize, FLOAT_T spee
         linesTicksQueued += p->timeInTicks;
         linesTicksRemaining -= p->timeInTicks;
 		
-		if (linesWritePos>=MOVE_CACHE_SIZE)
+		if(linesWritePos>=moveCacheSize)
 			linesWritePos = 0;
 		
 		// Notify the run() thread to work
@@ -806,13 +825,6 @@ PathPlanner::~PathPlanner() {
 	if(runningThread.joinable()) {
 		stopThread(true);
 	}
-	
-	for(unsigned i = 0;i<MOVE_CACHE_SIZE;i++) {
-		if(lines[i].commands) {
-			delete[] lines[i].commands;
-			lines[i].commands=NULL;
-		}
-	}
 }
 
 void PathPlanner::waitUntilFinished() {
@@ -854,14 +866,14 @@ void PathPlanner::run() {
 		//If the buffer is half or more empty and the line to print is an optimized one , wait for 500 ms again so that we can get some other path in the path planner buffer, and we do that until the buffer is not anymore half empty.
 		if(!isLinesBufferFilled() && cur->getWaitMS()>0 && waitUntilFilledUp) {
 			unsigned lastCount = 0;
-			LOG("Waiting for buffer to fill up... " << linesCount  << " lines pending " << lastCount << std::endl);
-			do { 
-				lastCount = linesCount; 
+			//~ LOG("Waiting for buffer to fill up... " << linesCount  << " lines pending " << lastCount << std::endl);
+			do {
+				lastCount = linesCount;
 				
-				lineAvailable.wait_for(lk,  std::chrono::milliseconds(PRINT_MOVE_BUFFER_WAIT), [this,lastCount]{return linesCount>lastCount || stop;});
+				lineAvailable.wait_for(lk,  std::chrono::milliseconds(printMoveBufferWait), [this,lastCount]{return linesCount>lastCount || stop;});
 				
-			} while(lastCount<linesCount && linesCount<MOVE_CACHE_SIZE && !stop);
-			LOG("Done waiting for buffer to fill up... " << linesCount  << " lines ready. " << lastCount << std::endl);
+			} while(lastCount<linesCount && linesCount<moveCacheSize && !stop);
+			//~ LOG("Done waiting for buffer to fill up... " << linesCount  << " lines ready. " << lastCount << std::endl);
 			
 			waitUntilFilledUp = false;
 		}
@@ -908,19 +920,12 @@ void PathPlanner::run() {
 		}
 		
 		vMaxReached = cur->vStart;
-		
+
+        // reset commands buffer every time
+        cur->commands.clear();
+        cur->commands.resize(cur->stepsRemaining);
+
 		//Determine direction of movement,check if endstop was hit
-		if(cur->commands && (cur->commandBufferSize<cur->stepsRemaining || (cur->commandBufferSize-cur->stepsRemaining)>1024*1024)) { //Delete the buffer if the delta in MB is more than commandSize.
-			delete[] cur->commands;
-			cur->commandBufferSize = 0;
-			cur->commands = NULL;
-		}
-		
-		if(!cur->commands) {
-			cur->commands = new SteppersCommand[cur->stepsRemaining];
-			cur->commandBufferSize = cur->stepsRemaining;
-		}
-		
 		directionMask|=((uint8_t)cur->isXPositiveMove() << X_AXIS);
 		directionMask|=((uint8_t)cur->isYPositiveMove() << Y_AXIS);
 		directionMask|=((uint8_t)cur->isZPositiveMove() << Z_AXIS);
@@ -941,7 +946,7 @@ void PathPlanner::run() {
 		
 		
 		for(unsigned int stepNumber=0; stepNumber<cur->stepsRemaining; stepNumber++){
-			SteppersCommand& cmd = cur->commands[stepNumber];
+			SteppersCommand& cmd = cur->commands.at(stepNumber);
 			cmd.direction = directionMask;
 			cmd.cancellableMask = cancellableMask;
 			
@@ -1031,11 +1036,11 @@ void PathPlanner::run() {
 		//LOG("Current move time " << pru.getTotalQueuedMovesTime() / (double) F_CPU << std::endl);
 		
 		//Wait until we need to push some lines so that the path planner can fill up
-		pru.waitUntilLowMoveTime((F_CPU/1000)*MIN_BUFFERED_MOVE_TIME); //in seconds
+		pru.waitUntilLowMoveTime((F_CPU/1000)*minBufferedMoveTime); //in seconds
 		
 		//LOG( "Sending " << std::dec << linesPos << ", Start speed=" << cur->startSpeed << ", end speed="<<cur->endSpeed << ", nb steps = " << cur->stepsRemaining << std::endl);
 		
-		pru.push_block((uint8_t*)cur->commands, sizeof(SteppersCommand)*cur->stepsRemaining, sizeof(SteppersCommand),linesPos,cur->timeInTicks);
+		pru.push_block((uint8_t*)cur->commands.data(), sizeof(SteppersCommand)*cur->stepsRemaining, sizeof(SteppersCommand),linesPos,cur->timeInTicks);
 		
 		// LOG( "Done sending with " << std::dec << linesPos << std::endl);
 		

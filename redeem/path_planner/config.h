@@ -29,29 +29,11 @@
 /* Total number of axis that the system supports, including the currently selected extruder. Currently only 4 is supported */
 #define NUM_AXIS 4
 
-/* Number of move to cache to execute the path planner on. */
-#define MOVE_CACHE_SIZE 1000
 /* Number of extruder */
 #define NUM_EXTRUDER 5
 
 /* The speed of the timer created by the PRU in Hz */
 #define F_CPU 200000000
-
-/* Minimum of move buffered in the PRU (in term of move time in milliseconds) before we stop sending moves to the PRU. */
-/* Should be as low as possible so that we can keep some moves in the PathPlanner buffer for proper speed computations */
-#define MIN_BUFFERED_MOVE_TIME 100
-
-/* Time to wait before processing a print command if the buffer is not full enough, expressed in milliseconds. 
- * Increasing this time will reduce the slow downs due to the path planner not having enough path in the buffer 
- * but it will increase the startup time of the print.
- */
-#define PRINT_MOVE_BUFFER_WAIT 250
-
-/* Only buffer this much for print command processing, expressed in milliseconds.
- * Too long, a lot of gcode will be consumed and will take a long time for comamnded pause
- * Too short, it might not have enough path segments for speed computation.
- */
-#define MAX_BUFFERED_MOVE_TIME (PRINT_MOVE_BUFFER_WAIT * 6)
 
 /* Data type for floating point */
 #define FLOAT_T double
