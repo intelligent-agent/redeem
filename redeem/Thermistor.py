@@ -36,7 +36,14 @@ class Thermistor:
         """ Init """
         self.pin = pin
         self.name = name
-        self.temp_table = np.array(temp_chart[chart_name]).transpose()
+        
+        try:
+            self.temp_table = np.array(temp_chart[chart_name]).transpose()
+        except:
+            # use a clearly bogus temperature chart with extreme temperatures
+            # so that even if it is used the pid loop should always drive to zero
+            self.temp_table = np.array([[1e6, 1e6],[2e6, 0.0]]) 
+            logging.error("unable to load temperature chart for %s"%chart_name)
 
     def get_temperature(self):
         """ Return the temperature in degrees celsius """

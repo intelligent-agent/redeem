@@ -74,17 +74,12 @@ class Redeem:
 
         printer = Printer()
         self.printer = printer
-
-        # Copy/create config files if not present
+        
+        # check for config files
         if not os.path.exists("/etc/redeem/default.cfg"):
-            if not os.path.isdir("/etc/redeem"):
-                os.makedirs("/etc/redeem/")
-            dirname = os.path.dirname(os.path.realpath(__file__))
-            logging.warning("/etc/redeem/default.cfg does not exist, copying it...")
-            for f in glob.glob(dirname+"/configs/*.cfg"):
-                logging.warning(f)
-                shutil.copy(f, "/etc/redeem")
-
+            logging.error("/etc/redeem/default.cfg does not exist, this file is required for operation")
+            sys.exit() # maybe use something more graceful?
+            
         # Parse the config files.
         printer.config = CascadingConfigParser(
             ['/etc/redeem/default.cfg', '/etc/redeem/printer.cfg',
