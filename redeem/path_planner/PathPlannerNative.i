@@ -185,7 +185,7 @@ public:
    * cleared before processing can continue.
    *         
    */         
-  void waitUntilSyncEvent();
+  int waitUntilSyncEvent();
                      
   /**      
    * @brief Clears a SINGLE sync event and restores normal operation of the stepper PRU
