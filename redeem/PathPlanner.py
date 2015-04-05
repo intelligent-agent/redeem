@@ -51,6 +51,7 @@ class PathPlanner:
 
         self.travel_length = {"X": 0.0, "Y": 0.0, "Z": 0.0, "E": 0.0, "H": 0.0}
         self.center_offset = {"X": 0.0, "Y": 0.0, "Z": 0.0, "E": 0.0, "H": 0.0}
+        self.rest_pos = {"X": 0.0, "Y": 0.0, "Z": 0.0, "E": 0.0, "H": 0.0}
         self.prev = G92Path({"X": 0.0, "Y": 0.0, "Z": 0.0, "E": 0.0, "H": 0.0}, 0)
         self.prev.set_prev(None)
 
@@ -158,6 +159,7 @@ class PathPlanner:
 
         path_center = {}
         path_zero = {}
+        path_rest = {}
 
         speed = Path.home_speed[0]
 
@@ -178,6 +180,8 @@ class PathPlanner:
             backoff_length = -np.sign(path_search[a]) * Path.home_backoff_offset[Path.axis_to_index(a)]
             path_backoff[a] = backoff_length;
             path_fine_search[a] = -backoff_length * 1.2;
+
+            path_rest[a] = self.rest_pos[a]
             
             fine_search_speed =  min(abs(speed), abs(Path.home_backoff_speed[Path.axis_to_index(a)]))
             speed = min(abs(speed), abs(Path.home_speed[Path.axis_to_index(a)]))
@@ -187,6 +191,7 @@ class PathPlanner:
         logging.debug("Backoff to: %s" % path_backoff)
         logging.debug("Fine search: %s" % path_fine_search)
         logging.debug("Center: %s" % path_center)
+        logging.debug("Rest: %s" % path_rest)
 
         # Move until endstop is hit
         p = RelativePath(path_search, speed, True, False, True, False)
@@ -212,9 +217,8 @@ class PathPlanner:
         p = G92Path(path_center, speed)
         self.add_path(p)
 
-        # Move to home position - this should always be the origin i.e. zero position
-        path_zero = {"X": 0.0, "Y": 0.0, "Z": 0.0, "E": 0.0, "H": 0.0}
-        p = AbsolutePath(path_zero, speed, True, False, False, False)
+        # Move to rest position
+        p = AbsolutePath(path_rest, speed, True, False, False, False)
         self.add_path(p)
         self.wait_until_done()
 

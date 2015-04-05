@@ -319,6 +319,11 @@ class Redeem:
                 if printer.config.has_option('Geometry', 'offset_' + axis.lower()) \
                 else (Path.soft_min[i] if Path.home_speed[i] > 0 else Path.soft_max[i])
 
+            printer.path_planner.rest_pos[axis] = \
+                printer.config.getfloat('Homing', 'rest_' + axis.lower()) \
+                if printer.config.has_option('Homing', 'rest_' + axis.lower()) \
+                else printer.path_planner.center_offset[axis]
+
             printer.acceleration[Path.axis_to_index(axis)] = printer.config.getfloat(
                                                         'Planner', 'acceleration_' + axis.lower())
         
