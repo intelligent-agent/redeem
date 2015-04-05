@@ -119,23 +119,23 @@ public:
 
 	bool queueSyncEvent(bool isBlocking = true);
 
-	int waitUntilSyncEvent();
+  int waitUntilSyncEvent();
 
-	void clearSyncEvent();
+  void clearSyncEvent();
 
-	void queueMove(FLOAT_T startPos[NUM_AXIS], FLOAT_T endPos[NUM_AXIS], FLOAT_T speed, bool cancelable, bool optimize);
+  void queueMove(FLOAT_T startPos[NUM_AXIS], FLOAT_T endPos[NUM_AXIS], FLOAT_T speed, bool cancelable, bool optimize);
 
 	void queueBatchMove(FLOAT_T* batchData, int batchSize, FLOAT_T speed, bool cancelable, bool optimize);
 
-	void runThread();
+  void runThread();
 
-	void stopThread(bool join);
+  void stopThread(bool join);
 
-	void waitUntilFinished();
+  void waitUntilFinished();
 
-    void setExtruder(int extNr);
+  void setExtruder(int extNr);
 
-	Extruder& getExtruder(int extNr);
+  Extruder& getExtruder(int extNr);
 
 	void setPrintMoveBufferWait(int dt);
 
@@ -151,15 +151,17 @@ public:
 
 	void setTravelAcceleration(FLOAT_T accel[NUM_MOVING_AXIS]);
 
-	void setMaxJerk(FLOAT_T maxJerk, FLOAT_T maxZJerk);
+  void setMaxJerk(FLOAT_T maxJerk, FLOAT_T maxZJerk);
 
-	void suspend();
+  void suspend();
+  
+  void resume();
 
-	void resume();
+   void setDriveSystem(int driveSystem);
 
-    void setDriveSystem(int driveSystem);
-
-	void reset();
+  void reset();
+  
+  virtual ~PathPlanner();
 
 };
 
