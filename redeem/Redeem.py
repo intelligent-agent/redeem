@@ -156,10 +156,7 @@ class Redeem:
 
         # Delta printer setup
         if Path.axis_config == Path.AXIS_CONFIG_DELTA:
-            opts = ["Hez", "L", "r", "Ae", "Be", "Ce", "Aco",
-                    "Bco", "Cco", "Apxe", "Apye", "Bpxe", "Bpye",
-                    "Cpxe", "Cpye"]
-
+            opts = ["Hez", "L", "r", "Ae", "Be", "Ce", "A_radial", "B_radial", "C_radial", "A_tangential", "B_tangential", "C_tangential" ]
             for opt in opts:
                 Delta.__dict__[opt] = printer.config.getfloat('Delta', opt)
 
@@ -298,32 +295,64 @@ class Redeem:
         self.printer.plugins = PluginsController(self.printer)
 
         # Path planner
+        travel_default = False
+        center_default = False
+        home_default = False
         self.printer.path_planner = PathPlanner(self.printer, pru_firmware)
         for axis in printer.steppers.keys():
             i = Path.axis_to_index(axis)
-
-            # Sometimes soft_end_stop aren't defined to be at the exact hardware boundary.
-            # Adding 100mm for searching buffer.
-            printer.path_planner.travel_length[axis] = \
-                printer.config.getfloat('Geometry', 'travel_' + axis.lower()) \
-                if printer.config.has_option('Geometry', 'travel_' + axis.lower()) \
-                else (Path.soft_max[i] - Path.soft_min[i]) + .1            
             
-            printer.path_planner.center_offset[axis] = \
-                printer.config.getfloat('Geometry', 'offset_' + axis.lower()) \
-                if printer.config.has_option('Geometry', 'offset_' + axis.lower()) \
-                else (Path.soft_min[i] if Path.home_speed[i] > 0 else Path.soft_max[i])
-
-            printer.path_planner.rest_pos[axis] = \
-                printer.config.getfloat('Homing', 'rest_' + axis.lower()) \
-                if printer.config.has_option('Homing', 'rest_' + axis.lower()) \
-                else printer.path_planner.center_offset[axis]
-
             printer.acceleration[Path.axis_to_index(axis)] = printer.config.getfloat(
                                                         'Planner', 'acceleration_' + axis.lower())
-        
-        
+                                                        
+            # Sometimes soft_end_stop aren't defined to be at the exact hardware boundary.
+            # Adding 100mm for searching buffer.
+            if printer.config.has_option('Geometry', 'travel_' + axis.lower()):
+                printer.path_planner.travel_length[axis] = printer.config.getfloat('Geometry', 'travel_' + axis.lower())
+            else:
+                printer.path_planner.travel_length[axis] = (Path.soft_max[i] - Path.soft_min[i]) + .1
+                if axis in ['X','Y','Z']:                
+                    travel_default = True
+            
+            if printer.config.has_option('Geometry', 'offset_' + axis.lower()):
+                printer.path_planner.center_offset[axis] = printer.config.getfloat('Geometry', 'offset_' + axis.lower())
+            else:
+                printer.path_planner.center_offset[axis] =(Path.soft_min[i] if Path.home_speed[i] > 0 else Path.soft_max[i])
+                if axis in ['X','Y','Z']:                
+                    center_default = True
 
+            if printer.config.has_option('Homing', 'home_' + axis.lower()):
+                printer.path_planner.home_pos[axis] = printer.config.getfloat('Homing', 'home_' + axis.lower())
+            else:
+                printer.path_planner.home_pos[axis] = printer.path_planner.center_offset[axis]
+                if axis in ['X','Y','Z']:                   
+                    home_default = True
+                
+        if Path.axis_config == Path.AXIS_CONFIG_DELTA:
+            if travel_default:
+                logging.warning("Axis travel (travel_*) set by soft limits, manual setup is recommended for a delta")
+            if center_default:
+                logging.warning("Axis offsets (offset_*) set by soft limits, manual setup is recommended for a delta")
+            if home_default:
+                logging.warning("Home position (home_*) set by soft limits or offset_*")
+                logging.info("Home position will be recalculated...")
+        
+                # convert home_pos to effector space
+                Az = printer.path_planner.home_pos['X']
+                Bz = printer.path_planner.home_pos['Y']
+                Cz = printer.path_planner.home_pos['Z']
+                
+                z_offset = Delta.vertical_offset(Az,Bz,Cz) # vertical offset
+                xyz = Delta.forward_kinematics2(Az, Bz, Cz) # effector position
+                
+                # The default home_pos, provided above, is based on effector space 
+                # coordinates for carriage positions. We need to transform these to 
+                # get where the effector actually is.
+                xyz[2] += z_offset
+                for i, a in enumerate(['X','Y','Z']):
+                    printer.path_planner.home_pos[a] = xyz[i]
+                
+                logging.info("Home position = %s"%str(printer.path_planner.home_pos))
 
         # Set up communication channels
         printer.comms["USB"] = USB(self.printer)

@@ -26,6 +26,7 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
 
 import logging
 from Path import Path, CompensationPath, AbsolutePath, RelativePath, G92Path
+from Delta import Delta
 from Printer import Printer
 import numpy as np
 
@@ -51,7 +52,7 @@ class PathPlanner:
 
         self.travel_length = {"X": 0.0, "Y": 0.0, "Z": 0.0, "E": 0.0, "H": 0.0}
         self.center_offset = {"X": 0.0, "Y": 0.0, "Z": 0.0, "E": 0.0, "H": 0.0}
-        self.rest_pos = {"X": 0.0, "Y": 0.0, "Z": 0.0, "E": 0.0, "H": 0.0}
+        self.home_pos = {"X": 0.0, "Y": 0.0, "Z": 0.0, "E": 0.0, "H": 0.0}
         self.prev = G92Path({"X": 0.0, "Y": 0.0, "Z": 0.0, "E": 0.0, "H": 0.0}, 0)
         self.prev.set_prev(None)
 
@@ -159,7 +160,6 @@ class PathPlanner:
 
         path_center = {}
         path_zero = {}
-        path_rest = {}
 
         speed = Path.home_speed[0]
 
@@ -180,18 +180,16 @@ class PathPlanner:
             backoff_length = -np.sign(path_search[a]) * Path.home_backoff_offset[Path.axis_to_index(a)]
             path_backoff[a] = backoff_length;
             path_fine_search[a] = -backoff_length * 1.2;
-
-            path_rest[a] = self.rest_pos[a]
             
-            fine_search_speed =  min(abs(speed), abs(Path.home_backoff_speed[Path.axis_to_index(a)]))
             speed = min(abs(speed), abs(Path.home_speed[Path.axis_to_index(a)]))
+            fine_search_speed =  min(abs(speed), abs(Path.home_backoff_speed[Path.axis_to_index(a)]))
+            
             logging.debug("axis: "+str(a))
         
         logging.debug("Search: %s" % path_search)
         logging.debug("Backoff to: %s" % path_backoff)
         logging.debug("Fine search: %s" % path_fine_search)
         logging.debug("Center: %s" % path_center)
-        logging.debug("Rest: %s" % path_rest)
 
         # Move until endstop is hit
         p = RelativePath(path_search, speed, True, False, True, False)
@@ -210,22 +208,37 @@ class PathPlanner:
         # Hit the endstop slowly
         p = RelativePath(path_fine_search, fine_search_speed, True, False, True, False)
         self.add_path(p)
+        self.wait_until_done()
 
         # Reset (final) position to offset
-        # If homing based on maximum travel endstops then offset = max - min
-        # If homing based on minimum travel endstops then offset = 0
         p = G92Path(path_center, speed)
         self.add_path(p)
 
-        # Move to rest position
-        p = AbsolutePath(path_rest, speed, True, False, False, False)
+        return path_center, speed
+        
+    def _go_to_home(self, axis):
+        """
+        go to the designated home position
+        do this as a separate call from _home_internal due to delta platforms 
+        performing home in cartesian mode
+        """
+        
+        path_home = {}
+        
+        speed = Path.home_speed[0]
+
+        for a in axis:
+            path_home[a] = self.home_pos[a]
+            speed = min(abs(speed), abs(Path.home_speed[Path.axis_to_index(a)]))
+            
+        logging.debug("Home: %s" % path_home)
+            
+        # Move to home position
+        p = AbsolutePath(path_home, speed, True, False, False, False)
         self.add_path(p)
         self.wait_until_done()
-
-        # Reset backlash compensation
-        Path.backlash_reset()
-
-        logging.debug("homing done for " + str(axis))
+        
+        return
 
     def home(self, axis):
         """ Home the given axis using endstops (min) """
@@ -242,10 +255,37 @@ class PathPlanner:
             if 0 < len({"X", "Y", "Z"}.intersection(set(axis))) < 3:
                 axis = list(set(axis).union({"X", "Y", "Z"}))	# Deltas must home all axes.
             Path.axis_config = Path.AXIS_CONFIG_XY
-            self._home_internal(axis)
+            path_center, speed = self._home_internal(axis)
             Path.axis_config = Path.AXIS_CONFIG_DELTA
+
+            # homing was performed in cartesian mode
+            # need to convert back to delta
+
+            Az = path_center['X']
+            Bz = path_center['Y']
+            Cz = path_center['Z']
+            
+            z_offset = Delta.vertical_offset(Az,Bz,Cz) # vertical offset
+            xyz = Delta.forward_kinematics2(Az, Bz, Cz) # effector position
+            xyz[2] += z_offset
+            path = {'X':xyz[0], 'Y':xyz[1], 'Z':xyz[2]}
+            
+            p = G92Path(path, speed)
+            self.add_path(p)
+            self.wait_until_done()
+            
         else:
             self._home_internal(axis)
+            
+        # go to the designated home position
+        self._go_to_home(axis)
+
+        # Reset backlash compensation
+        Path.backlash_reset()
+
+        logging.debug("homing done for " + str(axis))
+            
+        return
 
     def probe(self, z):
         old_feedrate = self.printer.feed_rate # Save old feedrate

@@ -34,20 +34,13 @@ class Delta:
     Be  = 0.02032
     Ce  = 0.02032
 
-    # Hijacking carriage offset to become carraige offset error.
+    A_radial = 0.00            # Radius error of the named column                          
+    B_radial = 0.00                                                                      
+    C_radial = 0.00                                                                     
+    A_tangential = 0.00                                                                 
+    B_tangential = 0.00                                                                
+    C_tangential = 0.00
 
-    Aco = 0.00
-    Bco = 0.00
-    Cco = 0.00
-
-    # Compensation for positional error on the columns
-    # https://github.com/hercek/Marlin/blob/Marlin_v1/calibration.wxm
-    Apxe = 0.00
-    Apye = 0.00
-    Bpxe = 0.00
-    Bpye = 0.00
-    Cpxe = 0.00
-    Cpye = 0.00
 
     @staticmethod
     def recalculate():
@@ -57,13 +50,21 @@ class Delta:
         Bt = 7.0 * np.pi / 6.0
         Ct = 11.0 * np.pi / 6.0
 
+        # Calculate the column tangential offsets
+        Apxe = Delta.A_tangential   # Tower A doesn't require a separate y component
+        Apye = 0.00
+        Bpxe = Delta.B_tangential/2
+        Bpye = np.sqrt(3)*(-Delta.B_tangential/2)
+        Cpxe = np.sqrt(3)*(Delta.C_tangential/2)
+        Cpye = Delta.C_tangential/2
+
         # Calculate the column positions 
-        Apx = (Delta.Aco + Delta.r)*np.cos(At) + Delta.Apxe
-        Apy = (Delta.Aco + Delta.r)*np.sin(At) + Delta.Apye
-        Bpx = (Delta.Bco + Delta.r)*np.cos(Bt) + Delta.Bpxe
-        Bpy = (Delta.Bco + Delta.r)*np.sin(Bt) + Delta.Bpye
-        Cpx = (Delta.Cco + Delta.r)*np.cos(Ct) + Delta.Cpxe
-        Cpy = (Delta.Cco + Delta.r)*np.sin(Ct) + Delta.Cpye
+        Apx = (Delta.A_radial + Delta.r)*np.cos(At) + Apxe
+        Apy = (Delta.A_radial + Delta.r)*np.sin(At) + Apye
+        Bpx = (Delta.B_radial + Delta.r)*np.cos(Bt) + Bpxe
+        Bpy = (Delta.B_radial + Delta.r)*np.sin(Bt) + Bpye
+        Cpx = (Delta.C_radial + Delta.r)*np.cos(Ct) + Cpxe
+        Cpy = (Delta.C_radial + Delta.r)*np.sin(Ct) + Cpye
 
         # Calculate the effector positions
         Aex = Delta.Ae*np.cos(At)
@@ -87,10 +88,12 @@ class Delta:
 
 
         logging.info("Delta calibration calculated. Current settings:")
-        logging.info("Column A(X): Acoe="+str(Delta.Aco)+" Apxe="+str(Delta.Apxe)+" Apye="+str(Delta.Apye))
-        logging.info("Column B(X): Bcoe="+str(Delta.Bco)+" Bpxe="+str(Delta.Bpxe)+" Bpye="+str(Delta.Bpye))
-        logging.info("Column C(X): Ccoe="+str(Delta.Cco)+" Cpxe="+str(Delta.Cpxe)+" Cpye="+str(Delta.Cpye))
-        logging.info("Radius (r) ="+str(Delta.r)+" Rod Length (L)="+str(Delta.L))
+        logging.info("Column A(X): A_radial={:3.5}mm A_tangential={:3.5}mm".format( Delta.A_radial*1000.0, Delta.A_tangential*1000.0))
+        logging.info("Column B(Y): B_radial={:3.5}mm B_tangential={:3.5}mm".format( Delta.B_radial*1000.0, Delta.B_tangential*1000.0))
+        logging.info("Column C(Z): C_radial={:3.5}mm C_tangential={:3.5}mm".format( Delta.C_radial*1000.0, Delta.C_tangential*1000.0))
+        logging.info("Radius (r) = {:3.5}mm  Rod Length (L)= {:3.5}mm".format(Delta.r*1000.0, Delta.L*1000.0))
+
+
 
     @staticmethod
     def inverse_kinematics(X, Y, Z):
@@ -201,6 +204,33 @@ class Delta:
         XYZ = p1 + x*ex + y*ey + -z*ez
 
         return XYZ
+        
+    @staticmethod
+    def vertical_offset(Az, Bz, Cz):
+        """
+        vertical offset between circumcenter of carriages and the effector
+        """
+        Delta.p1[2] = Az
+        Delta.p2[2] = Bz
+        Delta.p3[2] = Cz
+        
+        # location of virtual carriages
+        p1 = Delta.p1
+        p2 = Delta.p2
+        p3 = Delta.p3
+        
+        # normal to the plane
+        plane_normal = Delta.cross(p1-p2,p2-p3)
+        plane_normal_length = Delta.norm(plane_normal)
+        plane_normal /= plane_normal_length
+        
+        # radius of circle
+        r = (Delta.norm(p1-p2)*Delta.norm(p2-p3)*Delta.norm(p3-p1))/(2*plane_normal_length)
+
+        # distance below the plane
+        offset = plane_normal*math.sqrt(Delta.L**2 - r**2)
+        
+        return offset[2]
 
     @staticmethod
     def norm(p):

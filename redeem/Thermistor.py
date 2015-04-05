@@ -24,6 +24,7 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
 import numpy as np
 import logging
 from threading import Lock
+import sys
 
 # Import the temp chart. 
 from temp_chart import *
@@ -40,10 +41,8 @@ class Thermistor:
         try:
             self.temp_table = np.array(temp_chart[chart_name]).transpose()
         except:
-            # use a clearly bogus temperature chart with extreme temperatures
-            # so that even if it is used the pid loop should always drive to zero
-            self.temp_table = np.array([[1e6, 1e6],[2e6, 0.0]]) 
-            logging.error("unable to load temperature chart for %s"%chart_name)
+            logging.error("unable to load temperature chart %s, this file is required for operation"%chart_name)
+            sys.exit() # maybe use something more graceful?
 
     def get_temperature(self):
         """ Return the temperature in degrees celsius """
