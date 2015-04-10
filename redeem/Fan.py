@@ -37,7 +37,7 @@ class Fan(object):
     def __init_pwm():
         kernel_version = subprocess.check_output(["uname", "-r"]).strip()
         [major, minor, rev] = kernel_version.split("-")[0].split(".")
-        if int(minor) >= 14 :
+        if (int(major) == 3 and int(minor) >= 14) or int(major) > 3 :
             Fan.pwm = Adafruit_I2C(0x70, 2, False)  # Open device
         else:
             Fan.pwm = Adafruit_I2C(0x70, 1, False)  # Open device
