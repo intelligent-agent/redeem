@@ -4,7 +4,7 @@
 PYTHON=`which python`
 DESTDIR=/
 BUILDIR=$(CURDIR)/debian/redeem
-PROJECT=myprojectname
+PROJECT=Redeem
 VERSION=0.2.0
 
 all:
