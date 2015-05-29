@@ -37,7 +37,7 @@ import numpy as np
 import sys
 
 from Mosfet import Mosfet
-from Stepper import Stepper
+from Stepper import Stepper, Stepper_00B1, Stepper_00A4, Stepper_00A3
 from Thermistor import Thermistor
 from Fan import Fan
 from Servo import Servo
@@ -56,9 +56,10 @@ from Printer import Printer
 from GCodeProcessor import GCodeProcessor
 from PluginsController import PluginsController
 from Delta import Delta
+from Enable import Enable
+from PWM import PWM
 
-
-version = "0.17.0~Red Sonja"
+version = "0.17.1~Red Sonja"
 
 # Default logging level is set to debug
 logging.basicConfig(level=logging.DEBUG,
@@ -105,6 +106,11 @@ class Redeem:
         if level > 0:
             logging.getLogger().setLevel(level)
 
+        if self.revision in ["00A4", "0A4A", "00A3"]:
+            PWM.set_frequency(100)
+        elif self.revision in ["00B1"]:
+            PWM.set_frequency(1000)
+
         # Init the Paths
         Path.axis_config = printer.config.getint('Geometry', 'axis_config')
 
@@ -119,23 +125,33 @@ class Redeem:
 
         # Backwards compatibility with A3
         if self.revision == "00A3":
-            Stepper.revision = "A3"
-            Stepper.ENABLED = 6
-            Stepper.SLEEP = 5
-            Stepper.RESET = 4
-            Stepper.DECAY = 0
+            # Init the 5 Stepper motors (step, dir, fault, DAC channel, name)
+            printer.steppers["X"] = Stepper_00A3("GPIO0_27", "GPIO1_29", "GPIO2_4" , 0, "X", 0, 0)
+            printer.steppers["Y"] = Stepper_00A3("GPIO1_12", "GPIO0_22", "GPIO2_5" , 1, "Y", 1, 1)
+            printer.steppers["Z"] = Stepper_00A3("GPIO0_23", "GPIO0_26", "GPIO0_15", 2, "Z", 2, 2)
+            printer.steppers["E"] = Stepper_00A3("GPIO1_28", "GPIO1_15", "GPIO2_1" , 3, "E", 3, 3)
+            printer.steppers["H"] = Stepper_00A3("GPIO1_13", "GPIO1_14", "GPIO2_3" , 4, "H", 4, 4)
+        elif self.revision == "00B1":
 
-        # Init the 5 Stepper motors (step, dir, fault, DAC channel, name)
-        printer.steppers["X"] = Stepper("GPIO0_27", "GPIO1_29", "GPIO2_4" , 0, "X", 0, 0)
-        printer.steppers["Y"] = Stepper("GPIO1_12", "GPIO0_22", "GPIO2_5" , 1, "Y", 1, 1)
-        printer.steppers["Z"] = Stepper("GPIO0_23", "GPIO0_26", "GPIO0_15", 2, "Z", 2, 2)
-        printer.steppers["E"] = Stepper("GPIO1_28", "GPIO1_15", "GPIO2_1" , 3, "E", 3, 3)
-        printer.steppers["H"] = Stepper("GPIO1_13", "GPIO1_14", "GPIO2_3" , 4, "H", 4, 4)
+            # Init the 5 Stepper motors (step, dir, fault, DAC channel, name)
+            printer.steppers["X"] = Stepper_00B1("GPIO0_27", "GPIO1_29", "GPIO2_4" , 11, "X", 0, 0)
+            printer.steppers["Y"] = Stepper_00B1("GPIO1_12", "GPIO0_22", "GPIO2_5" , 12, "Y", 1, 1)
+            printer.steppers["Z"] = Stepper_00B1("GPIO0_23", "GPIO0_26", "GPIO0_15", 13, "Z", 2, 2)
+            printer.steppers["E"] = Stepper_00B1("GPIO1_28", "GPIO1_15", "GPIO2_1" , 14, "E", 3, 3)
+            printer.steppers["H"] = Stepper_00B1("GPIO1_13", "GPIO1_14", "GPIO2_3" , 15, "H", 4, 4)
+        else:
+            # Init the 5 Stepper motors (step, dir, fault, DAC channel, name)
+            printer.steppers["X"] = Stepper_00A4("GPIO0_27", "GPIO1_29", "GPIO2_4" , 0, "X", 0, 0)
+            printer.steppers["Y"] = Stepper_00A4("GPIO1_12", "GPIO0_22", "GPIO2_5" , 1, "Y", 1, 1)
+            printer.steppers["Z"] = Stepper_00A4("GPIO0_23", "GPIO0_26", "GPIO0_15", 2, "Z", 2, 2)
+            printer.steppers["E"] = Stepper_00A4("GPIO1_28", "GPIO1_15", "GPIO2_1" , 3, "E", 3, 3)
+            printer.steppers["H"] = Stepper_00A4("GPIO1_13", "GPIO1_14", "GPIO2_3" , 4, "H", 4, 4)
 
-        if printer.config.reach_revision:
-            printer.steppers["A"] = Stepper("GPIO2_2" , "GPIO1_18", "GPIO0_14", 5, "A", 5, 5)
-            printer.steppers["B"] = Stepper("GPIO1_14", "GPIO0_5" , "GPIO0_14", 6, "B", 6, 6)
-            printer.steppers["C"] = Stepper("GPIO0_3" , "GPIO3_19", "GPIO0_14", 7, "C", 7, 7)
+            if printer.config.reach_revision:
+                printer.steppers["A"] = Stepper_00A4("GPIO2_2" , "GPIO1_18", "GPIO0_14", 5, "A", 5, 5)
+                printer.steppers["B"] = Stepper_00A4("GPIO1_14", "GPIO0_5" , "GPIO0_14", 6, "B", 6, 6)
+                printer.steppers["C"] = Stepper_00A4("GPIO0_3" , "GPIO3_19", "GPIO0_14", 7, "C", 7, 7)
+
 
         # Enable the steppers and set the current, steps pr mm and
         # microstepping
@@ -206,12 +222,16 @@ class Redeem:
             self.printer.fans.append(Fan(0))
             self.printer.fans.append(Fan(1))
             self.printer.fans.append(Fan(2))
-        else:
+        elif self.revision == "0A4A":
+            self.printer.fans.append(Fan(8))
+            self.printer.fans.append(Fan(9))
+            self.printer.fans.append(Fan(10))
+        elif self.revision == "00B1":
+            self.printer.fans.append(Fan(7))
             self.printer.fans.append(Fan(8))
             self.printer.fans.append(Fan(9))
             self.printer.fans.append(Fan(10))
 
-        Fan.set_PWM_frequency(100)
 
         for f in self.printer.fans:
             f.set_value(0)
@@ -354,6 +374,10 @@ class Redeem:
                 
                 logging.info("Home position = %s"%str(printer.path_planner.home_pos))
 
+        # Enable PWM and steppers
+        printer.enable = Enable("P9_41")
+        printer.enable.set_enabled()
+
         # Set up communication channels
         printer.comms["USB"] = USB(self.printer)
         printer.comms["Eth"] = Ethernet(self.printer)
@@ -446,6 +470,7 @@ class Redeem:
         for name, comm in self.printer.comms.iteritems():
             logging.debug("closing "+name)
             comm.close()
+        self.printer.enable.set_disabled()
         logging.info("Redeem exited")
 
     def _execute(self, g):

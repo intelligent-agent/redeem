@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 """
-A Mosfet class for setting the PWM of a power mosfet for Replicape.
+This is an implementation of the PWM DAC
+It has a second order low pass filter 
+giving a ripple voltage of less than 1 mV
 
 Author: Elias Bakken
 email: elias(dot)bakken(at)gmail(dot)com
@@ -23,22 +25,24 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
 
 from PWM import PWM
 
-class Mosfet(PWM):   
-    def __init__(self, channel):
-        """ Channel is the channel that the thing is on (0-15) """
-        self.channel = channel
+class DAC(PWM):
 
-    def set_power(self, value):
-        """Set duty cycle between 0 and 1"""
-        PWM.set_value(value, self.channel)
+    def __init__(self, channel):
+        """ Channel is the pwm output is on (0..15) """
+        self.channel = channel
+        self.offset = 0.0
+
+    def set_voltage(self, voltage):
+        """ Set the amount of on-time from 0..1 """
+        # The VCC on the PWM chip is 5.0V on Replicape Rev B1
+        PWM.set_value((voltage/5.0)+self.offset, self.channel)
 
 
 if __name__ == '__main__':
+    PWM.set_frequency(100)
 
-    PWM.set_frequency(1000)   
-
-    mosfets = [0]*3
-    for i in range(3):
-        mosfets[i] = Mosfet(3+i)
-        mosfets[i].set_power(0.25)
+    dacs = [0]*5
+    for i in range(5):
+        dacs[i] = DAC(11+i)
+        dacs[i].set_voltage(1.5)
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-A Mosfet class for setting the PWM of a power mosfet for Replicape.
+Global enable
 
 Author: Elias Bakken
 email: elias(dot)bakken(at)gmail(dot)com
@@ -21,24 +21,25 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
  along with Redeem.  If not, see <http://www.gnu.org/licenses/>.
 """
 
-from PWM import PWM
 
-class Mosfet(PWM):   
-    def __init__(self, channel):
-        """ Channel is the channel that the thing is on (0-15) """
-        self.channel = channel
+import Adafruit_BBIO.GPIO as GPIO
 
-    def set_power(self, value):
-        """Set duty cycle between 0 and 1"""
-        PWM.set_value(value, self.channel)
+class Enable:
+
+    def __init__(self, pin):
+        self.pin = pin
+        GPIO.setup(pin, GPIO.OUT)
+
+    def set_enabled(self):
+        GPIO.output(self.pin, GPIO.LOW)
+
+    def set_disabled(self):
+        GPIO.output(self.pin, GPIO.HIGH)
+
 
 
 if __name__ == '__main__':
+    en = Enable("P9_41")
+    en.set_enabled()
 
-    PWM.set_frequency(1000)   
-
-    mosfets = [0]*3
-    for i in range(3):
-        mosfets[i] = Mosfet(3+i)
-        mosfets[i].set_power(0.25)
 
