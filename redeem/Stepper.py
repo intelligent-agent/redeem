@@ -25,77 +25,31 @@ import time
 import logging
 from Path import Path
 from DAC import DAC
+from ShiftRegister import ShiftRegister
 
-spi2_0 = None
-spi2_1 = None
-
-# Load SPI module
-try:
-    from Adafruit_BBIO.SPI import SPI
-except ImportError:
-    try:
-        from spi import SPI
-    except ImportError:
-        pass
-
-if 'SPI' in globals():
-    # init the SPI for the DAC
-    try:
-        spi2_0 = SPI(0, 0)
-    except IOError:
-        spi2_0 = SPI(1, 0)
-    spi2_0.bpw = 8
-    spi2_0.mode = 1
-    # Init the SPI for the serial to parallel
-    try:
-        spi2_1 = SPI(0, 1)
-    except IOError:
-        spi2_1 = SPI(1, 1)
-    spi2_1.bpw = 8
-    spi2_1.mode = 0
-else:
-    logging.warning("Unable to set up SPI")
-    spi2_0 = None
-    spi2_1 = None
 
 class Stepper(object):
 
     all_steppers = list()
     
-    @staticmethod
-    def commit():
-        """ Send the values to the serial to parallel chips """
-        if spi2_1 is None:
-            return
-        
-        bytes = []
-        for stepper in Stepper.all_steppers:
-            bytes.append(stepper.get_state())
-        spi2_1.writebytes(bytes[::-1])
-
-    def __init__(self, stepPin, dirPin, faultPin, dac_channel, name, internalStepPin, internalDirPin):
+    def __init__(self, stepPin, dirPin, faultPin, dac_channel, shiftreg_nr, name, internalStepPin, internalDirPin):
         """ Init """
         self.dac_channel     = dac_channel  # Which channel on the dac is connected to this stepper
         self.stepPin         = stepPin
         self.dirPin          = dirPin
         self.faultPin        = faultPin
         self.name            = name
-        self.enabled 	     = False	    # Start disabled
-        self.in_use          = False        # Is the stepper used?
-        self.steps_pr_mm     = 1            # Numer of steps pr mm. 
-        self.microsteps      = 1.0          # Well, this is the microstep number
+        self.enabled 	     = False	    
+        self.in_use          = False        
+        self.steps_pr_mm     = 1            
+        self.microsteps      = 1.0          
         self.direction       = 1
         self.internalStepPin = (1 << internalStepPin)
-        self.internalDirPin = (1 << internalDirPin)
-        Stepper.all_steppers.append(self)       # Add to list of steppers    
+        self.internalDirPin  = (1 << internalDirPin)
 
-    def set_decay(self, value, force_update=False):
-        """ Decay mode, look in the data sheet """
-        self.decay = value
-        self.state &= ~(1 << Stepper.DECAY)        # bit 5
-        self.state |= (value << Stepper.DECAY)
-        if force_update: 
-            self.update()
+        # Set up the Shift register
+        ShiftRegister.make()
+        self.shift_reg = ShiftRegister.registers[shiftreg_nr]
 
     def get_state(self):
         """ Returns the current state """
@@ -103,7 +57,7 @@ class Stepper(object):
 
     def update(self):
         """ Commits the changes	"""
-        Stepper.commit()  # Commit the serial to parallel
+        ShiftRegister.commit()  # Commit the serial to parallel
 
     # Higher level commands
     def set_steps_pr_mm(self, steps_pr_mm):
@@ -111,10 +65,6 @@ class Stepper(object):
         self.steps_pr_mm = steps_pr_mm
         self.mmPrStep = 1.0 / (steps_pr_mm * self.microsteps)
     
-    def set_max_feed_rate(self, max_feed_rate):
-        """ Well, you can only guess what this function does. """
-        self.max_feed_rate = max_feed_rate
-
     def get_steps_pr_meter(self):
         """ Get the number of steps pr meter """
         return self.steps_pr_mm*self.microsteps * 1000.0
@@ -146,8 +96,8 @@ D7 = CFG1-Z  = 0 (microstepping)
 
 class Stepper_00B1(Stepper):
 
-    def __init__(self, stepPin, dirPin, faultPin, dac_channel, name, internalStepPin, internalDirPin):
-        Stepper.__init__(self, stepPin, dirPin, faultPin, dac_channel, name, internalStepPin, internalDirPin)
+    def __init__(self, stepPin, dirPin, faultPin, dac_channel, shiftreg_nr, name, internalStepPin, internalDirPin):
+        Stepper.__init__(self, stepPin, dirPin, faultPin, dac_channel, shiftreg_nr, name, internalStepPin, internalDirPin)
         self.dac    = DAC(dac_channel)
         self.state  = 0 # The initial state of shift register
 
@@ -163,9 +113,8 @@ class Stepper_00B1(Stepper):
         stepper_num = Path.axis_to_index(self.name)
         Path.steps_pr_meter[stepper_num] = self.get_steps_pr_meter()
 
-        if force_update:
-            self.update()
-
+        self.shift_reg.remove_state(0xFF-0x01)
+        self.shift_reg.set_state(self.state)
 
     def set_current_value(self, i_rms):
         """ Current chopping limit (This is the value you can change) """
@@ -185,6 +134,9 @@ class Stepper_00B1(Stepper):
         pass
 
     def set_enabled(self, force_update=False):
+        pass
+
+    def set_decay(self, value):
         pass
 
 """
@@ -290,6 +242,13 @@ class Stepper_00A4(Stepper):
         # TODO: Change to only this channel (1<<dac_channel) ?
         spi2_0.writebytes([0xA0, 0xFF])
 
+    def set_decay(self, value, force_update=False):
+        """ Decay mode, look in the data sheet """
+        self.decay = value
+        self.state &= ~(1 << Stepper.DECAY)        # bit 5
+        self.state |= (value << Stepper.DECAY)
+        if force_update: 
+            self.update()
 
 """
 The bits in the shift register are as follows (Rev A3):

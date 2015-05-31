@@ -27,11 +27,15 @@ class Mosfet(PWM):
     def __init__(self, channel):
         """ Channel is the channel that the thing is on (0-15) """
         self.channel = channel
+        self.power = 0.0
 
     def set_power(self, value):
+        self.power = value
         """Set duty cycle between 0 and 1"""
         PWM.set_value(value, self.channel)
 
+    def get_power(self):
+        return self.power
 
 if __name__ == '__main__':
 

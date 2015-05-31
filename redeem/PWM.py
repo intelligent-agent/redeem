@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-This is an impolementation of the PWM DAC
+This is an implementation of the PWM DAC
 
 Author: Elias Bakken
 email: elias(dot)bakken(at)gmail(dot)com
@@ -24,6 +24,7 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
 from Adafruit_I2C import Adafruit_I2C 
 import time
 import subprocess
+
 
 class PWM(object):
 

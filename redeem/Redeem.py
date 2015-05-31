@@ -132,13 +132,12 @@ class Redeem:
             printer.steppers["E"] = Stepper_00A3("GPIO1_28", "GPIO1_15", "GPIO2_1" , 3, "E", 3, 3)
             printer.steppers["H"] = Stepper_00A3("GPIO1_13", "GPIO1_14", "GPIO2_3" , 4, "H", 4, 4)
         elif self.revision == "00B1":
-
             # Init the 5 Stepper motors (step, dir, fault, DAC channel, name)
-            printer.steppers["X"] = Stepper_00B1("GPIO0_27", "GPIO1_29", "GPIO2_4" , 11, "X", 0, 0)
-            printer.steppers["Y"] = Stepper_00B1("GPIO1_12", "GPIO0_22", "GPIO2_5" , 12, "Y", 1, 1)
-            printer.steppers["Z"] = Stepper_00B1("GPIO0_23", "GPIO0_26", "GPIO0_15", 13, "Z", 2, 2)
-            printer.steppers["E"] = Stepper_00B1("GPIO1_28", "GPIO1_15", "GPIO2_1" , 14, "E", 3, 3)
-            printer.steppers["H"] = Stepper_00B1("GPIO1_13", "GPIO1_14", "GPIO2_3" , 15, "H", 4, 4)
+            printer.steppers["X"] = Stepper_00B1("GPIO0_27", "GPIO1_29", "GPIO2_4" , 11, 0, "X", 0, 0)
+            printer.steppers["Y"] = Stepper_00B1("GPIO1_12", "GPIO0_22", "GPIO2_5" , 12, 1, "Y", 1, 1)
+            printer.steppers["Z"] = Stepper_00B1("GPIO0_23", "GPIO0_26", "GPIO0_15", 13, 2, "Z", 2, 2)
+            printer.steppers["E"] = Stepper_00B1("GPIO1_28", "GPIO1_15", "GPIO2_1" , 14, 3, "E", 3, 3)
+            printer.steppers["H"] = Stepper_00B1("GPIO1_13", "GPIO1_14", "GPIO2_3" , 15, 4, "H", 4, 4)
         else:
             # Init the 5 Stepper motors (step, dir, fault, DAC channel, name)
             printer.steppers["X"] = Stepper_00A4("GPIO0_27", "GPIO1_29", "GPIO2_4" , 0, "X", 0, 0)
@@ -168,7 +167,7 @@ class Redeem:
             Path.soft_max[Path.axis_to_index(name)] = printer.config.getfloat('Endstops', 'soft_end_stop_max_' + name)
 
         # Commit changes for the Steppers
-        Stepper.commit()
+        #Stepper.commit()
 
         # Delta printer setup
         if Path.axis_config == Path.AXIS_CONFIG_DELTA:
@@ -491,6 +490,7 @@ class Redeem:
     def end_stop_hit(self, endstop):
         """ An endStop has been hit """
         logging.info("End Stop " + endstop.name + " hit!")
+        self.printer.comms["toggle"].send_message("End stop hit!")
 
 
 def main():
