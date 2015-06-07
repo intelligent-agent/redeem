@@ -490,7 +490,8 @@ class Redeem:
     def end_stop_hit(self, endstop):
         """ An endStop has been hit """
         logging.info("End Stop " + endstop.name + " hit!")
-        self.printer.comms["toggle"].send_message("End stop hit!")
+        if "toggle" in self.printer.comms:
+            self.printer.comms["toggle"].send_message("End stop hit!")
 
 
 def main():

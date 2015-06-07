@@ -98,11 +98,18 @@ class Heater(object):
     def enable(self):
         """ Start the PID controller """
         self.enabled = True
-        self.t = Thread(target=self.keep_temperature)
+        self.t = Thread(target=self.keep_temperature, name=self.name)
         self.t.start()
 
     def keep_temperature(self):
         """ PID Thread that keeps the temperature stable """
+        import ctypes
+
+        SYS_gettid = 224
+        libc = ctypes.cdll.LoadLibrary('libc.so.6')
+        tid = libc.syscall(SYS_gettid)
+        logging.info("Extruder "+self.name+" TID: "+str(tid))
+
         try:
             while self.enabled:
                 self.current_temp = self.thermistor.get_temperature()
