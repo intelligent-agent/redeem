@@ -103,18 +103,51 @@ class Stepper_00B1(Stepper):
 
     def set_microstepping(self, value, force_update=False):                
         """ Todo: Find an elegant way for this """
-        self.microstepping = value
-        self.microsteps  = 2**value     # 2^val
-        self.state = int("0b"+bin(self.state)[2:].rjust(8, '0')[:4]+bin(value)[2:].rjust(3, '0')[::-1]+"0", 2)
+        EN_CFG1  = (1<<7)
+        DIS_CFG1 = (0<<7)
+        EN_CFG2  = (1<<5)
+        DIS_CFG2 = (0<<5)
+        CFG2_H   = (1<<4)
+        CFG2_L   = (0<<4)
+        CFG1_H   = (1<<6)
+        CFG1_L   = (0<<6)
+
+        if   value == 0:   # GND, GND
+            state = EN_CFG2 | CFG2_L | EN_CFG1 | CFG1_L
+            self.microsteps = 1
+        elif value == 1: # GND, VCC
+            state = EN_CFG2 | CFG2_L | EN_CFG1 | CFG1_H
+            self.microsteps = 2
+        elif value == 2: # GND, open
+            state = EN_CFG2 | CFG2_L | DIS_CFG1 | CFG1_L
+            self.microsteps = 2
+        elif value == 3: # VCC, GND
+            state = EN_CFG2 | CFG2_H | EN_CFG1 | CFG1_L
+            self.microsteps = 4
+        elif value == 4: # VCC, VCC
+            state = EN_CFG2 | CFG2_H | EN_CFG1 | CFG1_H
+            self.microsteps = 16
+        elif value == 5: # VCC, open
+            state = EN_CFG2 | CFG2_H | DIS_CFG1 | CFG1_L
+            self.microsteps = 4
+        elif value == 6: # open, GND
+            state = DIS_CFG2 | CFG2_L | EN_CFG1 | CFG1_L
+            self.microsteps = 16
+        elif value == 7: # open, VCC
+            state = DIS_CFG2 | CFG2_L | EN_CFG1 | CFG1_H
+            self.microsteps = 4
+        elif value == 8: # open, open
+            state = DIS_CFG2 | CFG2_L | DIS_CFG1 | CFG1_L
+            self.microsteps = 16
+
+        self.shift_reg.set_state(state,0xF0)
         self.mmPrStep    = 1.0/(self.steps_pr_mm*self.microsteps)
-        #logging.debug("Updated stepper "+self.name+" to microstepping "+str(self.microsteps))
 
         # update the Path class with new values
         stepper_num = Path.axis_to_index(self.name)
         Path.steps_pr_meter[stepper_num] = self.get_steps_pr_meter()
+        logging.debug("Updated stepper "+self.name+" to microstepping "+str(value)+" = "+str(self.microsteps))   
 
-        self.shift_reg.remove_state(0xFF-0x01)
-        self.shift_reg.set_state(self.state)
 
     def set_current_value(self, i_rms):
         """ Current chopping limit (This is the value you can change) """

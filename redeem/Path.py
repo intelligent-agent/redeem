@@ -74,7 +74,6 @@ class Path:
 
     def __init__(self, axes, speed,  cancelable=False, use_bed_matrix=True, use_backlash_compensation=True, enable_soft_endstops=True):
         """ The axes of evil, the feed rate in m/s and ABS or REL """
-        axes["Z"], axes["E"] = axes["E"], axes["Z"] 
         self.axes = axes
         self.speed = speed
         self.cancelable = int(cancelable)

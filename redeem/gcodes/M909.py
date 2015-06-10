@@ -15,16 +15,16 @@ try:
 except ImportError:
     from redeem.Stepper import Stepper
     from redeem.Path import Path
-
+import logging
 
 class M909(GCodeCommand):
 
     def execute(self, g):
         for i in range(g.num_tokens()):
             self.printer.steppers[g.token_letter(i)].set_microstepping(int(g.token_value(i)))
-        Stepper.commit()
         # Update the steps pr m in the native planner. 
         self.printer.path_planner.native_planner.setAxisStepsPerMeter(tuple([long(Path.steps_pr_meter[i]) for i in range(3)]))
+        logging.debug("Updated steps pr meter to "+str(Path.steps_pr_meter))
         # Update the extruders
         for i in range(Path.NUM_AXES - 3):
             e = self.printer.path_planner.native_planner.getExtruder(i)
