@@ -48,13 +48,8 @@ class Heater(object):
         self.prefix = ""
         self.current_time = time.time()
         self.prev_time = time.time()
-        self.temperatures = []
-        self.sleep = 0.1
-        self.avg = max(int(1.0/self.sleep), 3)
-        self.error = 0
-        self.errors = [0]*self.avg
-        self.average = 0
-        self.averages = [0]*self.avg
+        self.temperatures = []  
+        self.sleep = 0.1                 # Time to sleep between measurements
 
     def set_target_temperature(self, temp):
         """ Set the desired temperature of the extruder """
@@ -97,19 +92,17 @@ class Heater(object):
 
     def enable(self):
         """ Start the PID controller """
+        self.avg = max(int(1.0/self.sleep), 3)
+        self.error = 0
+        self.errors = [0]*self.avg
+        self.average = 0
+        self.averages = [0]*self.avg
         self.enabled = True
         self.t = Thread(target=self.keep_temperature, name=self.name)
         self.t.start()
 
     def keep_temperature(self):
         """ PID Thread that keeps the temperature stable """
-        import ctypes
-
-        SYS_gettid = 224
-        libc = ctypes.cdll.LoadLibrary('libc.so.6')
-        tid = libc.syscall(SYS_gettid)
-        logging.info("Extruder "+self.name+" TID: "+str(tid))
-
         try:
             while self.enabled:
                 self.current_temp = self.thermistor.get_temperature()
@@ -124,27 +117,21 @@ class Heater(object):
                 self.averages.append(self.average)
                 self.averages.pop(0)
 
-                #if self.name =="E":
-                #    logging.debug("Err: "+str(error)+" avg err: "+str(avg_error)+" der: "+str(derivative))
                 if self.onoff_control:
                     if self.error > 1.0:
                         power = 1.0
                     else:
                         power = 0.0
                 else:
+                    derivative = self.get_error_derivative()
+                    integral = self.get_error_integral()
                     if abs(self.error) > 20:  # Avoid windup
-                        if self.error > 0:
-                            power = 1.0
-                        else:
-                            power = 0.0
-
                         self.error_integral = 0
-                        self.last_error = self.error
-                    else:
-                        derivative = self.get_error_derivative()
-                        integral = self.get_error_integral()
-                        power = self.P*(self.average + self.D*derivative + self.I*integral)  # The standard formula for the PID
-                        power = max(min(power, 1.0), 0.0)                           # Normalize to 0,1
+                        integral = 0
+                    power = self.P*(self.average + self.D*derivative + self.I*integral)  # The standard formula for the PID
+                    power = max(min(power, 1.0), 0.0)                           # Normalize to 0,1
+                    #if self.name =="E":
+                    #    logging.debug("Der: "+str(derivative)+" Err: "+str(self.error)+" avg err: "+str(self.average))
 
                 # If the Thermistor is disconnected or running away or something
                 if self.current_temp <= 5 or self.current_temp > 250:

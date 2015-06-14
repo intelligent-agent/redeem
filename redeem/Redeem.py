@@ -59,7 +59,7 @@ from Delta import Delta
 from Enable import Enable
 from PWM import PWM
 
-version = "0.17.1~Red Sonja"
+version = "0.17.2~Red Sonja"
 
 # Default logging level is set to debug
 logging.basicConfig(level=logging.DEBUG,
@@ -259,6 +259,13 @@ class Redeem:
                     c.enable()
                     self.printer.coolers.append(c)
                     logging.info("Cooler connects therm {} with fan {}".format(t, f))
+
+        # Connect fans to M106
+        printer.controlled_fans = []
+        for i, fan in enumerate(self.printer.fans):
+            if self.printer.config.getboolean('Cold-ends', "add-fan-{}-to-M106".format(i)):
+                printer.controlled_fans.append(self.printer.fans[i])
+                logging.info("Added fan {} to M106/M107".format(i))
 
         # Connect the cold end 0 to fan 2
         # This is very "Thing" specific, should be configurable somehow.
