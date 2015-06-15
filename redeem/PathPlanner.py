@@ -90,7 +90,7 @@ class PathPlanner:
             e.setTravelAcceleration(self.printer.acceleration[i + 3])
             e.setMaxStartFeedrate(self.printer.maxJerkEH / 1000)
             e.setAxisStepsPerMeter(long(Path.steps_pr_meter[i + 3]))
-            #e.setDirectionInverted(self.steppers[Path.index_to_axis(i+3)].direction == -1)
+            e.setDirectionInverted(False)
 
         self.native_planner.setExtruder(0)
         self.native_planner.setDriveSystem(Path.axis_config)

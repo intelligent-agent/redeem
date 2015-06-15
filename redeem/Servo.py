@@ -20,17 +20,17 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
  You should have received a copy of the GNU General Public License
  along with Redeem.  If not, see <http://www.gnu.org/licenses/>.
 """
-
-from Fan import Fan
 from threading import Thread
 import time
 import math
 import Queue
 from multiprocessing import JoinableQueue
 import logging
+from PWM_pin import PWM_pin
+from ShiftRegister import ShiftRegister
 
-class Servo(Fan):
-    def __init__(self, channel, pulse_width_start, pulse_width_stop, init_angle, turnoff_timeout=0):
+class Servo:
+    def __init__(self, channel, shiftreg_nr, pulse_width_start, pulse_width_stop, init_angle, turnoff_timeout=0):
         """Define a new software controllable servo with adjustable speed control
 
         Keyword arguments:
@@ -40,13 +40,11 @@ class Servo(Fan):
         turnoff_timeout -- number of seconds after which the servo is turned off if no command is received. 0 = never turns off
         """
 
-        super(Servo, self).__init__(channel)
-
         self.pulse_width_start = pulse_width_start
         self.pulse_width_stop = pulse_width_stop
         self.turnoff_timeout = turnoff_timeout
 
-        self.current_pulse_width = int(init_angle*(self.pulse_width_stop-self.pulse_width_start)/180.0+self.pulse_width_start)
+        self.current_pulse_width = (init_angle*(self.pulse_width_stop-self.pulse_width_start)/180.0+self.pulse_width_start)
         self.last_pulse_width = self.current_pulse_width
 
         self.queue = JoinableQueue(1000)
@@ -57,15 +55,30 @@ class Servo(Fan):
         self.running = True
         self.t.start()
 
-    def set_angle(self,angle, speed = 60, asynchronous = True):
-        ''' Set the servo angle to the given value, in degree, with the given speed in deg / sec '''
-        pulse_width = int(angle*(self.pulse_width_stop-self.pulse_width_start)/180.0+self.pulse_width_start)
-        last_angle = int((self.last_pulse_width-self.pulse_width_start)/float(self.pulse_width_stop-self.pulse_width_start)*180.0)
+        self.pwm = PWM_pin(channel, 100, 0.1)
 
+        # Set up the Shift register for enabling this servo
+        ShiftRegister.make()
+        self.shift_reg = ShiftRegister.registers[shiftreg_nr]
+        self.set_enabled()
+
+    def set_enabled(self, is_enabled=True):
+        if is_enabled:
+            self.shift_reg.add_state(0x01)
+        else:
+            self.shift_reg.remove_state(0x01)
+
+
+    def set_angle(self, angle, speed=60, asynchronous=True):
+        ''' Set the servo angle to the given value, in degree, with the given speed in deg / sec '''
+        pulse_width = angle*(self.pulse_width_stop-self.pulse_width_start)/180.0+self.pulse_width_start
+        last_angle = (self.last_pulse_width-self.pulse_width_start)/float(self.pulse_width_stop-self.pulse_width_start)*180.0
+        
+        
         t = (math.fabs(angle-last_angle)/speed) / math.fabs(angle-last_angle)
 
-        for w in xrange(self.last_pulse_width, pulse_width, 1 if pulse_width>=self.last_pulse_width else -1):
-            self.queue.put((w,t))
+        for w in xrange(int(self.last_pulse_width*1000), int(pulse_width*1000), (1 if pulse_width>=self.last_pulse_width else -1)):
+            self.queue.put((w/1000.0,t))
 
         self.last_pulse_width = pulse_width
         
@@ -73,7 +86,7 @@ class Servo(Fan):
             self.queue.join()
 
     def turn_off(self):
-        self.set_value(0)
+        self.pwm.set_enabled(False)
 
     def stop(self):
         self.running = False
@@ -94,32 +107,24 @@ class Servo(Fan):
                 pass
 
             self.current_pulse_width = ev[0]
-            self.set_value(self.current_pulse_width/4095.0)
+            self.pwm.set_value(self.current_pulse_width)
             self.lastCommandTime = time.time()
             time.sleep(ev[1])
 
             self.queue.task_done()
 
+
 if __name__ == '__main__':
-    import os
-
-    logging.basicConfig(level=logging.DEBUG,
-                        format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
-                        datefmt='%m-%d %H:%M')
-
    
-    fan = Servo(1,500,750,90) 
+    servo_0 = Servo("P9_14", 3, 0.1, 0.2, 90) 
+    servo_1 = Servo("P9_16", 2, 0.1, 0.2, 90) 
 
-    Servo.set_PWM_frequency(100)
     while True:
-        try:
-            f=int(raw_input('Input:'))
-            fan.set_angle(f)
-        except ValueError:
-            print "Not a number"
-        except KeyboardInterrupt:
-            fan.turn_off()
-            print ""
-            break
+        for i in range(1, 180):
+            servo_0.set_angle(i)
+            servo_1.set_angle(i)
+        for i in range(180, 1, -1):
+            servo_0.set_angle(i)
+            servo_1.set_angle(i)
 
 

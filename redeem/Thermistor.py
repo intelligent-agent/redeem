@@ -33,11 +33,13 @@ from temp_chart import *
 class Thermistor:
     """ Represents a thermistor """
 
+    mutex = Lock()
+
     def __init__(self, pin, name, chart_name):
         """ Init """
         self.pin = pin
         self.name = name
-        
+
         try:
             self.temp_table = np.array(temp_chart[chart_name]).transpose()
         except:
@@ -46,14 +48,18 @@ class Thermistor:
 
     def get_temperature(self):
         """ Return the temperature in degrees celsius """
-        with open(self.pin, "r") as file:
-            try:
+        ret = -1.0
+        Thermistor.mutex.acquire()
+        try:
+            with open(self.pin, "r") as file:
                 voltage = (float(file.read().rstrip()) / 4095.0) * 1.8
                 res_val = self.voltage_to_resistance(voltage)  # Convert to resistance
-                return self.resistance_to_degrees(res_val) # Convert to degrees
-            except IOError as e:
-                logging.error("Unable to get ADC value ({0}): {1}".format(e.errno, e.strerror))
-                return -1.0
+                ret = self.resistance_to_degrees(res_val) # Convert to degrees
+        except IOError as e:
+            logging.error("Unable to get ADC value ({0}): {1}".format(e.errno, e.strerror))
+        finally:
+            Thermistor.mutex.release()
+        return ret
 
     def resistance_to_degrees(self, resistor_val):
         """ Return the temperature nearest to the resistor value """
