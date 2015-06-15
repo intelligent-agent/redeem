@@ -39,7 +39,7 @@ class Thermistor:
         """ Init """
         self.pin = pin
         self.name = name
-        
+
         try:
             self.temp_table = np.array(temp_chart[chart_name]).transpose()
         except:

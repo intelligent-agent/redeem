@@ -106,7 +106,6 @@ class Heater(object):
         try:
             while self.enabled:
                 self.current_temp = self.thermistor.get_temperature()
-                
                 self.temperatures.append(self.current_temp)
                 self.temperatures[:-max(int(60/self.sleep), self.avg)] = [] # Keep only this much history
 

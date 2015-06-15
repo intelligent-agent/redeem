@@ -140,16 +140,16 @@ class Redeem:
             printer.steppers["H"] = Stepper_00B1("GPIO1_13", "GPIO1_14", "GPIO2_3" , 15, 4, "H", 4, 4)
         else:
             # Init the 5 Stepper motors (step, dir, fault, DAC channel, name)
-            printer.steppers["X"] = Stepper_00A4("GPIO0_27", "GPIO1_29", "GPIO2_4" , 0, "X", 0, 0)
-            printer.steppers["Y"] = Stepper_00A4("GPIO1_12", "GPIO0_22", "GPIO2_5" , 1, "Y", 1, 1)
-            printer.steppers["Z"] = Stepper_00A4("GPIO0_23", "GPIO0_26", "GPIO0_15", 2, "Z", 2, 2)
-            printer.steppers["E"] = Stepper_00A4("GPIO1_28", "GPIO1_15", "GPIO2_1" , 3, "E", 3, 3)
-            printer.steppers["H"] = Stepper_00A4("GPIO1_13", "GPIO1_14", "GPIO2_3" , 4, "H", 4, 4)
+            printer.steppers["X"] = Stepper_00A4("GPIO0_27", "GPIO1_29", "GPIO2_4" , 0, 0, "X", 0, 0)
+            printer.steppers["Y"] = Stepper_00A4("GPIO1_12", "GPIO0_22", "GPIO2_5" , 1, 1, "Y", 1, 1)
+            printer.steppers["Z"] = Stepper_00A4("GPIO0_23", "GPIO0_26", "GPIO0_15", 2, 2, "Z", 2, 2)
+            printer.steppers["E"] = Stepper_00A4("GPIO1_28", "GPIO1_15", "GPIO2_1" , 3, 3, "E", 3, 3)
+            printer.steppers["H"] = Stepper_00A4("GPIO1_13", "GPIO1_14", "GPIO2_3" , 4, 4, "H", 4, 4)
 
             if printer.config.reach_revision:
-                printer.steppers["A"] = Stepper_00A4("GPIO2_2" , "GPIO1_18", "GPIO0_14", 5, "A", 5, 5)
-                printer.steppers["B"] = Stepper_00A4("GPIO1_14", "GPIO0_5" , "GPIO0_14", 6, "B", 6, 6)
-                printer.steppers["C"] = Stepper_00A4("GPIO0_3" , "GPIO3_19", "GPIO0_14", 7, "C", 7, 7)
+                printer.steppers["A"] = Stepper_00A4("GPIO2_2" , "GPIO1_18", "GPIO0_14", 5, 5, "A", 5, 5)
+                printer.steppers["B"] = Stepper_00A4("GPIO1_14", "GPIO0_5" , "GPIO0_14", 6, 6, "B", 6, 6)
+                printer.steppers["C"] = Stepper_00A4("GPIO0_3" , "GPIO3_19", "GPIO0_14", 7, 7, "C", 7, 7)
 
 
         # Enable the steppers and set the current, steps pr mm and

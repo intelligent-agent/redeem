@@ -24,7 +24,7 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
 import time
 import logging
 from Path import Path
-from DAC import DAC
+from DAC import DAC, PWM_DAC
 from ShiftRegister import ShiftRegister
 
 
@@ -98,7 +98,7 @@ class Stepper_00B1(Stepper):
 
     def __init__(self, stepPin, dirPin, faultPin, dac_channel, shiftreg_nr, name, internalStepPin, internalDirPin):
         Stepper.__init__(self, stepPin, dirPin, faultPin, dac_channel, shiftreg_nr, name, internalStepPin, internalDirPin)
-        self.dac    = DAC(dac_channel)
+        self.dac    = PWM_DAC(dac_channel)
         self.state  = 0 # The initial state of shift register
 
     def set_microstepping(self, value, force_update=False):                
@@ -192,40 +192,37 @@ class Stepper_00A4(Stepper):
     RESET       = 7
     DECAY       = 5
 
-    def __init__(self, stepPin, dirPin, faultPin, dac_channel, name, internalStepPin, internalDirPin):
-        Stepper.__init__(self, stepPin, dirPin, faultPin, dac_channel, name, internalStepPin, internalDirPin)
-        self.dacvalue 	     = 0x00   	    # The voltage value on the VREF		
-        self.state           = (1<<Stepper.SLEEP)|(1<<Stepper.RESET)| (1<<Stepper.ENABLED) # The initial state of the inputs
-
+    def __init__(self, stepPin, dirPin, faultPin, dac_channel, shiftreg_nr, name, internalStepPin, internalDirPin):
+        Stepper.__init__(self, stepPin, dirPin, faultPin, dac_channel, shiftreg_nr, name, internalStepPin, internalDirPin)
+        self.dac        = DAC(dac_channel)
+        self.dacvalue 	= 0x00   	    # The voltage value on the VREF		
+        self.state      = (1<<Stepper_00A4.SLEEP)|(1<<Stepper_00A4.RESET)| (1<<Stepper_00A4.ENABLED) # The initial state of the inputs
+        self.update()
 
     def set_enabled(self, force_update=False):
         """ Sets the Stepper enabled """
         if not self.enabled:
             self.state &= ~(1 << Stepper_00A4.ENABLED)
             self.enabled = True
-        if force_update:
-            self.update()
+        self.update()
 
     def set_disabled(self, force_update=False):
         """ Sets the Stepper disabled """
         if self.enabled:
             self.state |= (1 << Stepper_00A4.ENABLED)
             self.enabled = False
-        if force_update:
-            self.update()
+        self.update()
 
     def enable_sleepmode(self, force_update=False):
         """Logic high to enable device, logic low to enter
         low-power sleep mode. Internal pulldown."""
         self.state &= ~(1 << Stepper_00A4.SLEEP)
-        if force_update:
-            self.update()
+        self.update()
 
     def disable_sleepmode(self, force_update=False):
         """ Disables sleepmode (awake) """
         self.state |= (1<<Stepper_00A4.SLEEP)
-        if force_update:
-            self.update()
+        self.update()
 
     def reset(self, force_update=False):
         """nReset - Active-low reset input initializes the indexer
@@ -245,43 +242,34 @@ class Stepper_00A4(Stepper):
         self.microstepping = value
         self.microsteps  = 2**value     # 2^val
         # Keep bit 0, 4, 5, 6 intact but replace bit 1, 2, 3
-        self.state = int("0b"+bin(self.state)[2:].rjust(8, '0')[:4]+bin(value)[2:].rjust(3, '0')+bin(self.state)[-1:], 2)
-        #self.state = int("0b"+bin(self.state)[2:].rjust(8, '0')[:4]+bin(value)[2:].rjust(3, '0')+"0", 2)
+        self.state = int("0b"+bin(self.state)[2:].rjust(8, '0')[:4]+bin(value)[2:].rjust(3, '0')[::-1]+"0", 2)
+        #self.state = int("0b"+bin(self.state)[2:].rjust(8, '0')[:4]+bin(value)[2:].rjust(3, '0')+bin(self.state)[-1:], 2)
         self.mmPrStep    = 1.0/(self.steps_pr_mm*self.microsteps)
 
         # update the Path class with new values
         stepper_num = Path.axis_to_index(self.name)
         Path.steps_pr_meter[stepper_num] = self.get_steps_pr_meter()
-
-        if force_update:
-            self.update()
-
+        self.update()
 
     def set_current_value(self, iChop):
         """ Current chopping limit (This is the value you can change) """
         self.current_value = iChop
-        if spi2_0 is None:
-            return
-
-        vRef = 3.3                   # Voltage reference on the DAC
-        rSense = 0.1                 # Resistance for the
-        vOut = iChop * 5.0 * rSense  # Calculated voltage out from the DAC
-
-        self.dacval = int((vOut * 256.0) / vRef)
-        byte1 = ((self.dacval & 0xF0) >> 4) | (self.dac_channel << 4)
-        byte2 = (self.dacval & 0x0F) << 4
-        spi2_0.writebytes([byte1, byte2])       # Update all channels
-
-        # TODO: Change to only this channel (1<<dac_channel) ?
-        spi2_0.writebytes([0xA0, 0xFF])
+        rSense = 0.1                  # Resistance for the
+        v_out = iChop * 5.0 * rSense  # Calculated voltage out from the DAC
+        self.dac.set_voltage(v_out)
 
     def set_decay(self, value, force_update=False):
         """ Decay mode, look in the data sheet """
         self.decay = value
-        self.state &= ~(1 << Stepper.DECAY)        # bit 5
-        self.state |= (value << Stepper.DECAY)
-        if force_update: 
-            self.update()
+        self.state &= ~(1 << Stepper_00A4.DECAY)        # bit 5
+        self.state |= (value << Stepper_00A4.DECAY)
+        self.update()
+
+    def update(self):
+        # Invert shizzle
+        self.shift_reg.set_state(self.state)    
+        #logging.debug("Updated stepper {} to enabled, state: {}".format(self.name, bin(self.state)))
+
 
 """
 The bits in the shift register are as follows (Rev A3):
