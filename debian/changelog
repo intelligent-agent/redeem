@@ -1,3 +1,10 @@
+redeem (0.17.3) UNRELEASED; urgency=low
+
+  [ Elias ]
+  * First version with support for Replicape Rev B1
+
+ -- Elias <elias@elias-Aspire>  Mon, 16 Jun 2015 14:06:44 +0200
+
 redeem (0.17.0) UNRELEASED; urgency=low
 
   [ Chris Roadfeldt ]

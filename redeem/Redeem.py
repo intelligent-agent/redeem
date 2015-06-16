@@ -59,7 +59,7 @@ from Delta import Delta
 from Enable import Enable
 from PWM import PWM
 
-version = "0.17.2~Red Sonja"
+version = "0.17.3~Red Sonja"
 
 # Default logging level is set to debug
 logging.basicConfig(level=logging.DEBUG,

@@ -2,7 +2,7 @@ Source: redeem
 Maintainer: Chris Roadfeldt <chris@roadfeldt.com>
 Section: misc
 Priority: optional
-Standards-Version: 0.17.0
+Standards-Version: 0.17.3
 Build-Depends: build-essential, debhelper (>= 9), swig, python-smbus, python, dh-python, python-dev
 X-Python-Version: 2.7
 
