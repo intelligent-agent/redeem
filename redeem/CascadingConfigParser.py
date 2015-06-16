@@ -56,8 +56,15 @@ class CascadingConfigParser(ConfigParser.SafeConfigParser):
         self.reach_revision = None
         for busNumber in ["1","2"]:
             for addr in ["4", "5", "6", "7"]:
+                path = "/sys/bus/i2c/devices/"+busNumber+"-005"+addr
+                if(os.path.isfile(path+"/eeprom")):
+                    eeprom = path+"/eeprom"
+                elif os.path.isfile(path+"/nvmem/at24-1/nvmem"):
+                    eeprom = path+"/nvmem/at24-1/nvmem"
+                else:
+                    continue
                 try:
-                    with open("/sys/bus/i2c/devices/"+busNumber+"-005"+addr+"/eeprom", "rb") as f:
+                    with open(eeprom, "rb") as f:
                         data = f.read(100)
                         name = data[58:74].strip()
                         if name == "BB-BONE-REPLICAP":
