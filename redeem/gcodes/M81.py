@@ -19,11 +19,14 @@ class M81(GCodeCommand):
             g.answer = None   # Prevent reply
             self.printer.redeem.running = False
             self.printer.path_planner.queue_sync_event(True)
+        elif g.has_letter("R"):
+            g.answer = None   # Prevent reply
+            subprocess.call("systemctl restart redeem", shell=True)
         else:
             os.system("shutdown -h now")
 
     def get_description(self):
-        return "Shutdown the whole Replicape controller board. If paramter P is present, only exit loop. "
+        return "Shutdown the whole Replicape controller board. If paramter P is present, only exit loop. If R is present, restart daemon"
 
     def is_buffered(self):
         return False
