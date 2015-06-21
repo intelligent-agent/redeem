@@ -21,7 +21,7 @@ class M81(GCodeCommand):
             self.printer.path_planner.queue_sync_event(True)
         elif g.has_letter("R"):
             g.answer = None   # Prevent reply
-            subprocess.call("systemctl restart redeem", shell=True)
+            os.system("systemctl restart redeem")
         else:
             os.system("shutdown -h now")
 
