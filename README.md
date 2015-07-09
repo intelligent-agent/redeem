@@ -15,6 +15,7 @@ Software features:
 - Controllable via ethernet, USB, Manga Screen (Toggle on 4.3" LCD).   
 
 Wiki: (http://wiki.thing-printer.com/index.php?title=Redeem)
+If you make changes that affect the config, try to update the wiki as well. 
 
 Ipk packets (for Angstrom/Opkg) are available: 
   http://feeds.thing-printer.com/feeds/v2014.06/ipk/eglibc/armv7at2hf-vfp-neon/machine/beaglebone/
