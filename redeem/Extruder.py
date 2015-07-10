@@ -23,6 +23,7 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
 from threading import Thread
 import time
 import logging
+import numpy as np
 
 class Heater(object):
     """
@@ -47,6 +48,8 @@ class Heater(object):
         self.prefix = ""
         self.current_time = time.time()
         self.prev_time = time.time()
+        self.temperatures = []  
+        self.sleep = 0.1                 # Time to sleep between measurements
 
     def set_target_temperature(self, temp):
         """ Set the desired temperature of the extruder """
@@ -54,7 +57,11 @@ class Heater(object):
 
     def get_temperature(self):
         """ get the temperature of the thermistor"""
-        return self.current_temp
+        return np.average(self.temperatures[-self.avg:])
+
+    def get_target_temperature(self):
+        """ get the temperature of the thermistor"""
+        return self.target_temp
 
     def is_target_temperature_reached(self):
         """ Returns true if the target temperature is reached """
@@ -63,67 +70,92 @@ class Heater(object):
         err = abs(self.current_temp - self.target_temp)
         return err < self.ok_range
 
+    def is_temperature_stable(self, seconds=10):
+        """ Returns true if the temperature has been stable for n seconds """
+        if len(self.temperatures) < int(seconds/self.sleep):
+            return False
+        if max(self.temperatures[-int(seconds/self.sleep):]) > (self.target_temp + self.ok_range):
+            return False
+        if min(self.temperatures[-int(seconds/self.sleep):]) < (self.target_temp - self.ok_range):
+            return False
+        return True
+
     def disable(self):
         """ Stops the heater and the PID controller """
         self.enabled = False
         # Wait for PID to stop
         self.t.join()
         self.mosfet.set_power(0.0)
+        self.last_error = 0.0
+        self.error_integral = 0.0
+        self.error_integral_limit = 100.0
 
     def enable(self):
         """ Start the PID controller """
+        self.avg = max(int(1.0/self.sleep), 3)
+        self.error = 0
+        self.errors = [0]*self.avg
+        self.average = 0
+        self.averages = [0]*self.avg
         self.enabled = True
-        self.t = Thread(target=self.keep_temperature)
+        self.t = Thread(target=self.keep_temperature, name=self.name)
         self.t.start()
 
     def keep_temperature(self):
         """ PID Thread that keeps the temperature stable """
-        while self.enabled:
-            self.current_temp = self.thermistor.get_temperature()
-            error = self.target_temp-self.current_temp
+        try:
+            while self.enabled:
+                self.current_temp = self.thermistor.get_temperature()
+                self.temperatures.append(self.current_temp)
+                self.temperatures[:-max(int(60/self.sleep), self.avg)] = [] # Keep only this much history
 
-            if self.onoff_control:
-                if error > 1.0:
-                    power = 1.0
-                else:
-                    power = 0.0
-            else:
-                if abs(error) > 15:  # Avoid windup
-                    if error > 0:
+                self.error = self.target_temp-self.current_temp
+                self.errors.append(self.error)
+                self.errors.pop(0)
+                self.average = sum(self.errors)/self.avg
+                self.averages.append(self.average)
+                self.averages.pop(0)
+
+                if self.onoff_control:
+                    if self.error > 1.0:
                         power = 1.0
                     else:
                         power = 0.0
-
-                    self.error_integral = 0
-                    self.last_error = error
                 else:
-                    derivative = self._getErrorDerivative(error)
-                    integral = self._getErrorIntegral(error)
-                    power = self.P*error + self.D*derivative + self.I*integral  # The (right) formula for the PID				
+                    derivative = self.get_error_derivative()
+                    integral = self.get_error_integral()
+                    if abs(self.error) > 20:  # Avoid windup
+                        self.error_integral = 0
+                        integral = 0
+                    power = self.P*(self.average + self.D*derivative + self.I*integral)  # The standard formula for the PID
                     power = max(min(power, 1.0), 0.0)                           # Normalize to 0,1
+                    #if self.name =="E":
+                    #    logging.debug("Der: "+str(derivative)+" Err: "+str(self.error)+" avg err: "+str(self.average))
 
-            # If the Thermistor is disconnected or running away or something
-            if self.current_temp <= 5 or self.current_temp > 250:
-                power = 0
-            self.mosfet.set_power(power)
-            if self.current_time-self.prev_time > 2:
-                logging.warning("Heater time update large: " +
-                                self.name + " temp: " +
-                                str(self.current_temp) + " time delta: " +
-                                str(self.current_time-self.prev_time))
-            self.prev_time = self.current_time
-            self.current_time = time.time()
-            time.sleep(1)
+                # If the Thermistor is disconnected or running away or something
+                if self.current_temp <= 5 or self.current_temp > 250:
+                    power = 0
+                self.mosfet.set_power(power)
+                time_diff = self.current_time-self.prev_time
+                if time_diff > 2:
+                    logging.warning("Heater time update large: " +
+                                    self.name + " temp: " +
+                                    str(self.current_temp) + " time delta: " +
+                                    str(self.current_time-self.prev_time))
+                self.prev_time = self.current_time
+                self.current_time = time.time()
+                time.sleep(self.sleep)
+        finally:
+            # Disable this mosfet if anything goes wrong
+            self.mosfet.set_power(0)
 
-    def _getErrorDerivative(self, current_error):
+    def get_error_derivative(self):
         """ Get the derivative of the error term """
-        derivative = current_error-self.last_error		# Calculate the diff
-        self.last_error = current_error					      # Update the last error 
-        return derivative
+        return (self.average-self.averages[-2])/self.sleep		# Calculate the diff
 
-    def _getErrorIntegral(self, error):
+    def get_error_integral(self):
         """ Calculate and return the error integral """
-        self.error_integral += error
+        self.error_integral += self.error*self.sleep
         return self.error_integral
 
 
@@ -132,6 +164,7 @@ class Extruder(Heater):
     def __init__(self, smd, thermistor, mosfet, name, onoff_control):
         Heater.__init__(self, thermistor, mosfet, name, onoff_control)
         self.smd = smd
+        self.sleep = 0.25
         self.enable()
 
 
@@ -139,4 +172,5 @@ class HBP(Heater):
     """ Subclass for heater, this is a Heated build platform """
     def __init__(self, thermistor, mosfet, onoff_control):
         Heater.__init__(self, thermistor, mosfet, "HBP", onoff_control)
+        self.sleep = 0.5 # Heaters have more thermal mass
         self.enable()

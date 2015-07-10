@@ -83,6 +83,8 @@ public:
 	}
 	
 	void waitUntilLowMoveTime(unsigned long lowMoveTimeTicks);
+
+	int waitUntilSync();
 	
 	void suspend();
 	

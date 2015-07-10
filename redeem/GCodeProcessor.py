@@ -25,6 +25,7 @@ import inspect
 import logging
 import re
 import importlib
+from threading import Event
 from gcodes import GCodeCommand
 try:
     from Gcode import Gcode
@@ -54,6 +55,13 @@ class GCodeProcessor:
                 logging.debug("Loading GCode handler " + module_name + "...")
                 self.gcodes[module_name] = obj(self.printer)
 
+    def override_command(self, gcode, gcodeClassInstance):
+        """
+        This methods allow a plugin to replace a GCode command
+        with its own provided class.
+        """
+        self.gcodes[gcode] = gcodeClassInstance
+
     def get_supported_commands(self):
         ret = []
         for gcode in self.gcodes:
@@ -75,6 +83,28 @@ class GCodeProcessor:
 
         return self.gcodes[val].is_buffered()
 
+    def is_sync(self, gcode):
+        val = gcode.code()
+        if not val in self.gcodes:
+            return False
+
+        return self.gcodes[val].is_sync()
+
+    def synchronize(self, gcode):
+        val = gcode.code()
+        if not val in self.gcodes:
+            logging.error(
+                "No GCode processor for " + gcode.code() +
+                ". Message: " + gcode.message)
+            return None
+        
+        try:
+            self.gcodes[val].on_sync(gcode)
+            # Forcefully check/set the readyEvent here?
+        except Exception, e:
+            logging.error("Error while executing "+gcode.code()+": "+str(e))
+        return gcode
+
     def execute(self, gcode):
         val = gcode.code()
         if not val in self.gcodes:
@@ -84,10 +114,40 @@ class GCodeProcessor:
             return None
         
         try:
+
+            if self.gcodes[val].is_sync():
+                self.gcodes[val].readyEvent = Event()
+
             self.gcodes[val].execute(gcode)
+
+            if self.gcodes[val].is_sync():
+                self.gcodes[val].readyEvent.wait()  # Block until the event has occurred.
+
         except Exception, e:
             logging.error("Error while executing "+gcode.code()+": "+str(e))
         return gcode
+
+    def enqueue(self, gcode):
+        if self.printer.processor.is_buffered(gcode):     
+            self.printer.commands.put(gcode)              
+            if self.printer.processor.is_sync(gcode):     
+                self.printer.sync_commands.put(gcode)    # Yes, it goes into both queues!
+        else:                                         
+            self.printer.unbuffered_commands.put(gcode)  
+        
+
+    def get_long_description(self, gcode):
+        val = gcode.code()[:-1]        
+        if not val in self.gcodes:
+            logging.error(
+                "No GCode processor for " + gcode.code() +
+                ". Message: " + gcode.message)
+            return "GCode " + gcode.code() + " is not implemented"
+        try:
+            return self.gcodes[val].get_long_description()
+        except Exception, e:
+            logging.error("Error while getting long description on "+gcode.code()+": "+str(e))
+        return "Error getting long decription for "+str(val)
 
     def get_test_gcodes(self):
         gcodes = []

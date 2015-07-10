@@ -24,41 +24,9 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
 from Adafruit_I2C import Adafruit_I2C 
 import time
 import subprocess
+from PWM import PWM
 
-PCA9685_MODE1 = 0x0
-PCA9685_PRESCALE = 0xFE
-
-
-# Looks like the interface has changed..
-kernel_version = subprocess.check_output(["uname", "-r"]).strip()
-[major, minor, rev] = kernel_version.split("-")[0].split(".")
-if int(minor) >= 14 :
-    pwm = Adafruit_I2C(0x70, 2, False)  # Open device
-else:
-    pwm = Adafruit_I2C(0x70, 1, False)  # Open device
-
-
-pwm.write8(PCA9685_MODE1, 0x01)    # Reset 
-time.sleep(0.05)				   # Wait for reset
-
-
-class Fan:
-    @staticmethod
-    def set_PWM_frequency(freq):
-        """ Set the PWM frequency for all fans connected on this PWM-chip """
-        prescaleval = 25000000
-        prescaleval /= 4096
-        prescaleval /= float(freq)
-        prescaleval -= 1
-        prescale = int(prescaleval + 0.5)
-
-        oldmode = pwm.readU8(PCA9685_MODE1)
-        newmode = (oldmode & 0x7F) | 0x10
-        pwm.write8(PCA9685_MODE1, newmode)
-        pwm.write8(PCA9685_PRESCALE, prescale)
-        pwm.write8(PCA9685_MODE1, oldmode)
-        time.sleep(0.05)
-        pwm.write8(PCA9685_MODE1, oldmode | 0xA1)
+class Fan(PWM):
 
     def __init__(self, channel):
         """ Channel is the channel that the fan is on (0-7) """
@@ -66,7 +34,36 @@ class Fan:
 
     def set_value(self, value):
         """ Set the amount of on-time from 0..1 """
-        #off = min(1.0, value)
-        off = int(value*4095)
-        byte_list = [0x00, 0x00, off & 0xFF, off >> 8]
-        pwm.writeList(0x06+(4*self.channel), byte_list)
+        PWM.set_value(value, self.channel)
+
+if __name__ == '__main__':
+    import os
+    import logging
+
+    logging.basicConfig(level=logging.DEBUG,
+                        format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
+                        datefmt='%m-%d %H:%M')
+
+    PWM.set_frequency(100)   
+
+    fan7 = Fan(7) 
+    fan8 = Fan(8)
+    fan9 = Fan(9)
+    fan10 = Fan(10)
+
+
+    while 1:    
+        for i in xrange(1,100):
+            fan7.set_value(i/100.0)
+            fan8.set_value(i/100.0)
+            fan9.set_value(i/100.0)
+            fan10.set_value(i/100.0)
+            time.sleep(0.01)	
+        for i in xrange(100,1,-1):
+            fan7.set_value(i/100.0)
+            fan8.set_value(i/100.0)
+            fan9.set_value(i/100.0)
+            fan10.set_value(i/100.0)
+            time.sleep(0.01)
+
+

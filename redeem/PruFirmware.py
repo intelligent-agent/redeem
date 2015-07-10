@@ -27,6 +27,7 @@ import os
 import logging
 import subprocess
 import shutil
+import re
 
 
 class PruFirmware:
@@ -44,7 +45,7 @@ class PruFirmware:
             Full path to the file where to store the final firmware file
             without the extension (without .bin)
         revision : string
-            The revision of the board (A3 or A4)
+            The revision of the board (00A3 or 00A4)
         config_parser : ConfigParser
             The config parser with the config file already loaded
         compiler : string
@@ -124,7 +125,7 @@ class PruFirmware:
         configFile_0 = os.path.join("/tmp", 'config.h')
 
         with open(configFile_0, 'w') as configFile:
-            if self.revision == "A3":
+            if self.revision in ["00A3"]:
                 configFile.write("#define REV_A3\n")
             else:
                 configFile.write("#define REV_A4\n")
@@ -143,13 +144,37 @@ class PruFirmware:
 
             configFile.write(inversion_mask + "\n");
 
-            # Construct the endstop lookup table. 
-            for axis in ["X1", "X2", "Y1", "Y2", "Z1", "Z2"]:
-                configFile.write(
-                    "#define STEPPER_MASK_" + axis + "\t\t" + self.config.get(
-                        'Endstops', 'lookup_mask_' + axis) + "\n")
+            # Construct the endstop lookup table.
+            for axis in ["X1","Y1","Z1","X2","Y2","Z2"]:
+                mask = 0
+                # stepper name is x_cw or x_ccw
+                option = 'end_stop_' + axis + '_stops'
+                for stepper in self.config.get('Endstops', option).split(","):
+                    stepper = stepper.strip()
+                    if stepper == "":
+                        continue
+                    m = re.search('^([xyzehabc])_(ccw|cw|pos|neg)$', stepper)
+                    if (m == None):
+                        raise RuntimeError("'" + stepper + "' is invalid for " + option)
 
-        if self.revision in ["0A4A", "00A4"]:
+                    # direction should be 1 for normal operation and -1 to invert the stepper.
+                    if (m.group(2) == "pos"):
+                        direction = -1
+                    elif (m.group(2) == "neg"):
+                        direction = 1
+                    else:
+                        direction = 1 if self.config.getint('Steppers', 'direction_' + stepper[0]) > 0 else -1
+                        if (m.group(2) == "ccw"): 
+                            direction *= -1
+
+                    cur = 1 << ("xyzehabc".index(m.group(1)))
+                    if (direction == -1):
+                        cur <<= 8
+                    mask += cur
+                bin_mask = "0b"+(bin(mask)[2:]).zfill(16)
+                configFile.write("#define STEPPER_MASK_" + axis + "\t\t" + bin_mask + "\n")
+
+        if self.revision in ["0A4A", "00A4", "00B1"]:
             configFile_1 = os.path.join(
                 os.path.dirname(self.firmware_source_file1), 'config_00A4.h')
         else:            

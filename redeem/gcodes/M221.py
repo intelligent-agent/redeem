@@ -44,5 +44,4 @@ class M221(GCodeCommand):
         return "M221 S<factor in percent> - set extrude factor override percentage"
 
     def is_buffered(self):
-        return True
-
+        return False

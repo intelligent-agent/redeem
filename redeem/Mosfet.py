@@ -21,56 +21,28 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
  along with Redeem.  If not, see <http://www.gnu.org/licenses/>.
 """
 
-from Adafruit_I2C import Adafruit_I2C
-import time
-import subprocess
+from PWM import PWM
 
-PCA9685_MODE1 = 0x0
-PCA9685_PRESCALE = 0xFE
-
-
-# Looks like the interface has changed..
-kernel_version = subprocess.check_output(["uname", "-r"]).strip()
-[major, minor, rev] = kernel_version.split("-")[0].split(".")
-if int(minor) >= 14 :
-    pwm = Adafruit_I2C(0x70, 2, False) # Open device
-else:
-    pwm = Adafruit_I2C(0x70, 1, False) # Open device
-
-pwm.write8(PCA9685_MODE1, 0x01)    # Reset 
-time.sleep(0.05)                   # Wait for reset
-
-
-class Mosfet:
-    # Set the PWM frequency for all fans connected on this PWM-chip
-    @staticmethod
-    def set_pwm_frequency(freq):
-        prescaleval = 25000000
-        prescaleval /= 4096
-        prescaleval /= float(freq)
-        prescaleval -= 1
-        prescale = int(prescaleval + 0.5)
-
-        oldmode = pwm.readU8(PCA9685_MODE1)
-        newmode = (oldmode & 0x7F) | 0x10
-        pwm.write8(PCA9685_MODE1, newmode)
-        pwm.write8(PCA9685_PRESCALE, prescale)
-        pwm.write8(PCA9685_MODE1, oldmode)
-        time.sleep(0.05)
-        pwm.write8(PCA9685_MODE1, oldmode | 0xA1)
-
+class Mosfet(PWM):   
     def __init__(self, channel):
         """ Channel is the channel that the thing is on (0-15) """
         self.channel = channel
+        self.power = 0.0
 
     def set_power(self, value):
-        """Set duty cycle between 0 and 1"""
         self.power = value
-        off = min(1.0, value)
-        off = int(value * 4095)
-        bytes = [0x00, 0x00, off & 0xFF, off >> 8]
-        pwm.writeList(0x06 + (4 * self.channel), bytes)
+        """Set duty cycle between 0 and 1"""
+        PWM.set_value(value, self.channel)
 
     def get_power(self):
-        """ return the current power level """
         return self.power
+
+if __name__ == '__main__':
+
+    PWM.set_frequency(1000)   
+
+    mosfets = [0]*3
+    for i in range(3):
+        mosfets[i] = Mosfet(3+i)
+        mosfets[i].set_power(0.25)
+

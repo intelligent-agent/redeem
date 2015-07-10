@@ -26,8 +26,9 @@ from threading import Thread
 from distutils.spawn import find_executable
 import select
 import logging
-import os
 import subprocess
+import time
+import os
 from Gcode import Gcode
 
 
@@ -35,27 +36,39 @@ class Pipe:
 
     @staticmethod
     def check_tty0tty():
-        if find_executable("tty0tty") is None:
-            return False
-        else:
-            return True
+        return (find_executable("tty0tty") is not None)
+
+    @staticmethod
+    def check_socat():
+        return (find_executable("socat") is not None)
 
     def __init__(self, printer, prot):
         self.printer = printer
         self.prot = prot
 
-        pipe_0 = "/dev/" + self.prot + "_0"
-        pipe_1 = "/dev/" + self.prot + "_1"
+        pipe_0 = "/dev/" + prot + "_0"
+        pipe_1 = "/dev/" + prot + "_1"
 
         # Ensure tty0tty is installed and available in the PATH
-        if not Pipe.check_tty0tty():
-            logging.error("tty0tty not found! tty0tty must be installed")
-            raise EnvironmentError("tty0tty not found")
+        if not Pipe.check_tty0tty() and not Pipe.check_socat():
+            logging.error("Neither tty0tty nor socat found! tty0tty or socat must be installed")
+            raise EnvironmentError("tty0tty and socat not found")
 
-        p = subprocess.Popen(["tty0tty", pipe_0, pipe_1],
-                             stderr=subprocess.PIPE)
-        p.stderr.readline()
-        self.fifo = os.open(pipe_0, os.O_RDWR)
+        if Pipe.check_tty0tty():
+            p = subprocess.Popen(["tty0tty", pipe_0, pipe_1],
+                                 stderr=subprocess.PIPE)
+            p.stderr.readline()
+
+        elif Pipe.check_socat():
+            p = subprocess.Popen([
+                "socat", "-d", "-d", "-lf", "/var/log/redeem2"+self.prot, 
+                "pty,mode=777,raw,echo=0,link="+pipe_0,
+                "pty,mode=777,raw,echo=0,link="+pipe_1],
+                                 stderr=subprocess.PIPE)
+            while not os.path.exists(pipe_0):
+                time.sleep(0.1)
+        self.rd = open(pipe_0, "r")
+        self.wr = os.open(pipe_0, os.O_WRONLY)
         logging.info("Pipe " + self.prot + " open. Use '" + pipe_1 + "' to "
                      "communicate with it")
 
@@ -67,33 +80,24 @@ class Pipe:
     def get_message(self):
         """ Loop that gets messages and pushes them on the queue """
         while self.running:
-            ret = select.select([self.fifo], [], [], 1.0)
-            if ret[0] == [self.fifo]:
-                message = self.readline_custom()
+            r, w, x = select.select([self.rd], [], [], 1.0)
+            if r:
+                message = self.rd.readline().rstrip()
                 if len(message) > 0:
                     g = Gcode({"message": message, "prot": self.prot})
-                    if self.printer.processor.is_buffered(g):
-                        self.printer.commands.put(g)
-                    else:
-                        self.printer.unbuffered_commands.put(g)
+                    self.printer.processor.enqueue(g)
 
     def send_message(self, message):
         if self.send_response:
             if message[-1] != "\n":
                 message += "\n"
-                os.write(self.fifo, message)
+                try:
+                    os.write(self.wr, message)
+                except OSError:
+                    logging.warning("Unable to write to file. Closing down?")
 
     def close(self):
         self.running = False
         self.t.join()
-        os.close(self.fifo)
-
-    def readline_custom(self):
-        message = ""
-
-        while True:
-            cur_char = os.read(self.fifo, 1)
-            #Check for newline char    
-            if cur_char == '\n' or cur_char == "":
-                return message;
-            message += cur_char
+        self.rd.close()
+        os.close(self.wr)

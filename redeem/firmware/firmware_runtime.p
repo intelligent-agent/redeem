@@ -9,7 +9,8 @@
 #define CYCLE_TO_NS         1000000000/PRU_SPEED      //Number of cycles in 1 ns
 #define NS_TO_CYCLE         PRU_SPEED/1000000000      //Number of ns in one cycle
 
-#define PRU0_ARM_INTERRUPT  19
+#define PRU0_ARM_INTERRUPT  35
+#define PRU1_ARM_INTERRUPT  36
 #define GPIO_DATAOUT        0x13c               // This is the register for setting data 
 #define GPIO_DATAIN         0x138               // This is the register for reading data 
 #define GPIO0               0x44E07000          // The adress of the GPIO0 bank
@@ -60,7 +61,7 @@
     .u8     step                //Steppers are defined as 0b000HEZYX - A 1 for a stepper means we will do a step for this stepper
     .u8     direction           //Steppers are defined as 0b000HEZYX - Direction for each stepper
     .u8     cancellableMask     //If the endstop match the mask, all the move commands are canceled. 
-    .u8     options              //Options for the move, not yet used.
+    .u8     options              //Options for the move, bit 0 indicates that a sync interrupt is required. bit 1 indicates that after the sync, suspend.
     .u32    delay               //number of cycle to wait (this is the # of PRU click cycles)
 .ends
 
@@ -80,7 +81,7 @@
 // r16: Inverted mask for GPIO1 togglable pin
 // r17: Adress for reading/writing GPIO1 OUT pins
 // r20: GPIO1_IN
-
+// r22: Counts steps remaining
 
 INIT:
     LBCO r0, C4, 4, 4                                       // Load the PRU-ICSS SYSCFG register (4 bytes) into R0
@@ -104,7 +105,7 @@ INIT:
     MOV  r0, 8                                              // Load the address of the pru_control, written by the host system
     LBBO r27, r0, 0, 4                                      // Put it in R27
     
-    //This parts read the GPIO IN Pins in all banks and return them to the hosts so that it can now the initial states of the end-stops.
+    //This parts read the GPIO IN Pins in all banks and return them to the hosts so that it can know the initial states of the end-stops.
 
     //Load GPIO0,1,2,3 read register content to the DDR
     MOV  r0, 0                                              // Address in DDR, starts at 0
@@ -112,7 +113,7 @@ INIT:
     ADD  r2, r2, 4  
         
     MOV  GPIO_0_IN, GPIO0 | GPIO_DATAIN                     // Load Address
-    LBBO r1, GPIO_0_IN, 0, 4                                      // Read GPIO0 INPUT content
+    LBBO r1, GPIO_0_IN, 0, 4                                // Read GPIO0 INPUT content
     SBBO r1, r2, 0, 4                                       // Put GPIO INPUT content into local RAM
     ADD  r2, r2, 4  
     
@@ -121,13 +122,13 @@ INIT:
     SBBO r1, r2, 0, 4                                       // Put GPIO INPUT content into local RAM
     ADD  r2, r2, 4  
     
-    MOV  GPIO_2_IN, GPIO2 | GPIO_DATAIN                           // Load Address
-    LBBO r1, GPIO_2_IN, 0, 4                                      // Read GPIO2 INPUT content
+    MOV  GPIO_2_IN, GPIO2 | GPIO_DATAIN                     // Load Address
+    LBBO r1, GPIO_2_IN, 0, 4                                // Read GPIO2 INPUT content
     SBBO r1, r2, 0, 4                                       // Put GPIO INPUT content into local RAM
     ADD  r2, r2, 4  
     
-    MOV  GPIO_3_IN, GPIO3 | GPIO_DATAIN                       // Load Address
-    LBBO r1, GPIO_3_IN, 0, 4                                  // Read GPIO3 INPUT content
+    MOV  GPIO_3_IN, GPIO3 | GPIO_DATAIN                      // Load Address
+    LBBO r1, GPIO_3_IN, 0, 4                                 // Read GPIO3 INPUT content
     SBBO r1, r2, 0, 4                                        // Put GPIO INPUT content into local RAM
     
     //Set all the stepper pins to 0 
@@ -142,7 +143,9 @@ INIT:
     SBBO r9, r11, 0, 4  
     SBBO r10, r17, 0, 4 
     
-    //MOV R31.b0, PRU0_ARM_INTERRUPT+16                     // Send notification to Host that the instructions are done
+    MOV r22, 0
+
+    //MOV R31.b0, PRU0_ARM_INTERRUPT	                    // Send notification to Host that the instructions are done
     
 RESET_R4:   
     MOV  r0, 0  
@@ -240,7 +243,9 @@ NEXT_COMMAND:
 
     QBNE notcancel, r7.b1,0
 
-    //Cancel the move and all the other moves
+    //Store the number of steps remaining
+    ADD r22, r22, r1
+    SBCO r22, C28, 12, 4
 
     //Remove all the command from the buffer
 start_loop_remove:
@@ -251,6 +256,8 @@ start_loop_remove:
     QBA CANCEL_COMMAND_AFTER
 
 notcancel:
+    MOV r22, 0                                              // Reset the Remaining-loop
+
     AND r7, r7, 0x000000FF
     SBCO r7, C28, 8, 4
     AND pinCommand.step, pinCommand.step, r7.b0               // Mask the step pins with the end stop mask
@@ -359,7 +366,6 @@ DELAY2:
     LSR r0,r0,1
 
     //Now execute the delay, with the proper substraction
-    .leave CommandScope
 
 DELAY:
     SUB r0, r0, 1
@@ -367,7 +373,19 @@ DELAY:
 
 
     SUB r1, r1, 1                                           //r1 contains the number of stepper instructions in the DDR, we remove one.
-    
+
+SELFSUSPEND:
+    QBBC SUSPENDED, pinCommand.options, 0                  // Check if this command requires syncronization
+    QBBC SYNCHRONIZE, pinCommand.options, 1                // Check if this command also requires wait until sync cleared
+
+    MOV r0, 1
+    SBBO r0, r27, 0, 4                                      // Self-Suspend
+    .leave CommandScope
+
+SYNCHRONIZE:
+
+    MOV R31.b0, PRU1_ARM_INTERRUPT	                    // Send sync event to Host
+
 SUSPENDED:
     LBBO r0, r27, 0, 4                                      //Check if we are suspended or not
     QBNE SUSPENDED, r0, 0
@@ -378,7 +396,7 @@ CANCEL_COMMAND_AFTER:
             
     ADD r5, r5, 1                                           // r5++, r5 is the event_counter.
     SBBO r5, r6, 0, 4                                       // store the number of interrupts that have occured in the second reg of DRAM
-    MOV R31.b0, PRU0_ARM_INTERRUPT+16                       // Send notification to Host that the instructions are done
+    MOV R31.b0, PRU0_ARM_INTERRUPT		            // Send notification to Host that the instructions are done
             
     MOV  r3, DDR_MAGIC                                      // Load the fancy word into r3
     LBBO r2, r4, 0, 4                                       // Load the next data into r2
@@ -390,6 +408,6 @@ WAIT:
 WAIT2:
     LBBO r1, r4, 0, 4                                       // Load values from external DDR Memory into R1
     QBEQ RESET_R4, r1, r3                                   // Check if the end of DDR is reached   
-    QBNE PINS, r1, 0                                        // Start to process the commands stored in DDR if we have a value != of 0 stored in the current location of the DDR
+    QBNE PINS, r1, 0                                        // Start to process the commands stored in DDR if we have a value != of 0 stored in the current location of the DDR    
     QBA WAIT2                                                // Loop back to wait for new data
 

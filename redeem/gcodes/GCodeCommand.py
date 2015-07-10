@@ -15,6 +15,7 @@ class GCodeCommand(object):
     
     def __init__(self, printer):
         self.printer = printer
+        self.readyEvent = None
 
     @abstractmethod
     def execute(self, gcode):
@@ -23,10 +24,17 @@ class GCodeCommand(object):
     @abstractmethod
     def get_description(self):
         pass
-    
+
+    def get_long_description(self):
+        return "Long description missing"
+
     def is_buffered(self):
         """ Return true if the command has to wait in the command buffer or
         false to be executed immediately """
+        return False
+
+    def is_sync(self):
+        """ Return true if the command requires realtime synchronization with command execution """
         return False
 
     def __str__(self):

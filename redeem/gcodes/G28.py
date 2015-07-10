@@ -41,4 +41,3 @@ class G28(GCodeCommand):
 
     def get_test_gcodes(self):
         return ["G28"]
-

@@ -21,7 +21,7 @@ class M906(GCodeCommand):
             stepper = self.printer.steppers[axis]
 
             # Cap at 2.5A and convert to A.
-            stepper.set_current_value(max(int(g.token_value(i)), 2500)/1000.0)
+            stepper.set_current_value(min(int(g.token_value(i)), 2500)/1000.0)
 
     def get_description(self):
         return "Set stepper current in mA"

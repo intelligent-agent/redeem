@@ -21,7 +21,8 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
 """
 
 from Path import Path
-
+import numpy as np
+import logging
 
 class Printer:
     """ A command received from pronterface or whatever """
@@ -48,6 +49,14 @@ class Printer:
         self.maxJerkZ = 1
         self.maxJerkEH = 4
         self.current_tool = "E"
+        self.move_cache_size = 128
+        self.print_move_buffer_wait = 250
+        self.min_buffered_move_time = 100
+        self.max_buffered_move_time = 1000
+
+        self.probe_points  = [{"X": 0, "Y": 0, "Z": 0}]*3
+        self.probe_heights = [0]*3
+        self.probe_type = 0 # Servo
 
     def ensure_steppers_enabled(self):
         """
@@ -66,3 +75,36 @@ class Printer:
     def send_message(self, prot, msg):
         """ Send a message back to host """
         self.comms[prot].send_message(msg)
+
+    def save_settings(self, filename):
+        for name, stepper in self.steppers.iteritems():
+            self.config.set('Steppers', 'in_use_' + name, str(stepper.in_use))
+            self.config.set('Steppers', 'direction_' + name, str(stepper.direction))
+            self.config.set('Endstops', 'has_' + name, str(stepper.has_endstop))
+            self.config.set('Steppers', 'current_' + name, str(stepper.current_value))
+            self.config.set('Steppers', 'steps_pr_mm_' + name, str(stepper.steps_pr_mm))
+            self.config.set('Steppers', 'microstepping_' + name, str(stepper.microstepping))
+            self.config.set('Steppers', 'slow_decay_' + name, str(stepper.decay))
+
+        for name, heater in self.heaters.iteritems():
+            self.config.set('Heaters', 'pid_p_'+name, str(heater.P))
+            self.config.set('Heaters', 'pid_i_'+name, str(heater.I))
+            self.config.set('Heaters', 'pid_d_'+name, str(heater.D))
+
+        self.save_bed_compensation_matrix()
+
+        self.config.save(filename)
+
+    def load_bed_compensation_matrix(self):
+        mat = self.config.get('Geometry', 'bed_compensation_matrix').split(",")
+        mat = np.matrix(np.array([float(i) for i in mat]).reshape(3, 3))
+        return mat
+
+    def save_bed_compensation_matrix(self):
+        mat = "\n"
+        for idx, i in enumerate(Path.matrix_bed_comp):
+            mat += "\t"+", ".join([str(j) for j in i.tolist()[0]])+("" if idx == 2 else ",\n")
+        # Only update if they are different
+        if mat.replace('\t', '') != self.config.get('Geometry', 'bed_compensation_matrix'):
+            self.config.set('Geometry', 'bed_compensation_matrix', mat)        
+
