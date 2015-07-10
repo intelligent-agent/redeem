@@ -160,7 +160,7 @@ class Stepper_00B1(Stepper):
         if(v_iref > 2.5):
             logging.warning("Current ref for stepper "+self.name+" above limit (2.5 V). Setting to 2.5 V")
             v_iref = 2.5
-        logging.info("Setting votage to "+str(v_iref)+" for "+self.name)
+        logging.debug("Setting votage to "+str(v_iref)+" for "+self.name)
         self.dac.set_voltage(v_iref)
 
     def set_disabled(self, force_update=False):

@@ -48,6 +48,9 @@ class CascadingConfigParser(ConfigParser.SafeConfigParser):
         for config_file in self.config_files:
             if os.path.isfile(config_file):
                 ts = max(ts, os.path.getmtime(config_file))
+        
+        if os.path.islink("/etc/redeem/printer.cfg"):
+            ts = max(ts, os.lstat("/etc/redeem/printer.cfg").st_mtime)
         return ts
 
     def parse_capes(self):
