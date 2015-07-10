@@ -1,3 +1,11 @@
+redeem (0.17.4) UNRELEASED; urgency=low
+
+  [ Elias ]
+  * Changed config files to be compatible with Octoprint
+
+ -- Elias <elias@elias-Aspire>  Mon, 22 Jun 2015 14:06:44 +0200
+
+
 redeem (0.17.3) UNRELEASED; urgency=low
 
   [ Elias ]
