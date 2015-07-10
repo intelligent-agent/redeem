@@ -14,10 +14,10 @@ Software features:
 - Printer settings loaded from file  
 - Controllable via ethernet, USB, Manga Screen (Toggle on 4.3" LCD).   
 
-Wiki: (http://wiki.thing-printer.com/index.php?title=Redeem)
+[Redeem documentation on the wiki](http://wiki.thing-printer.com/index.php?title=Redeem)
 
 # Installation:  
-Most users should probably use the [Kamikaze CNC image], it is a complete BeagleBone eMMC flasher image that comes with Redeem. 
+Most users should probably use the [Kamikaze CNC image](http://wiki.thing-printer.com/index.php?title=Kamikaze), it is a complete BeagleBone eMMC flasher image that comes with Redeem. 
 
 If you have a different Debian distro, you can use the .deb packages form the thing-printer feed:  
 ```
@@ -47,7 +47,7 @@ cp configs/* /etc/redeem
 ```
 
 Get and compile the device tree overlay.  
-For Kernel 4.1, see the instructions for the new cape overlay repository: [https://github.com/beagleboard/bb.org-overlays]
+For Kernel 4.1, see the instructions for the new [cape overlay repository](https://github.com/beagleboard/bb.org-overlays)
 
 ```
 Get and compile the device tree overlay. Notice that there has been a change in the DT intefrace between 3.8 and 3.12:  
