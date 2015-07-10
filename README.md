@@ -27,7 +27,7 @@ apt-get update
 apt-get install redeem
 ```
 
-## Installatiion from source
+## Installation from source
 You can clone this repository directly on your BBB:  
 ```
 ssh root@192.168.7.2
@@ -44,12 +44,12 @@ cd /usr/src/redeem/
 python setup.py install  
 mkdir /etc/redeem
 cp configs/* /etc/redeem
+cp data/* /etc/redeem
 ```
 
 Get and compile the device tree overlay.  
-For Kernel 4.1, see the instructions for the new [cape overlay repository](https://github.com/beagleboard/bb.org-overlays)
-
-```
+For Kernel 4.1, see the instructions for the new [cape overlay repository](https://github.com/beagleboard/bb.org-overlays)  
+ 
 Get and compile the device tree overlay. Notice that there has been a change in the DT intefrace between 3.8 and 3.12:  
 For Kernel 3.8:
 ```
