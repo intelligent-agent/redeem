@@ -168,6 +168,7 @@ class Redeem:
 
         # Commit changes for the Steppers
         #Stepper.commit()
+        Stepper.printer = printer
 
         # Delta printer setup
         if Path.axis_config == Path.AXIS_CONFIG_DELTA:

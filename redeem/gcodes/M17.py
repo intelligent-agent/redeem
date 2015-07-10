@@ -23,7 +23,6 @@ class M17(GCodeCommand):
         for name, stepper in self.printer.steppers.iteritems():
             if self.printer.config.getboolean('Steppers', 'in_use_' + name):
                 stepper.set_enabled()
-        Stepper.commit()
 
     def get_description(self):
         return "Power on and enable all steppers. Motors are active after " \

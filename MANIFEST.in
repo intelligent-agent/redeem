@@ -4,3 +4,6 @@ include configs/*.cfg
 include data/*.cht
 include redeem/path_planner/*.h
 include redeem/path_planner/numpy.i
+include Makefile
+include debian/*
+include systemd/*.service

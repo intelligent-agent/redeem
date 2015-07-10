@@ -80,6 +80,11 @@ class Stepper(object):
     def get_direction(self):
         return self.direction
 
+    @staticmethod
+    def commit():
+        pass
+
+
 
 """
 The bits in the shift register are as follows (Rev B1): 
@@ -164,10 +169,12 @@ class Stepper_00B1(Stepper):
         self.dac.set_voltage(v_iref)
 
     def set_disabled(self, force_update=False):
-        pass
+        if hasattr(Stepper, printer):
+            printer.enable.set_disabled()
 
     def set_enabled(self, force_update=False):
-        pass
+        if hasattr(Stepper, printer):
+            printer.enable.set_enabled()
 
     def set_decay(self, value):
         pass
