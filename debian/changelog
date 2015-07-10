@@ -1,3 +1,11 @@
+redeem (1.0.0) UNRELEASED; urgency=low
+
+  [ Elias ]
+  * Fixed some bugs and merged to master
+
+ -- Elias <elias@elias-Aspire>  Fri, 10 Jul 2015 14:06:44 +0200
+
+
 redeem (0.17.4) UNRELEASED; urgency=low
 
   [ Elias ]
