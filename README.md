@@ -16,10 +16,18 @@ Software features:
 
 Wiki: (http://wiki.thing-printer.com/index.php?title=Redeem)
 
-Ipk packets (for Angstrom/Opkg) are available: 
-  http://feeds.thing-printer.com/feeds/v2014.06/ipk/eglibc/armv7at2hf-vfp-neon/machine/beaglebone/
-
 # Installation:  
+Most users should probably use the [Kamikaze CNC image], it is a complete BeagleBone eMMC flasher image that comes with Redeem. 
+
+If you have a different Debian distro, you can use the .deb packages form the thing-printer feed:  
+```
+wget -O - http://feeds.thing-printer.com/apt/debian/conf/replicape.gpg.key | apt-key add -
+echo "deb http://feeds.thing-printer.com/apt/debian jessie main" >> /etc/apt/sources.list
+apt-get update
+apt-get install redeem
+```
+
+## Installatiion from source
 You can clone this repository directly on your BBB:  
 ```
 ssh root@192.168.7.2
@@ -36,6 +44,11 @@ cd /usr/src/redeem/
 python setup.py install  
 mkdir /etc/redeem
 cp configs/* /etc/redeem
+```
+
+Get and compile the device tree overlay.  
+For Kernel 4.1, see the instructions for the new cape overlay repository: [https://github.com/beagleboard/bb.org-overlays]
+
 ```
 Get and compile the device tree overlay. Notice that there has been a change in the DT intefrace between 3.8 and 3.12:  
 For Kernel 3.8:
@@ -110,18 +123,10 @@ Reboot
 After a reboot, you should see a the cape firmware load:  
 `dmesg | grep -i replic`  
 
-For communicating with octoprint etc. Redeem uses a virtual tty:
-```
-cd /usr/src/  
-git clone https://github.com/eliasbakken/tty0tty  
-cd tty0tty/pts   
-make  
-make install  
-```  
 Enable the redeem service:  
 
 First modify the redeem.service file to update redeem 'binary' location.
-
+Since the software was sintalled form source, it is added to /usr/local
 `nano /usr/src/redeem/systemd/redeem.service`
 
 Edit line
@@ -136,5 +141,12 @@ cp /usr/src/redeem/systemd/redeem.service /lib/systemd/system/redeem.service
 systemctl enable redeem.service  
 systemctl start redeem.service  
 ```
+
+## Angstrom
+For Angstrom the packages are outdated, install from source. For legacy packages, look here: 
+[http://feeds.thing-printer.com/feeds/v2013.06/ipk/eglibc/armv7ahf-vfp-neon/machine/beaglebone/]
+
 # Development:  
   Try to be PEP8 compliant: http://legacy.python.org/dev/peps/pep-0008/
+
+
