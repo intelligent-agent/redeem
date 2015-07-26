@@ -102,11 +102,25 @@ class Gcode:
                 return token[1::]
         return None
 
+    def get_float_by_letter(self, letter, default):
+        if self.has_letter(letter):
+            if self.has_letter_value(letter):
+                return float(self.get_value_by_letter(letter))
+        return default
+        
+
     def get_int_by_letter(self, letter, default):
         """ Get an int or return a default value """
         if self.has_letter(letter):
             return int(self.get_value_by_letter(letter))
         return int(default)
+
+    def has_letter_value(self, letter):
+        for token in self.tokens:
+            if token[0] == letter:
+                if len(token) > 1:
+                    return True
+        return False
 
     def remove_token_by_letter(self, letter):
         for i, token in enumerate(self.tokens):

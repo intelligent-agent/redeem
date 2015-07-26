@@ -169,12 +169,12 @@ class Stepper_00B1(Stepper):
         self.dac.set_voltage(v_iref)
 
     def set_disabled(self, force_update=False):
-        if hasattr(Stepper, printer):
-            printer.enable.set_disabled()
+        if hasattr(Stepper, "printer"):
+            Stepper.printer.enable.set_disabled()
 
     def set_enabled(self, force_update=False):
-        if hasattr(Stepper, printer):
-            printer.enable.set_enabled()
+        if hasattr(Stepper, "printer"):
+            Stepper.printer.enable.set_enabled()
 
     def set_decay(self, value):
         pass
