@@ -30,7 +30,7 @@ from PWM_pin import PWM_pin
 from ShiftRegister import ShiftRegister
 
 class Servo:
-    def __init__(self, channel, shiftreg_nr, pulse_width_start, pulse_width_stop, init_angle, turnoff_timeout=0):
+    def __init__(self, channel, pulse_width_start, pulse_width_stop, init_angle, turnoff_timeout=0):
         """Define a new software controllable servo with adjustable speed control
 
         Keyword arguments:
@@ -44,7 +44,7 @@ class Servo:
         self.pulse_width_stop = pulse_width_stop
         self.turnoff_timeout = turnoff_timeout
 
-        self.current_pulse_width = (init_angle*(self.pulse_width_stop-self.pulse_width_start)/180.0+self.pulse_width_start)
+        self.current_pulse_width = init_angle*(self.pulse_width_stop-self.pulse_width_start)/180.0+self.pulse_width_start
         self.last_pulse_width = self.current_pulse_width
 
         self.queue = JoinableQueue(1000)
@@ -55,9 +55,17 @@ class Servo:
         self.running = True
         self.t.start()
 
-        self.pwm = PWM_pin(channel, 100, 0.1)
+        self.pwm = PWM_pin(channel, 100, self.current_pulse_width)
 
         # Set up the Shift register for enabling this servo
+        if channel == "P9_14":
+            shiftreg_nr = 3
+        elif channel == "P9_16":
+            shiftreg_nr = 2
+        else:
+            logging.warning("Tried to assign servo to an unknown channel/pin: "+str(channel))
+            return
+
         ShiftRegister.make()
         self.shift_reg = ShiftRegister.registers[shiftreg_nr]
         self.set_enabled()
@@ -116,8 +124,8 @@ class Servo:
 
 if __name__ == '__main__':
    
-    servo_0 = Servo("P9_14", 3, 0.1, 0.2, 90) 
-    servo_1 = Servo("P9_16", 2, 0.1, 0.2, 90) 
+    servo_0 = Servo("P9_14", 0.1, 0.2, 90) 
+    servo_1 = Servo("P9_16", 0.1, 0.2, 90) 
 
     while True:
         for i in range(1, 180):

@@ -241,11 +241,9 @@ class Redeem:
         servo_nr = 0
         while(printer.config.has_option("Servos", "servo_"+str(servo_nr)+"_enable")):
             if printer.config.getboolean("Servos", "servo_"+str(servo_nr)+"_enable"):
-                channel = printer.config.getint("Servos", "servo_"+str(servo_nr)+"_channel")
-                angle_off = printer.config.getint("Servos", "servo_"+str(servo_nr)+"_angle_off")
-                s = Servo(channel, 500, 750, angle_off)
-                s.angle_on = printer.config.getint("Servos", "servo_"+str(servo_nr)+"_angle_on")
-                s.angle_off = angle_off
+                channel = printer.config.get("Servos", "servo_"+str(servo_nr)+"_channel")
+                angle_init = printer.config.getint("Servos", "servo_"+str(servo_nr)+"_angle_init")
+                s = Servo(channel, 0.1, 0.2, angle_init)
                 printer.servos.append(s)
                 logging.info("Added servo "+str(servo_nr))
             servo_nr += 1

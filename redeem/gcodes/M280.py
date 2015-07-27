@@ -27,9 +27,15 @@ class M280(GCodeCommand):
             speed = float(g.get_value_by_letter("F"))
         else:
             speed = 100
+        # If "R" is present, be synchronous
+        if g.has_letter("R"):
+            async = False
+        else:
+            async = True
+        # Index of servo
         if index < len(self.printer.servos):
             servo = self.printer.servos[index]
-            servo.set_angle(angle, speed)
+            servo.set_angle(angle, speed, async) 
         else:
             logging.warning("M280: Servo index out of range "+str(index))
 
