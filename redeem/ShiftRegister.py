@@ -21,6 +21,8 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
  along with Redeem.  If not, see <http://www.gnu.org/licenses/>.
 """
 
+import logging
+
 spi = None
 
 # Load SPI module
@@ -48,13 +50,11 @@ class ShiftRegister(object):
     @staticmethod
     def commit():
         """ Send the values to the serial to parallel chips """
-        if spi is None:
-            return
-        
         bytes = []
         for reg in ShiftRegister.registers:
             bytes.append(reg.state)
-        spi.writebytes(bytes[::-1])
+        if spi is not None: 
+            spi.writebytes(bytes[::-1])
 
     @staticmethod
     def make():

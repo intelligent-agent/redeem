@@ -385,7 +385,7 @@ if __name__ == '__main__':
                         format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
                         datefmt='%m-%d %H:%M')
 
-    from Stepper import Stepper
+    from Stepper import Stepper, Stepper_00B1
     from PruFirmware import PruFirmware
 
     Path.steps_pr_meter = np.array(
@@ -396,24 +396,20 @@ if __name__ == '__main__':
     print "Making steppers"
 
     steppers = {}
-    steppers["X"] = Stepper("GPIO0_27", "GPIO1_29", "GPIO2_4", 0, "X", None, 0,
-                            0)
+
+    steppers["X"] = Stepper_00B1("GPIO0_27", "GPIO1_29", "GPIO2_4", 11, 0, "X", 0, 0)
     steppers["X"].set_microstepping(2)
     steppers["X"].set_steps_pr_mm(6.0)
-    steppers["Y"] = Stepper("GPIO1_12", "GPIO0_22", "GPIO2_5", 1, "Y", None, 1,
-                            1)
+    steppers["Y"] = Stepper_00B1("GPIO1_12", "GPIO0_22", "GPIO2_5", 12, 1, "Y", 1, 1)
     steppers["Y"].set_microstepping(2)
     steppers["Y"].set_steps_pr_mm(6.0)
-    steppers["Z"] = Stepper("GPIO0_23", "GPIO0_26", "GPIO0_15", 2, "Z", None,
-                            2, 2)
+    steppers["Z"] = Stepper_00B1("GPIO0_23", "GPIO0_26", "GPIO0_15", 13, 2, "Z", 2, 2)
     steppers["Z"].set_microstepping(2)
     steppers["Z"].set_steps_pr_mm(160.0)
-    steppers["E"] = Stepper("GPIO1_28", "GPIO1_15", "GPIO2_1", 3, "Ext1", None,
-                            3, 3)
+    steppers["E"] = Stepper_00B1("GPIO1_28", "GPIO1_15", "GPIO2_1", 14, 3, "E", 3, 3)
     steppers["E"].set_microstepping(2)
     steppers["E"].set_steps_pr_mm(5.0)
-    steppers["H"] = Stepper("GPIO1_13", "GPIO1_14", "GPIO2_3", 4, "Ext2", None,
-                            4, 4)
+    steppers["H"] = Stepper_00B1("GPIO1_13", "GPIO1_14", "GPIO2_3", 15, 4, "H", 4, 4)
     steppers["H"].set_microstepping(2)
     steppers["H"].set_steps_pr_mm(5.0)
 
@@ -423,20 +419,16 @@ if __name__ == '__main__':
 
     # Parse the config
     printer.config = CascadingConfigParser(
-        ['/etc/redeem/default.cfg', '/etc/redeem/local.cfg'])
+        ['configs/default.cfg'])
 
     # Get the revision from the Config file
-    revision = printer.config.get('System', 'revision', "A4")
-
+    printer.config.parse_capes()
+    revision = printer.config.replicape_revision
+    
     dirname = os.path.dirname(os.path.realpath(__file__))
+    Path.set_axes(5)
 
-    pru_firmware = PruFirmware(dirname + "/../firmware/firmware_runtime.p",
-                               dirname + "/../firmware/firmware_runtime.bin",
-                               dirname + "/../firmware/firmware_endstops.p",
-                               dirname + "/../firmware/firmware_endstops.bin",
-                               revision, printer.config, "/usr/bin/pasm")
-
-    path_planner = PathPlanner(printer, pru_firmware)
+    path_planner = PathPlanner(printer, None)
 
     speed = 3000 / 60000.0
 

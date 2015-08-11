@@ -34,6 +34,13 @@ class PWM(object):
     PCA9685_MODE1 = 0x0
     PCA9685_PRESCALE = 0xFE
 
+    def __init__(self, channel):
+        self.channel = channel
+    
+    def set_value(self, value):
+        PWM.set_value(value, self.channel)
+
+
     @staticmethod
     def __init_pwm():
         kernel_version = subprocess.check_output(["uname", "-r"]).strip()
