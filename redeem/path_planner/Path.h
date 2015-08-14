@@ -69,8 +69,8 @@
 #define E_AXIS 3
 #define H_AXIS 4
 
-#if NUM_AXIS!=4
-#if NUM_AXIS!=5
+#if NUM_AXES!=4
+#if NUM_AXES!=5
 #error Invalid number of axis
 #endif
 #endif
@@ -83,13 +83,9 @@ private:
 	unsigned int primaryAxis;
     unsigned long timeInTicks;
     unsigned int dir;                       ///< Direction of movement. 1 = X+, 2 = Y+, 4= Z+, values can be combined.
-    int delta[NUM_AXIS];                  ///< Steps we want to move.
-    int error[NUM_AXIS];                  ///< Error calculation for Bresenham algorithm
-    FLOAT_T speedX;                   ///< Speed in x direction at fullInterval in mm/s
-    FLOAT_T speedY;                   ///< Speed in y direction at fullInterval in mm/s
-    FLOAT_T speedZ;                   ///< Speed in z direction at fullInterval in mm/s
-    FLOAT_T speedE;                   ///< Speed in E direction at fullInterval in mm/s
-    FLOAT_T speedH;                   ///< Speed in H direction at fullInterval in mm/s
+    int delta[NUM_AXES];                  ///< Steps we want to move.
+    int error[NUM_AXES];                  ///< Error calculation for Bresenham algorithm
+    FLOAT_T speeds[NUM_AXES];
     FLOAT_T fullSpeed;                ///< Desired speed mm/s
     FLOAT_T invFullSpeed;             ///< 1.0/fullSpeed for fatser computation
     FLOAT_T accelerationDistance2;             ///< Real 2.0*distanceÜacceleration mm²/s²
@@ -101,8 +97,8 @@ private:
     unsigned int fullInterval;     ///< interval at full speed in ticks/step.
     unsigned int accelSteps;        ///< How much steps does it take, to reach the plateau.
     unsigned int decelSteps;        ///< How much steps does it take, to reach the end speed.
-    unsigned int accelerationPrim; ///< Acceleration along primary axis
-    unsigned int fAcceleration;    ///< accelerationPrim*262144/F_CPU
+    FLOAT_T accelerationPrim; ///< Acceleration along primary axis
+    FLOAT_T fAcceleration;    ///< accelerationPrim*262144/F_CPU
     unsigned int vMax;              ///< Maximum reached speed in steps/s.
     unsigned int vStart;            ///< Starting speed in steps/s.
     unsigned int vEnd;              ///< End speed in steps/s
@@ -111,78 +107,78 @@ private:
     std::vector<SteppersCommand> commands;
 
 
-	inline bool areParameterUpToDate()
-    {
+	inline bool areParameterUpToDate(){
         return joinFlags & FLAG_JOIN_STEPPARAMS_COMPUTED;
     }
-    inline void invalidateParameter()
-    {
+
+    inline void invalidateParameter(){
         joinFlags &= ~FLAG_JOIN_STEPPARAMS_COMPUTED;
     }
-    inline void setParameterUpToDate()
-    {
+
+    inline void setParameterUpToDate(){
         joinFlags |= FLAG_JOIN_STEPPARAMS_COMPUTED;
     }
-    inline bool isStartSpeedFixed()
-    {
+    inline bool isStartSpeedFixed(){
         return joinFlags & FLAG_JOIN_START_FIXED;
     }
-    inline void setStartSpeedFixed(bool newState)
-    {
+
+    inline void setStartSpeedFixed(bool newState){
         joinFlags = (newState ? joinFlags | FLAG_JOIN_START_FIXED : joinFlags & ~FLAG_JOIN_START_FIXED);
     }
-    inline void fixStartAndEndSpeed()
-    {
+
+    inline void fixStartAndEndSpeed(){
         joinFlags |= FLAG_JOIN_END_FIXED | FLAG_JOIN_START_FIXED;
     }
-    inline bool isEndSpeedFixed()
-    {
+
+    inline bool isEndSpeedFixed(){
         return joinFlags & FLAG_JOIN_END_FIXED;
     }
+
 	inline bool isCancelable() {
 		return joinFlags & FLAG_CANCELABLE;
 	}
+
 	inline void setCancelable(bool newState) {
 		joinFlags = (newState ? joinFlags | FLAG_CANCELABLE : joinFlags & ~FLAG_CANCELABLE);
 	}
-    inline void setEndSpeedFixed(bool newState)
-    {
+
+    inline void setEndSpeedFixed(bool newState){
         joinFlags = (newState ? joinFlags | FLAG_JOIN_END_FIXED : joinFlags & ~FLAG_JOIN_END_FIXED);
     }
-    inline bool isWarmUp()
-    {
+
+    inline bool isWarmUp(){
         return flags & FLAG_WARMUP;
     }
-    inline uint8_t getWaitForXLinesFilled()
-    {
+
+    inline uint8_t getWaitForXLinesFilled(){
         return primaryAxis;
     }
-    inline void setWaitForXLinesFilled(uint8_t b)
-    {
+
+    inline void setWaitForXLinesFilled(uint8_t b){
         primaryAxis = b;
     }
-    inline bool isExtruderForwardMove()
-    {
+
+    inline bool isExtruderForwardMove(){
         return (dir & 136)==136;
     }
-    inline void block()
-    {
+
+    inline void block(){
         flags |= FLAG_BLOCKED;
     }
-    inline void unblock()
-    {
+
+    inline void unblock(){
         flags &= ~FLAG_BLOCKED;
     }
-    inline bool isBlocked()
-    {
+
+    inline bool isBlocked(){
         return flags & FLAG_BLOCKED;
     }
-    inline bool isCheckEndstops()
-    {
+
+    inline bool isCheckEndstops(){
         return flags & FLAG_CHECK_ENDSTOPS;
     }
-    inline bool isNominalMove()
-    {
+
+    inline bool isNominalMove(){
         return flags & FLAG_NOMINAL;
     }
     inline void setNominalMove()
@@ -197,10 +193,8 @@ private:
     {
         return flags & FLAG_SYNC_WAIT;
     }
-    inline void setSyncEvent(bool wait)
-    {
+    inline void setSyncEvent(bool wait){
         flags |= wait ? FLAG_SYNC_WAIT : FLAG_SYNC;
-        
     }
     inline void setXMoveFinished()
     {
@@ -250,6 +244,10 @@ private:
     {
         return (dir & 136)==128;
     }
+    inline bool isHNegativeMove()
+    {
+        return (dir & 272)==256;
+    }
     inline bool isXMove()
     {
         return (dir & 16);
@@ -282,47 +280,49 @@ private:
     {
         return dir & 112;
     }
-    inline bool isMoveOfAxis(uint8_t axis)
-    {
+
+
+
+    inline bool isAxisMove(unsigned int axis){
         return (dir & (16<<axis));
     }
-    inline void setMoveOfAxis(uint8_t axis)
-    {
+    inline bool isAxisNegativeMove(unsigned int axis){
+        return (dir & ((16<<axis) + axis)) == (unsigned int)(16<<axis);
+    }
+    inline bool isAxisPositiveMove(unsigned int axis){
+        return (dir & ((16<<axis) + axis)) == ((16<<axis) + axis);
+    }
+    inline void setMoveOfAxis(unsigned int axis){
         dir |= 16<<axis;
     }
-    inline void setPositiveDirectionForAxis(uint8_t axis)
-    {
+    inline void setPositiveDirectionForAxis(unsigned int axis){
         dir |= 1<<axis;
     }
 	
-	inline unsigned long getWaitMS()
-    {
+
+
+	inline unsigned long getWaitMS(){
         return timeInTicks;
     }
 	
-    inline void setWaitMS(unsigned long wait)
-    {
+    inline void setWaitMS(unsigned long wait){
         timeInTicks = wait;
     }
 	
-	inline bool moveDecelerating(unsigned int stepNumber)
-    {
-        if(stepsRemaining - stepNumber <= decelSteps)
-        {
-            if (!(flags & FLAG_DECELERATING))
-            {
+	inline bool moveDecelerating(unsigned int stepNumber){
+        if(stepsRemaining - stepNumber <= decelSteps){
+            if (!(flags & FLAG_DECELERATING)){
                 flags |= FLAG_DECELERATING;
             }
             return true;
         }
-        else return false;
+        else 
+            return false;
     }
 	
-	inline bool moveAccelerating(unsigned int stepNumber)
-    {
+	inline bool moveAccelerating(unsigned int stepNumber){
         return stepNumber <= accelSteps;
     }
-	
 	
 	void updateStepsParameter();
 
@@ -330,8 +330,8 @@ public:
 	
 	FLOAT_T speed; //Feedrate
 	
-	FLOAT_T startPos[NUM_AXIS];
-	FLOAT_T endPos[NUM_AXIS];
+	FLOAT_T startPos[NUM_AXES];
+	FLOAT_T endPos[NUM_AXES];
 
 
 	Path();

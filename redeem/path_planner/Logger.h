@@ -73,9 +73,9 @@ public:
 };
 
 #ifndef NDEBUG
-#define LOG(x) Logger() << x
+#define LOG(x) Logger() << X
 #else
-#define LOG(X)
+#define LOG(X) Logger() << X
 #endif
 
 #endif /* defined(__PathPlanner__Logger__) */

@@ -71,31 +71,13 @@ class PathPlanner:
             return
 
         self.native_planner.initPRU(fw0, fw1)
-
-        self.native_planner.setPrintAcceleration(tuple([float(self.printer.acceleration[i]) for i in range(3)]))
-        self.native_planner.setTravelAcceleration(tuple([float(self.printer.acceleration[i]) for i in range(3)]))
-        self.native_planner.setAxisStepsPerMeter(tuple([long(Path.steps_pr_meter[i]) for i in range(3)]))
-        self.native_planner.setMaxFeedrates(tuple([float(Path.max_speeds[i]) for i in range(3)]))	
-        self.native_planner.setMaxJerk(self.printer.maxJerkXY / 1000.0, self.printer.maxJerkZ /1000.0)
+        self.native_planner.setAcceleration(tuple(self.printer.acceleration)))
+        self.native_planner.setAxisStepsPerMeter(tuple(Path.steps_pr_meter))
+        self.native_planner.setMaxFeedrates(tuple(Path.max_speeds))	
+        self.native_planner.setMaxJerk(self.printer.maxJerkXY / 1000.0)
         self.native_planner.setPrintMoveBufferWait(int(self.printer.print_move_buffer_wait))
         self.native_planner.setMinBufferedMoveTime(int(self.printer.min_buffered_move_time))
         self.native_planner.setMaxBufferedMoveTime(int(self.printer.max_buffered_move_time))
-        
-
-        #Setup the extruders
-        for i in range(Path.NUM_AXES - 3):
-            e = self.native_planner.getExtruder(i)
-            e.setMaxFeedrate(Path.max_speeds[i + 3])
-            e.setPrintAcceleration(self.printer.acceleration[i + 3])
-            e.setTravelAcceleration(self.printer.acceleration[i + 3])
-            e.setMaxStartFeedrate(self.printer.maxJerkEH / 1000)
-            e.setAxisStepsPerMeter(long(Path.steps_pr_meter[i + 3]))
-            e.setDirectionInverted(False)
-
-        self.native_planner.setExtruder(0)
-        self.native_planner.setDriveSystem(Path.axis_config)
-        logging.info("Setting drive system to "+str(Path.axis_config))
-
         self.printer.plugins.path_planner_initialized(self)
 
         self.native_planner.runThread()
@@ -127,7 +109,6 @@ class PathPlanner:
     def fire_sync_event(self):
         """ Unclogs any threads waiting for a sync """
         
-
     def force_exit(self):
         self.native_planner.stopThread(True)
 
@@ -153,7 +134,6 @@ class PathPlanner:
         """ Private method for homing a set or a single axis """
         logging.debug("homing internal " + str(axis))
             
-
         path_search = {}
         path_backoff = {}
         path_fine_search = {}

@@ -20,6 +20,8 @@
  
  */
 
+#define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
+
 #ifndef PathPlanner_config_h
 #define PathPlanner_config_h
 
@@ -27,7 +29,7 @@
 #define NUM_MOVING_AXIS 3
 
 /* Total number of axis that the system supports, including the currently selected extruder. Currently only 4 is supported */
-#define NUM_AXIS 5
+#define NUM_AXES 5
 
 /* Number of extruder */
 #define NUM_EXTRUDER 5
