@@ -71,7 +71,7 @@ class PathPlanner:
             return
 
         self.native_planner.initPRU(fw0, fw1)
-        self.native_planner.setAcceleration(tuple(self.printer.acceleration)))
+        self.native_planner.setAcceleration(tuple(self.printer.acceleration))
         self.native_planner.setAxisStepsPerMeter(tuple(Path.steps_pr_meter))
         self.native_planner.setMaxFeedrates(tuple(Path.max_speeds))	
         self.native_planner.setMaxJerk(self.printer.maxJerkXY / 1000.0)
@@ -304,23 +304,29 @@ class PathPlanner:
         """ Add a path segment to the path planner """
         """ This code, and the native planner, needs to be updated for reach. """
         # Link to the previous segment in the chain
+        logging.info("Adding path")
         new.set_prev(self.prev)
+
+        logging.info("set prev done")
+        
 
         if new.compensation is not None:
             # Apply a backlash compensation move
 #           CompensationPath(new.compensation, new.speed, False, False, False))
-            self.native_planner.queueMove(tuple(np.zeros(Path.NUM_AXES)[:4]),
-                                          tuple(new.compensation[:4]), new.speed,
+            logging.info("Queueing move")
+
+            self.native_planner.queueMove(tuple(np.zeros(Path.NUM_AXES)[:5]),
+                                          tuple(new.compensation[:5]), new.speed,
                                           bool(new.cancelable),
                                           False)
 
-        if new.needs_splitting():
+        if new.needs_splitting():            
             path_batch = new.get_delta_segments()
             # Construct a batch
             batch_array = np.zeros(shape=(len(path_batch)*2*4),dtype=np.float64)     # Change this to reflect NUM_AXIS.
          
             for maj_index, path in enumerate(path_batch):
-                for subindex in range(4):  # this needs to be NUM_AXIS
+                for subindex in range(5):  # this needs to be NUM_AXIS
                     batch_array[(maj_index * 8) + subindex] = path.start_pos[subindex]
                     batch_array[(maj_index * 8) + 4 + subindex] = path.stepper_end_pos[subindex]
                 
@@ -336,10 +342,11 @@ class PathPlanner:
             return 
 
         if not new.is_G92():
+            logging.info("Queueing move from "+str(new.start_pos[:5])+" to "+str(new.end_pos[:5]))
             self.printer.ensure_steppers_enabled()
             #push this new segment   
-            self.native_planner.queueMove(tuple(new.start_pos[:4]),
-                                      tuple(new.stepper_end_pos[:4]), new.speed,
+            self.native_planner.queueMove(tuple(new.start_pos[:5]),
+                                      tuple(new.stepper_end_pos[:5]), new.speed,
                                       bool(new.cancelable),
                                       bool(new.movement != Path.RELATIVE))
 

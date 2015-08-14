@@ -2,7 +2,18 @@
 
 from distutils.core import setup, Extension
 
-pathplanner = Extension('_PathPlannerNative', sources = ['PathPlannerNative.i', 'PathPlanner.cpp', 'Path.cpp', 'PruTimer.cpp','prussdrv.c','Logger.cpp'],  swig_opts=['-c++','-builtin'], extra_compile_args = ['-std=c++0x','-g','-Ofast','-fpermissive','-D_GLIBCXX_USE_NANOSLEEP','-DBUILD_PYTHON_EXT=1', '-Wno-write-strings'])
+pathplanner = Extension('_PathPlannerNative', 
+    sources = ['PathPlannerNative.i', 'PathPlanner.cpp', 'Path.cpp', 'PruTimer.cpp','prussdrv.c','Logger.cpp'],  
+    swig_opts=['-c++','-builtin'], 
+    extra_compile_args = [
+        '-std=c++0x',
+        '-g',
+        '-Ofast',
+        '-fpermissive',
+        '-D_GLIBCXX_USE_NANOSLEEP',
+        '-DBUILD_PYTHON_EXT=1', 
+        '-Wno-write-strings', 
+        '-Wno-maybe-uninitialized'])
 
 setup(name='PathPlannerNative',
       version='1.0',

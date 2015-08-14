@@ -790,6 +790,7 @@ void PathPlanner::run() {
 			cmd.delay = (uint32_t)interval;
 		} // stepsRemaining
 		
+
 		LOG("Current move time " << pru.getTotalQueuedMovesTime() / (double) F_CPU << std::endl);
 		
 		//Wait until we need to push some lines so that the path planner can fill up

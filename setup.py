@@ -17,7 +17,9 @@ pathplanner = Extension(
         '-Ofast',
         '-fpermissive',
         '-D_GLIBCXX_USE_NANOSLEEP',
-        '-DBUILD_PYTHON_EXT=1']
+        '-DBUILD_PYTHON_EXT=1',
+        '-Wno-write-strings', 
+        '-Wno-maybe-uninitialized']
 )
 
 setup(
