@@ -80,29 +80,30 @@ private:
 	unsigned int joinFlags;
 	std::atomic_uint_fast32_t flags;
 	
-	unsigned int primaryAxis;
-    unsigned long timeInTicks;
-    unsigned int dir;                       ///< Direction of movement. 1 = X+, 2 = Y+, 4= Z+, values can be combined.
-    int delta[NUM_AXES];                  ///< Steps we want to move.
-    int error[NUM_AXES];                  ///< Error calculation for Bresenham algorithm
-    FLOAT_T speeds[NUM_AXES];
-    FLOAT_T fullSpeed;                ///< Desired speed mm/s
-    FLOAT_T invFullSpeed;             ///< 1.0/fullSpeed for fatser computation
-    FLOAT_T accelerationDistance2;             ///< Real 2.0*distanceÜacceleration mm²/s²
-    FLOAT_T maxJunctionSpeed;         ///< Max. junction speed between this and next segment
-    FLOAT_T startSpeed;               ///< Staring speed in mm/s
-    FLOAT_T endSpeed;                 ///< Exit speed in mm/s
+	int primaryAxis;                /// < Axis with longest move. 
+    unsigned long timeInTicks;      /// < Time for completing a move. 
+    unsigned int dir;               /// < Direction of movement. 1 = X+, 2 = Y+, 4= Z+, values can be combined.
+    int delta[NUM_AXES];            /// < Steps we want to move.
+    int error[NUM_AXES];            /// < Error calculation for Bresenham algorithm
+    FLOAT_T speeds[NUM_AXES];       /// < Speeds for each axis
+    FLOAT_T accels[NUM_AXES];/// < Acceleration for each axis
+    FLOAT_T fullSpeed;              /// < Desired speed m/s
+    FLOAT_T invFullSpeed;           /// < 1.0/fullSpeed for fatser computation
+    FLOAT_T accelerationDistance2;  /// < Real 2.0*distanceÜacceleration mm²/s²
+    FLOAT_T maxJunctionSpeed;       /// < Max. junction speed between this and next segment
+    FLOAT_T startSpeed;             /// < Staring speed in m/s
+    FLOAT_T endSpeed;               /// < Exit speed in m/s
     FLOAT_T minSpeed;
     FLOAT_T distance;
-    unsigned int fullInterval;     ///< interval at full speed in ticks/step.
-    unsigned int accelSteps;        ///< How much steps does it take, to reach the plateau.
-    unsigned int decelSteps;        ///< How much steps does it take, to reach the end speed.
-    FLOAT_T accelerationPrim; ///< Acceleration along primary axis
-    FLOAT_T fAcceleration;    ///< accelerationPrim*262144/F_CPU
-    unsigned int vMax;              ///< Maximum reached speed in steps/s.
-    unsigned int vStart;            ///< Starting speed in steps/s.
-    unsigned int vEnd;              ///< End speed in steps/s
-    unsigned int stepsRemaining;            ///< Remaining steps, until move is finished
+    FLOAT_T fullInterval;           /// < interval at full speed in ticks/step.
+    unsigned int accelSteps;        /// < How much steps does it take, to reach the plateau.
+    unsigned int decelSteps;        /// < How much steps does it take, to reach the end speed.
+    FLOAT_T accelerationPrim;       /// < Acceleration along primary axis
+    FLOAT_T fAcceleration;          /// < accelerationPrim*262144/F_CPU
+    FLOAT_T vMax;                   /// < Maximum reached speed in steps/s.
+    FLOAT_T vStart;                 /// < Starting speed in steps/s.
+    FLOAT_T vEnd;                   /// < End speed in steps/s
+    unsigned int stepsRemaining;    /// < Remaining steps, until move is finished
 
     std::vector<SteppersCommand> commands;
 

@@ -49,8 +49,8 @@ private:
 	void forwardPlanner(unsigned int first);
 	
 	FLOAT_T maxFeedrate[NUM_AXES];
-	unsigned long maxAccelerationStepsPerSquareSecond[NUM_AXES];
-	unsigned long maxAccelerationMMPerSquareSecond[NUM_AXES];
+	FLOAT_T maxAccelerationStepsPerSquareSecond[NUM_AXES];
+	FLOAT_T maxAccelerationMMPerSquareSecond[NUM_AXES];
 	
 	FLOAT_T maxJerk;	
 	FLOAT_T minimumSpeed;			
