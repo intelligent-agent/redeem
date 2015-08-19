@@ -362,7 +362,7 @@ void PathPlanner::calculateMove(Path* p, FLOAT_T axis_diff[NUM_AXES]){
 
     LOG("p->fAcceleration: " << p->fAcceleration << std::endl);
 
-    p->accelerationDistance2 = 2.0*p->distance*slowest_axisk_plateau_time_repro*p->fullSpeed; // mm^2/s^2
+    p->accelerationDistance2 = 2.0*p->distance*slowest_axis_plateau_time_repro*p->fullSpeed; // mm^2/s^2
     p->startSpeed = p->endSpeed = p->minSpeed = safeSpeed(p);
     // Can accelerate to full speed within the line
     if (p->startSpeed * p->startSpeed + p->accelerationDistance2 >= p->fullSpeed * p->fullSpeed)
