@@ -41,6 +41,7 @@
         endPos[axis] = 0;        
     }
     speed = 0;
+    accel = 0;
     fullSpeed = 0;
     invFullSpeed = 0;
     accelerationDistance2 = 0;

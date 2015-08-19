@@ -86,7 +86,7 @@ private:
     int delta[NUM_AXES];            /// < Steps we want to move.
     int error[NUM_AXES];            /// < Error calculation for Bresenham algorithm
     FLOAT_T speeds[NUM_AXES];       /// < Speeds for each axis
-    FLOAT_T accels[NUM_AXES];/// < Acceleration for each axis
+    FLOAT_T accels[NUM_AXES];       /// < Acceleration for each axis
     FLOAT_T fullSpeed;              /// < Desired speed m/s
     FLOAT_T invFullSpeed;           /// < 1.0/fullSpeed for fatser computation
     FLOAT_T accelerationDistance2;  /// < Real 2.0*distanceÜacceleration mm²/s²
@@ -300,8 +300,6 @@ private:
         dir |= 1<<axis;
     }
 	
-
-
 	inline unsigned long getWaitMS(){
         return timeInTicks;
     }
@@ -329,7 +327,8 @@ private:
 
 public:
 	
-	FLOAT_T speed; //Feedrate
+	FLOAT_T speed; // Feedrate in m/s
+    FLOAT_T accel; // Accleeration in m/s^2
 	
 	FLOAT_T startPos[NUM_AXES];
 	FLOAT_T endPos[NUM_AXES];

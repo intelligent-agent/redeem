@@ -17,9 +17,9 @@ t.setMaxJerk(1.0)
 t.runThread()
 
 start = (0, 0, 0, 0, 0)
-end = (2.0, 0, 0, 0, 0)
+end = (1.0, 0, 0, 0, 0)
 
-t.queueMove(start,end,1,False, False)
+t.queueMove(start, end, 1.0, False, False)
 t.waitUntilFinished()
 
 #start = (0, 0, 0, 0, 0)
