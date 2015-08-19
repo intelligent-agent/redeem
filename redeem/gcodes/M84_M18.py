@@ -8,6 +8,7 @@ Website: http://www.xwaves.net
 License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 """
 
+import logging
 from GCodeCommand import GCodeCommand
 try:
     from Stepper import Stepper
@@ -17,6 +18,7 @@ except ImportError:
 class M18(GCodeCommand):
 
     def execute(self, g):
+        logging.debug("Execute M18")
         self.printer.path_planner.wait_until_done()
         if g.num_tokens() == 0:
             # If no token is present, do this for all steppers

@@ -174,7 +174,7 @@ class PruFirmware:
                 bin_mask = "0b"+(bin(mask)[2:]).zfill(16)
                 configFile.write("#define STEPPER_MASK_" + axis + "\t\t" + bin_mask + "\n")
 
-        if self.revision in ["0A4A", "00A4", "00B1"]:
+        if self.revision in ["0A4A", "00A4", "00B1", "00B2"]:
             configFile_1 = os.path.join(
                 os.path.dirname(self.firmware_source_file1), 'config_00A4.h')
         else:            

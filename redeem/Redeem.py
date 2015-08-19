@@ -37,7 +37,7 @@ import numpy as np
 import sys
 
 from Mosfet import Mosfet
-from Stepper import Stepper, Stepper_00B1, Stepper_00A4, Stepper_00A3
+from Stepper import Stepper, Stepper_00A3, Stepper_00A4, Stepper_00B1, Stepper_00B2 
 from Thermistor import Thermistor
 from Fan import Fan
 from Servo import Servo
@@ -108,7 +108,7 @@ class Redeem:
 
         if self.revision in ["00A4", "0A4A", "00A3"]:
             PWM.set_frequency(100)
-        elif self.revision in ["00B1"]:
+        elif self.revision in ["00B1", "00B2"]:
             PWM.set_frequency(1000)
 
         # Init the Paths
@@ -138,6 +138,13 @@ class Redeem:
             printer.steppers["Z"] = Stepper_00B1("GPIO0_23", "GPIO0_26", "GPIO0_15", 13, 2, "Z", 2, 2)
             printer.steppers["E"] = Stepper_00B1("GPIO1_28", "GPIO1_15", "GPIO2_1" , 14, 3, "E", 3, 3)
             printer.steppers["H"] = Stepper_00B1("GPIO1_13", "GPIO1_14", "GPIO2_3" , 15, 4, "H", 4, 4)
+        elif self.revision == "00B2":
+            # Init the 5 Stepper motors (step, dir, fault, DAC channel, name)
+            printer.steppers["X"] = Stepper_00B2("GPIO0_27", "GPIO1_29", "GPIO2_4" , 11, 0, "X", 0, 0)
+            printer.steppers["Y"] = Stepper_00B2("GPIO1_12", "GPIO0_22", "GPIO2_5" , 12, 1, "Y", 1, 1)
+            printer.steppers["Z"] = Stepper_00B2("GPIO0_23", "GPIO0_26", "GPIO0_15", 13, 2, "Z", 2, 2)
+            printer.steppers["E"] = Stepper_00B2("GPIO1_28", "GPIO1_15", "GPIO2_1" , 14, 3, "E", 3, 3)
+            printer.steppers["H"] = Stepper_00B2("GPIO1_13", "GPIO1_14", "GPIO2_3" , 15, 4, "H", 4, 4)
         else:
             # Init the 5 Stepper motors (step, dir, fault, DAC channel, name)
             printer.steppers["X"] = Stepper_00A4("GPIO0_27", "GPIO1_29", "GPIO2_4" , 0, 0, "X", 0, 0)
@@ -226,7 +233,7 @@ class Redeem:
             self.printer.fans.append(Fan(8))
             self.printer.fans.append(Fan(9))
             self.printer.fans.append(Fan(10))
-        elif self.revision == "00B1":
+        elif self.revision in ["00B1", "00B2"]:
             self.printer.fans.append(Fan(7))
             self.printer.fans.append(Fan(8))
             self.printer.fans.append(Fan(9))
