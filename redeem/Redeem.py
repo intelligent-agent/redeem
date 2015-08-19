@@ -37,7 +37,7 @@ import numpy as np
 import sys
 
 from Mosfet import Mosfet
-from Stepper import Stepper, Stepper_00B1, Stepper_00A4, Stepper_00A3
+from Stepper import Stepper, Stepper_00A3, Stepper_00A4, Stepper_00B1, Stepper_00B2 
 from Thermistor import Thermistor
 from Fan import Fan
 from Servo import Servo
