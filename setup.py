@@ -27,12 +27,13 @@ pathplanner = Extension(
         '-Ofast',
         '-fpermissive',
         '-D_GLIBCXX_USE_NANOSLEEP',
-        '-DBUILD_PYTHON_EXT=1']
+        '-DBUILD_PYTHON_EXT=1', 
+        '-Wno-write-strings']
 )
 
 setup(
     name = "Redeem",
-    version = "1.0.0",
+    version = "1.0.1",
     packages = find_packages(exclude=["redeem/path_planner"]),
     data_files=[
         ('redeem/firmware', [
