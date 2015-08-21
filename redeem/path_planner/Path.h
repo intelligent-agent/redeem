@@ -95,11 +95,11 @@ private:
     FLOAT_T endSpeed;               /// < Exit speed in m/s
     FLOAT_T minSpeed;
     FLOAT_T distance;
-    FLOAT_T fullInterval;           /// < interval at full speed in ticks/step.
+    unsigned int fullInterval;      /// < interval at full speed in ticks/step.
     unsigned int accelSteps;        /// < How much steps does it take, to reach the plateau.
     unsigned int decelSteps;        /// < How much steps does it take, to reach the end speed.
-    FLOAT_T accelerationPrim;       /// < Acceleration along primary axis
-    FLOAT_T fAcceleration;          /// < accelerationPrim*262144/F_CPU
+    unsigned int accelerationPrim;  /// < Acceleration along primary axis in steps/s²
+    unsigned int fAcceleration;            /// < accelerationPrim*262144/F_CPU
     FLOAT_T vMax;                   /// < Maximum reached speed in steps/s.
     FLOAT_T vStart;                 /// < Starting speed in steps/s.
     FLOAT_T vEnd;                   /// < End speed in steps/s
@@ -159,10 +159,6 @@ private:
         primaryAxis = b;
     }
 
-    inline bool isExtruderForwardMove(){
-        return (dir & 136)==136;
-    }
-
     inline void block(){
         flags |= FLAG_BLOCKED;
     }
@@ -197,109 +193,42 @@ private:
     inline void setSyncEvent(bool wait){
         flags |= wait ? FLAG_SYNC_WAIT : FLAG_SYNC;
     }
-    inline void setXMoveFinished()
-    {
-        dir&=~16;
-    }
-    inline void setYMoveFinished()
-    {
-        dir&=~32;
-    }
-    inline void setZMoveFinished()
-    {
-        dir&=~64;
-    }
-    inline void setXYMoveFinished()
-    {
-        dir&=~48;
-    }
-    inline bool isXPositiveMove()
-    {
-        return (dir & 17)==17;
-    }
-    inline bool isXNegativeMove()
-    {
-        return (dir & 17)==16;
-    }
-    inline bool isYPositiveMove()
-    {
-        return (dir & 34)==34;
-    }
-    inline bool isYNegativeMove()
-    {
-        return (dir & 34)==32;
-    }
-    inline bool isZPositiveMove()
-    {
-        return (dir & 68)==68;
-    }
-    inline bool isZNegativeMove()
-    {
-        return (dir & 68)==64;
-    }
-    inline bool isEPositiveMove()
-    {
-        return (dir & 136)==136;
-    }
-    inline bool isENegativeMove()
-    {
-        return (dir & 136)==128;
-    }
-    inline bool isHNegativeMove()
-    {
-        return (dir & 272)==256;
-    }
-    inline bool isXMove()
-    {
-        return (dir & 16);
-    }
-    inline bool isYMove()
-    {
-        return (dir & 32);
-    }
-    inline bool isXOrYMove()
-    {
-        return dir & 48;
-    }
-    inline bool isZMove()
-    {
-        return (dir & 64);
-    }
-    inline bool isEMove()
-    {
-        return (dir & 128);
-    }
-    inline bool isEOnlyMove()
-    {
-        return (dir & 240)==128;
-    }
     inline bool isNoMove()
     {
-        return (dir & 240)==0;
+        return (dir & 992) == 0;
     }
-    inline bool isXYZMove()
+    /*inline bool isXYZMove()
     {
         return dir & 112;
+    }*/
+
+
+
+
+
+    inline void setMoveOfAxis(unsigned int axis){
+        dir |= (32<<axis);
+    }
+    inline bool isAxisMove(unsigned int axis){
+        return (dir & (32<<axis));
     }
 
-
-
-    inline bool isAxisMove(unsigned int axis){
-        return (dir & (16<<axis));
+    inline void setPositiveDirectionForAxis(unsigned int axis){
+        dir |= (1<<axis);
     }
     inline bool isAxisNegativeMove(unsigned int axis){
-        return (dir & ((16<<axis) + axis)) == (unsigned int)(16<<axis);
+        return (dir & ((32<<axis) + (1<<axis))) == (unsigned int)(32<<axis);
     }
     inline bool isAxisPositiveMove(unsigned int axis){
-        return (dir & ((16<<axis) + axis)) == ((16<<axis) + axis);
-    }
-    inline void setMoveOfAxis(unsigned int axis){
-        dir |= 16<<axis;
-    }
-    inline void setPositiveDirectionForAxis(unsigned int axis){
-        dir |= 1<<axis;
+        return (dir & ((32<<axis) + (1<<axis))) == (unsigned int)((32<<axis) + (1<<axis));
     }
 	
+    inline bool isAxisOnlyMove(unsigned int axis){
+        return ((dir & 992) == (unsigned int)(32 << axis));
+    }
+
+
+
 	inline unsigned long getWaitMS(){
         return timeInTicks;
     }

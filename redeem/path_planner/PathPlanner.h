@@ -48,16 +48,14 @@ private:
 	void backwardPlanner(unsigned int start,unsigned int last);
 	void forwardPlanner(unsigned int first);
 	
-	FLOAT_T maxFeedrate[NUM_AXES];
+	FLOAT_T maxSpeeds[NUM_AXES];
+	FLOAT_T minSpeeds[NUM_AXES];
+    FLOAT_T maxJerks[NUM_AXES];
 	FLOAT_T maxAccelerationStepsPerSquareSecond[NUM_AXES];
-	FLOAT_T maxAccelerationMMPerSquareSecond[NUM_AXES];
+	FLOAT_T maxAccelerationMPerSquareSecond[NUM_AXES];
 	
-	FLOAT_T maxJerk;	
 	FLOAT_T minimumSpeed;			
-	FLOAT_T invAxisStepsPerMM[NUM_AXES];
-	FLOAT_T axisStepsPerMM[NUM_AXES];
-
-    int driveSystem;
+	FLOAT_T axisStepsPerM[NUM_AXES];
 
 	std::atomic_uint_fast32_t linesPos; // Position for executing line movement
 	std::atomic_uint_fast32_t linesWritePos; // Position where we write the next cached line move
@@ -164,7 +162,7 @@ public:
      * @param cancelable flags the move as cancelable.
      * @param optimize Wait for additional commands to fill the buffer, to optimize speed.
 	 */
-	void queueMove(FLOAT_T startPos[NUM_AXES], FLOAT_T endPos[NUM_AXES], FLOAT_T speed, bool cancelable, bool optimize=true );
+	void queueMove(FLOAT_T startPos[NUM_AXES], FLOAT_T endPos[NUM_AXES], FLOAT_T speed, FLOAT_T accel, bool cancelable, bool optimize=true );
 
 	/**
 	 * @brief Queue a batch of line moves for execution
@@ -179,7 +177,7 @@ public:
 	 * @param cancelable flags the entire group of moves as cancelable.
 	 * @param optimize Waits upto PRINT_MOVE_BUFFER_WAIT to perform speed optimization on an entire group of moves.
 	 */
-	void queueBatchMove(FLOAT_T* batchData, int batchSize, FLOAT_T speed, bool cancelable, bool optimize=true);
+	void queueBatchMove(FLOAT_T* batchData, int batchSize, FLOAT_T speed, FLOAT_T accel, bool cancelable, bool optimize=true);
 	
 	/**
 	 * @brief Run the path planner thread
@@ -235,7 +233,15 @@ public:
 	 * 
 	 * @param rates The feedrate for each of the axis, consisting of a NUM_AXES length array.
 	 */
-	void setMaxFeedrates(FLOAT_T rates[NUM_AXES]);
+	void setMaxSpeeds(FLOAT_T speeds[NUM_AXES]);
+
+	/**
+	 * @brief Set the maximum feedrates of the different axis X,Y,Z
+	 * @details Set the maximum feedrates of the different axis in m/s
+	 * 
+	 * @param rates The feedrate for each of the axis, consisting of a NUM_AXES length array.
+	 */
+	void setMinSpeeds(FLOAT_T speeds[NUM_AXES]);
 
 	/**
 	 * @brief Set the number of steps required to move each axis by 1 meter
@@ -278,7 +284,7 @@ public:
 	 *
 	 * @param maxJerk The maximum jerk for X and Y axis in m/s
 	 */
-	void setMaxJerk(FLOAT_T maxJerk);
+	void setJerks(FLOAT_T jerks[NUM_AXES]);
 	
 	void suspend() {
 		pru.suspend();

@@ -30,6 +30,7 @@
 #include <thread>
 #include <Python.h>
 
+#define ComputeV(timer,accel)  (((timer>>8)*accel)>>10)
 #define ComputeV2(timer,accel)  (((timer/256.0)*accel)/1024)
 
 void PathPlanner::setPrintMoveBufferWait(int dt) {
@@ -44,54 +45,55 @@ void PathPlanner::setMaxBufferedMoveTime(int dt) {
     maxBufferedMoveTime = dt;
 }
 
-void PathPlanner::setMaxFeedrates(FLOAT_T rates[NUM_AXES]){
+// Speeds / accels
+void PathPlanner::setMaxSpeeds(FLOAT_T speeds[NUM_AXES]){
 	for(int i=0;i<NUM_AXES;i++) {
-		maxFeedrate[i] = rates[i];
+		maxSpeeds[i] = speeds[i];
 	}
+}
+
+void PathPlanner::setMinSpeeds(FLOAT_T speeds[NUM_AXES]){
+    for(int i=0; i<NUM_AXES; i++){
+        minSpeeds[i] = speeds[i];
+    }
 }
 
 void PathPlanner::setAcceleration(FLOAT_T accel[NUM_AXES]){
 	for(int i=0;i<NUM_AXES;i++) {
-		maxAccelerationMMPerSquareSecond[i] = accel[i];
+		maxAccelerationMPerSquareSecond[i] = accel[i];
 	}
 	recomputeParameters();
 }
 
-void PathPlanner::setMaxJerk(FLOAT_T maxJerk){
-	this->maxJerk = maxJerk;
+void PathPlanner::setJerks(FLOAT_T jerks[NUM_AXES]){
+	for(int i=0;i<NUM_AXES;i++) {
+		maxJerks[i] = jerks[i];
+	}
 }
 
 void PathPlanner::setAxisStepsPerMeter(FLOAT_T stepPerM[NUM_AXES]) {
 	for(int i=0;i<NUM_AXES;i++) {
-		axisStepsPerMM[i] = stepPerM[i];
+		axisStepsPerM[i] = stepPerM[i];
 	}
 	recomputeParameters();
 }
 
 void PathPlanner::recomputeParameters() {
 	for(int i=0; i<NUM_AXES; i++){
-		
         /** Acceleration in steps/s^2 in printing mode.*/
-        maxAccelerationStepsPerSquareSecond[i] =  maxAccelerationMMPerSquareSecond[i] * axisStepsPerMM[i];
+        maxAccelerationStepsPerSquareSecond[i] =  maxAccelerationMPerSquareSecond[i] * axisStepsPerM[i];
     }
-
-	FLOAT_T accel = maxAccelerationMMPerSquareSecond[X_AXIS];
-    minimumSpeed = accel*sqrt(2.0f/(axisStepsPerMM[X_AXIS]*accel));
 }
 
 PathPlanner::PathPlanner(unsigned int cacheSize) {
 	linesPos = 0;
 	linesWritePos = 0;
-
     LOG( "PathPlanner " << std::endl);
-
 	moveCacheSize = cacheSize;
 	lines.resize(moveCacheSize);
-	
-	maxJerk = 20;
 	printMoveBufferWait = 250;
 	minBufferedMoveTime = 100;
-	maxBufferedMoveTime = 6*printMoveBufferWait;
+	maxBufferedMoveTime = 6 * printMoveBufferWait;
 	recomputeParameters();
 	linesCount = 0;
 	linesTicksCount = 0;
@@ -109,38 +111,35 @@ bool PathPlanner::queueSyncEvent(bool isBlocking /* = true */){
 			unsigned int lastLine = (linesWritePos == 0) ? moveCacheSize - 1 : linesWritePos - 1;
 			Path *p = &lines[lastLine];
 			p->setSyncEvent(isBlocking);
-
 			PyEval_RestoreThread(_save);
-
 			return true;
 		}
 	}
 
 	PyEval_RestoreThread(_save);
-
 	return false;	// If the move command buffer is completly empty, it's too late.
 }
 
+// Wait for a sync event on the stepper PRU
 int PathPlanner::waitUntilSyncEvent(){
     int ret;
 	PyThreadState *_save; 
 	_save = PyEval_SaveThread();
-	// Wait for a sync event on the stepper PRU
 	ret = pru.waitUntilSync();
 	PyEval_RestoreThread(_save);
     return ret;
 }
                      
+// Clear the sync event on the stepper PRU and resume operation.
 void PathPlanner::clearSyncEvent(){
 	PyThreadState *_save; 
 	_save = PyEval_SaveThread();
-	// Clear the sync event on the stepper PRU and resume operation.
 	pru.resume();
 	PyEval_RestoreThread(_save);
 }
 
-void PathPlanner::queueBatchMove(FLOAT_T* batchData, int batchSize, FLOAT_T speed, bool cancelable, bool optimize /* = true */) {
-    FLOAT_T axis_diff[NUM_AXES]; // Axis movement in mm
+void PathPlanner::queueBatchMove(FLOAT_T* batchData, int batchSize, FLOAT_T speed, FLOAT_T accel, bool cancelable, bool optimize /* = true */) {
+    FLOAT_T axis_diff[NUM_AXES];        // Axis movement in m
 	PyThreadState *_save; 
 	_save = PyEval_SaveThread();
     int numSegments = batchSize / (2 * NUM_AXES);
@@ -177,32 +176,28 @@ void PathPlanner::queueBatchMove(FLOAT_T* batchData, int batchSize, FLOAT_T spee
 		memcpy(p->startPos, /* startPos */ &batchData[segment_index * 2 * NUM_AXES], sizeof(FLOAT_T)*NUM_AXES);
 		memcpy(p->endPos, /* endPos */ &batchData[segment_index * 2 * NUM_AXES + NUM_AXES], sizeof(FLOAT_T)*NUM_AXES);
         
-		//Convert meters to mm		
-		p->speed = speed; //Speed is in m/s
-        p->accel = maxAccelerationMMPerSquareSecond[X_AXIS];
+		p->speed = speed; // Speed is in m/s
+		p->accel = accel; // Accel is in m/s²
 		p->joinFlags = 0;
 		p->flags = 0;
 		p->setCancelable(cancelable);
 		p->setWaitMS(optimize ? printMoveBufferWait : 0);
-		p->dir = 0;
-		
+		p->dir = 0;		
 
 		//Find direction
 		for(int axis=0; axis < NUM_AXES; axis++){
-			p->startPos[axis] = ceil(p->startPos[axis]*axisStepsPerMM[axis]);
-			p->endPos[axis] = ceil(p->endPos[axis]*axisStepsPerMM[axis]);
+			p->startPos[axis] = ceil(p->startPos[axis]*axisStepsPerM[axis]);
+			p->endPos[axis] = ceil(p->endPos[axis]*axisStepsPerM[axis]);
 			p->delta[axis] = p->endPos[axis] - p->startPos[axis];
 
 		    if(p->delta[axis]>=0)
 				p->setPositiveDirectionForAxis(axis);
-			else
+			else               
 				p->delta[axis] = -p->delta[axis];
-
-			axis_diff[axis] = p->delta[axis] / axisStepsPerMM[axis];
+			axis_diff[axis] = p->delta[axis] / axisStepsPerM[axis];
 			if(p->delta[axis]) 
 				p->setMoveOfAxis(axis);			
-            //LOG("Delta " << axis << ": "<< p->delta[axis] << " steps " <<std::endl);
-            //LOG("Axis diff " << axis << ": "<< axis_diff[axis] << " m " << std::endl);
+            LOG( "Axis "<< axis << " length is " << axis_diff[axis] << std::endl);
 		}
 		
 		if(p->isNoMove()){
@@ -210,10 +205,7 @@ void PathPlanner::queueBatchMove(FLOAT_T* batchData, int batchSize, FLOAT_T spee
 			continue; // No steps included
 		}
 
-
-		//LOG( "Warning: Doing the breshnam thing" << std::endl);
-	
-		//Define variables that are needed for the Bresenham algorithm. Please note that  Z is not currently included in the Bresenham algorithm.
+		//Define variables that are needed for the Bresenham algorithm.
         // Find the primary axis            
         p->primaryAxis = X_AXIS;
         for(int i=0; i<NUM_AXES; i++){
@@ -231,9 +223,11 @@ void PathPlanner::queueBatchMove(FLOAT_T* batchData, int batchSize, FLOAT_T spee
                             axis_diff[E_AXIS] * axis_diff[E_AXIS] + 
                             axis_diff[H_AXIS] * axis_diff[H_AXIS]);
 
-        LOG("Distance in m: " << p->distance << std::endl);
-        LOG("Speed in m/s: "  << p->speed << std::endl);
-        LOG("Accel in m/s²: " << p->accel << std::endl);
+        LOG("Distance in m:     " << p->distance << std::endl);
+        LOG("Speed in m/s:      " << p->speed << std::endl);
+        LOG("Accel in m/s²:     " << p->accel << std::endl);
+        LOG("StartSpeed in m/s: " << p->startSpeed << std::endl);
+        LOG("EndSpeed in m/s:   " << p->endSpeed << std::endl);
 
 		calculateMove(p, axis_diff);
 		updateTrapezoids();
@@ -266,47 +260,43 @@ void PathPlanner::queueBatchMove(FLOAT_T* batchData, int batchSize, FLOAT_T spee
 	PyEval_RestoreThread(_save);
 }
 
-
-void PathPlanner::queueMove(FLOAT_T startPos[NUM_AXES],FLOAT_T endPos[NUM_AXES],FLOAT_T speed, bool cancelable, bool optimize) {
+void PathPlanner::queueMove(FLOAT_T startPos[NUM_AXES],FLOAT_T endPos[NUM_AXES], FLOAT_T speed, FLOAT_T accel, bool cancelable, bool optimize) {
 	FLOAT_T temp[NUM_AXES * 2];
 	memcpy(temp, startPos, sizeof(FLOAT_T)*NUM_AXES);
 	memcpy(&temp[NUM_AXES], endPos, sizeof(FLOAT_T)*NUM_AXES);	
-	queueBatchMove( temp, NUM_AXES*2, speed, cancelable, optimize);
+	queueBatchMove( temp, NUM_AXES*2, speed, accel, cancelable, optimize);
 }
 
 FLOAT_T PathPlanner::safeSpeed(Path* p){
-    FLOAT_T safe = maxJerk * 0.5;
+    FLOAT_T safe = 1e15;
     
     // Cap the speed based on axis. 
+    // TODO: Add factor?
     for(int i=0; i<NUM_AXES; i++){
         if(p->isAxisMove(i)){
-            safe = std::min(safe, maxJerk * 0.5 * p->fullSpeed / fabs(p->speeds[i]));
+            safe = std::min(safe, minSpeeds[i]);
         }
     }
     
-    // Enforce minimum speed
-    safe = std::max(minimumSpeed, safe);
-
     return std::min(safe, p->fullSpeed);
 }
 
 void PathPlanner::calculateMove(Path* p, FLOAT_T axis_diff[NUM_AXES]){
-    float axisInterval[NUM_AXES];
-	//FLOAT_T timeForMove = (FLOAT_T)(F_CPU)*p->distance / (p->isXOrYMove() ? std::max(minimumSpeed,p->speed): p->speed); // time is in ticks	
-
+    unsigned int axisInterval[NUM_AXES];
     float timeForMove = p->distance/p->speed;
     p->timeInTicks = timeForMove*F_CPU;
 	
     LOG( "CalucluateMove: Time for move is: " << timeForMove << " s" << std::endl);
+    LOG( "CalucluateMove: Time in ticks:    " << p->timeInTicks << " ticks" << std::endl);
 
     // Compute the slowest allowed interval (ticks/step), so maximum feedrate is not violated
-    float limitInterval = timeForMove/(float)p->stepsRemaining; // until not violated by other constraints it is your target speed
+    unsigned int limitInterval = (float)p->timeInTicks/(float)p->stepsRemaining; // until not violated by other constraints it is your target speed
     LOG( "CalucluateMove: StepsRemaining " << p->stepsRemaining << " steps" << std::endl);
-    LOG( "CalucluateMove: limitInterval is " << limitInterval << " s/step" << std::endl);
+    LOG( "CalucluateMove: limitInterval is " << limitInterval << " steps/s" << std::endl);
         
     for(int i=0; i<NUM_AXES; i++){
         if(p->isAxisMove(i)){
-            axisInterval[i] = fabs(axis_diff[i]) / (maxFeedrate[i] * p->stepsRemaining); // mm*ticks/s/(mm/s*steps) = ticks/step
+            axisInterval[i] = fabs(axis_diff[i] * F_CPU) / (maxSpeeds[i] * p->stepsRemaining); // m*ticks/s/(mm/s*steps) = ticks/step
             limitInterval = std::max(axisInterval[i], limitInterval);
         }
         else 
@@ -314,38 +304,37 @@ void PathPlanner::calculateMove(Path* p, FLOAT_T axis_diff[NUM_AXES]){
         //LOG( "CalucluateMove: AxisInterval " << i << ": " << axisInterval[i] << std::endl);
         //LOG( "CalucluateMove: AxisAccel   " << i << ": " << maxAccelerationMMPerSquareSecond[i] << std::endl);
     }
+    LOG( "CalucluateMove: limitInterval is " << limitInterval << " steps/s" << std::endl);
     p->fullInterval = limitInterval; // This is our target speed
 	
     // new time at full speed = limitInterval*p->stepsRemaining [ticks]
-    timeForMove = limitInterval * p->stepsRemaining; 
+    timeForMove = (limitInterval * p->stepsRemaining); 
     for(int i=0; i<NUM_AXES; i++){
         if(p->isAxisMove(i)){
             axisInterval[i] = timeForMove / p->delta[i];
             p->speeds[i] = std::fabs(axis_diff[i] / timeForMove);
-            p->accels[i] = maxAccelerationMMPerSquareSecond[i];
+            //p->accels[i] = maxAccelerationMPerSquareSecond[i];
         }
         else 
             p->speeds[i] = 0;
     }
 
-    p->fullSpeed = p->distance / timeForMove;
+    p->fullSpeed = (p->distance / timeForMove)*F_CPU;
 	
     // slowest time to accelerate from v0 to limitInterval determines used acceleration
     // t = (v_end-v_start)/a
     FLOAT_T slowest_axis_plateau_time_repro = 1e15; // repro to reduce division Unit: 1/s
     FLOAT_T *accel = maxAccelerationStepsPerSquareSecond;
-    FLOAT_T slowest_accel = 1e15;
     for(int i=0; i < NUM_AXES ; i++){
-        if(p->isAxisMove(i))
-            slowest_accel = std::min(slowest_accel, p->accels[i]);
+        if(p->isAxisMove(i)){
             // v = a * t => t = v/a = F_CPU/(c*a) => 1/t = c*a/F_CPU
-            slowest_axis_plateau_time_repro = std::min(slowest_axis_plateau_time_repro, axisInterval[i] * accel[i]); //  steps/s^2 * step/tick  Ticks/s^2
+            slowest_axis_plateau_time_repro = std::min(slowest_axis_plateau_time_repro, (FLOAT_T)axisInterval[i] * accel[i]); //  steps/s^2 * step/tick  Ticks/s^2
+        }
     }
 
-    
-    LOG("slowest accel: " << slowest_accel << std::endl);
 
-    //LOG("slowest_axis_plateau_time_repro: "<<slowest_axis_plateau_time_repro<<std::endl);
+   
+    LOG("slowest_axis_plateau_time_repro: "<<slowest_axis_plateau_time_repro<<std::endl);
     //LOG("axisInterval[p->primaryAxis]: " << axisInterval[p->primaryAxis] << std::endl);
 
     // Errors for delta move are initialized in timer (except extruder)
@@ -353,29 +342,22 @@ void PathPlanner::calculateMove(Path* p, FLOAT_T axis_diff[NUM_AXES]){
     p->invFullSpeed = 1.0/p->fullSpeed;
     p->accelerationPrim = slowest_axis_plateau_time_repro / axisInterval[p->primaryAxis]; // a = v/t = F_CPU/(c*t): Steps/s^2
 
-    p->accelerationPrim = slowest_accel*axisStepsPerMM[p->primaryAxis];
-
-    LOG("p->accelerationPrim: " << p->accelerationPrim << " steps/s²"<< std::endl);
-
     //Now we can calculate the new primary axis acceleration, so that the slowest axis max acceleration is not violated
-    p->fAcceleration = 262144.0*p->accelerationPrim/F_CPU;
-
+    p->fAcceleration = 262144.0*p->accelerationPrim/F_CPU; // (2^18)
+    LOG("p->accelerationPrim: " << p->accelerationPrim << " steps/s²"<< std::endl);
     LOG("p->fAcceleration: " << p->fAcceleration << std::endl);
 
-    p->accelerationDistance2 = 2.0*p->distance*slowest_axis_plateau_time_repro*p->fullSpeed; // mm^2/s^2
+    p->accelerationDistance2 = 2.0*p->distance*slowest_axis_plateau_time_repro*p->fullSpeed/F_CPU; // m^2/s^2
     p->startSpeed = p->endSpeed = p->minSpeed = safeSpeed(p);
     // Can accelerate to full speed within the line
     if (p->startSpeed * p->startSpeed + p->accelerationDistance2 >= p->fullSpeed * p->fullSpeed)
         p->setNominalMove();
 	
-    LOG("fullInterval: " << p->fullInterval << std::endl);
-    LOG("fullSpeed: " << p->fullSpeed << std::endl);
+    LOG("fullInterval: " << p->fullInterval << " ticks" << std::endl);
+    LOG("fullSpeed: " << p->fullSpeed << " m/s" << std::endl);
 
-    p->vMax = 1.0 / p->fullInterval; // maximum steps per second, we can reach   
-    LOG("vMax for path is : " << p->vMax << " steps/s "<< std::endl);
-    // how much steps on primary axis do we need to reach target feedrate
-    //p->plateauSteps = (long) (((FLOAT_T)p->acceleration *0.5f / slowest_axis_plateau_time_repro + p->vMin) *1.01f/slowest_axis_plateau_time_repro);
-	
+    p->vMax = F_CPU / p->fullInterval; // maximum steps per second, we can reach   
+    LOG("vMax for path is : " << p->vMax << " steps/s "<< std::endl);	
 }
 
 /** Update parameter used by updateTrapezoids
@@ -396,13 +378,14 @@ void Path::updateStepsParameter(){
     accelSteps = (((vmax2 - (vStart * vStart)) / (accelerationPrim * 2)) + 1); // Always add 1 for missing precision
     decelSteps = (((vmax2 - (vEnd   * vEnd  )) / (accelerationPrim * 2)) + 1);	
 
-    LOG("accelSteps: " << accelSteps << " steps" <<std::endl);
-    	
+    LOG("accelSteps before cap: " << accelSteps << " steps" <<std::endl);
     if(accelSteps+decelSteps >= stepsRemaining){   // can't reach limit speed
         unsigned int red = (accelSteps+decelSteps + 2 - stepsRemaining) >> 1;
         accelSteps = accelSteps-std::min(accelSteps,red);
         decelSteps = decelSteps-std::min(decelSteps,red);
     }
+    LOG("accelSteps: " << accelSteps << " steps" <<std::endl);
+
     setParameterUpToDate();
 }
 
@@ -421,7 +404,6 @@ void PathPlanner::updateTrapezoids(){
 	unsigned int first = linesWritePos;
     Path *firstLine;
     Path *act = &lines[linesWritePos];
-    //BEGIN_INTERRUPT_PROTECTED;
     unsigned int maxfirst = linesPos; // first non fixed segment
 
     LOG("UpdateTRapezoids:: "<<std::endl);
@@ -455,8 +437,9 @@ void PathPlanner::updateTrapezoids(){
 
 	LOG("UpdateTRapezoids:: computeMAxJunctionSpeed"<<std::endl);
 
+
     computeMaxJunctionSpeed(previous,act); // Set maximum junction speed if we have a real move before
-    if(previous->isEOnlyMove() != act->isEOnlyMove()){
+    if(previous->isAxisOnlyMove(E_AXIS) != act->isAxisOnlyMove(E_AXIS)){
         previous->setEndSpeedFixed(true);
         act->setStartSpeedFixed(true);
         act->updateStepsParameter();
@@ -482,17 +465,24 @@ void PathPlanner::updateTrapezoids(){
 }
 
 // TODO: Remove dependency on Extruder. 
-void PathPlanner::computeMaxJunctionSpeed(Path *previous,Path *current){
+void PathPlanner::computeMaxJunctionSpeed(Path *previous, Path *current){
     // First we compute the normalized jerk for speed 1
     FLOAT_T dx = current->speeds[0] - previous->speeds[0];
     FLOAT_T dy = current->speeds[1] - previous->speeds[1];
     FLOAT_T dz = current->speeds[2] - previous->speeds[2];
-    FLOAT_T de = current->speeds[3] - previous->speeds[3];
-    FLOAT_T dh = current->speeds[4] - previous->speeds[4];
+    FLOAT_T de = std::fabs(current->speeds[3] - previous->speeds[3]);
+    FLOAT_T dh = std::fabs(current->speeds[4] - previous->speeds[4]);
     FLOAT_T factor = 1;
-    FLOAT_T jerk = sqrt(dx*dx + dy*dy + dz*dz + de*de + dh*dh);
-    if(jerk>maxJerk)
-        factor = maxJerk / jerk;
+    FLOAT_T jerk = sqrt(dx*dx + dy*dy + dz*dz);
+    if(jerk>maxJerks[0])
+        factor = maxJerks[0] / jerk;
+    
+    if(de > maxJerks[E_AXIS])
+        factor = std::min(factor, maxJerks[E_AXIS]/de);
+ 
+    if(dh > maxJerks[H_AXIS])
+        factor = std::min(factor, maxJerks[H_AXIS]/dh);
+
     previous->maxJunctionSpeed = std::min(previous->fullSpeed * factor, current->fullSpeed);
 }
 
@@ -661,12 +651,12 @@ void PathPlanner::run() {
 		}
 		
 		long cur_errupd = 0;
-		uint8_t directionMask = 0; //0b000HEZYX
-		uint8_t cancellableMask = 0;
-		float vMaxReached;
-        float timer_accel = 0;
-		float timer_decel = 0;
-	    float interval;
+		int directionMask = 0;      //0b000HEZYX
+		int cancellableMask = 0;
+		unsigned int vMaxReached;
+        unsigned int timer_accel = 0;
+		unsigned int timer_decel = 0;
+	    unsigned int interval;
 		
 		if(cur->isBlocked()){   // This step is in computation - shouldn't happen
 			cur = NULL;
@@ -683,25 +673,41 @@ void PathPlanner::run() {
 			cur->updateStepsParameter();
 		}
 		
+
+
+
 		vMaxReached = cur->vStart;
         // reset commands buffer every time
         cur->commands.clear();
         cur->commands.resize(cur->stepsRemaining);
 
+        directionMask = 0;
+        cancellableMask = 0;
         for(int i=0; i<NUM_AXES; i++){
-            directionMask |= ((uint8_t) cur->isAxisPositiveMove(i) << i);
+            LOG("Direction for axis " << i << " is " << cur->isAxisPositiveMove(i) << std::endl);
+            directionMask |= (cur->isAxisPositiveMove(i) << i);
         }
 		if(cur->isCancelable()) {
             for(int i=0; i<NUM_AXES; i++)
-    			cancellableMask |= ((uint8_t)cur->isAxisMove(i) << i);
+    			cancellableMask |= (cur->isAxisMove(i) << i);
 		}		
+        LOG("Direction mask: " << directionMask << std::endl);
+        LOG("Canel     mask: " << cancellableMask << std::endl);
 		assert(cur);
 		assert(cur->commands);
 
+
+        LOG("startSpeed:   " << cur->startSpeed << std::endl);
+        LOG("fullSpeed:    " << cur->fullSpeed << std::endl);
+        LOG("acceleration: " << cur->accel << std::endl);
+        LOG("accelTime:    " << ((cur->fullSpeed - cur->startSpeed)/cur->accel) << std::endl);
+        
+        
+
 		for(unsigned int stepNumber=0; stepNumber<cur->stepsRemaining; stepNumber++){
 			SteppersCommand& cmd = cur->commands.at(stepNumber);
-			cmd.direction = directionMask;
-			cmd.cancellableMask = cancellableMask;
+			cmd.direction = (uint8_t) directionMask;
+			cmd.cancellableMask = (uint8_t) cancellableMask;
 			
 			if((stepNumber == cur->stepsRemaining - 1) && cur->isSyncEvent()){
 				if(cur->isSyncWaitEvent())
@@ -726,37 +732,36 @@ void PathPlanner::run() {
 									
 			//If acceleration is enabled on this move and we are in the acceleration segment, calculate the current interval
 			if (cur->moveAccelerating(stepNumber)){   // we are accelerating
-                LOG( "Acceleration" << std::endl);
-                vMaxReached = (timer_accel * cur->fAcceleration) + cur->vStart;
-                //float v = v0 + a*t
-                LOG( "vStart: " << cur->vStart << std::endl);                
-                LOG( "vMaxReached: " << vMaxReached << std::endl);
-				if(vMaxReached > cur->vMax) 
+                //LOG( "Acceleration" << std::endl);
+                vMaxReached = ComputeV(timer_accel, cur->fAcceleration) + cur->vStart;
+				if(vMaxReached>cur->vMax) 
                     vMaxReached = cur->vMax;
-				float v = vMaxReached;
-                interval = v;
-				timer_accel += interval;
+				unsigned long v = vMaxReached;
+				interval = F_CPU/(v);
+				timer_accel+=interval;
 			}
 			else if (cur->moveDecelerating(stepNumber)){     // time to slow down
-				LOG( "Decelleration "<<std::endl);
-				float v = (timer_decel * cur->fAcceleration);
+				//LOG( "Decelleration "<<std::endl);
+				unsigned long v = ComputeV(timer_decel, cur->fAcceleration);
 				if (v > vMaxReached)   // if deceleration goes too far it can become too large
 					v = cur->vEnd;
 			 	else{
-					v = vMaxReached - v;
+					v=vMaxReached - v;
 					if (v < cur->vEnd)
                         v = cur->vEnd; // extra steps at the end of desceleration due to rounding erros
-				}				
-				timer_decel += (1.0/v);
+				}
+				
+				interval = F_CPU/(v);
+				timer_decel += interval;
 			}
 			else{ // full speed reached
-                LOG( "Cruising "<<std::endl);
+                //LOG( "Cruising "<<std::endl);
 				interval = cur->fullInterval;
 			}
 
-    		LOG("Interval: " << interval << std::endl);
-			
-			cmd.delay = (uint32_t)interval*F_CPU;
+    		//LOG("Interval: " << interval << std::endl);
+			assert(interval < F_CPU*4);
+			cmd.delay = (uint32_t)interval;
 		} // stepsRemaining
 		
 
@@ -767,7 +772,7 @@ void PathPlanner::run() {
 		
 		LOG( "Sending " << std::dec << linesPos << ", Start speed=" << cur->startSpeed << ", end speed="<<cur->endSpeed << ", nb steps = " << cur->stepsRemaining << std::endl);
 		
-		pru.push_block((uint8_t*)cur->commands.data(), sizeof(SteppersCommand)*cur->stepsRemaining, sizeof(SteppersCommand),linesPos,cur->timeInTicks);
+		pru.push_block((uint8_t*)cur->commands.data(), sizeof(SteppersCommand)*cur->stepsRemaining, sizeof(SteppersCommand), linesPos, cur->timeInTicks);
 		
 		LOG( "Done sending with " << std::dec << linesPos << std::endl);
 		

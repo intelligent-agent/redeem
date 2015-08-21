@@ -63,6 +63,8 @@ class Path:
         """ Set number of axes """
         Path.NUM_AXES = num_axes
         Path.max_speeds = np.ones(num_axes)
+        Path.min_speeds = np.ones(num_axes)*0.01
+        Path.jerks      = np.ones(num_axes)*0.1
         Path.home_speed = np.ones(num_axes)
         Path.home_backoff_speed = np.ones(num_axes)
         Path.home_backoff_offset = np.zeros(num_axes)
@@ -72,10 +74,11 @@ class Path:
         Path.soft_min = -np.ones(num_axes)*1000.0
         Path.soft_max = np.ones(num_axes)*1000.0
 
-    def __init__(self, axes, speed,  cancelable=False, use_bed_matrix=True, use_backlash_compensation=True, enable_soft_endstops=True):
+    def __init__(self, axes, speed, accel, cancelable=False, use_bed_matrix=True, use_backlash_compensation=True, enable_soft_endstops=True):
         """ The axes of evil, the feed rate in m/s and ABS or REL """
         self.axes = axes
         self.speed = speed
+        self.accel = accel
         self.cancelable = int(cancelable)
         self.use_bed_matrix = int(use_bed_matrix)
         self.use_backlash_compensation = int(use_backlash_compensation)
@@ -249,7 +252,7 @@ class Path:
 
 class AbsolutePath(Path):
     """ A path segment with absolute movement """
-    def __init__(self, axes, speed, cancelable=False, use_bed_matrix=True, use_backlash_compensation=True, enable_soft_endstops=True):
+    def __init__(self, axes, speed, accel, cancelable=False, use_bed_matrix=True, use_backlash_compensation=True, enable_soft_endstops=True):
         Path.__init__(self, axes, speed, cancelable, use_bed_matrix, use_backlash_compensation, enable_soft_endstops)
         self.movement = Path.ABSOLUTE
 
@@ -296,8 +299,8 @@ class AbsolutePath(Path):
 
 class RelativePath(Path):
     """ A path segment with Relative movement """
-    def __init__(self, axes, speed, cancelable=False, use_bed_matrix=True, use_backlash_compensation=True, enable_soft_endstops=True):
-        Path.__init__(self, axes, speed, cancelable, use_bed_matrix, use_backlash_compensation, enable_soft_endstops)
+    def __init__(self, axes, speed, accel, cancelable=False, use_bed_matrix=True, use_backlash_compensation=True, enable_soft_endstops=True):
+        Path.__init__(self, axes, speed, accel, cancelable, use_bed_matrix, use_backlash_compensation, enable_soft_endstops)
         self.movement = Path.RELATIVE
 
     def set_prev(self, prev):
@@ -343,8 +346,8 @@ class RelativePath(Path):
 class G92Path(Path):
     """ A reset axes path segment. No movement occurs, only global position
     setting """
-    def __init__(self, axes, speed,  cancelable=False):
-        Path.__init__(self, axes, speed)
+    def __init__(self, axes, cancelable=False):
+        Path.__init__(self, axes, 0, 0)
         self.movement = Path.G92
 
     def set_prev(self, prev):
@@ -368,8 +371,8 @@ class G92Path(Path):
 
 class CompensationPath(Path):
     """ A path segment with relative movement and resets axes """
-    def __init__(self, axes, speed, cancelable=False, use_bed_matrix=False, use_backlash_compensation=False):
-        Path.__init__(self, axes, speed, cancelable, use_bed_matrix, use_backlash_compensation)
+    def __init__(self, axes, speed, accel, cancelable=False, use_bed_matrix=False, use_backlash_compensation=False):
+        Path.__init__(self, axes, speed, accel, cancelable, use_bed_matrix, use_backlash_compensation)
         self.movement = Path.RELATIVE
 
     def needs_splitting(self):

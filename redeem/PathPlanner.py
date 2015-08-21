@@ -53,7 +53,7 @@ class PathPlanner:
         self.travel_length = {"X": 0.0, "Y": 0.0, "Z": 0.0, "E": 0.0, "H": 0.0}
         self.center_offset = {"X": 0.0, "Y": 0.0, "Z": 0.0, "E": 0.0, "H": 0.0}
         self.home_pos = {"X": 0.0, "Y": 0.0, "Z": 0.0, "E": 0.0, "H": 0.0}
-        self.prev = G92Path({"X": 0.0, "Y": 0.0, "Z": 0.0, "E": 0.0, "H": 0.0}, 0)
+        self.prev = G92Path({"X": 0.0, "Y": 0.0, "Z": 0.0, "E": 0.0, "H": 0.0})
         self.prev.set_prev(None)
 
         if pru_firmware:
@@ -73,8 +73,9 @@ class PathPlanner:
         self.native_planner.initPRU(fw0, fw1)
         self.native_planner.setAcceleration(tuple(self.printer.acceleration))
         self.native_planner.setAxisStepsPerMeter(tuple(Path.steps_pr_meter))
-        self.native_planner.setMaxFeedrates(tuple(Path.max_speeds))	
-        self.native_planner.setMaxJerk(self.printer.maxJerkXY / 1000.0)
+        self.native_planner.setMaxSpeeds(tuple(Path.max_speeds))	
+        self.native_planner.setMinSpeeds(tuple(Path.min_speeds))	
+        self.native_planner.setJerks(tuple(Path.jerks))
         self.native_planner.setPrintMoveBufferWait(int(self.printer.print_move_buffer_wait))
         self.native_planner.setMinBufferedMoveTime(int(self.printer.min_buffered_move_time))
         self.native_planner.setMaxBufferedMoveTime(int(self.printer.max_buffered_move_time))
@@ -316,7 +317,7 @@ class PathPlanner:
             logging.info("Queueing move")
 
             self.native_planner.queueMove(tuple(np.zeros(Path.NUM_AXES)[:5]),
-                                          tuple(new.compensation[:5]), new.speed,
+                                          tuple(new.compensation[:5]), new.speed, new.accel,
                                           bool(new.cancelable),
                                           False)
 
@@ -335,7 +336,7 @@ class PathPlanner:
 
             # Queue the entire batch at once.
             self.printer.ensure_steppers_enabled()
-            self.native_planner.queueBatchMove(batch_array, new.speed, bool(new.cancelable), bool(True))
+            self.native_planner.queueBatchMove(batch_array, new.speed, new.accel, bool(new.cancelable), bool(True))
                 
             # Do not add the original segment
             new.unlink()
@@ -346,7 +347,9 @@ class PathPlanner:
             self.printer.ensure_steppers_enabled()
             #push this new segment   
             self.native_planner.queueMove(tuple(new.start_pos[:5]),
-                                      tuple(new.stepper_end_pos[:5]), new.speed,
+                                      tuple(new.stepper_end_pos[:5]), 
+                                      new.speed, 
+                                      new.accel,
                                       bool(new.cancelable),
                                       bool(new.movement != Path.RELATIVE))
 

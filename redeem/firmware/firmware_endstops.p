@@ -32,6 +32,10 @@
 #include "config_00A4.h"
 #endif
 
+#ifdef REV_B2
+#include "config_00B2.h"
+#endif
+
 
 #ifndef FIRMWARE_CONFIG
 #error You must define the REV_A3 or REV_A4 preprocessor flag.

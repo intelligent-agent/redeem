@@ -2,6 +2,16 @@
 
 from distutils.core import setup, Extension
 
+import os
+from distutils.sysconfig import get_config_vars
+
+(opt,) = get_config_vars('OPT')
+os.environ['OPT'] = " ".join(
+    flag for flag in opt.split() if flag != '-Wstrict-prototypes'
+)
+
+
+
 pathplanner = Extension('_PathPlannerNative', 
     sources = ['PathPlannerNative.i', 'PathPlanner.cpp', 'Path.cpp', 'PruTimer.cpp','prussdrv.c','Logger.cpp'],  
     swig_opts=['-c++','-builtin'], 
@@ -13,7 +23,8 @@ pathplanner = Extension('_PathPlannerNative',
         '-D_GLIBCXX_USE_NANOSLEEP',
         '-DBUILD_PYTHON_EXT=1', 
         '-Wno-write-strings', 
-        '-Wno-maybe-uninitialized'])
+        '-Wno-maybe-uninitialized', 
+    	'-Wno-format'])
 
 setup(name='PathPlannerNative',
       version='1.0',
