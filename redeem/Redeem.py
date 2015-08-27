@@ -59,7 +59,7 @@ from Delta import Delta
 from Enable import Enable
 from PWM import PWM
 
-version = "1.0.0~Commando"
+version = "1.0.1~Commando"
 
 # Default logging level is set to debug
 logging.basicConfig(level=logging.DEBUG,

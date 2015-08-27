@@ -1,7 +1,3 @@
-#import sys
-#sys.path.append('/home/elias/workspace/redeem/redeem/path_planner')
-
-
 from _PathPlannerNative import PathPlannerNative
 from time import sleep
 
@@ -27,7 +23,7 @@ t.waitUntilFinished()
 #end = (1.0, 1.0, 1.0, 1.0, 1.0)
 #t.queueMove(start,end,1,False, False)
 
-#sleep(5) # Time in seconds.
+t.queueMove(start, end, 3000, False, False)
 t.waitUntilFinished()
 
 t.stopThread(True)

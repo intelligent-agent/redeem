@@ -1,3 +1,19 @@
+redeem (1.0.2) UNRELEASED; urgency=low
+
+  [ Elias ]
+  * New nvmem on new kernel
+
+ -- Elias <elias@elias-Aspire>  Mon, 24 Aug 2015 14:06:44 +0200
+
+redeem (1.0.1) UNRELEASED; urgency=low
+
+  [ Elias ]
+  * Support for Rev B2
+
+ -- Elias <elias@elias-Aspire>  Fri, 21 Aug 2015 14:06:44 +0200
+
+
+
 redeem (1.0.0) UNRELEASED; urgency=low
 
   [ Elias ]

@@ -1,5 +1,15 @@
 from setuptools import setup, find_packages, Extension
 import numpy as np
+import os
+
+from distutils.sysconfig import get_config_vars
+
+# Remove the strict prototpyes warnings
+(opt,) = get_config_vars('OPT')
+os.environ['OPT'] = " ".join(
+    flag for flag in opt.split() if flag != '-Wstrict-prototypes'
+)
+
 
 import os
 from distutils.sysconfig import get_config_vars
@@ -33,10 +43,11 @@ pathplanner = Extension(
 
 setup(
     name = "Redeem",
-    version = "1.0.0",
+    version = "1.0.2",
     packages = find_packages(exclude=["redeem/path_planner"]),
     data_files=[
         ('redeem/firmware', [
+            'redeem/firmware/config_00B2.h', 
             'redeem/firmware/config_00A4.h', 
             'redeem/firmware/config_00A3.h', 
             'redeem/firmware/firmware_runtime.p', 
