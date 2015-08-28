@@ -22,13 +22,8 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
 """
 
 import logging
-import glob
-
+    
 class ColdEnd: 
-    @staticmethod
-    def discover(path):
-        """ Discover ds18b20 sensors in this path """
-        return glob.glob(path+"/28-*/w1_slave")
 
     def __init__(self, pin, name):
         """ Init """
