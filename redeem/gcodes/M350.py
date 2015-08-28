@@ -23,11 +23,10 @@ class M350(GCodeCommand):
         
         for i in range(g.num_tokens()):
             axis = g.token_letter(i)
-            logging.debug("M350 on "+axis)
             stepper = self.printer.steppers[axis]
             stepper.set_microstepping(int(g.token_value(i)))
+        self.printer.path_planner.update_steps_pr_meter()
         Stepper.commit()
-        logging.debug("acceleration tables recreated")
 
     def get_description(self):
         return "Set microstepping mode for the axes present with a token. " \

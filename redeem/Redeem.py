@@ -185,13 +185,11 @@ class Redeem:
 
             Delta.recalculate()
 
-        # Set up cold ends
-        path = self.printer.config.get('Cold-ends', 'path', 0)
-        if os.path.exists(path):
-            self.printer.cold_ends.append(ColdEnd(path, "Cold End 0"))
+        # Discover and add all DS18B20 cold ends.
+        paths = ColdEnd.discover("/sys/bus/w1")
+        for i, path in enumerate(paths):
+            self.printer.cold_ends.append(path, "ds18b20-"+str(i))
             logging.info("Found Cold end on " + path)
-        else:
-            logging.info("No cold end present in path: " + path)
 
         # Make Mosfets, thermistors and extruders
         heaters = ["E", "H", "HBP"]
@@ -240,6 +238,7 @@ class Redeem:
             self.printer.fans.append(Fan(10))
 
 
+        # Disable all fans
         for f in self.printer.fans:
             f.set_value(0)
 
@@ -273,15 +272,15 @@ class Redeem:
                 printer.controlled_fans.append(self.printer.fans[i])
                 logging.info("Added fan {} to M106/M107".format(i))
 
-        # Connect the cold end 0 to fan 2
-        # This is very "Thing" specific, should be configurable somehow.
-        if len(self.printer.cold_ends):
-            self.printer.coolers.append(
-                Cooler(self.printer.cold_ends[0], self.printer.fans[2],
-                       "Cooler0", False))
-            self.printer.coolers[0].ok_range = 4
-            self.printer.coolers[0].set_target_temperature(60)
-            self.printer.coolers[0].enable()
+        # Connect the colds to fans
+        for f, fan in enumerate(self.printer.fans):
+            if self.printer.config.getboolean('Cold-ends', "connect-ds18b20-{}-fan-{}".format(t, f)):
+                c = Cooler(therm, fan, "Cooler-{}-{}".format(t, f), False)
+                c.ok_range = 4
+                c.set_target_temperature(60)
+                c.enable()
+                self.printer.coolers.append(c)
+                logging.info("Cooler connects ds18b20 {} with fan {}".format(t, f))
 
         # Make a queue of commands
         self.printer.commands = JoinableQueue(10)

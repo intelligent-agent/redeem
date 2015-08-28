@@ -83,6 +83,11 @@ class PathPlanner:
 
         self.native_planner.runThread()
 
+    def update_steps_pr_meter(self):
+        """ Update steps pr meter from the path """
+        logging.debug("Setting Steps pr meter to: "+str(Path.steps_pr_meter))
+        self.native_planner.setAxisStepsPerMeter(tuple(Path.steps_pr_meter))
+
     def get_current_pos(self):
         """ Get the current pos as a dict """
         pos = self.prev.end_pos
