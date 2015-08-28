@@ -188,6 +188,8 @@ class Stepper_00B2(Stepper_00B1):
         self.state  = 0 # The initial state of shift register
     
     def set_disabled(self, force_update=False):
+        if not self.enabled:
+            return
         logging.debug("Disabling stepper "+self.name)
         # X, Y, Z steppers are on the first shift reg. Extruders have their own.  
         if self.name in ["X", "Y", "Z"]:
@@ -196,8 +198,11 @@ class Stepper_00B2(Stepper_00B1):
             ShiftRegister.registers[3].add_state(0x1)
         elif self.name == "H":
             ShiftRegister.registers[4].add_state(0x1)
+        self.enabled = False
 
     def set_enabled(self, force_update=False):
+        if self.enabled:
+            return
         logging.debug("Enabling stepper "+self.name)
         # X, Y, Z steppers are on the first shift reg. Extruders have their own.  
         if self.name in ["X", "Y", "Z"]:
@@ -206,6 +211,7 @@ class Stepper_00B2(Stepper_00B1):
             ShiftRegister.registers[3].remove_state(0x1)
         elif self.name == "H":
             ShiftRegister.registers[4].remove_state(0x1)
+        self.enabled = True
 
 """
 The bits in the shift register are as follows (Rev A4) :
