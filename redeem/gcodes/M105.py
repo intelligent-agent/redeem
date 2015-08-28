@@ -36,9 +36,9 @@ class M105(GCodeCommand):
         if not self.printer.heaters[current_tool].onoff_control:
             answer += " @:" + str(math.floor(255*self.printer.heaters[current_tool].mosfet.get_power()))
 
-        if len(self.printer.coolers) > 0:
-            cold_end = self.printer.coolers[0].get_temperature()
-            answer += " C2:{0:.0f}".format(cold_end)
+        for c, cooler in enumerate(self.printer.cold_ends):
+            temp = cooler.get_temperature()
+            answer += " C{0}:{1:.0f}".format(c, temp)
    
         g.set_answer(answer)
 
