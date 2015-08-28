@@ -70,4 +70,7 @@ class Thermistor:
         """ Convert the voltage to a resistance value """
         if v_sense == 0 or (abs(v_sense - 1.8) < 0.001):
             return 10000000.0
+        # Workaround for hardware BOM bug in rev B2 having 470K res pullup
+        if self.printer.config.replicape_revision == "00B2":
+            return 470000.0 / ((1.8 / v_sense) - 1.0)    
         return 4700.0 / ((1.8 / v_sense) - 1.0)

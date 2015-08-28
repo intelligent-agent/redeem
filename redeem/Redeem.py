@@ -205,6 +205,7 @@ class Redeem:
             adc = self.printer.config.get("Heaters", "path_adc_"+e)
             chart = self.printer.config.get("Heaters", "temp_chart_"+e)
             self.printer.thermistors[e] = Thermistor(adc, "MOSFET "+e, chart)
+            self.printer.thermistors[e].printer = printer
 
             # Extruders
             onoff = self.printer.config.getboolean('Heaters', 'onoff_'+e)
