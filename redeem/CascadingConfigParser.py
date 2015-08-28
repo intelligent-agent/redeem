@@ -64,6 +64,8 @@ class CascadingConfigParser(ConfigParser.SafeConfigParser):
                     eeprom = path+"/eeprom"
                 elif os.path.isfile(path+"/nvmem/at24-1/nvmem"):
                     eeprom = path+"/nvmem/at24-1/nvmem"
+                elif os.path.isfile(path+"/at24-1/nvmem"):
+                    eeprom = path+"/at24-1/nvmem"
                 else:
                     continue
                 try:
