@@ -59,7 +59,7 @@ from Delta import Delta
 from Enable import Enable
 from PWM import PWM
 
-version = "1.0.3~Commando"
+version = "1.0.4~Commando"
 
 # Default logging level is set to debug
 logging.basicConfig(level=logging.DEBUG,
@@ -204,7 +204,8 @@ class Redeem:
             # Thermistors
             adc = self.printer.config.get("Heaters", "path_adc_"+e)
             chart = self.printer.config.get("Heaters", "temp_chart_"+e)
-            self.printer.thermistors[e] = Thermistor(adc, "MOSFET "+e, chart)
+            resistance = self.printer.config.getfloat("Heaters", "resistance_"+e)
+            self.printer.thermistors[e] = Thermistor(adc, "MOSFET "+e, chart, resistance)
             self.printer.thermistors[e].printer = printer
 
             # Extruders
