@@ -94,7 +94,7 @@ class Redeem:
             Path.set_axes(5)
         else:
             logging.warning("Oh no! No Replicape present!")
-            self.revision = "0A4A"
+            self.revision = "00B2"
             # We set it to 5 axis by default
             Path.set_axes(5)
         if self.printer.config.reach_revision:
