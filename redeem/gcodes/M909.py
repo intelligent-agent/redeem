@@ -40,4 +40,3 @@ class M909(GCodeCommand):
                 "as 2^value, so M909 X2 sets microstepping "
                 "to 2^2 = 4, M909 Y3 sets microstepping to 2^3 = 8 etc. ")
 
- 

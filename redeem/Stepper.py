@@ -177,8 +177,37 @@ class Stepper_00B1(Stepper):
             Stepper.printer.enable.set_enabled()
 
     def set_decay(self, value):
-        pass
+        EN_CFG0  = (1<<3)
+        DIS_CFG0 = (0<<3)
+        EN_CFG4  = (1<<2)
+        DIS_CFG4 = (0<<2)
+        EN_CFG5  = (1<<1)
+        DIS_CFG5 = (0<<1)
 
+        if   value == 0:   # GND, GND, GND
+            state = DIS_CFG0 | DIS_CFG4 | DIS_CFG5
+        elif value == 1: # GND, GND, VCC
+            state = DIS_CFG0 | DIS_CFG4 | EN_CFG5
+        elif value == 2: # GND, VCC, GND
+            state = DIS_CFG0 | EN_CFG4 | DIS_CFG5
+        elif value == 3: # GND, VCC, VCC
+            state = DIS_CFG0 | EN_CFG4 | EN_CFG5
+        elif value == 4: # VCC, GND, GND
+            state = EN_CFG0 | DIS_CFG4 | DIS_CFG5
+        elif value == 5: # VCC, GND, VCC
+            state = EN_CFG0 | DIS_CFG4 | EN_CFG5
+        elif value == 6: # VCC, VCC, GND
+           state = EN_CFG0 | EN_CFG4 | DIS_CFG5
+        elif value == 7: # VCC, VCC, VCC
+            state = EN_CFG0 | EN_CFG4 | EN_CFG5
+        else: 
+            logging.warning("Tried to set illegal value for stepper decay: "+str(value))
+            return
+
+        self.shift_reg.set_state(state,0x0E)
+        
+        logging.debug("Stepper "+self.name+" has updated decay mode: "+str(value))
+        
 
 class Stepper_00B2(Stepper_00B1):
 
