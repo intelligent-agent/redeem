@@ -204,8 +204,11 @@ class Stepper_00B1(Stepper):
             logging.warning("Tried to set illegal value for stepper decay: "+str(value))
             return
 
-        self.shift_reg.set_state(state,0x0E)
+        logging.debug("Before: "+bin(self.shift_reg.state))        
+        self.shift_reg.set_state(state, 0x0F)
         
+        logging.debug("After: "+bin(self.shift_reg.state))
+
         logging.debug("Stepper "+self.name+" has updated decay mode: "+str(value))
         
 

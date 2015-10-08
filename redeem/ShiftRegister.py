@@ -69,7 +69,7 @@ class ShiftRegister(object):
 
     def set_state(self, state, mask=0xFF):
         self.remove_state(mask)
-        self.state = state & mask
+        self.state |= (state & mask)
         ShiftRegister.commit()
 
     def add_state(self, state):
