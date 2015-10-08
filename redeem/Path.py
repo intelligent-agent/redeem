@@ -213,9 +213,9 @@ class Path:
                         self.start_pos[i], 
                         self.ideal_end_pos[i], 
                         num_segments
-                        ) for i in xrange(4)]) 
+                        ) for i in xrange(Path.NUM_AXES)]) 
         vals = np.delete(vals, 0, axis=0)
-        vec_segments = [dict(zip(["X", "Y", "Z", "E"], list(val))) for val in vals]
+        vec_segments = [dict(zip(["X", "Y", "Z", "E", "H"], list(val))) for val in vals]
         path_segments = []
 
         for index, segment in enumerate(vec_segments):

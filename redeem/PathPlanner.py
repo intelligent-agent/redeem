@@ -327,22 +327,24 @@ class PathPlanner:
                                           bool(new.cancelable),
                                           False)
 
-        if new.needs_splitting():            
+        if new.needs_splitting():     
+            logging.info("Needs splitting")
+               
             path_batch = new.get_delta_segments()
             # Construct a batch
-            batch_array = np.zeros(shape=(len(path_batch)*2*4),dtype=np.float64)     # Change this to reflect NUM_AXIS.
-         
+            batch_array = np.zeros(shape=(len(path_batch)*2*Path.NUM_AXES),dtype=np.float64)     # Change this to reflect NUM_AXIS.
+
             for maj_index, path in enumerate(path_batch):
-                for subindex in range(5):  # this needs to be NUM_AXIS
-                    batch_array[(maj_index * 8) + subindex] = path.start_pos[subindex]
-                    batch_array[(maj_index * 8) + 4 + subindex] = path.stepper_end_pos[subindex]
+                for subindex in range(Path.NUM_AXES):  # this needs to be NUM_AXIS
+                    batch_array[(maj_index * Path.NUM_AXES * 2) + subindex] = path.start_pos[subindex]
+                    batch_array[(maj_index * Path.NUM_AXES * 2) + Path.NUM_AXES + subindex] = path.stepper_end_pos[subindex]
                 
                 self.prev = path
                 self.prev.unlink()
 
             # Queue the entire batch at once.
             self.printer.ensure_steppers_enabled()
-            self.native_planner.queueBatchMove(batch_array, new.speed, new.accel, bool(new.cancelable), bool(True))
+            self.native_planner.queueBatchMove(batch_array, new.speed, new.accel, bool(new.cancelable), True)
                 
             # Do not add the original segment
             new.unlink()
