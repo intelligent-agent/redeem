@@ -31,7 +31,8 @@ from Printer import Printer
 import numpy as np
 
 try:
-    from path_planner.PathPlannerNative import PathPlannerNative
+    #from path_planner.PathPlannerNative import PathPlannerNative
+    from _PathPlannerNative import PathPlannerNative
 except Exception, e:
     logging.error("You have to compile the native path planner before running"
                   " Redeem. Make sure you have swig installed (apt-get "
@@ -365,10 +366,10 @@ class PathPlanner:
     def set_extruder(self, ext_nr):
         if ext_nr in range(Path.NUM_AXES-3):
             logging.debug("Selecting "+str(ext_nr))
-            Path.steps_pr_meter[3] = self.printer.steppers[
-                    Path.index_to_axis(ext_nr+3)
-                    ].get_steps_pr_meter()
-            self.native_planner.setExtruder(ext_nr)
+            #Path.steps_pr_meter[3] = self.printer.steppers[
+            #        Path.index_to_axis(ext_nr+3)
+            #        ].get_steps_pr_meter()
+            #self.native_planner.setExtruder(ext_nr)
 
 
 if __name__ == '__main__':
