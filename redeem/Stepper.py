@@ -316,6 +316,7 @@ class Stepper_00A4(Stepper):
         # update the Path class with new values
         stepper_num = Path.axis_to_index(self.name)
         Path.steps_pr_meter[stepper_num] = self.get_steps_pr_meter()
+        logging.debug("Updated stepper "+self.name+" to microstepping "+str(value)+" = "+str(self.microsteps))   
         self.update()
 
     def set_current_value(self, iChop):
