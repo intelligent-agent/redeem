@@ -8,7 +8,7 @@ Website: http://www.thing-printer.com
 License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
 
  Redeem is free software: you can redistribute it and/or modify
- it under the terms of the GNU General Public License as published by
+     it under the terms of the GNU General Public License as published by
  the Free Software Foundation, either version 3 of the License, or
  (at your option) any later version.
  
@@ -56,7 +56,11 @@ class Path:
     matrix_bed_comp     = np.identity(3)
     matrix_bed_comp_inv = np.linalg.inv(matrix_bed_comp)
 
-    axis_config = AXIS_CONFIG_XY # Default config is normal cartesian XY
+    # Default config is normal cartesian XY
+    axis_config = AXIS_CONFIG_XY 
+    
+    # By default, do not check for slaves
+    has_slaves = False
 
     @staticmethod
     def set_axes(num_axes):
@@ -73,7 +77,16 @@ class Path:
         Path.backlash_state = np.zeros(num_axes)
         Path.soft_min = -np.ones(num_axes)*1000.0
         Path.soft_max = np.ones(num_axes)*1000.0
+        Path.slaves = {key: "" for key in Path.AXES[:num_axes]}
 
+
+    @staticmethod
+    def add_slave(master, slave):
+        ''' Make an axis copy the movement of another. 
+        the slave will get the same position as the axis'''
+        Path.slaves[master] = slave
+        Path.has_slaves = True
+    
     def __init__(self, axes, speed, accel, cancelable=False, use_bed_matrix=True, use_backlash_compensation=True, enable_soft_endstops=True):
         """ The axes of evil, the feed rate in m/s and ABS or REL """
         self.axes = axes
@@ -96,7 +109,7 @@ class Path:
         self.num_steps = None
         self.delta = None
         self.compensation = None
-        self.split_size = 0.001
+        self.split_size = 0.001       
 
     def is_G92(self):
         """ Special path, only set the global position on this """
@@ -169,7 +182,7 @@ class Path:
 
     @staticmethod
     def backlash_reset():
-	Path.backlash_state = np.zeros(Path.NUM_AXES)
+	    Path.backlash_state = np.zeros(Path.NUM_AXES)
 
     def backlash_compensate(self):
         """ Apply compensation to the distance taken if the direction of the axis has changed. """
@@ -187,6 +200,18 @@ class Path:
                 self.compensation = ret_vec;
 
         return ret_vec
+
+    def handle_slaves(self):
+        # If slave mode is enabled, copy position now. 
+        if Path.has_slaves:
+            for slave in Path.slaves:
+                master = Path.slaves[slave]
+                if master:
+                    s_i = Path.axis_to_index(slave)
+                    m_i = Path.axis_to_index(master)
+                    self.start_pos[s_i] = self.start_pos[m_i]
+                    self.stepper_end_pos[s_i] = self.stepper_end_pos[m_i]
+
 
     def needs_splitting(self):
         """ Return true if this is a delta segment and longer than 1 mm """
@@ -290,6 +315,9 @@ class AbsolutePath(Path):
         self.stepper_end_pos = self.start_pos + self.delta
         self.rounded_vec = vec
 
+        # Fix slave mode, if any
+        self.handle_slaves()
+
         if np.isnan(vec).any():
             self.end_pos = self.start_pos
             self.ideal_end_pos = np.copy(prev.ideal_end_pos)
@@ -336,6 +364,9 @@ class RelativePath(Path):
         self.end_pos = self.start_pos + vec
         self.stepper_end_pos = self.start_pos + self.delta
         self.rounded_vec = vec
+
+        # Fix slave mode, if any
+        self.handle_slaves()
 
         if np.isnan(vec).any():
             self.end_pos = self.start_pos

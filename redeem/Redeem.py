@@ -172,6 +172,10 @@ class Redeem:
             # Add soft end stops
             Path.soft_min[Path.axis_to_index(name)] = printer.config.getfloat('Endstops', 'soft_end_stop_min_' + name)
             Path.soft_max[Path.axis_to_index(name)] = printer.config.getfloat('Endstops', 'soft_end_stop_max_' + name)
+            slave = printer.config.get('Steppers', 'slave_' + name)
+            if slave:
+                Path.add_slave(name, slave)
+                logging.debug("Axis "+name+" has slave "+slave)
 
         # Commit changes for the Steppers
         #Stepper.commit()
@@ -368,6 +372,7 @@ class Redeem:
                 printer.path_planner.home_pos[axis] = printer.path_planner.center_offset[axis]
                 if axis in ['X','Y','Z']:                   
                     home_default = True
+            
                 
         if Path.axis_config == Path.AXIS_CONFIG_DELTA:
             if travel_default:

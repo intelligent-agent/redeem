@@ -148,7 +148,8 @@ class PathPlanner:
         path_center = {}
         path_zero = {}
 
-        speed = Path.home_speed[0]
+        speed = Path.home_speed[0] # TODO: speed for each axis
+        accel = self.printer.acceleration[0] # TODO: accel for each axis
 
         for a in axis:
             if not self.printer.steppers[a].has_endstop:
@@ -179,7 +180,7 @@ class PathPlanner:
         logging.debug("Center: %s" % path_center)
 
         # Move until endstop is hit
-        p = RelativePath(path_search, speed, True, False, True, False)
+        p = RelativePath(path_search, speed, accel, True, False, True, False)
         self.add_path(p)
         self.wait_until_done()
 
@@ -189,11 +190,11 @@ class PathPlanner:
         self.wait_until_done()
 
         # Back off a bit
-        p = RelativePath(path_backoff, speed, True, False, True, False)
+        p = RelativePath(path_backoff, speed, accel, True, False, True, False)
         self.add_path(p)
 
         # Hit the endstop slowly
-        p = RelativePath(path_fine_search, fine_search_speed, True, False, True, False)
+        p = RelativePath(path_fine_search, fine_search_speed, accel, True, False, True, False)
         self.add_path(p)
         self.wait_until_done()
 
@@ -213,6 +214,7 @@ class PathPlanner:
         path_home = {}
         
         speed = Path.home_speed[0]
+        accel = self.printer.acceleration[0]
 
         for a in axis:
             path_home[a] = self.home_pos[a]
@@ -221,7 +223,7 @@ class PathPlanner:
         logging.debug("Home: %s" % path_home)
             
         # Move to home position
-        p = AbsolutePath(path_home, speed, True, False, False, False)
+        p = AbsolutePath(path_home, speed, accel, True, False, False, False)
         self.add_path(p)
         self.wait_until_done()
         
@@ -278,9 +280,10 @@ class PathPlanner:
         old_feedrate = self.printer.feed_rate # Save old feedrate
 
         speed = Path.home_speed[0]
+        accel = self.printer.acceleration[0]
         path_back = {"Z": -z}
         # Move until endstop is hits
-        p = RelativePath(path_back, speed, True)
+        p = RelativePath(path_back, speed, accel, True)
 
         self.wait_until_done()
         self.add_path(p)
@@ -311,16 +314,16 @@ class PathPlanner:
         """ Add a path segment to the path planner """
         """ This code, and the native planner, needs to be updated for reach. """
         # Link to the previous segment in the chain
-        logging.info("Adding path")
+        #logging.info("Adding path")
         new.set_prev(self.prev)
 
-        logging.info("set prev done")
+        #logging.info("set prev done")
         
 
         if new.compensation is not None:
             # Apply a backlash compensation move
 #           CompensationPath(new.compensation, new.speed, False, False, False))
-            logging.info("Queueing move")
+            #logging.info("Queueing move")
 
             self.native_planner.queueMove(tuple(np.zeros(Path.NUM_AXES)[:5]),
                                           tuple(new.compensation[:5]), new.speed, new.accel,
@@ -328,11 +331,9 @@ class PathPlanner:
                                           False)
 
         if new.needs_splitting():     
-            logging.info("Needs splitting")
-               
             path_batch = new.get_delta_segments()
             # Construct a batch
-            batch_array = np.zeros(shape=(len(path_batch)*2*Path.NUM_AXES),dtype=np.float64)     # Change this to reflect NUM_AXIS.
+            batch_array = np.zeros(shape=(len(path_batch)*2*Path.NUM_AXES), dtype=np.float64)     # Change this to reflect NUM_AXIS.
 
             for maj_index, path in enumerate(path_batch):
                 for subindex in range(Path.NUM_AXES):  # this needs to be NUM_AXIS
@@ -344,6 +345,7 @@ class PathPlanner:
 
             # Queue the entire batch at once.
             self.printer.ensure_steppers_enabled()
+
             self.native_planner.queueBatchMove(batch_array, new.speed, new.accel, bool(new.cancelable), True)
                 
             # Do not add the original segment
@@ -351,7 +353,7 @@ class PathPlanner:
             return 
 
         if not new.is_G92():
-            logging.info("Queueing move from "+str(new.start_pos[:5])+" to "+str(new.end_pos[:5]))
+            #logging.info("Queueing move from "+str(new.start_pos[:5])+" to "+str(new.end_pos[:5]))
             self.printer.ensure_steppers_enabled()
             #push this new segment   
             self.native_planner.queueMove(tuple(new.start_pos[:5]),
