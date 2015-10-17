@@ -1,5 +1,5 @@
 """
-GCode M906
+GCode M907
 Set stepper current in mA
 
 Author: Elias Bakken
@@ -11,7 +11,7 @@ License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 from GCodeCommand import GCodeCommand
 
 
-class M906(GCodeCommand):
+class M907(GCodeCommand):
 
     def execute(self, g):
         self.printer.path_planner.wait_until_done()
