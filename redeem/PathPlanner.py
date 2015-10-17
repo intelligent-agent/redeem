@@ -84,6 +84,10 @@ class PathPlanner:
 
         self.native_planner.runThread()
 
+    def restart(self):
+        self.native_planner.stopThread(True)        
+        self.__init_path_planner()
+
     def update_steps_pr_meter(self):
         """ Update steps pr meter from the path """
         logging.debug("Setting Steps pr meter to: "+str(Path.steps_pr_meter))
@@ -279,12 +283,14 @@ class PathPlanner:
     def probe(self, z):
         old_feedrate = self.printer.feed_rate # Save old feedrate
 
-        speed = Path.home_speed[0]
+        speed = Path.home_speed[0]*0.1
         accel = self.printer.acceleration[0]
+        
+        delta = bool(Path.axis_config == Path.AXIS_CONFIG_DELTA)
+
         path_back = {"Z": -z}
         # Move until endstop is hits
-        p = RelativePath(path_back, speed, accel, True)
-
+        p = RelativePath(path_back, speed, accel, True, False, True, False)
         self.wait_until_done()
         self.add_path(p)
         self.wait_until_done()

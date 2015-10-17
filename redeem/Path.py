@@ -215,9 +215,10 @@ class Path:
 
     def needs_splitting(self):
         """ Return true if this is a delta segment and longer than 1 mm """
+        # If there is no movement along the XY axis (Z+extruders) only, don't split.
         return (Path.axis_config == Path.AXIS_CONFIG_DELTA 
-            and self.get_magnitude() > self.split_size
-            and np.any(self.vec[:2])) # If there is no movement along the XY axis (Z+extruders) only, don't split.
+            and self.get_magnitude() > self.split_size 
+            and ("X" in self.axes or "Y" in self.axes))
 
     def get_magnitude(self):
         """ Returns the magnitde in XYZ dim """
@@ -244,7 +245,7 @@ class Path:
         path_segments = []
 
         for index, segment in enumerate(vec_segments):
-            path = AbsolutePath(segment, self.speed, self.cancelable, self.use_bed_matrix, False)
+            path = AbsolutePath(segment, self.speed, self.accel, self.cancelable, self.use_bed_matrix, False)
             if index is not 0:
                 path.set_prev(path_segments[-1])
             else:

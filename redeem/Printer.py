@@ -96,6 +96,9 @@ class Printer:
 
         self.config.save(filename)
 
+    def set_endstop_config(es, config):
+        
+
     def load_bed_compensation_matrix(self):
         mat = self.config.get('Geometry', 'bed_compensation_matrix').split(",")
         mat = np.matrix(np.array([float(i) for i in mat]).reshape(3, 3))

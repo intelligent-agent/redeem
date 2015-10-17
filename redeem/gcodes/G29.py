@@ -28,6 +28,8 @@ class G29(GCodeCommand):
             self.printer.processor.execute(G)
             self.printer.path_planner.wait_until_done()
 
+        logging.debug(self.printer.probe_heights)
+
         # Remove the offset from the probed points        
         self.printer.probe_heights -= min(self.printer.probe_heights)
 
@@ -39,6 +41,8 @@ class G29(GCodeCommand):
 
         # Update the bed compensation matrix
         Path.update_autolevel_matrix(self.printer.probe_points, self.printer.probe_heights)
+        logging.debug("New Bed level matrix: ")
+        logging.debug(Path.matrix_bed_comp)
 
 
     def get_description(self):

@@ -39,8 +39,9 @@ class G30(GCodeCommand):
         remaining_z = self.printer.path_planner.probe(probe_length) # Probe one cm. TODO: get this from config
         probe_diff = probe_length-remaining_z
         # Update the current Z-position
-        logging.info("G92 Z{:.10}".format(-probe_diff*1000.0))
-        G92 = Gcode({"message": "G92 Z{:.10}".format(-probe_diff*1000.0), "prot": g.prot})
+        #probe_diff = 0
+        logging.info("G92 Z{:.10}".format(0*1000.0))
+        G92 = Gcode({"message": "G92 Z{:.10}".format(0*1000.0), "prot": g.prot})
         self.printer.processor.execute(G92)
 
         logging.info("Found Z probe height {} at (X, Y) = ({}, {})".format(probe_diff, point["X"], point["Y"]))

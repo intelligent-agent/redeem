@@ -197,7 +197,7 @@ void PathPlanner::queueBatchMove(FLOAT_T* batchData, int batchSize, FLOAT_T spee
 			axis_diff[axis] = p->delta[axis] / axisStepsPerM[axis];
 			if(p->delta[axis]) 
 				p->setMoveOfAxis(axis);			
-            LOG( "Axis "<< axis << " length is " << axis_diff[axis] << std::endl);
+            //LOG( "Axis "<< axis << " length is " << axis_diff[axis] << std::endl);
 		}
 		
 		if(p->isNoMove()){
@@ -223,11 +223,11 @@ void PathPlanner::queueBatchMove(FLOAT_T* batchData, int batchSize, FLOAT_T spee
                             axis_diff[E_AXIS] * axis_diff[E_AXIS] + 
                             axis_diff[H_AXIS] * axis_diff[H_AXIS]);
 
-        LOG("Distance in m:     " << p->distance << std::endl);
-        LOG("Speed in m/s:      " << p->speed << std::endl);
-        LOG("Accel in m/s²:     " << p->accel << std::endl);
-        LOG("StartSpeed in m/s: " << p->startSpeed << std::endl);
-        LOG("EndSpeed in m/s:   " << p->endSpeed << std::endl);
+        //LOG("Distance in m:     " << p->distance << std::endl);
+        //LOG("Speed in m/s:      " << p->speed << std::endl);
+        //LOG("Accel in m/s²:     " << p->accel << std::endl);
+        //LOG("StartSpeed in m/s: " << p->startSpeed << std::endl);
+        //LOG("EndSpeed in m/s:   " << p->endSpeed << std::endl);
 
 		calculateMove(p, axis_diff);
 		updateTrapezoids();
@@ -254,9 +254,9 @@ void PathPlanner::queueBatchMove(FLOAT_T* batchData, int batchSize, FLOAT_T spee
             linesTicksQueued = 0;
 			lineAvailable.notify_all();
 		}
-		LOG( "Line finished (" << linesQueued << " lines ready)." << std::endl);
+		//LOG( "Line finished (" << linesQueued << " lines ready)." << std::endl);
 	}
-	LOG( "End batch queuing move command" << std::endl);
+	//LOG( "End batch queuing move command" << std::endl);
 	PyEval_RestoreThread(_save);
 }
 
@@ -286,13 +286,13 @@ void PathPlanner::calculateMove(Path* p, FLOAT_T axis_diff[NUM_AXES]){
     float timeForMove = p->distance/p->speed;
     p->timeInTicks = timeForMove*F_CPU;
 	
-    LOG( "CalucluateMove: Time for move is: " << timeForMove << " s" << std::endl);
-    LOG( "CalucluateMove: Time in ticks:    " << p->timeInTicks << " ticks" << std::endl);
+    //LOG( "CalucluateMove: Time for move is: " << timeForMove << " s" << std::endl);
+    //LOG( "CalucluateMove: Time in ticks:    " << p->timeInTicks << " ticks" << std::endl);
 
     // Compute the slowest allowed interval (ticks/step), so maximum feedrate is not violated
     unsigned int limitInterval = (float)p->timeInTicks/(float)p->stepsRemaining; // until not violated by other constraints it is your target speed
-    LOG( "CalucluateMove: StepsRemaining " << p->stepsRemaining << " steps" << std::endl);
-    LOG( "CalucluateMove: limitInterval is " << limitInterval << " steps/s" << std::endl);
+    //LOG( "CalucluateMove: StepsRemaining " << p->stepsRemaining << " steps" << std::endl);
+    //LOG( "CalucluateMove: limitInterval is " << limitInterval << " steps/s" << std::endl);
         
     for(int i=0; i<NUM_AXES; i++){
         if(p->isAxisMove(i)){
@@ -304,7 +304,7 @@ void PathPlanner::calculateMove(Path* p, FLOAT_T axis_diff[NUM_AXES]){
         //LOG( "CalucluateMove: AxisInterval " << i << ": " << axisInterval[i] << std::endl);
         //LOG( "CalucluateMove: AxisAccel   " << i << ": " << maxAccelerationMMPerSquareSecond[i] << std::endl);
     }
-    LOG( "CalucluateMove: limitInterval is " << limitInterval << " steps/s" << std::endl);
+    //LOG( "CalucluateMove: limitInterval is " << limitInterval << " steps/s" << std::endl);
     p->fullInterval = limitInterval; // This is our target speed
 	
     // new time at full speed = limitInterval*p->stepsRemaining [ticks]
@@ -332,9 +332,7 @@ void PathPlanner::calculateMove(Path* p, FLOAT_T axis_diff[NUM_AXES]){
         }
     }
 
-
-   
-    LOG("slowest_axis_plateau_time_repro: "<<slowest_axis_plateau_time_repro<<std::endl);
+    //LOG("slowest_axis_plateau_time_repro: "<<slowest_axis_plateau_time_repro<<std::endl);
     //LOG("axisInterval[p->primaryAxis]: " << axisInterval[p->primaryAxis] << std::endl);
 
     // Errors for delta move are initialized in timer (except extruder)
@@ -344,8 +342,8 @@ void PathPlanner::calculateMove(Path* p, FLOAT_T axis_diff[NUM_AXES]){
 
     //Now we can calculate the new primary axis acceleration, so that the slowest axis max acceleration is not violated
     p->fAcceleration = 262144.0*p->accelerationPrim/F_CPU; // (2^18)
-    LOG("p->accelerationPrim: " << p->accelerationPrim << " steps/s²"<< std::endl);
-    LOG("p->fAcceleration: " << p->fAcceleration << std::endl);
+    //LOG("p->accelerationPrim: " << p->accelerationPrim << " steps/s²"<< std::endl);
+    //LOG("p->fAcceleration: " << p->fAcceleration << std::endl);
 
     p->accelerationDistance2 = 2.0*p->distance*slowest_axis_plateau_time_repro*p->fullSpeed/F_CPU; // m^2/s^2
     p->startSpeed = p->endSpeed = p->minSpeed = safeSpeed(p);
@@ -353,11 +351,11 @@ void PathPlanner::calculateMove(Path* p, FLOAT_T axis_diff[NUM_AXES]){
     if (p->startSpeed * p->startSpeed + p->accelerationDistance2 >= p->fullSpeed * p->fullSpeed)
         p->setNominalMove();
 	
-    LOG("fullInterval: " << p->fullInterval << " ticks" << std::endl);
-    LOG("fullSpeed: " << p->fullSpeed << " m/s" << std::endl);
+    //LOG("fullInterval: " << p->fullInterval << " ticks" << std::endl);
+    //LOG("fullSpeed: " << p->fullSpeed << " m/s" << std::endl);
 
     p->vMax = F_CPU / p->fullInterval; // maximum steps per second, we can reach   
-    LOG("vMax for path is : " << p->vMax << " steps/s "<< std::endl);	
+    //LOG("vMax for path is : " << p->vMax << " steps/s "<< std::endl);	
 }
 
 /** Update parameter used by updateTrapezoids
@@ -368,23 +366,23 @@ void Path::updateStepsParameter(){
     if(areParameterUpToDate() || isWarmUp()) 
         return;
 
-    LOG( "Path::updateStepsParameter()"<<std::endl);
+    //LOG( "Path::updateStepsParameter()"<<std::endl);
     FLOAT_T startFactor = startSpeed * invFullSpeed;
     FLOAT_T endFactor   = endSpeed   * invFullSpeed;
     vStart = vMax * startFactor; //starting speed
     vEnd   = vMax * endFactor;
-    LOG("vStart is " << vStart << " steps/s" <<std::endl);
+    //LOG("vStart is " << vStart << " steps/s" <<std::endl);
     FLOAT_T vmax2 = vMax*vMax;    
     accelSteps = (((vmax2 - (vStart * vStart)) / (accelerationPrim * 2)) + 1); // Always add 1 for missing precision
     decelSteps = (((vmax2 - (vEnd   * vEnd  )) / (accelerationPrim * 2)) + 1);	
 
-    LOG("accelSteps before cap: " << accelSteps << " steps" <<std::endl);
+    //LOG("accelSteps before cap: " << accelSteps << " steps" <<std::endl);
     if(accelSteps+decelSteps >= stepsRemaining){   // can't reach limit speed
         unsigned int red = (accelSteps+decelSteps + 2 - stepsRemaining) >> 1;
         accelSteps = accelSteps-std::min(accelSteps,red);
         decelSteps = decelSteps-std::min(decelSteps,red);
     }
-    LOG("accelSteps: " << accelSteps << " steps" <<std::endl);
+    //LOG("accelSteps: " << accelSteps << " steps" <<std::endl);
 
     setParameterUpToDate();
 }
@@ -406,19 +404,19 @@ void PathPlanner::updateTrapezoids(){
     Path *act = &lines[linesWritePos];
     unsigned int maxfirst = linesPos; // first non fixed segment
 
-    LOG("UpdateTRapezoids:: "<<std::endl);
+    //LOG("UpdateTRapezoids:: "<<std::endl);
     
     // Search last fixed element
     while(first != maxfirst && !lines[first].isEndSpeedFixed()){
-        LOG("caling previousPlannerIndex"<<std::endl);
+        //LOG("caling previousPlannerIndex"<<std::endl);
         previousPlannerIndex(first);
     }
     if(first != linesWritePos && lines[first].isEndSpeedFixed()){
-        LOG("caling nextPlannerIndex"<<std::endl);
+        //LOG("caling nextPlannerIndex"<<std::endl);
         nextPlannerIndex(first);
     }
     if(first == linesWritePos){   // Nothing to plan
-        LOG("Nothing to plan"<<std::endl);
+        //LOG("Nothing to plan"<<std::endl);
         act->block();
         act->setStartSpeedFixed(true);
         act->updateStepsParameter();
@@ -435,7 +433,7 @@ void PathPlanner::updateTrapezoids(){
     previousPlannerIndex(previousIndex);
     Path *previous = &lines[previousIndex];
 
-	LOG("UpdateTRapezoids:: computeMAxJunctionSpeed"<<std::endl);
+	//LOG("UpdateTRapezoids:: computeMAxJunctionSpeed"<<std::endl);
 
 
     computeMaxJunctionSpeed(previous,act); // Set maximum junction speed if we have a real move before
@@ -461,7 +459,7 @@ void PathPlanner::updateTrapezoids(){
     act->updateStepsParameter();
     act->unblock();
 
-    LOG("UpdateTRapezoids:: done"<<std::endl);
+    //LOG("UpdateTRapezoids:: done"<<std::endl);
 }
 
 // TODO: Remove dependency on Extruder. 
@@ -673,9 +671,6 @@ void PathPlanner::run() {
 			cur->updateStepsParameter();
 		}
 		
-
-
-
 		vMaxReached = cur->vStart;
         // reset commands buffer every time
         cur->commands.clear();
@@ -684,7 +679,7 @@ void PathPlanner::run() {
         directionMask = 0;
         cancellableMask = 0;
         for(int i=0; i<NUM_AXES; i++){
-            LOG("Direction for axis " << i << " is " << cur->isAxisPositiveMove(i) << std::endl);
+            //LOG("Direction for axis " << i << " is " << cur->isAxisPositiveMove(i) << std::endl);
             directionMask |= (cur->isAxisPositiveMove(i) << i);
         }
 		if(cur->isCancelable()) {
@@ -692,15 +687,15 @@ void PathPlanner::run() {
     			cancellableMask |= (cur->isAxisMove(i) << i);
 		}		
         LOG("Direction mask: " << directionMask << std::endl);
-        LOG("Canel     mask: " << cancellableMask << std::endl);
+        LOG("Cancel    mask: " << cancellableMask << std::endl);
 		assert(cur);
 		assert(cur->commands);
 
 
-        LOG("startSpeed:   " << cur->startSpeed << std::endl);
-        LOG("fullSpeed:    " << cur->fullSpeed << std::endl);
-        LOG("acceleration: " << cur->accel << std::endl);
-        LOG("accelTime:    " << ((cur->fullSpeed - cur->startSpeed)/cur->accel) << std::endl);
+        //LOG("startSpeed:   " << cur->startSpeed << std::endl);
+        //LOG("fullSpeed:    " << cur->fullSpeed << std::endl);
+        //LOG("acceleration: " << cur->accel << std::endl);
+        //LOG("accelTime:    " << ((cur->fullSpeed - cur->startSpeed)/cur->accel) << std::endl);
         
         
 
