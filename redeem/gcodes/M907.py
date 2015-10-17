@@ -1,10 +1,8 @@
 """
 GCode M907
-Set stepper current in mA
+Set stepper current in A
 
-Author: Elias Bakken
-email: elias.bakken(at)gmail(dot)com
-Website: http://www.thing-printer.com
+Author: quillford
 License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 """
 
@@ -20,8 +18,8 @@ class M907(GCodeCommand):
             axis = g.token_letter(i)
             stepper = self.printer.steppers[axis]
 
-            # Cap at 2.5A and convert to A.
-            stepper.set_current_value(min(int(g.token_value(i)), 2500)/1000.0)
+            # Cap at 2.5A and set the current
+            stepper.set_current_value(min(int(g.token_value(i)), 2.5)/1.0)
 
     def get_description(self):
-        return "Set stepper current in mA"
+        return "Set stepper current in A"
