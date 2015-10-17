@@ -1,6 +1,6 @@
 """
 GCode M190
-Set heated bed temperature and for it to be reached
+Set heated bed temperature and wait for it to be reached
 
 Author: Mathieu Monney
 email: zittix(at)xwaves(dot)net
