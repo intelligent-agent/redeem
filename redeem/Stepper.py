@@ -42,7 +42,8 @@ class Stepper(object):
         self.enabled 	     = False	    
         self.in_use          = False        
         self.steps_pr_mm     = 1            
-        self.microsteps      = 1.0          
+        self.microsteps      = 1.0     
+        self.microstepping   = 0
         self.direction       = 1
         self.internalStepPin = (1 << internalStepPin)
         self.internalDirPin  = (1 << internalDirPin)
@@ -152,7 +153,7 @@ class Stepper_00B1(Stepper):
         stepper_num = Path.axis_to_index(self.name)
         Path.steps_pr_meter[stepper_num] = self.get_steps_pr_meter()
         logging.debug("Updated stepper "+self.name+" to microstepping "+str(value)+" = "+str(self.microsteps))   
-
+        self.microstepping = value
 
     def set_current_value(self, i_rms):
         """ Current chopping limit (This is the value you can change) """
@@ -204,13 +205,8 @@ class Stepper_00B1(Stepper):
             logging.warning("Tried to set illegal value for stepper decay: "+str(value))
             return
 
-        logging.debug("Before: "+bin(self.shift_reg.state))        
-        self.shift_reg.set_state(state, 0x0F)
-        
-        logging.debug("After: "+bin(self.shift_reg.state))
-
-        logging.debug("Stepper "+self.name+" has updated decay mode: "+str(value))
-        
+        self.shift_reg.set_state(state, 0x0E)
+        self.decay = value # For saving the setting with M500
 
 class Stepper_00B2(Stepper_00B1):
 
@@ -322,6 +318,7 @@ class Stepper_00A4(Stepper):
         # update the Path class with new values
         stepper_num = Path.axis_to_index(self.name)
         Path.steps_pr_meter[stepper_num] = self.get_steps_pr_meter()
+        logging.debug("Updated stepper "+self.name+" to microstepping "+str(value)+" = "+str(self.microsteps))   
         self.update()
 
     def set_current_value(self, iChop):

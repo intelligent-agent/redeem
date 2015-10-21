@@ -59,7 +59,7 @@ from Delta import Delta
 from Enable import Enable
 from PWM import PWM
 
-version = "1.0.5~Commando"
+version = "1.1.0~Raw Deal"
 
 # Default logging level is set to debug
 logging.basicConfig(level=logging.DEBUG,
@@ -172,6 +172,10 @@ class Redeem:
             # Add soft end stops
             Path.soft_min[Path.axis_to_index(name)] = printer.config.getfloat('Endstops', 'soft_end_stop_min_' + name)
             Path.soft_max[Path.axis_to_index(name)] = printer.config.getfloat('Endstops', 'soft_end_stop_max_' + name)
+            slave = printer.config.get('Steppers', 'slave_' + name)
+            if slave:
+                Path.add_slave(name, slave)
+                logging.debug("Axis "+name+" has slave "+slave)
 
         # Commit changes for the Steppers
         #Stepper.commit()

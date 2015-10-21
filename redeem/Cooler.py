@@ -84,10 +84,6 @@ class Cooler:
                 power = self.P*error  # The formula for the PID (only P)				
                 power = max(min(power, 1.0), 0.0)                             # Normalize to 0,1
 
-            # If the Thermistor is disconnected or running away or something
-            if self.current_temp <= 5 or self.current_temp > 250:
-                power = 0.0
-
             # Invert the control since it'a a cooler
             power = 1.0 - power
             #logging.info("Err: {}, Pwr: {}".format(error, power))

@@ -8,6 +8,7 @@ How to add a new command
 
 1. Create a new file in the gcodes/ directory with the name of your GCode command and the **py** extension. (like M106.py).
 2. Fill the file with the following template and change it to fit your needs. You have to change the **<GCodeName>** with your GCode name (e.g. M106):
+
         """
         GCode <GCodeName>
         <GCode description>

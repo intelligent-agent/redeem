@@ -32,6 +32,31 @@ import_array();
 #error Unsupported float type
 #endif
 
+// Grab a 5 element array as a Python 5-tuple
+%typemap(in) FLOAT_T[5](FLOAT_T temp[5]) {   // temp[4] becomes a local variable
+  if (PyTuple_Check($input)) {
+    if (!PyArg_ParseTuple($input,""FLOAT_TUPLE_LETTER""FLOAT_TUPLE_LETTER""FLOAT_TUPLE_LETTER""FLOAT_TUPLE_LETTER""FLOAT_TUPLE_LETTER,temp,temp+1,temp+2,temp+3,temp+4)) {
+      PyErr_SetString(PyExc_TypeError,"tuple must have 5 elements");
+      return NULL;
+    }
+    $1 = &temp[0];
+  } else {
+    PyErr_SetString(PyExc_TypeError,"expected a tuple.");
+    return NULL;
+  }
+}
+%typemap(in) unsigned long[5](unsigned long temp[5]) {   // temp[4] becomes a local variable
+  if (PyTuple_Check($input)) {
+    if (!PyArg_ParseTuple($input,"kkkkk",temp,temp+1,temp+2,temp+3,temp+4)) {
+      PyErr_SetString(PyExc_TypeError,"tuple must have 5 elements");
+      return NULL;
+    }
+    $1 = &temp[0];
+  } else {
+    PyErr_SetString(PyExc_TypeError,"expected a tuple.");
+    return NULL;
+  }
+}
 // Grab a 4 element array as a Python 4-tuple
 %typemap(in) FLOAT_T[4](FLOAT_T temp[4]) {   // temp[4] becomes a local variable
   if (PyTuple_Check($input)) {
@@ -90,78 +115,30 @@ import_array();
 %apply (FLOAT_T* IN_ARRAY1, int DIM1 ) { (FLOAT_T* batchData, int batchSize) }
 // %apply (int DIM1, FLOAT_T* IN_ARRAY1, FLOAT_T NONZERO, bool INPUT, bool INPUT) { (int batchSize, FLOAT_T* batchData, FLOAT_T speed, bool cancelable, bool optimize) }
 
-
-class Extruder {
-public:
-	void setMaxFeedrate(FLOAT_T rate);
-
-	void setMaxStartFeedrate(FLOAT_T maxstartfeedrate);
-
-	void setAxisStepsPerMeter(unsigned long stepPerM);
-
-	void setPrintAcceleration(FLOAT_T accel);
-
-	void setTravelAcceleration(FLOAT_T accel);
-
-	unsigned int getStepperCommandPosition();
-
-	void setStepperCommandPosition(unsigned int pose);
-
-	void setDirectionInverted(bool inverted);
-};
-
 class PathPlanner {
 public:
-
 	PathPlanner(unsigned int cacheSize);
-
 	bool initPRU(const std::string& firmware_stepper, const std::string& firmware_endstops);
-
 	bool queueSyncEvent(bool isBlocking = true);
-
-  int waitUntilSyncEvent();
-
-  void clearSyncEvent();
-
-  void queueMove(FLOAT_T startPos[NUM_AXIS], FLOAT_T endPos[NUM_AXIS], FLOAT_T speed, bool cancelable, bool optimize);
-
-	void queueBatchMove(FLOAT_T* batchData, int batchSize, FLOAT_T speed, bool cancelable, bool optimize);
-
-  void runThread();
-
-  void stopThread(bool join);
-
-  void waitUntilFinished();
-
-  void setExtruder(int extNr);
-
-  Extruder& getExtruder(int extNr);
-
+    int waitUntilSyncEvent();
+    void clearSyncEvent();
+    void queueMove(FLOAT_T startPos[NUM_AXES], FLOAT_T endPos[NUM_AXES], FLOAT_T speed, FLOAT_T accel, bool cancelable, bool optimize);
+	void queueBatchMove(FLOAT_T* batchData, int batchSize, FLOAT_T speed, FLOAT_T accel, bool cancelable, bool optimize);
+    void runThread();
+    void stopThread(bool join);
+    void waitUntilFinished();
 	void setPrintMoveBufferWait(int dt);
-
 	void setMinBufferedMoveTime(int dt);
-
 	void setMaxBufferedMoveTime(int dt);
-
-	void setMaxFeedrates(FLOAT_T rates[NUM_MOVING_AXIS]);
-
-	void setAxisStepsPerMeter(unsigned long stepPerM[NUM_MOVING_AXIS]);
-
-	void setPrintAcceleration(FLOAT_T accel[NUM_MOVING_AXIS]);
-
-	void setTravelAcceleration(FLOAT_T accel[NUM_MOVING_AXIS]);
-
-  void setMaxJerk(FLOAT_T maxJerk, FLOAT_T maxZJerk);
-
-  void suspend();
-  
-  void resume();
-
-   void setDriveSystem(int driveSystem);
-
-  void reset();
-  
-  virtual ~PathPlanner();
+	void setMaxSpeeds(FLOAT_T speeds[NUM_AXES]);
+	void setMinSpeeds(FLOAT_T speeds[NUM_AXES]);
+	void setAxisStepsPerMeter(FLOAT_T stepPerM[NUM_AXES]);
+	void setAcceleration(FLOAT_T accel[NUM_AXES]);
+	void setJerks(FLOAT_T jerks[NUM_AXES]);
+    void suspend();
+    void resume();
+    void reset();
+    virtual ~PathPlanner();
 
 };
 

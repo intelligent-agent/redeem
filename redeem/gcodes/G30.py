@@ -30,32 +30,56 @@ class G30(GCodeCommand):
             point["X"] = float(g.get_value_by_letter("X"))
         if g.has_letter("Y"): # Override Y
             point["Y"] = float(g.get_value_by_letter("Y"))
+        if g.has_letter("Z"): # Override Z
+            point["Z"] = float(g.get_value_by_letter("Z"))        
 
-        probe_length = 0.01
+        # Get probe length, if present, else use 1 cm. 
+        if g.has_letter("D"):
+            probe_length = float(g.get_value_by_letter("D"))
+        else:
+            probe_length = self.printer.config.getfloat('Probe', 'length')
 
-        G0 = Gcode({"message": "G0 X{} Y{}".format(point["X"], point["Y"]), "prot": g.prot})    
+        # Get probe speed. If not preset, use printers curent speed. 
+        if g.has_letter("F"):
+            probe_speed = float(g.get_value_by_letter("F")) / 60000.0
+        else:
+            probe_speed = self.printer.config.getfloat('Probe', 'length')
+        
+        # Get acceleration. If not present, use value from config.        
+        if g.has_letter("A"):
+            probe_accel = float(g.get_value_by_letter("A"))
+        else:
+            probe_accel = self.printer.config.getfloat('Probe', 'accel')
+        
+        # Move to the position
+        G0 = Gcode({"message": "G0 X{} Y{} Z{}".format(point["X"], point["Y"], point["Z"]), "prot": g.prot})    
         self.printer.processor.execute(G0)
         self.printer.path_planner.wait_until_done()
-        remaining_z = self.printer.path_planner.probe(probe_length) # Probe one cm. TODO: get this from config
-        probe_diff = probe_length-remaining_z
-        # Update the current Z-position
-        logging.info("G92 Z{:.10}".format(-probe_diff*1000.0))
-        G92 = Gcode({"message": "G92 Z{:.10}".format(-probe_diff*1000.0), "prot": g.prot})
-        self.printer.processor.execute(G92)
+        bed_dist = self.printer.path_planner.probe(probe_length, probe_speed, probe_accel) # Probe one cm. TODO: get this from config
+        logging.debug("Bed dist: "+str(bed_dist*1000)+" mm")
 
-        logging.info("Found Z probe height {} at (X, Y) = ({}, {})".format(probe_diff, point["X"], point["Y"]))
+        # Add the probe offsets to the points
+        
+        #logging.info("Found Z probe height {} at (X, Y) = ({}, {})".format(bed_dist, point["X"], point["Y"]))
         if g.has_letter("S"):
             if not g.has_letter("P"):
                 logging.warning("G30: S-parameter was set, but no index (P) was set.")
             else:
-                self.printer.probe_heights[index] = probe_diff
+                self.printer.probe_heights[index] = bed_dist
                 self.printer.send_message(g.prot, 
-                    "Found Z probe height {} at (X, Y) = ({}, {})".format(probe_diff, point["X"], point["Y"]))
+                    "Found Z probe height {} at (X, Y) = ({}, {})".format(bed_dist, point["X"], point["Y"]))
         
 
     def get_description(self):
         return "Probe the bed at current point"
 
+    def get_long_description(self):
+        return ("Probe the bed at the current position, or if specified, a point "
+                "previously set by M557. X, Y, and Z starting probe positions can be overridden, "
+                "D sets the probe length, or taken from config if nothing is specified. "
+                "F sets the probe speed. If not present, it's taken from the config"
+                "A sets the probe acceleration. If not present, it's taken from the config")
+   
     def is_buffered(self):
         return True
 

@@ -146,10 +146,10 @@ MASK_Z_MAX:
     OR r8, r8, r15
 
 PUBLISH: 
-    NOT r8.w0, r8.w0        //Invert so that the 1 (meaning do not move) becomes 0 for masking the step in PRU0
-    SBCO r7, C28, 0, 8   // Publish the endstop states from r7/r8
+    NOT r8.w0, r8.w0         //Invert so that the 1 (meaning do not move) becomes 0 for masking the step in PRU0
+    SBCO r7, C28, 0, 8       // Publish the endstop states from r7/r8
 
-    MOV r0, 200           // Add some delay
+    MOV r0, END_STOP_DELAY   // Add some delay
 DELAY:
     SUB r0, r0, 1
     QBNE DELAY, r0, 0

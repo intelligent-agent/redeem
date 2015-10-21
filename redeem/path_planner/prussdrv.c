@@ -81,7 +81,8 @@ int __prussdrv_memmap_init(void)
     }
     fd = open(PRUSS_UIO_DRV_PRUSS_BASE, O_RDONLY);
     if (fd >= 0) {
-        read(fd, hexstring, PRUSS_UIO_PARAM_VAL_LEN);
+        if(read(fd, hexstring, PRUSS_UIO_PARAM_VAL_LEN) == 0)
+            ;
         prussdrv.pruss_phys_base =
             strtoul(hexstring, NULL, HEXA_DECIMAL_BASE);
         close(fd);
@@ -89,7 +90,8 @@ int __prussdrv_memmap_init(void)
         return -1;
     fd = open(PRUSS_UIO_DRV_PRUSS_SIZE, O_RDONLY);
     if (fd >= 0) {
-        read(fd, hexstring, PRUSS_UIO_PARAM_VAL_LEN);
+        if(read(fd, hexstring, PRUSS_UIO_PARAM_VAL_LEN) == 0)
+            ;
         prussdrv.pruss_map_size =
             strtoul(hexstring, NULL, HEXA_DECIMAL_BASE);
         close(fd);
@@ -218,7 +220,8 @@ int __prussdrv_memmap_init(void)
 
     fd = open(PRUSS_UIO_DRV_EXTRAM_BASE, O_RDONLY);
     if (fd >= 0) {
-        read(fd, hexstring, PRUSS_UIO_PARAM_VAL_LEN);
+        if(read(fd, hexstring, PRUSS_UIO_PARAM_VAL_LEN) == 0)
+            ;
         prussdrv.extram_phys_base =
             strtoul(hexstring, NULL, HEXA_DECIMAL_BASE);
         close(fd);
@@ -227,7 +230,8 @@ int __prussdrv_memmap_init(void)
 
     fd = open(PRUSS_UIO_DRV_EXTRAM_SIZE, O_RDONLY);
     if (fd >= 0) {
-        read(fd, hexstring, PRUSS_UIO_PARAM_VAL_LEN);
+        if(read(fd, hexstring, PRUSS_UIO_PARAM_VAL_LEN) == 0)
+            ;
         prussdrv.extram_map_size =
             strtoul(hexstring, NULL, HEXA_DECIMAL_BASE);
         close(fd);
@@ -521,7 +525,8 @@ unsigned int prussdrv_pru_wait_event(unsigned int host_interrupt, unsigned int t
 
 	}
 	
-	read(fd, &event_count, sizeof(unsigned int));
+	if(read(fd, &event_count, sizeof(unsigned int)) == 0)
+        ;
 	
     return event_count;
 }
@@ -639,21 +644,18 @@ int prussdrv_map_peripheral_io(unsigned int per_id, void **address)
 unsigned int prussdrv_get_phys_addr(const void *address)
 {
     unsigned int retaddr = 0;
-    if ((address >= prussdrv.pru0_dataram_base)
-        && (address <
-            prussdrv.pru0_dataram_base + prussdrv.pruss_map_size)) {
+    if ((address >= (void *) prussdrv.pru0_dataram_base)
+        && (address < (void *) prussdrv.pru0_dataram_base + prussdrv.pruss_map_size)) {
         retaddr =
             ((unsigned int) ((char*)address - prussdrv.pru0_dataram_base) +
              prussdrv.pru0_dataram_phy_base);
-    } else if ((address >= prussdrv.l3ram_base)
-               && (address <
-                   prussdrv.l3ram_base + prussdrv.l3ram_map_size)) {
+    } else if ((address >= (void *) prussdrv.l3ram_base)
+               && (address < (void *) prussdrv.l3ram_base + prussdrv.l3ram_map_size)) {
         retaddr =
             ((unsigned int) ((char*)address - prussdrv.l3ram_base) +
              prussdrv.l3ram_phys_base);
-    } else if ((address >= prussdrv.extram_base)
-               && (address <
-                   prussdrv.extram_base + prussdrv.extram_map_size)) {
+    } else if ((address >= (void *) prussdrv.extram_base)
+               && (address < (void *) prussdrv.extram_base + prussdrv.extram_map_size)) {
         retaddr =
             ((unsigned int) ((char*)address - prussdrv.extram_base) +
              prussdrv.extram_phys_base);

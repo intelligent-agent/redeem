@@ -127,7 +127,7 @@ class PruFirmware:
         with open(configFile_0, 'w') as configFile:
             if self.revision in ["00A3"]:
                 configFile.write("#define REV_A3\n")
-            elif self.revision in ["00B2"]:
+            elif self.revision in ["00B1", "00B2", "00B3"]:
                 configFile.write("#define REV_B2\n")
             else:
                 configFile.write("#define REV_A4\n")
@@ -175,6 +175,11 @@ class PruFirmware:
                     mask += cur
                 bin_mask = "0b"+(bin(mask)[2:]).zfill(16)
                 configFile.write("#define STEPPER_MASK_" + axis + "\t\t" + bin_mask + "\n")
+        
+            # Add end stop delay to the config file
+            end_stop_delay = self.config.getint('Endstops', 'end_stop_delay_cycles')
+            configFile.write("#define END_STOP_DELAY " +str(end_stop_delay)+ "\n");
+
 
         if self.revision in ["0A4A", "00A4"]:
             configFile_1 = os.path.join(

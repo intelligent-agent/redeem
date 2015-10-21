@@ -55,19 +55,24 @@ class Servo:
         self.running = True
         self.t.start()
 
-        self.pwm = PWM_pin(channel, 100, self.current_pulse_width)
+        # Branch based on channel type.
 
-        # Set up the Shift register for enabling this servo
-        if channel == "P9_14":
-            shiftreg_nr = 3
-        elif channel == "P9_16":
-            shiftreg_nr = 2
-        else:
-            logging.warning("Tried to assign servo to an unknown channel/pin: "+str(channel))
-            return
+        if type(channel) == int: # Revision A
+            self.pwm = PWM(channel, 100, self.current_pulse_width)
+        else: # Revision B
+            # Set up the Shift register for enabling this servo
+            if channel == "P9_14":
+                shiftreg_nr = 3
+                self.pwm = PWM_pin(channel, 100, self.current_pulse_width)
+            elif channel == "P9_16":
+                shiftreg_nr = 2
+                self.pwm = PWM_pin(channel, 100, self.current_pulse_width)
+            else:
+                logging.warning("Tried to assign servo to an unknown channel/pin: "+str(channel))
+                return        
 
-        ShiftRegister.make()
-        self.shift_reg = ShiftRegister.registers[shiftreg_nr]
+            ShiftRegister.make()
+            self.shift_reg = ShiftRegister.registers[shiftreg_nr]
         self.set_enabled()
 
     def set_enabled(self, is_enabled=True):

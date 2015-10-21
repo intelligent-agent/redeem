@@ -11,6 +11,15 @@ os.environ['OPT'] = " ".join(
 )
 
 
+import os
+from distutils.sysconfig import get_config_vars
+
+(opt,) = get_config_vars('OPT')
+os.environ['OPT'] = " ".join(
+    flag for flag in opt.split() if flag != '-Wstrict-prototypes'
+)
+
+
 pathplanner = Extension(
     '_PathPlannerNative', sources = [
         'redeem/path_planner/PathPlannerNative.i',
@@ -27,13 +36,14 @@ pathplanner = Extension(
         '-Ofast',
         '-fpermissive',
         '-D_GLIBCXX_USE_NANOSLEEP',
-        '-DBUILD_PYTHON_EXT=1', 
-        '-Wno-write-strings']
+        '-DBUILD_PYTHON_EXT=1',
+        '-Wno-write-strings', 
+        '-Wno-maybe-uninitialized']
 )
 
 setup(
     name = "Redeem",
-    version = "1.0.4",
+    version = "1.1.0",
     packages = find_packages(exclude=["redeem/path_planner"]),
     data_files=[
         ('redeem/firmware', [
