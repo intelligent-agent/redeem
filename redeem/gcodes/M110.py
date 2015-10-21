@@ -1,6 +1,6 @@
 """
 GCode M110
-Reset line counter
+Set current Gcode line number
 
 Author: Mathieu Monney
 email: zittix(at)xwaves(dot)net
@@ -15,12 +15,14 @@ except ImportError:
     from redeem.Gcode import Gcode
 
 class M110(GCodeCommand):
-
-    def execute(self, g):
-        Gcode.line_number = 0
+    def execute(self, gcode):
+        if gcode.has_letter("N"):  # Line number is specified
+            Gcode.line_number = gcode.get_int_by_letter("N",0)
+        else:  # No line number specified, reset the counter
+            Gcode.line_number = 0
 
     def get_description(self):
-        return "Reset GCode line counter"
+        return "Set current gcode line number"
 
     def is_buffered(self):
         return True
