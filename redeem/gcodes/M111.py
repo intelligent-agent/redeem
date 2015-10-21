@@ -16,15 +16,17 @@ import logging
 class M111(GCodeCommand):
 
     def execute(self, g):
-        if g.has_letter("S"):  # Get the feed rate
-            level = g.get_int_by_letter("S", 20)
-            if level in [10, 20, 30, 40, 50, 60]:
-                logging.getLogger().setLevel(level)
-                logging.info("Debug level set to "+str(level))
+        level = g.get_int_by_letter("S", 20)
+        if level in [10, 20, 30, 40, 50, 60]:
+            logging.getLogger().setLevel(level)
+            logging.info("Debug level set to "+str(level))
 
 
     def get_description(self):
         return "Set debug level"
+
+    def get_long_description(self):
+        return ("set debug level, S sets the level. If no S is present, it is set to 20 = Info")
 
     def is_buffered(self):
         return True

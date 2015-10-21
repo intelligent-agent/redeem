@@ -280,29 +280,33 @@ class PathPlanner:
             
         return
 
-    def probe(self, z):
-        old_feedrate = self.printer.feed_rate # Save old feedrate
+    def probe(self, z, speed, accel):
 
-        speed = Path.home_speed[0]*0.1
-        accel = self.printer.acceleration[0]
-        
-        delta = bool(Path.axis_config == Path.AXIS_CONFIG_DELTA)
-
-        path_back = {"Z": -z}
+        self.wait_until_done()
         # Move until endstop is hits
-        p = RelativePath(path_back, speed, accel, True, False, True, False)
-        self.wait_until_done()
-        self.add_path(p)
-        self.wait_until_done()
+        self.printer.ensure_steppers_enabled()
+        #push this new segment
+        start = (0.0, 0.0, 0.0, 0.0, 0.0)
+        steps = np.ceil(z*Path.steps_pr_meter[2])
+        z_dist = steps/Path.steps_pr_meter[2]
+        end   = (-z_dist, -z_dist, -z_dist, 0.0, 0.0)
 
-        self.printer.feed_rate = old_feedrate
+        logging.info("Steps total: "+str(steps))
+   
+        self.native_planner.queueMove(start,
+                                  end, 
+                                  speed, 
+                                  accel,
+                                  True,
+                                  True)
+
+        self.wait_until_done()
 
         import struct
         import mmap
 
         PRU_ICSS = 0x4A300000 
         PRU_ICSS_LEN = 512*1024
-
         RAM2_START = 0x00012000
 
         with open("/dev/mem", "r+b") as f:	       
@@ -311,10 +315,20 @@ class PathPlanner:
             steps_remaining = shared[3]
         logging.info("Steps remaining : "+str(steps_remaining))
 
-        # Update the current Z-position based on the probing
-        delta_z = steps_remaining/Path.steps_pr_meter[2]
-
-        return delta_z
+        steps -= steps_remaining
+        z_dist = steps/Path.steps_pr_meter[2]
+        start = (0.0, 0.0, 0.0, 0.0, 0.0)
+        end   = (z_dist, z_dist, z_dist, 0.0, 0.0)
+        
+        self.native_planner.queueMove(start,
+                                  end, 
+                                  speed, 
+                                  accel,
+                                  True,
+                                  False)
+        
+        self.wait_until_done()
+        return steps/Path.steps_pr_meter[2]
 
     def add_path(self, new):
         """ Add a path segment to the path planner """
@@ -362,6 +376,13 @@ class PathPlanner:
             #logging.info("Queueing move from "+str(new.start_pos[:5])+" to "+str(new.end_pos[:5]))
             self.printer.ensure_steppers_enabled()
             #push this new segment   
+
+            start = tuple(new.start_pos[:5])
+            end   = tuple(new.stepper_end_pos[:5])
+            can = bool(new.cancelable)
+            rel = bool(new.movement != Path.RELATIVE)
+            #logging.debug("Queueing "+str(start)+" "+str(end)+" "+str(new.speed)+" "+str(new.accel)+" "+str(can)+" "+str(rel))
+            
             self.native_planner.queueMove(tuple(new.start_pos[:5]),
                                       tuple(new.stepper_end_pos[:5]), 
                                       new.speed, 

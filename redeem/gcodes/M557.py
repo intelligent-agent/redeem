@@ -30,10 +30,16 @@ class M557(GCodeCommand):
         else:
             logging.warning("M557: Missing Y-parameter")
             return
-        if len(self.printer.probe_points) > p:
-            self.printer.probe_points[p] = {"X": X, "Y": Y}
+        if g.has_letter("Z"):
+            Z = float(g.get_value_by_letter("Z"))
         else:
-            self.printer.probe_points.append({"X": X, "Y": Y})
+            logging.warning("M557: Missing Z-parameter")
+            Z = 0
+
+        if len(self.printer.probe_points) > p:
+            self.printer.probe_points[p] = {"X": X, "Y": Y, "Z": Z}
+        else:
+            self.printer.probe_points.append({"X": X, "Y": Y, "Z": Z})
             self.printer.probe_heights.append(0)
             
 
