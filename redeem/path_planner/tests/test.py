@@ -13,18 +13,23 @@ t.setJerks(tuple([0.1]*5))
 
 t.runThread()
 
-start = (0, 0, 0, 0, 0)
-end = (-1, -1, -1, -1, -1)
-
-t.queueMove(start, end, 1.0, 1.0, False, False)
-t.waitUntilFinished()
-
 #start = (0, 0, 0, 0, 0)
-#end = (1.0, 1.0, 1.0, 1.0, 1.0)
-#t.queueMove(start,end,1,False, False)
+#end = (-1, -1, -1, -1, -1)
 
-t.queueMove(start, end, 3000, False, False)
+#t.queueMove(start, end, 1.0, 1.0, False, False)
+#t.waitUntilFinished()
+#t.stopThread(True)
+
+
+for i in range(10):
+    start = (0, 0, 0, 0, 0)
+    end = ((i%2)*0.02-0.01, 0, 0, 0, 0)
+    #end = (0.1, 0, 0, 0, 0)
+    #print start
+    #print end
+    t.queueMove(start, end, 1.0, 1.0, False, False)
+    
+#t.runThread()
 t.waitUntilFinished()
-
 t.stopThread(True)
 

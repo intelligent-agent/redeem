@@ -262,6 +262,7 @@ void PathPlanner::queueBatchMove(FLOAT_T* batchData, int batchSize, FLOAT_T spee
 
 void PathPlanner::queueMove(FLOAT_T startPos[NUM_AXES],FLOAT_T endPos[NUM_AXES], FLOAT_T speed, FLOAT_T accel, bool cancelable, bool optimize) {
 	FLOAT_T temp[NUM_AXES * 2];
+    LOG("Queue move"<< std::endl);
 	memcpy(temp, startPos, sizeof(FLOAT_T)*NUM_AXES);
 	memcpy(&temp[NUM_AXES], endPos, sizeof(FLOAT_T)*NUM_AXES);	
 	queueBatchMove( temp, NUM_AXES*2, speed, accel, cancelable, optimize);
@@ -277,8 +278,9 @@ FLOAT_T PathPlanner::safeSpeed(Path* p){
             safe = std::min(safe, minSpeeds[i]);
         }
     }
-    
-    return std::min(safe, p->fullSpeed);
+    safe = std::min(safe, p->fullSpeed);
+    //LOG("Safe speed: "<< safe << std::endl);
+    return safe;
 }
 
 void PathPlanner::calculateMove(Path* p, FLOAT_T axis_diff[NUM_AXES]){
@@ -308,11 +310,14 @@ void PathPlanner::calculateMove(Path* p, FLOAT_T axis_diff[NUM_AXES]){
     p->fullInterval = limitInterval; // This is our target speed
 	
     // new time at full speed = limitInterval*p->stepsRemaining [ticks]
-    timeForMove = (limitInterval * p->stepsRemaining); 
+    timeForMove = (limitInterval * p->stepsRemaining);
+    float inv_time_s = (float)F_CPU / timeForMove; 
     for(int i=0; i<NUM_AXES; i++){
         if(p->isAxisMove(i)){
             axisInterval[i] = timeForMove / p->delta[i];
-            p->speeds[i] = std::fabs(axis_diff[i] / timeForMove);
+            p->speeds[i] = axis_diff[i] * inv_time_s;
+            if(p->isAxisNegativeMove(i))
+                p->speeds[i] *= -1;
             //p->accels[i] = maxAccelerationMPerSquareSecond[i];
         }
         else 
@@ -435,7 +440,6 @@ void PathPlanner::updateTrapezoids(){
 
 	//LOG("UpdateTRapezoids:: computeMAxJunctionSpeed"<<std::endl);
 
-
     computeMaxJunctionSpeed(previous,act); // Set maximum junction speed if we have a real move before
     if(previous->isAxisOnlyMove(E_AXIS) != act->isAxisOnlyMove(E_AXIS)){
         previous->setEndSpeedFixed(true);
@@ -466,6 +470,7 @@ void PathPlanner::updateTrapezoids(){
 void PathPlanner::computeMaxJunctionSpeed(Path *previous, Path *current){
     // First we compute the normalized jerk for speed 1
     FLOAT_T dx = current->speeds[0] - previous->speeds[0];
+    LOG("dx = "<<dx<<std::endl);
     FLOAT_T dy = current->speeds[1] - previous->speeds[1];
     FLOAT_T dz = current->speeds[2] - previous->speeds[2];
     FLOAT_T de = std::fabs(current->speeds[3] - previous->speeds[3]);
@@ -625,14 +630,14 @@ void PathPlanner::run() {
         // and we do that until the buffer is not anymore half empty.
 		if(!isLinesBufferFilled() && cur->getWaitMS()>0 && waitUntilFilledUp) {
 			unsigned lastCount = 0;
-			//~ LOG("Waiting for buffer to fill up... " << linesCount  << " lines pending " << lastCount << std::endl);
+			LOG("Waiting for buffer to fill up. " << linesCount  << " lines pending, lastCount is " << lastCount << std::endl);
 			do {
 				lastCount = linesCount;				
 				lineAvailable.wait_for(lk,  std::chrono::milliseconds(printMoveBufferWait), [this,lastCount]{
                     return linesCount>lastCount || stop;
                 });				
 			} while(lastCount<linesCount && linesCount<moveCacheSize && !stop);
-			//~ LOG("Done waiting for buffer to fill up... " << linesCount  << " lines ready. " << lastCount << std::endl);			
+			LOG("Done waiting for buffer to fill up... " << linesCount  << " lines ready. " << lastCount << std::endl);			
 			waitUntilFilledUp = false;
 		}
 		
@@ -686,8 +691,8 @@ void PathPlanner::run() {
             for(int i=0; i<NUM_AXES; i++)
     			cancellableMask |= (cur->isAxisMove(i) << i);
 		}		
-        LOG("Direction mask: " << directionMask << std::endl);
-        LOG("Cancel    mask: " << cancellableMask << std::endl);
+        //LOG("Direction mask: " << directionMask << std::endl);
+        //LOG("Cancel    mask: " << cancellableMask << std::endl);
 		assert(cur);
 		assert(cur->commands);
 
@@ -768,7 +773,6 @@ void PathPlanner::run() {
 		LOG( "Sending " << std::dec << linesPos << ", Start speed=" << cur->startSpeed << ", end speed="<<cur->endSpeed << ", nb steps = " << cur->stepsRemaining << std::endl);
 		
 		pru.push_block((uint8_t*)cur->commands.data(), sizeof(SteppersCommand)*cur->stepsRemaining, sizeof(SteppersCommand), linesPos, cur->timeInTicks);
-		
 		LOG( "Done sending with " << std::dec << linesPos << std::endl);
 		
 		removeCurrentLine();

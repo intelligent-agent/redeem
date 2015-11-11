@@ -287,6 +287,7 @@ void PruTimer::stopThread(bool join) {
 	
 	blockAvailable.notify_all();
 	if(join && runningThread.joinable()) {
+        LOG( "Joining thread" << std::endl);
 		runningThread.join();
 	}
 	
@@ -558,7 +559,7 @@ void PruTimer::run() {
 			continue;
 		SteppersCommand * cmd = (SteppersCommand*)(currentReadingAddress+4);
 		FLOAT_T totalWait = 0;
-		for(int i=0;i<*nbCommand;i++) {
+		for(int i=0; i<(int)*nbCommand;i++) {
 			totalWait+=cmd->delay/200000.0;
 			cmd++;
 		}
@@ -576,7 +577,7 @@ void PruTimer::run() {
 
 		if(stop) break;
 		
-		/*
+		/*  
 		if (nbWaitedEvent)
 			LOG( ("\tINFO: PRU0 completed transfer.\r\n"));
 		else
