@@ -27,17 +27,25 @@ class M665(GCodeCommand):
         if g.has_letter("L"):
 	    Delta.L = float(g.get_value_by_letter("L"))
 
-	if g.has_letter("R"):
+	    if g.has_letter("R"):
             Delta.r = float(g.get_value_by_letter("R"))
  
         if g.has_letter("S"):
-                logging.info("M665 S (segments/second) specified, but not implemented.")
+            logging.info("M665 S (segments/second) specified, but not implemented.")
 
         #Recalcualte delta settings
 	Delta.recalculate()
 
     def get_description(self):
         return "Set delta arm calibration values"
+
+    def get_long_description(self):
+        return ("L sets the length of the arm. "
+                "If the objects printed are too small, "
+                "try increasing(?) the length of the arm"
+                "R sets the radius of the towers. "
+                "If the measured points are too convex, "
+                "try increasing the radius")
 
 """
 GCode M666

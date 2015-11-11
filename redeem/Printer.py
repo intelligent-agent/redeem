@@ -23,6 +23,7 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
 from Path import Path
 import numpy as np
 import logging
+from Delta import Delta
 
 class Printer:
     """ A command received from pronterface or whatever """
@@ -94,10 +95,12 @@ class Printer:
 
         self.save_bed_compensation_matrix()
 
-        self.config.save(filename)
+        # Save Delta shit    
+        opts = ["Hez", "L", "r", "Ae", "Be", "Ce", "A_radial", "B_radial", "C_radial", "A_tangential", "B_tangential", "C_tangential" ]
+        for opt in opts:
+            self.config.set('Delta', opt, str(Delta.__dict__[opt]))
 
-    def set_endstop_config(es, config):
-        
+        self.config.save(filename)
 
     def load_bed_compensation_matrix(self):
         mat = self.config.get('Geometry', 'bed_compensation_matrix').split(",")

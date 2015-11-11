@@ -280,7 +280,6 @@ class PathPlanner:
         return
 
     def probe(self, z, speed, accel):
-
         self.wait_until_done()
         # Move until endstop is hits
         self.printer.ensure_steppers_enabled()
@@ -290,7 +289,7 @@ class PathPlanner:
         z_dist = steps/Path.steps_pr_meter[2]
         end   = (-z_dist, -z_dist, -z_dist, 0.0, 0.0)
 
-        logging.info("Steps total: "+str(steps))
+        logging.debug("Steps total: "+str(steps))
    
         self.native_planner.queueMove(start,
                                   end, 
@@ -301,18 +300,18 @@ class PathPlanner:
 
         self.wait_until_done()
 
+
+        # TODO: Move this to PruInterface.py
         import struct
         import mmap
-
         PRU_ICSS = 0x4A300000 
         PRU_ICSS_LEN = 512*1024
         RAM2_START = 0x00012000
-
         with open("/dev/mem", "r+b") as f:	       
             ddr_mem = mmap.mmap(f.fileno(), PRU_ICSS_LEN, offset=PRU_ICSS) 
             shared = struct.unpack('LLLL', ddr_mem[RAM2_START:RAM2_START+16])
             steps_remaining = shared[3]
-        logging.info("Steps remaining : "+str(steps_remaining))
+        logging.debug("Steps remaining : "+str(steps_remaining))
 
         steps -= steps_remaining
         z_dist = steps/Path.steps_pr_meter[2]

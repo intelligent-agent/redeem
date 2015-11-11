@@ -51,8 +51,12 @@ class G30(GCodeCommand):
         else:
             probe_accel = self.printer.config.getfloat('Probe', 'accel')
         
+        # Find the Probe offset
+        offset_x = self.printer.config.getfloat('Probe', 'offset_x')*1000
+        offset_y = self.printer.config.getfloat('Probe', 'offset_y')*1000
+
         # Move to the position
-        G0 = Gcode({"message": "G0 X{} Y{} Z{}".format(point["X"], point["Y"], point["Z"]), "prot": g.prot})    
+        G0 = Gcode({"message": "G0 X{} Y{} Z{}".format(point["X"]+offset_x, point["Y"]+offset_y, point["Z"]), "prot": g.prot})    
         self.printer.processor.execute(G0)
         self.printer.path_planner.wait_until_done()
         bed_dist = self.printer.path_planner.probe(probe_length, probe_speed, probe_accel) # Probe one cm. TODO: get this from config
