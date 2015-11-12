@@ -308,6 +308,8 @@ class Redeem:
         for axis in printer.steppers.keys():
             i = Path.axis_to_index(axis)
             Path.max_speeds[i] = printer.config.getfloat('Planner', 'max_speed_'+axis.lower())
+            Path.min_speeds[i] = printer.config.getfloat('Planner', 'min_speed_'+axis.lower())
+            Path.jerks[i] = printer.config.getfloat('Planner', 'max_jerk_'+axis.lower())
             Path.home_speed[i] = printer.config.getfloat('Homing', 'home_speed_'+axis.lower())
             Path.home_backoff_speed[i] = printer.config.getfloat('Homing', 'home_backoff_speed_'+axis.lower())
             Path.home_backoff_offset[i] = printer.config.getfloat('Homing', 'home_backoff_offset_'+axis.lower())
@@ -324,9 +326,6 @@ class Redeem:
             dirname + "/firmware/firmware_endstops.bin",
             self.revision, self.printer.config, "/usr/bin/pasm")
 
-        printer.maxJerkXY = printer.config.getfloat('Planner', 'maxJerk_xy')
-        printer.maxJerkZ = printer.config.getfloat('Planner', 'maxJerk_z')
-        printer.maxJerkEH = printer.config.getfloat('Planner', 'maxJerk_eh')
         
         printer.move_cache_size = printer.config.getfloat('Planner', 'move_cache_size')
         printer.print_move_buffer_wait = printer.config.getfloat('Planner', 'print_move_buffer_wait')

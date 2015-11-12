@@ -68,19 +68,19 @@ class Path:
     @staticmethod
     def set_axes(num_axes):
         """ Set number of axes """
-        Path.NUM_AXES = num_axes
+        Path.NUM_AXES   = num_axes
         Path.max_speeds = np.ones(num_axes)
         Path.min_speeds = np.ones(num_axes)*0.01
         Path.jerks      = np.ones(num_axes)*0.01
         Path.home_speed = np.ones(num_axes)
-        Path.home_backoff_speed = np.ones(num_axes)
-        Path.home_backoff_offset = np.zeros(num_axes)
-        Path.steps_pr_meter = np.ones(num_axes)
-        Path.backlash_compensation = np.zeros(num_axes)
-        Path.backlash_state = np.zeros(num_axes)
-        Path.soft_min = -np.ones(num_axes)*1000.0
-        Path.soft_max = np.ones(num_axes)*1000.0
-        Path.slaves = {key: "" for key in Path.AXES[:num_axes]}
+        Path.home_backoff_speed     = np.ones(num_axes)
+        Path.home_backoff_offset    = np.zeros(num_axes)
+        Path.steps_pr_meter         = np.ones(num_axes)
+        Path.backlash_compensation  = np.zeros(num_axes)
+        Path.backlash_state         = np.zeros(num_axes)
+        Path.soft_min   = -np.ones(num_axes)*1000.0
+        Path.soft_max   = np.ones(num_axes)*1000.0
+        Path.slaves     = {key: "" for key in Path.AXES[:num_axes]}
 
 
     @staticmethod
@@ -308,6 +308,8 @@ class Path:
 
         num_segments = np.ceil(np.abs(end_t-start_t)/self.split_size)+1
 
+
+        # TODO: test this, it is probably wrong. 
         if self.movement == G2: 
             arc_T = np.linspace(start_t, end_t, num_segments)
         else:        
