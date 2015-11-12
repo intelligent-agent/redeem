@@ -18,7 +18,7 @@
 #include <condition_variable>
 #include "Logger.h"
 
-#define DEMO_PRU
+//#define DEMO_PRU
 
 class PruTimer {
 	
