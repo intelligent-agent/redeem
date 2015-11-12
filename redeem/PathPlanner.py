@@ -336,7 +336,7 @@ class PathPlanner:
 
         if new.compensation is not None:
             # Apply a backlash compensation move
-#           CompensationPath(new.compensation, new.speed, False, False, False))
+            #CompensationPath(new.compensation, new.speed, False, False, False))
             #logging.info("Queueing move")
 
             self.native_planner.queueMove(tuple(np.zeros(Path.NUM_AXES)[:5]),
@@ -345,7 +345,7 @@ class PathPlanner:
                                           False)
 
         if new.needs_splitting():     
-            path_batch = new.get_delta_segments()
+            path_batch = new.get_segments()
             # Construct a batch
             batch_array = np.zeros(shape=(len(path_batch)*2*Path.NUM_AXES), dtype=np.float64)     # Change this to reflect NUM_AXIS.
 

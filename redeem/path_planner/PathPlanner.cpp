@@ -262,7 +262,6 @@ void PathPlanner::queueBatchMove(FLOAT_T* batchData, int batchSize, FLOAT_T spee
 
 void PathPlanner::queueMove(FLOAT_T startPos[NUM_AXES],FLOAT_T endPos[NUM_AXES], FLOAT_T speed, FLOAT_T accel, bool cancelable, bool optimize) {
 	FLOAT_T temp[NUM_AXES * 2];
-    LOG("Queue move, bihces"<< std::endl);
 	memcpy(temp, startPos, sizeof(FLOAT_T)*NUM_AXES);
 	memcpy(&temp[NUM_AXES], endPos, sizeof(FLOAT_T)*NUM_AXES);	
 	queueBatchMove( temp, NUM_AXES*2, speed, accel, cancelable, optimize);
@@ -279,7 +278,6 @@ FLOAT_T PathPlanner::safeSpeed(Path* p){
         }
     }
     safe = std::min(safe, p->fullSpeed);
-    LOG("Safe speed: "<< safe << std::endl);
     return safe;
 }
 
@@ -314,7 +312,7 @@ void PathPlanner::calculateMove(Path* p, FLOAT_T axis_diff[NUM_AXES]){
     for(int i=0; i<NUM_AXES; i++){
         if(p->isAxisMove(i)){
             axisInterval[i] = timeForMove / p->delta[i];
-            p->speeds[i] = std::fabs(axis_diff[i] / timeForMove);
+            p->speeds[i] = -std::fabs(axis_diff[i] / timeForMove);
             if(p->isAxisNegativeMove(i))
                 p->speeds[i] *= -1;
             //p->accels[i] = maxAccelerationMPerSquareSecond[i];
@@ -370,7 +368,7 @@ void Path::updateStepsParameter(){
     if(areParameterUpToDate() || isWarmUp()) 
         return;
 
-    LOG( "Path::updateStepsParameter()"<<std::endl);
+    //LOG( "Path::updateStepsParameter()"<<std::endl);
     FLOAT_T startFactor = startSpeed * invFullSpeed;
     FLOAT_T endFactor   = endSpeed   * invFullSpeed;
     vStart = vMax * startFactor; //starting speed
@@ -437,7 +435,7 @@ void PathPlanner::updateTrapezoids(){
     previousPlannerIndex(previousIndex);
     Path *previous = &lines[previousIndex];
 
-	LOG("UpdateTRapezoids:: computeMAxJunctionSpeed"<<std::endl);
+	//LOG("UpdateTRapezoids:: computeMAxJunctionSpeed"<<std::endl);
 
 
     computeMaxJunctionSpeed(previous,act); // Set maximum junction speed if we have a real move before
@@ -470,7 +468,7 @@ void PathPlanner::updateTrapezoids(){
 void PathPlanner::computeMaxJunctionSpeed(Path *previous, Path *current){
     // First we compute the normalized jerk for speed 1
     FLOAT_T dx = (current->speeds[0] - previous->speeds[0])*F_CPU;
-    LOG("dx = "<<dx<<std::endl);
+    //LOG("dx = "<<dx<<std::endl);
     FLOAT_T dy = (current->speeds[1] - previous->speeds[1])*F_CPU;
     FLOAT_T dz = (current->speeds[2] - previous->speeds[2])*F_CPU;
     FLOAT_T de = std::fabs(current->speeds[3] - previous->speeds[3])*F_CPU;
@@ -487,6 +485,7 @@ void PathPlanner::computeMaxJunctionSpeed(Path *previous, Path *current){
         factor = std::min(factor, maxJerks[H_AXIS]/dh);
 
     previous->maxJunctionSpeed = std::min(previous->fullSpeed * factor, current->fullSpeed);
+    //LOG("Max junction speed = "<<previous->maxJunctionSpeed<<std::endl);
 }
 
 /**
@@ -765,7 +764,7 @@ void PathPlanner::run() {
 		} // stepsRemaining
 		
 
-		LOG("Current move time " << pru.getTotalQueuedMovesTime() / (double) F_CPU << std::endl);
+		//LOG("Current move time " << pru.getTotalQueuedMovesTime() / (double) F_CPU << std::endl);
 		
 		//Wait until we need to push some lines so that the path planner can fill up
 		pru.waitUntilLowMoveTime((F_CPU/1000)*minBufferedMoveTime); //in seconds
@@ -773,7 +772,7 @@ void PathPlanner::run() {
 		LOG( "Sending " << std::dec << linesPos << ", Start speed=" << cur->startSpeed << ", end speed="<<cur->endSpeed << ", nb steps = " << cur->stepsRemaining << std::endl);
 		
 		pru.push_block((uint8_t*)cur->commands.data(), sizeof(SteppersCommand)*cur->stepsRemaining, sizeof(SteppersCommand), linesPos, cur->timeInTicks);
-		LOG( "Done sending with " << std::dec << linesPos << std::endl);
+		//LOG( "Done sending with " << std::dec << linesPos << std::endl);
 		
 		removeCurrentLine();
 		lineAvailable.notify_all();
