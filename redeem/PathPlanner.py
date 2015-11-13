@@ -50,10 +50,10 @@ class PathPlanner:
 
         self.printer.path_planner = self
 
-        self.travel_length = {"X": 0.0, "Y": 0.0, "Z": 0.0, "E": 0.0, "H": 0.0}
-        self.center_offset = {"X": 0.0, "Y": 0.0, "Z": 0.0, "E": 0.0, "H": 0.0}
-        self.home_pos = {"X": 0.0, "Y": 0.0, "Z": 0.0, "E": 0.0, "H": 0.0}
-        self.prev = G92Path({"X": 0.0, "Y": 0.0, "Z": 0.0, "E": 0.0, "H": 0.0}, 0)
+        self.travel_length  = {"X": 0.0, "Y": 0.0, "Z": 0.0, "E": 0.0, "H": 0.0}
+        self.center_offset  = {"X": 0.0, "Y": 0.0, "Z": 0.0, "E": 0.0, "H": 0.0}
+        self.home_pos       = {"X": 0.0, "Y": 0.0, "Z": 0.0, "E": 0.0, "H": 0.0}
+        self.prev   = G92Path({"X": 0.0, "Y": 0.0, "Z": 0.0, "E": 0.0, "H": 0.0}, 0)
         self.prev.set_prev(None)
 
         if pru_firmware:
@@ -116,9 +116,6 @@ class PathPlanner:
        """ Returns True if a sync event has been queued. False on failure.(use wait_until_done() instead) """
        return self.native_planner.queueSyncEvent(isBlocking)
 
-    def fire_sync_event(self):
-        """ Unclogs any threads waiting for a sync """
-        
     def force_exit(self):
         self.native_planner.stopThread(True)
 
@@ -135,9 +132,11 @@ class PathPlanner:
         self.__init_path_planner()
 
     def suspend(self):
+        ''' Temporary pause of planner '''
         self.native_planner.suspend()
 
     def resume(self):
+        ''' resume a paused planner '''
         self.native_planner.resume()
 
     def _home_internal(self, axis):
@@ -186,6 +185,7 @@ class PathPlanner:
         p = RelativePath(path_search, speed, accel, True, False, True, False)
         self.add_path(p)
         self.wait_until_done()
+        logging.debug("Coarse search done!")
 
         # Reset position to offset
         p = G92Path(path_center, speed)
@@ -230,6 +230,12 @@ class PathPlanner:
         self.add_path(p)
         self.wait_until_done()
         
+        # Due to rounding errors, we explicitly set the found 
+        # position to the right value. 
+        # Reset (final) position to offset
+        p = G92Path(path_home, speed)
+        self.add_path(p)
+
         return
 
     def home(self, axis):
@@ -374,7 +380,7 @@ class PathPlanner:
             end   = tuple(new.stepper_end_pos[:5])
             can = bool(new.cancelable)
             rel = bool(new.movement != Path.RELATIVE)
-            #logging.debug("Queueing "+str(start)+" "+str(end)+" "+str(new.speed)+" "+str(new.accel)+" "+str(can)+" "+str(rel))
+            logging.debug("Queueing "+str(start)+" "+str(end)+" "+str(new.speed)+" "+str(new.accel)+" "+str(can)+" "+str(rel))
             
             self.native_planner.queueMove(tuple(new.start_pos[:5]),
                                       tuple(new.stepper_end_pos[:5]), 

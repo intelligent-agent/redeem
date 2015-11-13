@@ -294,13 +294,24 @@ void PruTimer::stopThread(bool join) {
 	LOG( "PruTimer stopped." << std::endl);
 }
 
+
+/**
+blockMemory - the data. 
+blockLen - number of data bytes. 
+unit - stepSize in bytes. 
+pathID - linespos. 
+totalTime - time it takes to complete the current block, in ticks. 
+*/
 void PruTimer::push_block(uint8_t* blockMemory, size_t blockLen, unsigned int unit, unsigned int pathID, unsigned long totalTime) {
 	
-	if(!ddr_write_location) return;
+	if(!ddr_write_location) 
+        return;
 	
 	//Split the block in smaller blocks if needed
 	size_t nbBlocks = ceil((blockLen+12)/(FLOAT_T)(ddr_size-12));
-	
+
+	LOG("nbBlocks: "<<nbBlocks<<std::endl);
+
 	size_t blockSize = blockLen / nbBlocks;
 	
 	//Make sure block size is a multiple of unit

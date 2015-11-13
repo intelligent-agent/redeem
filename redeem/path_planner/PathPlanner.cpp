@@ -195,9 +195,11 @@ void PathPlanner::queueBatchMove(FLOAT_T* batchData, int batchSize, FLOAT_T spee
 			else               
 				p->delta[axis] = -p->delta[axis];
 			axis_diff[axis] = p->delta[axis] / axisStepsPerM[axis];
-			if(p->delta[axis]) 
-				p->setMoveOfAxis(axis);			
-            //LOG( "Axis "<< axis << " length is " << axis_diff[axis] << std::endl);
+			if(p->delta[axis]){ 
+				p->setMoveOfAxis(axis);
+                LOG( "Axis "<< axis << " is move since p->delta is " << p->delta[axis] << std::endl);
+            }			
+            LOG( "Axis "<< axis << " length is " << axis_diff[axis] << std::endl);
 		}
 		
 		if(p->isNoMove()){
@@ -690,8 +692,8 @@ void PathPlanner::run() {
             for(int i=0; i<NUM_AXES; i++)
     			cancellableMask |= (cur->isAxisMove(i) << i);
 		}		
-        //LOG("Direction mask: " << directionMask << std::endl);
-        //LOG("Cancel    mask: " << cancellableMask << std::endl);
+        LOG("Direction mask: " << directionMask << std::endl);
+        LOG("Cancel    mask: " << cancellableMask << std::endl);
 		assert(cur);
 		assert(cur->commands);
 
