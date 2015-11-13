@@ -62,4 +62,9 @@ class M303(GCodeCommand):
             "generates Proportional (Kp), Integral (Ki), "
             "and Derivative (Kd) values for the hotend or "
             "bed (E-1). Send the appropriate code and wait "
-            "for the output to update the firmware. ")
+            "for the output to update the firmware. "
+            "E<0 or 1> overrides the extruder. Use E-1 for heated bed. "
+            "Default is the 'E' extruder."
+            "S overrides the temperature to calibrate for. Default is 100. "
+            "C overrides the number of cycles to run. Default is 3")
+
