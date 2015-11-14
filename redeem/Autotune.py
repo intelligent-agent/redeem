@@ -25,6 +25,10 @@ from threading import Thread
 import time
 import logging
 import numpy as np
+try:
+    from Gcode import Gcode
+except ImportError:
+    from redeem.Gcode import Gcode
 
 
 class Autotune:
@@ -44,6 +48,14 @@ class Autotune:
         self.running = False
         self.t.join()
 
+
+    def send_temperature(self):
+        m105 = Gcode({"message": "M105", "prot": g.prot})
+        self.printer.processor.execute(m105)
+        answer = m105.get_answer()
+        m105.set_answer(answer[2:])  # strip away the "ok"
+        self.printer.reply(m105)
+
     def run(self):
         """ Start the PID autotune loop """
         # Reset found peaks
@@ -53,6 +65,7 @@ class Autotune:
         # Wait for temperature to stabilize
         self.heater.set_target_temperature(self.steady_temperature)
         while not self.heater.is_temperature_stable(self.stable_start_seconds):
+            self.send_temperature()
             time.sleep(1)
 
         # Set the standard parameters
@@ -100,6 +113,7 @@ class Autotune:
                 self.temps.append(temp)
                 if not self.running: 
                     return
+
                 time.sleep(self.sleep)
 
             # Set lower temperature step
@@ -113,6 +127,7 @@ class Autotune:
                 self.temps.append(temp)
                 if not self.running: 
                     return
+                self.send_temperature()
                 time.sleep(self.sleep)
 
             if peak == 0:
