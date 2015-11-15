@@ -25,17 +25,30 @@ import_array();
 %rename(PathPlannerNative) PathPlanner;
 
 #if FLOAT_T == double
-#define FLOAT_TUPLE_LETTER "d"
+#define FTL "d"
 #elif FLOAT_T == float
-#define FLOAT_TUPLE_LETTER "f"
+#define FTL "f"
 #else
 #error Unsupported float type
 #endif
 
-// Grab a 5 element array as a Python 5-tuple
-%typemap(in) FLOAT_T[5](FLOAT_T temp[5]) {   // temp[4] becomes a local variable
+// Grab a 8 element array as a Python 8-tuple
+%typemap(in) FLOAT_T[8](FLOAT_T temp[8]) {   // temp[8] becomes a local variable
   if (PyTuple_Check($input)) {
-    if (!PyArg_ParseTuple($input,""FLOAT_TUPLE_LETTER""FLOAT_TUPLE_LETTER""FLOAT_TUPLE_LETTER""FLOAT_TUPLE_LETTER""FLOAT_TUPLE_LETTER,temp,temp+1,temp+2,temp+3,temp+4)) {
+    if (!PyArg_ParseTuple($input,""FTL""FTL""FTL""FTL""FTL""FTL""FTL""FTL,temp,temp+1,temp+2,temp+3,temp+4,temp+5,temp+6,temp+7)) {
+      PyErr_SetString(PyExc_TypeError,"tuple must have 8 elements");
+      return NULL;
+    }
+    $1 = &temp[0];
+  } else {
+    PyErr_SetString(PyExc_TypeError,"expected a tuple.");
+    return NULL;
+  }
+}
+// Grab a 5 element array as a Python 5-tuple
+%typemap(in) FLOAT_T[5](FLOAT_T temp[5]) {   // temp[5] becomes a local variable
+  if (PyTuple_Check($input)) {
+    if (!PyArg_ParseTuple($input,""FTL""FTL""FTL""FTL""FTL,temp,temp+1,temp+2,temp+3,temp+4)) {
       PyErr_SetString(PyExc_TypeError,"tuple must have 5 elements");
       return NULL;
     }
@@ -45,6 +58,7 @@ import_array();
     return NULL;
   }
 }
+
 %typemap(in) unsigned long[5](unsigned long temp[5]) {   // temp[4] becomes a local variable
   if (PyTuple_Check($input)) {
     if (!PyArg_ParseTuple($input,"kkkkk",temp,temp+1,temp+2,temp+3,temp+4)) {
@@ -60,7 +74,7 @@ import_array();
 // Grab a 4 element array as a Python 4-tuple
 %typemap(in) FLOAT_T[4](FLOAT_T temp[4]) {   // temp[4] becomes a local variable
   if (PyTuple_Check($input)) {
-    if (!PyArg_ParseTuple($input,""FLOAT_TUPLE_LETTER""FLOAT_TUPLE_LETTER""FLOAT_TUPLE_LETTER""FLOAT_TUPLE_LETTER,temp,temp+1,temp+2,temp+3)) {
+    if (!PyArg_ParseTuple($input,""FTL""FTL""FTL""FTL,temp,temp+1,temp+2,temp+3)) {
       PyErr_SetString(PyExc_TypeError,"tuple must have 4 elements");
       return NULL;
     }
@@ -87,7 +101,7 @@ import_array();
 // Grab a 3 element array as a Python 3-tuple
 %typemap(in) FLOAT_T[3](FLOAT_T temp[3]) {   // temp[3] becomes a local variable
   if (PyTuple_Check($input)) {
-    if (!PyArg_ParseTuple($input,""FLOAT_TUPLE_LETTER""FLOAT_TUPLE_LETTER""FLOAT_TUPLE_LETTER,temp,temp+1,temp+2)) {
+    if (!PyArg_ParseTuple($input,""FTL""FTL""FTL,temp,temp+1,temp+2)) {
       PyErr_SetString(PyExc_TypeError,"tuple must have 3 elements");
       return NULL;
     }

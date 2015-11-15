@@ -68,19 +68,20 @@ class Path:
     @staticmethod
     def set_axes(num_axes):
         """ Set number of axes """
-        Path.NUM_AXES   = num_axes
-        Path.max_speeds = np.ones(num_axes)
-        Path.min_speeds = np.ones(num_axes)*0.01
-        Path.jerks      = np.ones(num_axes)*0.01
-        Path.home_speed = np.ones(num_axes)
+        Path.NUM_AXES               = num_axes
+        Path.max_speeds             = np.ones(num_axes)
+        Path.min_speeds             = np.ones(num_axes)*0.01
+        Path.jerks                  = np.ones(num_axes)*0.01
+        Path.acceleration           = [0.3]*num_axes
+        Path.home_speed             = np.ones(num_axes)
         Path.home_backoff_speed     = np.ones(num_axes)
         Path.home_backoff_offset    = np.zeros(num_axes)
         Path.steps_pr_meter         = np.ones(num_axes)
         Path.backlash_compensation  = np.zeros(num_axes)
         Path.backlash_state         = np.zeros(num_axes)
-        Path.soft_min   = -np.ones(num_axes)*1000.0
-        Path.soft_max   = np.ones(num_axes)*1000.0
-        Path.slaves     = {key: "" for key in Path.AXES[:num_axes]}
+        Path.soft_min               = -np.ones(num_axes)*1000.0
+        Path.soft_max               = np.ones(num_axes)*1000.0
+        Path.slaves                 = {key: "" for key in Path.AXES[:num_axes]}
 
 
     @staticmethod
@@ -150,13 +151,6 @@ class Path:
                                                cur_pos[1] + vec[1],
                                                cur_pos[2] + vec[2])
             ret_vec[:3] = self.end_ABC - self.start_ABC
-
-        # Apply Automatic bed compensation
-        #if self.use_bed_matrix:
-        #    logging.debug("Before matrix: "+str(ret_vec[:3]))
-        #    ret_vec[:3] = np.dot(Path.matrix_bed_comp, ret_vec[:3])
-        #    logging.debug("After  matrix: "+str(ret_vec[:3]))
-            
         return ret_vec
 
     def reverse_transform_vector(self, vec, cur_pos):
@@ -179,11 +173,6 @@ class Path:
             end_xyz = Delta.forward_kinematics2(self.end_ABC[0], self.end_ABC[1],
                                                self.end_ABC[2])
             ret_vec[:3] = end_xyz - start_xyz
-
-        # Apply Automatic bed compensation
-        #if self.use_bed_matrix:
-        #    ret_vec[:3] = np.dot(Path.matrix_bed_comp_inv, ret_vec[:3])
-
         return ret_vec
 
     @staticmethod
@@ -206,6 +195,16 @@ class Path:
                 self.compensation = ret_vec;
 
         return ret_vec
+
+    def handle_tools(self):
+        """ If tool is != E, move the vectors to the right position """
+        if Path.printer.current_tool is not "E":
+            tool = Path.printer.current_tool
+            index = Path.axis_to_index(tool)
+            self.start_pos[index] = self.start_pos[3]
+            self.start_pos[3] = 0
+            self.stepper_end_pos[index] = self.stepper_end_pos[3]
+            self.stepper_end_pos[3] = 0
 
     def handle_slaves(self):
         # If slave mode is enabled, copy position now. 
@@ -387,6 +386,7 @@ class Path:
         #logging.debug("Level pos: "+str(self.level_end_pos[:3]))
         #logging.debug("End   pos: "+str(self.end_pos[:3]))
 
+        self.handle_tools()
 
         # Fix slave mode, if any
         self.handle_slaves()

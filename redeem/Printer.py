@@ -46,10 +46,6 @@ class Printer:
         self.movement = Path.ABSOLUTE
         self.feed_rate = 0.5
         self.accel = 0.5
-        self.acceleration = [0.5]*5
-        self.maxJerkXY = 20
-        self.maxJerkZ = 1
-        self.maxJerkEH = 4
         self.current_tool = "E"
         self.move_cache_size = 128
         self.print_move_buffer_wait = 250

@@ -32,12 +32,12 @@ class Stepper(object):
 
     all_steppers = list()
     
-    def __init__(self, stepPin, dirPin, faultPin, dac_channel, shiftreg_nr, name, internalStepPin, internalDirPin):
+    def __init__(self, step_pin, dir_pin, fault_pin, dac_channel, shiftreg_nr, name):
         """ Init """
         self.dac_channel     = dac_channel  # Which channel on the dac is connected to this stepper
-        self.stepPin         = stepPin
-        self.dirPin          = dirPin
-        self.faultPin        = faultPin
+        self.step_pin        = step_pin
+        self.dir_pin         = dir_pin
+        self.fault_pin        = fault_pin
         self.name            = name
         self.enabled 	     = False	    
         self.in_use          = False        
@@ -45,11 +45,9 @@ class Stepper(object):
         self.microsteps      = 1.0     
         self.microstepping   = 0
         self.direction       = 1
-        self.internalStepPin = (1 << internalStepPin)
-        self.internalDirPin  = (1 << internalDirPin)
 
         # Set up the Shift register
-        ShiftRegister.make()
+        ShiftRegister.make(8)
         self.shift_reg = ShiftRegister.registers[shiftreg_nr]
 
     def get_state(self):
@@ -70,13 +68,21 @@ class Stepper(object):
         """ Get the number of steps pr meter """
         return self.steps_pr_mm*self.microsteps * 1000.0
 
-    def get_step_pin(self):
-        """ The pin that steps, it looks like GPIO1_31 aso """
-        return self.internalStepPin
+    def get_step_bank(self):
+        """ The pin that steps, it looks like GPIO1_31 """
+        return int(self.step_pin[4:5])
     
+    def get_step_pin(self):
+        """ The pin that steps, it looks like GPIO1_31 """
+        return int(self.step_pin[6:])
+
+    def get_dir_bank(self):
+        """ Get the dir pin shifted into position """
+        return int(self.dir_pin[4:5])
+
     def get_dir_pin(self):
         """ Get the dir pin shifted into position """
-        return self.internalDirPin
+        return int(self.dir_pin[6:])
 
     def get_direction(self):
         return self.direction
@@ -102,8 +108,8 @@ D7 = CFG1-Z  = 0 (microstepping)
 
 class Stepper_00B1(Stepper):
 
-    def __init__(self, stepPin, dirPin, faultPin, dac_channel, shiftreg_nr, name, internalStepPin, internalDirPin):
-        Stepper.__init__(self, stepPin, dirPin, faultPin, dac_channel, shiftreg_nr, name, internalStepPin, internalDirPin)
+    def __init__(self, stepPin, dirPin, faultPin, dac_channel, shiftreg_nr, name):
+        Stepper.__init__(self, stepPin, dirPin, faultPin, dac_channel, shiftreg_nr, name)
         self.dac    = PWM_DAC(dac_channel)
         self.state  = 0 # The initial state of shift register
 
@@ -210,8 +216,8 @@ class Stepper_00B1(Stepper):
 
 class Stepper_00B2(Stepper_00B1):
 
-    def __init__(self, stepPin, dirPin, faultPin, dac_channel, shiftreg_nr, name, internalStepPin, internalDirPin):
-        Stepper_00B1.__init__(self, stepPin, dirPin, faultPin, dac_channel, shiftreg_nr, name, internalStepPin, internalDirPin)
+    def __init__(self, stepPin, dirPin, faultPin, dac_channel, shiftreg_nr, name):
+        Stepper_00B1.__init__(self, stepPin, dirPin, faultPin, dac_channel, shiftreg_nr, name)
         self.dac    = PWM_DAC(dac_channel)
         self.state  = 0 # The initial state of shift register
     
@@ -261,8 +267,8 @@ class Stepper_00A4(Stepper):
     RESET       = 7
     DECAY       = 5
 
-    def __init__(self, stepPin, dirPin, faultPin, dac_channel, shiftreg_nr, name, internalStepPin, internalDirPin):
-        Stepper.__init__(self, stepPin, dirPin, faultPin, dac_channel, shiftreg_nr, name, internalStepPin, internalDirPin)
+    def __init__(self, stepPin, dirPin, faultPin, dac_channel, shiftreg_nr, name):
+        Stepper.__init__(self, stepPin, dirPin, faultPin, dac_channel, shiftreg_nr, name)
         self.dac        = DAC(dac_channel)
         self.dacvalue 	= 0x00   	    # The voltage value on the VREF		
         self.state      = (1<<Stepper_00A4.SLEEP)|(1<<Stepper_00A4.RESET)| (1<<Stepper_00A4.ENABLED) # The initial state of the inputs
@@ -340,6 +346,8 @@ class Stepper_00A4(Stepper):
         self.shift_reg.set_state(self.state)    
         #logging.debug("Updated stepper {} to enabled, state: {}".format(self.name, bin(self.state)))
 
+class Stepper_reach_00A4(Stepper_00A4):
+    pass
 
 """
 The bits in the shift register are as follows (Rev A3):
@@ -359,4 +367,15 @@ class Stepper_00A3(Stepper_00A4):
     Stepper.SLEEP = 5
     Stepper.RESET = 4
     Stepper.DECAY = 0
+
+
+
+# Simple test procedure for the steppers
+if __name__ == '__main__':
+    s = Stepper("GPIO0_27", "GPIO1_29", "GPIO2_4" , 0, 0, "X")
+
+    print s.get_step_pin()
+    print s.get_step_bank()
+    print s.get_dir_pin()
+    print s.get_dir_bank()
 

@@ -29,7 +29,7 @@
 #define NUM_MOVING_AXIS 3
 
 /* Total number of axis that the system supports, including the currently selected extruder. Currently only 4 is supported */
-#define NUM_AXES 5
+#define NUM_AXES 8
 
 /* Number of extruder */
 #define NUM_EXTRUDER 5

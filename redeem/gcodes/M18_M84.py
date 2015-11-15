@@ -20,9 +20,9 @@ class M18(GCodeCommand):
     def execute(self, g):
         logging.debug("Execute M18")
         self.printer.path_planner.wait_until_done()
+        # If no token is present, do this for all steppers
         if g.num_tokens() == 0:
-            # If no token is present, do this for all steppers
-            g.set_tokens(["X", "Y", "Z", "E", "H"])
+            g.set_tokens(self.printer.steppers.keys())
 
         for i in range(g.num_tokens()):  # Run through all tokens
             axis = g.token_letter(i)  # Get the axis, X, Y, Z or E

@@ -210,20 +210,16 @@ void PathPlanner::queueBatchMove(FLOAT_T* batchData, int batchSize, FLOAT_T spee
 		//Define variables that are needed for the Bresenham algorithm.
         // Find the primary axis            
         p->primaryAxis = X_AXIS;
+        float sum = 0;
         for(int i=0; i<NUM_AXES; i++){
             if(p->delta[i] > p->delta[p->primaryAxis])
                 p->primaryAxis = i;
+            sum += axis_diff[i] * axis_diff[i];
         }
 
 		//LOG( "Primary axis is " << p->primaryAxis << std::endl);
-		p->stepsRemaining = p->delta[p->primaryAxis];
-	    
-        p->distance = sqrt(
-                            axis_diff[X_AXIS] * axis_diff[X_AXIS] +
-                            axis_diff[Y_AXIS] * axis_diff[Y_AXIS] +
-                            axis_diff[Z_AXIS] * axis_diff[Z_AXIS] + 
-                            axis_diff[E_AXIS] * axis_diff[E_AXIS] + 
-                            axis_diff[H_AXIS] * axis_diff[H_AXIS]);
+		p->stepsRemaining = p->delta[p->primaryAxis];	    
+        p->distance = sqrt(sum);
 
         //LOG("Distance in m:     " << p->distance << std::endl);
         //LOG("Speed in m/s:      " << p->speed << std::endl);
@@ -468,26 +464,24 @@ void PathPlanner::updateTrapezoids(){
 
 // TODO: Remove dependency on Extruder. 
 void PathPlanner::computeMaxJunctionSpeed(Path *previous, Path *current){
-    // First we compute the normalized jerk for speed 1
-    FLOAT_T dx = (current->speeds[0] - previous->speeds[0])*F_CPU;
-    //LOG("dx = "<<dx<<std::endl);
-    FLOAT_T dy = (current->speeds[1] - previous->speeds[1])*F_CPU;
-    FLOAT_T dz = (current->speeds[2] - previous->speeds[2])*F_CPU;
-    FLOAT_T de = std::fabs(current->speeds[3] - previous->speeds[3])*F_CPU;
-    FLOAT_T dh = std::fabs(current->speeds[4] - previous->speeds[4])*F_CPU;
+    FLOAT_T d[NUM_AXES];
+    FLOAT_T jerk = 0; 
     FLOAT_T factor = 1;
-    FLOAT_T jerk = sqrt(dx*dx + dy*dy + dz*dz);
+    
+    LOG("Computing Max junction speed"<<std::endl);
+    
+
+    for(int i=0; i<NUM_AXES; i++){
+        d[i] = std::fabs(current->speeds[i] - previous->speeds[i])*F_CPU;
+        jerk += d[i]*d[i];
+    }
+
+    jerk = sqrt(jerk);
     if(jerk>maxJerks[0])
         factor = maxJerks[0] / jerk;
-    
-    if(de > maxJerks[E_AXIS])
-        factor = std::min(factor, maxJerks[E_AXIS]/de);
- 
-    if(dh > maxJerks[H_AXIS])
-        factor = std::min(factor, maxJerks[H_AXIS]/dh);
 
     previous->maxJunctionSpeed = std::min(previous->fullSpeed * factor, current->fullSpeed);
-    //LOG("Max junction speed = "<<previous->maxJunctionSpeed<<std::endl);
+    LOG("Max junction speed = "<<previous->maxJunctionSpeed<<std::endl);
 }
 
 /**
@@ -655,7 +649,7 @@ void PathPlanner::run() {
 		}
 		
 		long cur_errupd = 0;
-		int directionMask = 0;      //0b000HEZYX
+		int directionMask = 0;      //0bCBAHEZYX
 		int cancellableMask = 0;
 		unsigned int vMaxReached;
         unsigned int timer_accel = 0;
@@ -698,10 +692,10 @@ void PathPlanner::run() {
 		assert(cur->commands);
 
 
-        //LOG("startSpeed:   " << cur->startSpeed << std::endl);
-        //LOG("fullSpeed:    " << cur->fullSpeed << std::endl);
-        //LOG("acceleration: " << cur->accel << std::endl);
-        //LOG("accelTime:    " << ((cur->fullSpeed - cur->startSpeed)/cur->accel) << std::endl);
+        LOG("startSpeed:   " << cur->startSpeed << std::endl);
+        LOG("fullSpeed:    " << cur->fullSpeed << std::endl);
+        LOG("acceleration: " << cur->accel << std::endl);
+        LOG("accelTime:    " << ((cur->fullSpeed - cur->startSpeed)/cur->accel) << std::endl);
         
         
 
@@ -730,7 +724,7 @@ void PathPlanner::run() {
 				    }
 			    }
             }
-									
+
 			//If acceleration is enabled on this move and we are in the acceleration segment, calculate the current interval
 			if (cur->moveAccelerating(stepNumber)){   // we are accelerating
                 //LOG( "Acceleration" << std::endl);

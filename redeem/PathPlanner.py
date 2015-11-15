@@ -50,10 +50,10 @@ class PathPlanner:
 
         self.printer.path_planner = self
 
-        self.travel_length  = {"X": 0.0, "Y": 0.0, "Z": 0.0, "E": 0.0, "H": 0.0}
-        self.center_offset  = {"X": 0.0, "Y": 0.0, "Z": 0.0, "E": 0.0, "H": 0.0}
-        self.home_pos       = {"X": 0.0, "Y": 0.0, "Z": 0.0, "E": 0.0, "H": 0.0}
-        self.prev   = G92Path({"X": 0.0, "Y": 0.0, "Z": 0.0, "E": 0.0, "H": 0.0}, 0)
+        self.travel_length  = {"X": 0, "Y": 0, "Z": 0, "E": 0, "H": 0, "A": 0, "B": 0, "C": 0}
+        self.center_offset  = {"X": 0, "Y": 0, "Z": 0, "E": 0, "H": 0, "A": 0, "B": 0, "C": 0}
+        self.home_pos       = {"X": 0, "Y": 0, "Z": 0, "E": 0, "H": 0, "A": 0, "B": 0, "C": 0}
+        self.prev   = G92Path({"X": 0, "Y": 0, "Z": 0, "E": 0, "H": 0, "A": 0, "B": 0, "C": 0}, 0)
         self.prev.set_prev(None)
 
         if pru_firmware:
@@ -71,7 +71,7 @@ class PathPlanner:
             return
 
         self.native_planner.initPRU(fw0, fw1)
-        self.native_planner.setAcceleration(tuple(self.printer.acceleration))
+        self.native_planner.setAcceleration(tuple(Path.acceleration))
         self.native_planner.setAxisStepsPerMeter(tuple(Path.steps_pr_meter))
         self.native_planner.setMaxSpeeds(tuple(Path.max_speeds))	
         self.native_planner.setMinSpeeds(tuple(Path.min_speeds))	
@@ -89,7 +89,6 @@ class PathPlanner:
 
     def update_steps_pr_meter(self):
         """ Update steps pr meter from the path """
-        logging.debug("Setting Steps pr meter to: "+str(Path.steps_pr_meter))
         self.native_planner.setAxisStepsPerMeter(tuple(Path.steps_pr_meter))
 
     def get_current_pos(self):
@@ -342,11 +341,8 @@ class PathPlanner:
 
         if new.compensation is not None:
             # Apply a backlash compensation move
-            #CompensationPath(new.compensation, new.speed, False, False, False))
-            #logging.info("Queueing move")
-
-            self.native_planner.queueMove(tuple(np.zeros(Path.NUM_AXES)[:5]),
-                                          tuple(new.compensation[:5]), new.speed, new.accel,
+            self.native_planner.queueMove(tuple(np.zeros(Path.NUM_AXES)),
+                                          tuple(new.compensation), new.speed, new.accel,
                                           bool(new.cancelable),
                                           False)
 
@@ -376,14 +372,14 @@ class PathPlanner:
             self.printer.ensure_steppers_enabled()
             #push this new segment   
 
-            start = tuple(new.start_pos[:5])
-            end   = tuple(new.stepper_end_pos[:5])
+            start = tuple(new.start_pos)
+            end   = tuple(new.stepper_end_pos)
             can = bool(new.cancelable)
             rel = bool(new.movement != Path.RELATIVE)
             logging.debug("Queueing "+str(start)+" "+str(end)+" "+str(new.speed)+" "+str(new.accel)+" "+str(can)+" "+str(rel))
             
-            self.native_planner.queueMove(tuple(new.start_pos[:5]),
-                                      tuple(new.stepper_end_pos[:5]), 
+            self.native_planner.queueMove(tuple(new.start_pos),
+                                      tuple(new.stepper_end_pos), 
                                       new.speed, 
                                       new.accel,
                                       bool(new.cancelable),

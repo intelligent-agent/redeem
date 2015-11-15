@@ -20,26 +20,7 @@
 #define GPIO_2_IN r18
 #define GPIO_3_IN r19
 
-#ifdef HAS_CONFIG_H
 #include "config.h"
-#endif
-
-#ifdef REV_A3
-#include "config_00A3.h"
-#endif
-
-#ifdef REV_A4
-#include "config_00A4.h"
-#endif
-
-#ifdef REV_B2
-#include "config_00B2.h"
-#endif
-
-#ifndef FIRMWARE_CONFIG
-#error You must define the REV_A3 or REV_A4 preprocessor flag.
-#endif
-
 
 // Endstop/mask bit buildup: 0b00<Z+><Y+><X+><Z-><Y-><X->
 // r7 : contains the endstop values 
@@ -87,36 +68,36 @@ COLLECT:
     LBBO GPIO_2_IN, r4, 0, 4
     LBBO GPIO_3_IN, r5, 0, 4
 
-    // Endstop X MIN
-    LSR r0, STEPPER_X_END_MIN_BANK, STEPPER_X_END_MIN_PIN  // Right shift pin to bit 0
-    AND r7,r0,0x01                                       // Endstop Xmin - Build a mask into r7.b0 that contains the end stop state. This will be used to mask the command.step field.
+    // Endstop X1
+    LSR r0, STEPPER_X1_END_BANK, STEPPER_X1_END_PIN     // Right shift pin to bit 0
+    AND r7,r0,0x01                                      // Endstop Xmin - Build a mask into r7.b0 that contains the end stop state. This will be used to mask the command.step field.
 
-    // Endstop Y MIN
-    LSR r0,STEPPER_Y_END_MIN_BANK,STEPPER_Y_END_MIN_PIN                         // Right shift the end stop pin to bit 0
-    AND r0,r0,0x01                                          // Clear the other bits 
-    LSL r0,r0,0x01                                          // Shift pin one left since it is Y
-    OR r7,r7.b0,r0                                       // Mask away the step pin if the end stop is set
+    // Endstop Y1
+    LSR r0,STEPPER_Y1_END_BANK,STEPPER_Y1_END_PIN       // Right shift the end stop pin to bit 0
+    AND r0,r0,0x01                                      // Clear the other bits 
+    LSL r0,r0,0x01                                      // Shift pin one left since it is Y
+    OR r7,r7.b0,r0                                      // Mask away the step pin if the end stop is set
 
-    // Endstop Z MIN              
-    LSR r0,STEPPER_Z_END_MIN_BANK,STEPPER_Z_END_MIN_PIN
+    // Endstop Z1              
+    LSR r0,STEPPER_Z1_END_BANK,STEPPER_Z1_END_PIN
     AND r0,r0,0x01
     LSL r0,r0,0x02
     OR  r7, r7,r0                                      
 
-    // Endstop X MAX         
-    LSR r0, STEPPER_X_END_MAX_BANK, STEPPER_X_END_MAX_PIN               
+    // Endstop X2         
+    LSR r0, STEPPER_X2_END_BANK, STEPPER_X2_END_PIN               
     AND r0,r0,0x01                                  
     LSL r0,r0,0x03
     OR  r7, r7,r0                                      
 
-    // Endstop Y MAX              
-    LSR r0,STEPPER_Y_END_MAX_BANK,STEPPER_Y_END_MAX_PIN                         
+    // Endstop Y2
+    LSR r0,STEPPER_Y2_END_BANK,STEPPER_Y2_END_PIN                         
     AND r0,r0,0x01                                          
     LSL r0,r0,0x04                                          
     OR r7, r7 ,r0                                      
 
-    // Endstop Z MAX               
-    LSR r0,STEPPER_Z_END_MAX_BANK,STEPPER_Z_END_MAX_PIN
+    // Endstop Z2
+    LSR r0,STEPPER_Z2_END_BANK,STEPPER_Z2_END_PIN
     AND r0,r0,0x01
     LSL r0,r0,0x05
     OR  r7, r7, r0
@@ -127,7 +108,7 @@ COLLECT:
 MASK:
     MOV r8, 0
 MASK_X_MIN:
-    QBBC MASK_Y_MIN, r7, 0                      // Jump to next label if bit 0 is clear 
+    QBBC MASK_Y_MIN, r7, 0             // Jump to next label if bit 0 is clear 
     OR r8, r8, r10                     // Mask the stepper directions used by X_MIN
 MASK_Y_MIN:
     QBBC MASK_Z_MIN, r7, 1
@@ -146,7 +127,7 @@ MASK_Z_MAX:
     OR r8, r8, r15
 
 PUBLISH: 
-    NOT r8.w0, r8.w0         //Invert so that the 1 (meaning do not move) becomes 0 for masking the step in PRU0
+    NOT r8.w0, r8.w0         // Invert so that the 1 (meaning do not move) becomes 0 for masking the step in PRU0
     SBCO r7, C28, 0, 8       // Publish the endstop states from r7/r8
 
     MOV r0, END_STOP_DELAY   // Add some delay

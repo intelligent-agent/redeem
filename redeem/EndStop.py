@@ -66,27 +66,12 @@ class EndStop:
             if code == self.key_code:
                 if self.invert is True and direction == "down":
                     self.hit = True 
-                    if EndStop.callback is not None:
-                        EndStop.callback(self)
+                    self.callback()
                 elif self.invert is False and direction == "up":
                     self.hit = True
-                    if EndStop.callback is not None:
-                        EndStop.callback(self)
+                    self.callback(self)
                 else:
                     self.hit = False
-
-    def read_direction_mask_value(self):
-        """
-        Read the current direction mask value using PRU1.
-        For debugging purposes.
-        """
-        with open("/dev/mem", "r+b") as f:
-            ddr_mem = mmap.mmap(f.fileno(), self.PRU_ICSS_LEN,
-                                offset=self.PRU_ICSS)
-            state = struct.unpack('LL',
-                                  ddr_mem[self.RAM2_START:self.RAM2_START + 8])
-            
-            return state[1]
 
     def read_value(self):
         """ Read the current endstop value from GPIO using PRU1 """
@@ -110,3 +95,9 @@ class EndStop:
             else:
                 raise RuntimeError('Invalid endstop name')
         return self.hit
+
+    def callback(self):
+        """ An endStop has been hit """
+        logging.info("End Stop " + self.name + " hit!")
+        if "toggle" in self.printer.comms:
+            self.printer.comms["toggle"].send_message("End stop hit!")

@@ -57,9 +57,9 @@ class ShiftRegister(object):
             spi.writebytes(bytes[::-1])
 
     @staticmethod
-    def make():
+    def make(num):
         if len(ShiftRegister.registers) == 0:
-            for i in range(5):
+            for i in range(num):
                 ShiftRegister()
 
     def __init__(self):

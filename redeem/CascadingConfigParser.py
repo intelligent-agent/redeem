@@ -57,35 +57,26 @@ class CascadingConfigParser(ConfigParser.SafeConfigParser):
         """ Read the name and revision of each cape on the BeagleBone """
         self.replicape_revision = None
         self.reach_revision = None
-        for busNumber in ["1","2"]:
-            for addr in ["4", "5", "6", "7"]:
-                path = "/sys/bus/i2c/devices/"+busNumber+"-005"+addr
-                if(os.path.isfile(path+"/eeprom")):
-                    eeprom = path+"/eeprom"
-                elif os.path.isfile(path+"/nvmem/at24-1/nvmem"):
-                    eeprom = path+"/nvmem/at24-1/nvmem"
-                elif os.path.isfile(path+"/at24-1/nvmem"):
-                    eeprom = path+"/at24-1/nvmem"
-                else:
-                    continue
-                try:
-                    with open(eeprom, "rb") as f:
-                        data = f.read(100)
-                        name = data[58:74].strip()
-                        if name == "BB-BONE-REPLICAP":
-                            self.replicape_revision = data[38:42]
-                        elif name[:13] == "BB-BONE-REACH":
-                            self.reach_revision = data[38:42]
-
-                        if self.replicape_revision != None and self.reach_revision != None:
-                            break
-                except IOError as e:
-                    pass
-
-            if self.replicape_revision != None and self.reach_revision != None:
-                    break
-
-
+        
+        import glob
+        paths = glob.glob("/sys/bus/i2c/devices/[1-2]-005[4-7]/at24-[1-4]/nvmem")
+        paths.append(glob.glob("/sys/bus/i2c/devices/[1-2]-005[4-7]/nvmem/at24-[1-4]/nvmem"))
+        paths.append(glob.glob("/sys/bus/i2c/devices/[1-2]-005[4-7]/eeprom"))
+        for i, path in enumerate(paths):
+            try:
+                logging.debug(path)
+                with open(path, "rb") as f:
+                    data = f.read(100)
+                    name = data[58:74].strip()
+                    if name == "BB-BONE-REPLICAP":
+                        self.replicape_revision = data[38:42]
+                    elif name[:13] == "BB-BONE-REACH":
+                        self.reach_revision = data[38:42]
+                    if self.replicape_revision != None and self.reach_revision != None:
+                        break
+            except IOError as e:
+                pass
+        return 
     
     def save(self, filename):
         """ Save the changed settings to local.cfg """

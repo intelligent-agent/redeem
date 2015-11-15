@@ -68,10 +68,15 @@
 #define Z_AXIS 2
 #define E_AXIS 3
 #define H_AXIS 4
+#define A_AXIS 5
+#define B_AXIS 6
+#define C_AXIS 7
 
 #if NUM_AXES!=4
 #if NUM_AXES!=5
+#if NUM_AXES!=8
 #error Invalid number of axis
+#endif
 #endif
 #endif
 
@@ -195,48 +200,33 @@ private:
     }
     inline bool isNoMove()
     {
-        return (dir & 992) == 0;
+        return (dir & (255<<8)) == 0;
     }
-    /*inline bool isXYZMove()
-    {
-        return dir & 112;
-    }*/
-
-
-
-
-
     inline void setMoveOfAxis(unsigned int axis){
-        dir |= (32<<axis);
+        dir |= (256<<axis);
     }
     inline bool isAxisMove(unsigned int axis){
-        return (dir & (32<<axis));
+        return (dir & (256<<axis));
     }
-
     inline void setPositiveDirectionForAxis(unsigned int axis){
         dir |= (1<<axis);
     }
     inline bool isAxisNegativeMove(unsigned int axis){
-        return (dir & ((32<<axis) + (1<<axis))) == (unsigned int)(32<<axis);
+        return (dir & ((256<<axis) + (1<<axis))) == (unsigned int)(256<<axis);
     }
     inline bool isAxisPositiveMove(unsigned int axis){
-        return (dir & ((32<<axis) + (1<<axis))) == (unsigned int)((32<<axis) + (1<<axis));
+        return (dir & ((256<<axis) + (1<<axis))) == (unsigned int)((256<<axis) + (1<<axis));
     }
 	
     inline bool isAxisOnlyMove(unsigned int axis){
-        return ((dir & 992) == (unsigned int)(32 << axis));
+        return ((dir & (255<<8)) == (unsigned int)(256 << axis));
     }
-
-
-
 	inline unsigned long getWaitMS(){
         return timeInTicks;
     }
-	
     inline void setWaitMS(unsigned long wait){
         timeInTicks = wait;
     }
-	
 	inline bool moveDecelerating(unsigned int stepNumber){
         if(stepsRemaining - stepNumber <= decelSteps){
             if (!(flags & FLAG_DECELERATING)){
