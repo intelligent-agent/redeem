@@ -2,8 +2,10 @@
 """
 Redeem main program. This should run on the BeagleBone.
 
+Minor version tag is Arnold Schwarzenegger movies chronologically.
+
 Author: Elias Bakken
-email: elias(dot)bakken(at)gmail(dot)com
+email: elias(at)iagent(dot)no
 Website: http://www.thing-printer.com
 License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
 
@@ -19,9 +21,6 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
 
  You should have received a copy of the GNU General Public License
  along with Redeem.  If not, see <http://www.gnu.org/licenses/>.
-
-
-Minor version tag is Arnold Schwarzenegger movies chronologically.
 """
 
 import glob
@@ -59,19 +58,16 @@ from Delta import Delta
 from Enable import Enable
 from PWM import PWM
 
-version = "1.1.1~Raw Deal"
+# Global vars
+printer = None
 
 # Default logging level is set to debug
 logging.basicConfig(level=logging.DEBUG,
                     format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
                     datefmt='%m-%d %H:%M')
-
-
 class Redeem:
-
     def __init__(self):
-        """ Init """
-        logging.info("Redeem initializing " + version)
+        logging.info("Redeem initializing 1.1.1~Raw Deal" )
 
         printer = Printer()
         self.printer = printer
@@ -92,15 +88,17 @@ class Redeem:
         self.revision = self.printer.config.replicape_revision
         if self.revision:
             logging.info("Found Replicape rev. " + self.revision)
-            Path.set_axes(5)
         else:
             logging.warning("Oh no! No Replicape present!")
             self.revision = "00B2"
-            # We set it to 5 axis by default
-            Path.set_axes(5)
+        # We set it to 5 axis by default
+        Path.NUM_AXES = 5
         if self.printer.config.reach_revision:
-            Path.set_axes(8)
             logging.info("Found Reach rev. "+self.printer.config.reach_revision)
+        if self.printer.config.reach_revision == "00A0":
+            Path.NUM_AXES = 8
+        elif self.printer.config.reach_revision == "00B0":
+            Path.NUM_AXES = 7
 
         # Get the revision and loglevel from the Config file
         level = self.printer.config.getint('System', 'loglevel')
@@ -299,6 +297,26 @@ class Redeem:
                         self.printer.coolers.append(c)
                         logging.info("Cooler connects temp sensor ds18b20 {} with fan {}".format(ce, f))
 
+        # Init rotary encoders
+        printer.rotary_encoders = []
+        for ex in ["E", "H", "A", "B", "C"]:
+            if not self.printer.config.has_option('Rotary-encoders', "enable-{}".format(ex)):
+                continue
+            if printer.config.getboolean("Rotary-encoders", "enable-{}".format(ex)):
+                logging.debug("")
+                event = printer.config.get("Rotary-encoders", "event-{}".format(ex))
+                cpr = printer.config.getint("Rotary-encoders", "cpr-{}".format(ex))
+                diameter = printer.config.getfloat("Rotary-encoders", "diameter-{}".format(ex))
+                r = RotaryEncoder(event, cpr, diameter)
+                printer.rotary_encoders.append(r)
+
+        # Init roatray encs. 
+        printer.filament_sensors = []
+        for enc in printer.rotary_encoders:
+            sensor = FilamentSensor()
+            sensor.add_sensor(enc)
+            printer.filament_sensors.append(sensor)
+    
         # Make a queue of commands
         self.printer.commands = JoinableQueue(10)
 

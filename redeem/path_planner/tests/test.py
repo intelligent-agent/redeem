@@ -37,8 +37,8 @@ for i in range(45):
 
 # Long Z-move
 start = (0, 0, 0, 0, 0, 0, 0, 0)
-end   = (10, 0, 8, 0, 0, 0, 0, 8)
-t.queueMove(start, end, 1.0, 1.0, False, False)
+end   = (0.01, 0, 0, 0, 0, 0, 0, 0)
+t.queueMove(start, end, 0.00001, 0.5, False, False)
 
 #t.runThread()
 t.waitUntilFinished()

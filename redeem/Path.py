@@ -29,13 +29,32 @@ import logging
 
 class Path:
     AXES = "XYZEHABC"
+    MAX_AXES = 8
+    NUM_AXES = 5
+
+    # Variables set from config.
+    max_speeds             = [0]*MAX_AXES
+    min_speeds             = [0]*MAX_AXES
+    jerks                  = [0]*MAX_AXES
+    acceleration           = [0]*MAX_AXES
+    home_speed             = [0]*MAX_AXES
+    home_backoff_speed     = [0]*MAX_AXES
+    home_backoff_offset    = [0]*MAX_AXES
+    steps_pr_meter         = [0]*MAX_AXES
+    backlash_compensation  = [0]*MAX_AXES
+    backlash_state         = [0]*MAX_AXES
+    soft_min               = [0]*MAX_AXES
+    soft_max               = [0]*MAX_AXES
+    slaves                 = {key: "" for key in AXES}
+
+    axes_zipped = zip(["X", "Y", "Z", "E", "H", "A", "B", "C"])
 
     AXIS_CONFIG_XY = 0
     AXIS_CONFIG_H_BELT = 1
     AXIS_CONFIG_CORE_XY = 2
     AXIS_CONFIG_DELTA = 3
 
-    # Different types
+    # Different types of paths
     ABSOLUTE = 0
     RELATIVE = 1
     G92 = 2
@@ -64,25 +83,6 @@ class Path:
     
     # By default, do not check for slaves
     has_slaves = False
-
-    @staticmethod
-    def set_axes(num_axes):
-        """ Set number of axes """
-        Path.NUM_AXES               = num_axes
-        Path.max_speeds             = np.ones(num_axes)
-        Path.min_speeds             = np.ones(num_axes)*0.01
-        Path.jerks                  = np.ones(num_axes)*0.01
-        Path.acceleration           = [0.3]*num_axes
-        Path.home_speed             = np.ones(num_axes)
-        Path.home_backoff_speed     = np.ones(num_axes)
-        Path.home_backoff_offset    = np.zeros(num_axes)
-        Path.steps_pr_meter         = np.ones(num_axes)
-        Path.backlash_compensation  = np.zeros(num_axes)
-        Path.backlash_state         = np.zeros(num_axes)
-        Path.soft_min               = -np.ones(num_axes)*1000.0
-        Path.soft_max               = np.ones(num_axes)*1000.0
-        Path.slaves                 = {key: "" for key in Path.AXES[:num_axes]}
-
 
     @staticmethod
     def add_slave(master, slave):
@@ -177,11 +177,11 @@ class Path:
 
     @staticmethod
     def backlash_reset():
-	    Path.backlash_state = np.zeros(Path.NUM_AXES)
+	    Path.backlash_state = np.zeros(Path.MAX_AXES)
 
     def backlash_compensate(self):
         """ Apply compensation to the distance taken if the direction of the axis has changed. """
-        ret_vec = np.zeros(Path.NUM_AXES)
+        ret_vec = np.zeros(Path.MAX_AXES)
         if self.use_backlash_compensation:
             for index, d in enumerate(self.delta):
                 dirstate = np.sign(d)
@@ -258,9 +258,9 @@ class Path:
                         self.prev.ideal_end_pos[i], 
                         self.ideal_end_pos[i], 
                         num_segments
-                        ) for i in xrange(Path.NUM_AXES)]) 
+                        ) for i in xrange(Path.MAX_AXES)]) 
         vals = np.delete(vals, 0, axis=0)
-        vec_segments = [dict(zip(["X", "Y", "Z", "E", "H"], list(val))) for val in vals]
+        vec_segments = [dict(Path.axes_zipped, list(val)) for val in vals]
         path_segments = []
 
         for index, segment in enumerate(vec_segments):
@@ -323,14 +323,14 @@ class Path:
                         self.prev.ideal_end_pos[i], 
                         self.ideal_end_pos[i], 
                         num_segments
-                        ) for i in xrange(Path.NUM_AXES)]) 
+                        ) for i in xrange(Path.MAX_AXES)]) 
 
         # Update the X and Y positions
         for i, val in enumerate(vals):
             val[:2] = (X[i], Y[i])
         vals = np.delete(vals, 0, axis=0)
 
-        vec_segments = [dict(zip(["X", "Y", "Z", "E", "H"], list(val))) for val in vals]
+        vec_segments = [dict(Path.axes_zipped, list(val)) for val in vals]
         path_segments = []
 
         for index, segment in enumerate(vec_segments):
@@ -393,8 +393,8 @@ class Path:
 
         if np.isnan(vec).any():
             self.end_pos = self.start_pos
-            self.num_steps = np.zeros(Path.NUM_AXES)
-            self.delta = np.zeros(Path.NUM_AXES)
+            self.num_steps = np.zeros(Path.MAX_AXES)
+            self.delta = np.zeros(Path.MAX_AXES)
 
     def __str__(self):
         """ The vector representation of this path segment """
@@ -457,7 +457,7 @@ class RelativePath(Path):
         self.start_pos = prev.end_pos
 
         # Generate the vector
-        vec = np.zeros(Path.NUM_AXES, dtype=Path.DTYPE)
+        vec = np.zeros(Path.MAX_AXES, dtype=Path.DTYPE)
         for index, axis in enumerate(Path.AXES):
             if axis in self.axes:
                 vec[index] = self.axes[axis]
@@ -483,14 +483,14 @@ class G92Path(Path):
             self.ideal_end_pos = np.copy(prev.ideal_end_pos)
             prev.next = self
         else:
-            self.start_pos = np.zeros(Path.NUM_AXES, dtype=Path.DTYPE)
+            self.start_pos = np.zeros(Path.MAX_AXES, dtype=Path.DTYPE)
             self.ideal_end_pos = np.copy(self.start_pos)
 
         self.end_pos = np.copy(self.start_pos)
         for index, axis in enumerate(Path.AXES):
             if axis in self.axes:
                 self.end_pos[index] = self.ideal_end_pos[index] = self.axes[axis]
-        self.vec = np.zeros(Path.NUM_AXES)
+        self.vec = np.zeros(Path.MAX_AXES)
         self.rounded_vec = self.vec
 
 
@@ -515,7 +515,7 @@ class CompensationPath(Path):
 
         # Set stepper and true posision
         self.stepper_end_pos = np.copy(prev.stepper_end_pos)
-        self.rounded_vec = np.zeros(Path.NUM_AXES, dtype=Path.DTYPE)
+        self.rounded_vec = np.zeros(Path.MAX_AXES, dtype=Path.DTYPE)
 
         # Generate the vector 
         self.vec = self.axes
@@ -526,10 +526,8 @@ class CompensationPath(Path):
 
         if np.isnan(self.vec).any():
             logging.error("Compensation Path Invalid: "+str(self.start_pos)+" to "+str(self.axes))
-            self.num_steps = np.zeros(Path.NUM_AXES)
-            self.delta = np.zeros(Path.NUM_AXES)
-
-
+            self.num_steps = np.zeros(Path.MAX_AXES)
+            self.delta = np.zeros(Path.MAX_AXES)
 
 # Simple test procedure for G2
 if __name__ == '__main__':

@@ -56,6 +56,23 @@ class Printer:
         self.probe_heights = [0]*3
         self.probe_type = 0 # Servo
 
+        # Max number of axes. 
+        self.num_axes = 8
+
+        self.max_speeds             = np.ones(self.num_axes)
+        self.min_speeds             = np.ones(self.num_axes)*0.01
+        self.jerks                  = np.ones(self.num_axes)*0.01
+        self.acceleration           = [0.3]*self.num_axes
+        self.home_speed             = np.ones(self.num_axes)
+        self.home_backoff_speed     = np.ones(self.num_axes)
+        self.home_backoff_offset    = np.zeros(self.num_axes)
+        self.steps_pr_meter         = np.ones(self.num_axes)
+        self.backlash_compensation  = np.zeros(self.num_axes)
+        self.backlash_state         = np.zeros(self.num_axes)
+        self.soft_min               = -np.ones(self.num_axes)*1000.0
+        self.soft_max               = np.ones(self.num_axes)*1000.0
+        self.slaves                 = {key: "" for key in Path.AXES[:self.num_axes]}
+
     def ensure_steppers_enabled(self):
         """
         This method is called for every move, so it should be fast/cached.

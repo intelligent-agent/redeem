@@ -99,6 +99,10 @@ class PathPlanner:
             pos2[axis] = pos[index]
         return pos2
 
+    def get_extruder_pos(self, ext_nr):
+        """ Return the current position of this extruder """
+        return self.prev.end_pos[3+ext_nr]
+
     def wait_until_done(self):
         """ Wait until the queue is empty """
         self.native_planner.waitUntilFinished()

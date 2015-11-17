@@ -60,8 +60,8 @@ class CascadingConfigParser(ConfigParser.SafeConfigParser):
         
         import glob
         paths = glob.glob("/sys/bus/i2c/devices/[1-2]-005[4-7]/at24-[1-4]/nvmem")
-        paths.append(glob.glob("/sys/bus/i2c/devices/[1-2]-005[4-7]/nvmem/at24-[1-4]/nvmem"))
-        paths.append(glob.glob("/sys/bus/i2c/devices/[1-2]-005[4-7]/eeprom"))
+        #paths.append(glob.glob("/sys/bus/i2c/devices/[1-2]-005[4-7]/nvmem/at24-[1-4]/nvmem"))
+        #paths.append(glob.glob("/sys/bus/i2c/devices/[1-2]-005[4-7]/eeprom"))
         for i, path in enumerate(paths):
             try:
                 logging.debug(path)

@@ -302,7 +302,7 @@ void PathPlanner::calculateMove(Path* p, FLOAT_T axis_diff[NUM_AXES]){
         //LOG( "CalucluateMove: AxisInterval " << i << ": " << axisInterval[i] << std::endl);
         //LOG( "CalucluateMove: AxisAccel   " << i << ": " << maxAccelerationMMPerSquareSecond[i] << std::endl);
     }
-    //LOG( "CalucluateMove: limitInterval is " << limitInterval << " steps/s" << std::endl);
+    LOG( "CalucluateMove: limitInterval is " << limitInterval << " steps/s" << std::endl);
     p->fullInterval = limitInterval; // This is our target speed
 	
     // new time at full speed = limitInterval*p->stepsRemaining [ticks]
