@@ -25,7 +25,7 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
 """
 
 import logging
-from Path import Path, CompensationPath, AbsolutePath, RelativePath, G92Path
+from Path import Path, AbsolutePath, RelativePath, G92Path
 from Delta import Delta
 from Printer import Printer
 import numpy as np
@@ -345,7 +345,7 @@ class PathPlanner:
         #logging.debug("Adding "+str(new))
         new.set_prev(self.prev)
 
-        if new.compensation is not None:
+        if new.compensation:
             # Apply a backlash compensation move
             self.native_planner.queueMove(tuple(np.zeros(Path.MAX_AXES)),
                                           tuple(new.compensation), new.speed, new.accel,

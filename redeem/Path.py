@@ -193,7 +193,7 @@ class Path:
                     Path.backlash_state[index] = dirstate
 
             if np.any(ret_vec):
-                self.compensation = ret_vec;
+                self.compensation = ret_vec
 
         return ret_vec
 
@@ -495,40 +495,7 @@ class G92Path(Path):
         self.rounded_vec = self.vec
 
 
-class CompensationPath(Path):
-    """ A path segment with relative movement and resets axes """
-    def __init__(self, axes, speed, accel, cancelable=False, use_bed_matrix=False, use_backlash_compensation=False):
-        Path.__init__(self, axes, speed, accel, cancelable, use_bed_matrix, use_backlash_compensation)
-        self.movement = Path.RELATIVE
 
-    def needs_splitting(self):
-        return False
-
-    def set_prev(self, prev):
-        """ Link to previous segment """
-        self.prev = prev
-        prev.next = self
-
-        # We are not moving to anywhere, really.
-        self.start_pos = np.copy(prev.end_pos)
-        self.ideal_end_pos = np.copy(prev.ideal_end_pos)
-        self.end_pos = np.copy(prev.end_pos)
-
-        # Set stepper and true posision
-        self.stepper_end_pos = np.copy(prev.stepper_end_pos)
-        self.rounded_vec = np.zeros(Path.MAX_AXES, dtype=Path.DTYPE)
-
-        # Generate the vector 
-        self.vec = self.axes
-
-        # Compute stepper translation
-        self.num_steps = np.ceil(np.abs(self.vec) * Path.steps_pr_meter)
-        self.delta = np.sign(self.vec) * self.num_steps / Path.steps_pr_meter
-
-        if np.isnan(self.vec).any():
-            logging.error("Compensation Path Invalid: "+str(self.start_pos)+" to "+str(self.axes))
-            self.num_steps = np.zeros(Path.MAX_AXES)
-            self.delta = np.zeros(Path.MAX_AXES)
 
 # Simple test procedure for G2
 if __name__ == '__main__':
