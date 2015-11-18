@@ -237,8 +237,10 @@ class PathPlanner:
         p = AbsolutePath(path_home, speed, True, False, False, False)
         self.add_path(p)
         self.wait_until_done()
-        
-        return
+
+        # Reset (final) position to offset
+        p = G92Path(path_home, speed)
+        self.add_path(p)
 
     def home(self, axis):
         """ Home the given axis using endstops (min) """
