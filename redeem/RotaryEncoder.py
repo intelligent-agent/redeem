@@ -50,7 +50,6 @@ class RotaryEncoder:
                 self.step += event.value
                 self.rounds = self.step/self.cpr
                 self.distance = self.rounds*math.pi*self.d if self.rounds != 0 else 0
-                print self.distance
             if not self.running:
                 break
 

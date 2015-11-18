@@ -57,7 +57,9 @@ from PluginsController import PluginsController
 from Delta import Delta
 from Enable import Enable
 from PWM import PWM
-
+from RotaryEncoder import *
+from FilamentSensor import *
+    
 # Global vars
 printer = None
 
@@ -297,25 +299,28 @@ class Redeem:
                         self.printer.coolers.append(c)
                         logging.info("Cooler connects temp sensor ds18b20 {} with fan {}".format(ce, f))
 
+        # Init roatray encs. 
+        printer.filament_sensors = []
+
         # Init rotary encoders
         printer.rotary_encoders = []
         for ex in ["E", "H", "A", "B", "C"]:
-            if not self.printer.config.has_option('Rotary-encoders', "enable-{}".format(ex)):
+            if not printer.config.has_option('Rotary-encoders', "enable-{}".format(ex)):
                 continue
             if printer.config.getboolean("Rotary-encoders", "enable-{}".format(ex)):
-                logging.debug("")
+                logging.debug("Rotary encoder {} enabled".format(ex))
                 event = printer.config.get("Rotary-encoders", "event-{}".format(ex))
                 cpr = printer.config.getint("Rotary-encoders", "cpr-{}".format(ex))
                 diameter = printer.config.getfloat("Rotary-encoders", "diameter-{}".format(ex))
                 r = RotaryEncoder(event, cpr, diameter)
                 printer.rotary_encoders.append(r)
-
-        # Init roatray encs. 
-        printer.filament_sensors = []
-        for enc in printer.rotary_encoders:
-            sensor = FilamentSensor()
-            sensor.add_sensor(enc)
-            printer.filament_sensors.append(sensor)
+                # Append as Filament Sensor
+                ext_nr = Path.axis_to_index(ex)-3
+                sensor = FilamentSensor(ex, r, ext_nr, printer)
+                alarm_level = printer.config.getfloat("Filament-sensors", "alarm-level-{}".format(ex))
+                logging.debug(alarm_level)
+                sensor.alarm_level = alarm_level
+                printer.filament_sensors.append(sensor)
     
         # Make a queue of commands
         self.printer.commands = JoinableQueue(10)

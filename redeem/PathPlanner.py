@@ -95,7 +95,7 @@ class PathPlanner:
         """ Get the current pos as a dict """
         pos = self.prev.end_pos
         pos2 = {}
-        for index, axis in enumerate(Path.AXES[:Path.NUM_AXES]):
+        for index, axis in enumerate(Path.AXES[:Path.MAX_AXES]):
             pos2[axis] = pos[index]
         return pos2
 
@@ -341,11 +341,13 @@ class PathPlanner:
         """ Add a path segment to the path planner """
         """ This code, and the native planner, needs to be updated for reach. """
         # Link to the previous segment in the chain
+
+        #logging.debug("Adding "+str(new))
         new.set_prev(self.prev)
 
         if new.compensation is not None:
             # Apply a backlash compensation move
-            self.native_planner.queueMove(tuple(np.zeros(Path.NUM_AXES)),
+            self.native_planner.queueMove(tuple(np.zeros(Path.MAX_AXES)),
                                           tuple(new.compensation), new.speed, new.accel,
                                           bool(new.cancelable),
                                           False)
@@ -353,12 +355,12 @@ class PathPlanner:
         if new.needs_splitting():     
             path_batch = new.get_segments()
             # Construct a batch
-            batch_array = np.zeros(shape=(len(path_batch)*2*Path.NUM_AXES), dtype=np.float64)     # Change this to reflect NUM_AXIS.
+            batch_array = np.zeros(shape=(len(path_batch)*2*Path.MAX_AXES), dtype=np.float64)     # Change this to reflect NUM_AXIS.
 
             for maj_index, path in enumerate(path_batch):
-                for subindex in range(Path.NUM_AXES):  # this needs to be NUM_AXIS
-                    batch_array[(maj_index * Path.NUM_AXES * 2) + subindex] = path.start_pos[subindex]
-                    batch_array[(maj_index * Path.NUM_AXES * 2) + Path.NUM_AXES + subindex] = path.stepper_end_pos[subindex]
+                for subindex in range(Path.MAX_AXES):  # this needs to be NUM_AXIS
+                    batch_array[(maj_index * Path.MAX_AXES * 2) + subindex] = path.start_pos[subindex]
+                    batch_array[(maj_index * Path.MAX_AXES * 2) + Path.MAX_AXES + subindex] = path.stepper_end_pos[subindex]
                 
                 self.prev = path
                 self.prev.unlink()
@@ -394,7 +396,7 @@ class PathPlanner:
                             # in memory, so we keep only the last path.
 
     def set_extruder(self, ext_nr):
-        if ext_nr in range(Path.NUM_AXES-3):
+        if ext_nr in range(Path.MAX_AXES-3):
             logging.debug("Selecting "+str(ext_nr))
             #Path.steps_pr_meter[3] = self.printer.steppers[
             #        Path.index_to_axis(ext_nr+3)

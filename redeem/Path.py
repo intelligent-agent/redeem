@@ -40,7 +40,7 @@ class Path:
     home_speed             = [0]*MAX_AXES
     home_backoff_speed     = [0]*MAX_AXES
     home_backoff_offset    = [0]*MAX_AXES
-    steps_pr_meter         = [0]*MAX_AXES
+    steps_pr_meter         = [1]*MAX_AXES
     backlash_compensation  = [0]*MAX_AXES
     backlash_state         = [0]*MAX_AXES
     soft_min               = [0]*MAX_AXES
@@ -93,6 +93,8 @@ class Path:
     
     def __init__(self, axes, speed, accel, cancelable=False, use_bed_matrix=True, use_backlash_compensation=True, enable_soft_endstops=True):
         """ The axes of evil, the feed rate in m/s and ABS or REL """
+
+        logging.debug(axes)
         self.axes = axes
         self.speed = speed
         self.accel = accel
@@ -101,7 +103,6 @@ class Path:
         self.use_backlash_compensation = int(use_backlash_compensation)
         self.enable_soft_endstops = enable_soft_endstops
         self.mag = None
-        self.pru_data = []
         self.next = None
         self.prev = None
         self.speeds = None

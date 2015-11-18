@@ -25,55 +25,45 @@ Author: Elias Bakken
 from threading import Thread
 import time
 import logging
-from Redeem import printer
 
 class FilamentSensor:
 
-    def __init__(self):
-        self.alarm_level = []
-        self.current_pos = []
-        self.ideal_pos = []
-        self.error_pos = []
-        self.sensors = []
+    def __init__(self, name, sensor, ext_nr, printer=None):
+        self.name = name
+        self.sensor = sensor
+        self.ext_nr = ext_nr
+        self.printer = printer
+        self.alarm_level = 0
+        self.current_pos = 0
+        self.ideal_pos = 0
+        self.error_pos = 0
+
         self.t = Thread(target=self._loop)
         self.running = True
         self.t.start()
-
-    def set_alarm_level(self, level, ext_num=0):
-        ''' Set the distance error for which to sound an alarm '''
-        self.alarm_level[ext_num] = level
-
-    def add_sensor(self, sensor):
-        ''' Add a sensor to monitor '''
-        self.current_pos.append(0)
-        self.ideal_pos.append(0)
-        self.error_pos.append(0)
-        self.alarm_level.append(0)
-        self.sensors.append(sensor)
         
-    def set_ideal_position(self, pos, ext_num=0):
-        ''' Sets the position the extruder should have travelled. '''
-        self.ideal_pos[ext_num] = pos
+    def execute_alarm(self):
+        logging.warning("Extruder {0} has reported too large deviation: {1:.2f} mm".format(self.ext_nr, self.error_pos*1000))
 
-    def get_diff(self, ext_num=0):
-        ''' Return the error in position '''
-        return self.error[ext_num]
+    def get_status(self):
+        """ return a human readable status report """
+        return "Filament sensor {0}: measured error is {1:.2f} mm ".format(self.name, self.error_pos*1000)
 
-    def alarm(self, ext_num):
-        logging.warning("Extruder {} has reported too large deviation".fomat(ext_num))
+    def set_distance(self, distance):
+        """ Set sensor distance """
+        self.sensor.distance = distance
 
     def _loop(self):
         ''' Gather distance travelled from each of the sensors '''
         while self.running:
-            for i, sensor in enumerate(self.sensors):
-                self.current_pos[i] = sensor.get_distance()
-                self.error_pos[i] = self.current_pos[i]-self.ideal_pos[i]
-                if printer:
-                    self.ideal_pos[i] = printer.path_planner.get_extruder_pos(i)
-                logging.debug("Error :"+str(self.error_pos[0]))
-                print("Error :"+str(self.error_pos[0]))
-                if self.error_pos[i] > self.alarm_level[i]: 
-                    self.alarm(i)
+            self.current_pos = self.sensor.get_distance()
+            self.error_pos = self.current_pos-self.ideal_pos
+            if self.printer and self.printer.path_planner:
+                self.ideal_pos = self.printer.path_planner.get_extruder_pos(self.ext_nr)
+            #logging.debug("Set: {}, Measured: {}, Error : {}, alarm: {}".format(
+            #    self.ideal_pos, self.current_pos, self.error_pos, self.alarm_level))
+            if abs(self.error_pos) >= self.alarm_level: 
+                self.execute_alarm()
             time.sleep(1)
 
     def stop(self):
