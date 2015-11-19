@@ -33,12 +33,14 @@ except ImportError:
 
 class Autotune:
 
-    def __init__(self, heater, temp=100.0, cycles=3):        
+    def __init__(self, heater, temp=100.0, cycles=3, g=None, printer=None):        
         self.heater = heater
         self.noise_band = 0.5
         # Steady state starting temperture
         self.steady_temperature = temp
         self.cycles = cycles
+        self.g = g
+        self.printer = printer
         # Degrees to step
         self.output_step = 10.0
         self.stable_start_seconds = 10
@@ -50,7 +52,7 @@ class Autotune:
 
 
     def send_temperature(self):
-        m105 = Gcode({"message": "M105", "prot": g.prot})
+        m105 = Gcode({"message": "M105", "prot": self.g.prot})
         self.printer.processor.execute(m105)
         answer = m105.get_answer()
         m105.set_answer(answer[2:])  # strip away the "ok"

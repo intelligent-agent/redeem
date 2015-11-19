@@ -219,9 +219,8 @@ class PruFirmware:
 
             # Construct the end stop inversion mask
             inversion_mask = "#define INVERSION_MASK\t\t0b00"
-            for name, endstop in self.printer.end_stops.iteritems():
-                inversion_mask += "1" if self.config.getboolean('Endstops',
-                                                                'invert_' + name) else "0"
+            for name in ["X1", "X2", "Y1", "Y2", "Z1", "Z2"]:
+                inversion_mask += "1" if self.config.getboolean('Endstops', 'invert_' + name) else "0"
 
             configFile.write(inversion_mask + "\n");
 

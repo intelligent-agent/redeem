@@ -121,7 +121,7 @@ class Redeem:
             pin = self.printer.config.get("Endstops", "pin_"+es)
             keycode = self.printer.config.getint("Endstops", "keycode_"+es)
             invert = self.printer.config.getboolean("Endstops", "invert_"+es)
-            self.printer.end_stops[es] = EndStop(pin, keycode, es, invert)
+            self.printer.end_stops[es] = EndStop(printer, pin, keycode, es, invert)
 
         # Init the 5 Stepper motors (step, dir, fault, DAC channel, name)
         if self.revision == "00A3":

@@ -42,7 +42,7 @@ class M303(GCodeCommand):
         else:
             cycles = 3
         
-        tuner = Autotune(heater, temp, cycles)
+        tuner = Autotune(heater, temp, cycles, g, self.printer)
         tuner.run()
         logging.info("Max temp: {}, Min temp: {}, Ku: {}, Pu: {}".format(tuner.max_temp, tuner.min_temp, tuner.Ku, tuner.Pu))
         logging.info("P: {}, I: {}, D: {}".format(heater.P, heater.I, heater.D))
