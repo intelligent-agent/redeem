@@ -210,16 +210,19 @@ void PathPlanner::queueBatchMove(FLOAT_T* batchData, int batchSize, FLOAT_T spee
 		//Define variables that are needed for the Bresenham algorithm.
         // Find the primary axis            
         p->primaryAxis = X_AXIS;
-        float sum = 0;
         for(int i=0; i<NUM_AXES; i++){
             if(p->delta[i] > p->delta[p->primaryAxis])
                 p->primaryAxis = i;
-            sum += axis_diff[i] * axis_diff[i];
         }
+
+        float sum = 0;
+        for(int i=0; <NUM_MOVING_AXES; i++)
+            sum += axis_diff[i] * axis_diff[i];
+
+        p->distance = sqrt(sum);
 
 		//LOG( "Primary axis is " << p->primaryAxis << std::endl);
 		p->stepsRemaining = p->delta[p->primaryAxis];	    
-        p->distance = sqrt(sum);
 
         //LOG("Distance in m:     " << p->distance << std::endl);
         //LOG("Speed in m/s:      " << p->speed << std::endl);
