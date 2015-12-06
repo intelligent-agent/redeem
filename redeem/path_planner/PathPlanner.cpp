@@ -186,8 +186,8 @@ void PathPlanner::queueBatchMove(FLOAT_T* batchData, int batchSize, FLOAT_T spee
 
 		//Find direction
 		for(int axis=0; axis < NUM_AXES; axis++){
-			p->startPos[axis] = ceil(p->startPos[axis]*axisStepsPerM[axis]);
-			p->endPos[axis] = ceil(p->endPos[axis]*axisStepsPerM[axis]);
+			p->startPos[axis] = round(p->startPos[axis]*axisStepsPerM[axis]);
+			p->endPos[axis] = round(p->endPos[axis]*axisStepsPerM[axis]);
 			p->delta[axis] = p->endPos[axis] - p->startPos[axis];
 
 		    if(p->delta[axis]>=0)
@@ -216,7 +216,7 @@ void PathPlanner::queueBatchMove(FLOAT_T* batchData, int batchSize, FLOAT_T spee
         }
 
         float sum = 0;
-        for(int i=0; <NUM_MOVING_AXES; i++)
+        for(int i=0; i<NUM_AXES; i++)
             sum += axis_diff[i] * axis_diff[i];
 
         p->distance = sqrt(sum);

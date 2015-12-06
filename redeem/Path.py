@@ -250,7 +250,7 @@ class Path:
         if not self.needs_splitting():
             return [self]
 
-        num_segments = np.ceil(self.get_magnitude()/self.split_size)+1
+        num_segments = np.round(self.get_magnitude()/self.split_size)+1
         #logging.debug("Magnitude: "+str(self.get_magnitude()))
         #logging.debug("Split size: "+str(self.split_size))
         #logging.debug("Num segments: "+str(num_segments))
@@ -368,7 +368,7 @@ class Path:
         # Compute stepper translation, 
         # yielding the discrete/rounded distance.
         vec = self.transform_vector(self.vec, self.start_pos)
-        self.num_steps = np.ceil(np.abs(vec) * Path.steps_pr_meter)
+        self.num_steps = np.round(np.abs(vec) * Path.steps_pr_meter)
         self.delta = np.sign(vec) * self.num_steps / Path.steps_pr_meter
         vec = self.reverse_transform_vector(self.delta, self.start_pos)
 
