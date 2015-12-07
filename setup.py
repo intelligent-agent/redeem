@@ -38,9 +38,8 @@ setup(
             'configs/mendelmax.cfg', 
             'configs/testing.cfg', 
             'configs/prusa_i3.cfg',
-	    'configs/debrew.cfg', 
-	    'configs/delta.cfg', 
-	    'configs/kossel_mini.cfg']),
+	        'configs/debrew.cfg', 
+	        'configs/kossel_mini.cfg']),
         ('redeem/data',[
             'data/B57540G0104F000.cht',
             'data/B57560G104F.cht',
