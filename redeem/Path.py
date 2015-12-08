@@ -94,7 +94,7 @@ class Path:
     def __init__(self, axes, speed, accel, cancelable=False, use_bed_matrix=True, use_backlash_compensation=True, enable_soft_endstops=True):
         """ The axes of evil, the feed rate in m/s and ABS or REL """
 
-        logging.debug(axes)
+        #logging.debug(axes)
         self.axes = axes
         self.speed = speed
         self.accel = accel

@@ -39,8 +39,10 @@ class M221(GCodeCommand):
 	    pos['H'] *= self.printer.extrude_factor
             self.printer.path_planner.add_path(G92Path(pos, self.printer.feed_rate))
 
-	    
     def get_description(self):
+        return "Set extruder override percentage"
+
+    def get_long_description(self):
         return "M221 S<factor in percent> - set extrude factor override percentage"
 
     def is_buffered(self):

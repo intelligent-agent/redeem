@@ -247,6 +247,45 @@ class Stepper_00B2(Stepper_00B1):
             ShiftRegister.registers[4].remove_state(0x1)
         self.enabled = True
 
+class Stepper_00B3(Stepper_00B2):
+
+    def __init__(self, stepPin, dirPin, faultPin, dac_channel, shiftreg_nr, name):
+        Stepper_00B1.__init__(self, stepPin, dirPin, faultPin, dac_channel, shiftreg_nr, name)
+        self.dac    = PWM_DAC(dac_channel)
+        self.state  = 0 # The initial state of shift register
+    
+    def set_disabled(self, force_update=False):
+        if not self.enabled:
+            return
+        logging.debug("Disabling stepper "+self.name)
+        # X, Y, Z steppers are on the first shift reg. Extruders have their own.  
+        if self.name in ["X", "Y", "Z"]:
+            ShiftRegister.registers[0].add_state(0x1)
+        elif self.name in ["E", "H"]:
+            ShiftRegister.registers[3].add_state(0x1)
+        self.enabled = False
+
+    def set_enabled(self, force_update=False):
+        if self.enabled:
+            return
+        logging.debug("Enabling stepper "+self.name)
+        # X, Y, Z steppers are on the first shift reg. Extruders have their own.  
+        if self.name in ["X", "Y", "Z"]:
+            ShiftRegister.registers[0].remove_state(0x1) # First bit low. 
+        elif self.name in ["E", "H"]:
+            ShiftRegister.registers[3].remove_state(0x1)
+        self.enabled = True
+
+
+    def set_stepper_power_down(self, pd):
+        ''' Enables stepper low current mode on all steppers '''
+        if pd:
+            ShiftRegister.registers[4].add_state(0x1)
+        else:
+            ShiftRegister.registers[4].remove_state(0x1)
+                    
+
+
 """
 The bits in the shift register are as follows (Rev A4) :
 Bit - name   - init val 

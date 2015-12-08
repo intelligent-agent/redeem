@@ -109,7 +109,7 @@ class Redeem:
 
         if self.revision in ["00A4", "0A4A", "00A3"]:
             PWM.set_frequency(100)
-        elif self.revision in ["00B1", "00B2"]:
+        elif self.revision in ["00B1", "00B2", "00B3"]:
             PWM.set_frequency(1000)
 
         # Init the Paths
@@ -142,6 +142,12 @@ class Redeem:
             printer.steppers["Z"] = Stepper_00B2("GPIO0_23", "GPIO0_26", "GPIO0_15", 13, 2, "Z")
             printer.steppers["E"] = Stepper_00B2("GPIO1_28", "GPIO1_15", "GPIO2_1" , 14, 3, "E")
             printer.steppers["H"] = Stepper_00B2("GPIO1_13", "GPIO1_14", "GPIO2_3" , 15, 4, "H")
+        elif self.revision == "00B3":
+            printer.steppers["X"] = Stepper_00B3("GPIO0_27", "GPIO1_29", "GPIO2_4" , 11, 0, "X")
+            printer.steppers["Y"] = Stepper_00B3("GPIO1_12", "GPIO0_22", "GPIO2_5" , 12, 1, "Y")
+            printer.steppers["Z"] = Stepper_00B3("GPIO0_23", "GPIO0_26", "GPIO0_15", 13, 2, "Z")
+            printer.steppers["E"] = Stepper_00B3("GPIO1_28", "GPIO1_15", "GPIO2_1" , 14, 3, "E")
+            printer.steppers["H"] = Stepper_00B3("GPIO1_13", "GPIO1_14", "GPIO2_3" , 15, 4, "H")
         elif self.revision in ["00A4", "0A4A"]:
             printer.steppers["X"] = Stepper_00A4("GPIO0_27", "GPIO1_29", "GPIO2_4" , 0, 0, "X")
             printer.steppers["Y"] = Stepper_00A4("GPIO1_12", "GPIO0_22", "GPIO2_5" , 1, 1, "Y")
@@ -318,7 +324,7 @@ class Redeem:
                 ext_nr = Path.axis_to_index(ex)-3
                 sensor = FilamentSensor(ex, r, ext_nr, printer)
                 alarm_level = printer.config.getfloat("Filament-sensors", "alarm-level-{}".format(ex))
-                logging.debug(alarm_level)
+                logging.debug("Alarm level"+str(alarm_level))
                 sensor.alarm_level = alarm_level
                 printer.filament_sensors.append(sensor)
     
@@ -474,13 +480,9 @@ class Redeem:
                     gcode = queue.get(block=True, timeout=1)
                 except Queue.Empty:
                     continue
-
                 logging.debug("Executing "+gcode.code()+" from "+name + " " + gcode.message)
-
                 self._execute(gcode)
-
                 self.printer.reply(gcode)
-
                 queue.task_done()
         except Exception:
             logging.exception("Exception in {} loop: ".format(name))
@@ -495,7 +497,6 @@ class Redeem:
                         gcode = queue.get(block=True, timeout=1)
                     except Queue.Empty:
                         continue
-
                     self._synchronize(gcode)
                     logging.info("Event handled for " + gcode.code() + " from " + name + " " + gcode.message)
                     queue.task_done()

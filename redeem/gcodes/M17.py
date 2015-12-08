@@ -25,5 +25,8 @@ class M17(GCodeCommand):
                 stepper.set_enabled()
 
     def get_description(self):
+        return "Enable steppers"
+
+    def get_long_description(self):
         return "Power on and enable all steppers. Motors are active after " \
                "this command."

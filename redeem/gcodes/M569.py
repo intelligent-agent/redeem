@@ -34,3 +34,7 @@ class M569(GCodeCommand):
     def get_description(self):
         return "Set stepper direction"
 
+    def get_long_description(self):
+        return ("Set the direction for each axis. "
+                "Use <axis><direction> for each of the axes you want."
+                "Axis is one of X, Y, Z, E, H, A, B, C and direction is 1 or -1")

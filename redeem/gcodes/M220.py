@@ -22,6 +22,9 @@ class M220(GCodeCommand):
 	logging.debug("M220 factor " + str(self.printer.factor))
 	
     def get_description(self):
+        return "Set speed override percentage"
+
+    def get_long_description(self):
         return "M220 S<factor in percent> - set speed factor override percentage"
 
     def is_buffered(self):

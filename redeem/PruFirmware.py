@@ -280,7 +280,7 @@ class PruFirmware:
 if __name__ == '__main__':
     from Printer import Printer
     from EndStop import EndStop
-    from Stepper import Stepper, Stepper_00A3, Stepper_00A4, Stepper_00B1, Stepper_00B2 
+    from Stepper import Stepper, Stepper_00A3, Stepper_00A4, Stepper_00B1, Stepper_00B2, Stepper_00B3
     from CascadingConfigParser import CascadingConfigParser
     printer = Printer()
 

@@ -176,9 +176,7 @@ class PathPlanner:
             
             speed = min(abs(speed), abs(Path.home_speed[Path.axis_to_index(a)]))
             fine_search_speed =  min(abs(speed), abs(Path.home_backoff_speed[Path.axis_to_index(a)]))
-            
-            logging.debug("axis: "+str(a))
-        
+                    
         logging.debug("Search: %s" % path_search)
         logging.debug("Backoff to: %s" % path_backoff)
         logging.debug("Fine search: %s" % path_fine_search)
@@ -382,7 +380,7 @@ class PathPlanner:
             end   = tuple(new.stepper_end_pos)
             can = bool(new.cancelable)
             rel = bool(new.movement != Path.RELATIVE)
-            logging.debug("Queueing "+str(start)+" "+str(end)+" "+str(new.speed)+" "+str(new.accel)+" "+str(can)+" "+str(rel))
+            #logging.debug("Queueing "+str(start)+" "+str(end)+" "+str(new.speed)+" "+str(new.accel)+" "+str(can)+" "+str(rel))
             
             self.native_planner.queueMove(tuple(new.start_pos),
                                       tuple(new.stepper_end_pos), 

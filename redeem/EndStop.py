@@ -56,17 +56,19 @@ class EndStop:
     def _wait_for_event(self):
         for event in self.dev.read_loop():
             if event.type == ecodes.EV_KEY:
-                #logging.debug(event)
-                #logging.debug(event.code)
                 if event.code == self.key_code:
-                    logging.debug(event.value)
-                    if self.invert and int(event.value):
-                        self.hit = True 
-                        self.callback()
-                    elif not self.invert and not int(event.value):
-                        self.hit = True 
-                        self.callback()
-                    #logging.debug(self.read_value())
+                    if self.invert: 
+                        if int(event.value):
+                            self.hit = True 
+                            self.callback()
+                        else:
+                            self.hit = False
+                    elif not self.invert:
+                        if not int(event.value):
+                            self.hit = True 
+                            self.callback()
+                        else:
+                            self.hit = False
             if not self.running:
                 break
 

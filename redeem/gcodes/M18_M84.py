@@ -29,6 +29,9 @@ class M18(GCodeCommand):
             self.printer.steppers[axis].set_disabled()
 
     def get_description(self):
+        return "Disable all steppers"
+
+    def get_long_description(self):
         return "Disable all steppers. No more current is applied to the " \
                "stepper motors after this command."
 

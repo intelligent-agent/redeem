@@ -29,6 +29,13 @@ class M350(GCodeCommand):
         Stepper.commit()
 
     def get_description(self):
+        return "Set microstepping value"
+
+    def get_long_description(self):
         return "Set microstepping mode for the axes present with a token. " \
                "Microstepping will be 2^val. Steps pr. mm. is changed" \
                " accordingly."
+
+    def is_buffered(self):
+        return True
+
