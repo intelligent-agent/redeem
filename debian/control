@@ -2,8 +2,8 @@ Source: redeem
 Maintainer: Elias Bakken <elias@iagent.no>
 Section: misc
 Priority: optional
-Standards-Version: 1.0.4
-Build-Depends: build-essential, debhelper (>= 9), swig, python-smbus, python, dh-python, python-dev
+Standards-Version: 1.1.1
+Build-Depends: build-essential, debhelper (>= 9), swig, python-smbus, python, dh-python, python-dev, python-evdev
 X-Python-Version: 2.7
 
 Package: redeem

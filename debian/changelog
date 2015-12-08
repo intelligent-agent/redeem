@@ -1,3 +1,13 @@
+redeem (1.1.1) UNRELEASED; urgency=low
+
+  [ Elias ]
+  * Up to 8 axes
+  * Some new M-code
+  * firmware config made in python 
+
+ -- Elias <elias@elias-Aspire>  Mon, 7 Dec 2015 14:06:44 +0200
+
+
 redeem (1.0.4) UNRELEASED; urgency=low
 
   [ Elias ]
