@@ -92,7 +92,7 @@ class Redeem:
             logging.info("Found Replicape rev. " + self.revision)
         else:
             logging.warning("Oh no! No Replicape present!")
-            self.revision = "00B2"
+            self.revision = "00B3"
         # We set it to 5 axis by default
         Path.NUM_AXES = 5
         if self.printer.config.reach_revision:
