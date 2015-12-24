@@ -24,4 +24,7 @@ class M119(GCodeCommand):
         g.set_answer("ok "+", ".join([v.name+": "+str(int(v.hit)) for k,v in self.printer.end_stops.iteritems()]))
 
     def get_description(self):
+        return "Get current endstops state"    
+
+    def get_long_description(self):
         return "Get current endstops state"

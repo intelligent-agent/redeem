@@ -28,5 +28,9 @@ class M270(GCodeCommand):
                 Path.axis_config = axis_config
                 logging.info("Coordinate system set to " + str(axis_config))
 
+    def get_long_description(self):
+        return ("Set coordinate system. Parameter S set the type, which is "
+                "0 = Cartesian, 1 = H-belt, 2 = CoreXY, 3 = Delta")
+
     def get_description(self):
         return "Set coordinate system"
