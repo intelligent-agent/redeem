@@ -142,13 +142,18 @@ class Redeem:
             printer.steppers["Z"] = Stepper_00B2("GPIO0_23", "GPIO0_26", "GPIO0_15", 13, 2, "Z")
             printer.steppers["E"] = Stepper_00B2("GPIO1_28", "GPIO1_15", "GPIO2_1" , 14, 3, "E")
             printer.steppers["H"] = Stepper_00B2("GPIO1_13", "GPIO1_14", "GPIO2_3" , 15, 4, "H")
+            printer.steppers["X"].set_disabled() # Disable steppers
+            printer.steppers["E"].set_disabled()
+            printer.steppers["H"].set_disabled()
         elif self.revision == "00B3":
             printer.steppers["X"] = Stepper_00B3("GPIO0_27", "GPIO1_29", "GPIO2_4" , 11, 0, "X")
             printer.steppers["Y"] = Stepper_00B3("GPIO1_12", "GPIO0_22", "GPIO2_5" , 12, 1, "Y")
             printer.steppers["Z"] = Stepper_00B3("GPIO0_23", "GPIO0_26", "GPIO0_15", 13, 2, "Z")
             printer.steppers["E"] = Stepper_00B3("GPIO1_28", "GPIO1_15", "GPIO2_1" , 14, 3, "E")
             printer.steppers["H"] = Stepper_00B3("GPIO1_13", "GPIO1_14", "GPIO2_3" , 15, 4, "H")
-            printer.steppers["H"].set_stepper_power_down(1)
+            printer.steppers["X"].set_disabled() # Disable steppers
+            printer.steppers["E"].set_disabled()
+            printer.steppers["E"].set_stepper_power_down(1)
         elif self.revision in ["00A4", "0A4A"]:
             printer.steppers["X"] = Stepper_00A4("GPIO0_27", "GPIO1_29", "GPIO2_4" , 0, 0, "X")
             printer.steppers["Y"] = Stepper_00A4("GPIO1_12", "GPIO0_22", "GPIO2_5" , 1, 1, "Y")
