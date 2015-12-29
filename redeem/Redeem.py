@@ -69,7 +69,7 @@ logging.basicConfig(level=logging.DEBUG,
                     datefmt='%m-%d %H:%M')
 class Redeem:
     def __init__(self):
-        logging.info("Redeem initializing 1.1.1~Raw Deal" )
+        logging.info("Redeem initializing 1.1.4~Raw Deal" )
 
         printer = Printer()
         self.printer = printer
