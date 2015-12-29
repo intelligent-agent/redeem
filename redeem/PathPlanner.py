@@ -342,7 +342,6 @@ class PathPlanner:
 
         #logging.debug("Adding "+str(new))
         new.set_prev(self.prev)
-
         if new.compensation:
             # Apply a backlash compensation move
             self.native_planner.queueMove(tuple(np.zeros(Path.MAX_AXES)),
@@ -360,12 +359,11 @@ class PathPlanner:
                     batch_array[(maj_index * Path.MAX_AXES * 2) + subindex] = path.start_pos[subindex]
                     batch_array[(maj_index * Path.MAX_AXES * 2) + Path.MAX_AXES + subindex] = path.stepper_end_pos[subindex]
                 
-                self.prev = path
-                self.prev.unlink()
+            self.prev = path
+            self.prev.unlink()
 
             # Queue the entire batch at once.
             self.printer.ensure_steppers_enabled()
-
             self.native_planner.queueBatchMove(batch_array, new.speed, new.accel, bool(new.cancelable), True)
                 
             # Do not add the original segment
