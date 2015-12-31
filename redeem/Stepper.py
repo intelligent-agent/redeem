@@ -219,8 +219,12 @@ class Stepper_00B2(Stepper_00B1):
     def __init__(self, stepPin, dirPin, faultPin, dac_channel, shiftreg_nr, name):
         Stepper_00B1.__init__(self, stepPin, dirPin, faultPin, dac_channel, shiftreg_nr, name)
         self.dac    = PWM_DAC(dac_channel)
-        self.state  = 0 # The initial state of shift register
-    
+        if name in ["X", "E", "H"]:
+            self.state  = 0x1 # The initial state of shift register
+        else:
+            self.state  = 0x0
+        self.shift_reg.set_state(self.state)
+
     def set_disabled(self, force_update=False):
         if not self.enabled:
             return
@@ -252,8 +256,12 @@ class Stepper_00B3(Stepper_00B2):
     def __init__(self, stepPin, dirPin, faultPin, dac_channel, shiftreg_nr, name):
         Stepper_00B1.__init__(self, stepPin, dirPin, faultPin, dac_channel, shiftreg_nr, name)
         self.dac    = PWM_DAC(dac_channel)
-        self.state  = 0 # The initial state of shift register
-    
+        if name in ["X", "E", "H"]:
+            self.state  = 0x1 # The initial state of shift register
+        else:
+            self.state  = 0x0
+        self.shift_reg.set_state(self.state)
+   
     def set_disabled(self, force_update=False):
         if not self.enabled:
             return

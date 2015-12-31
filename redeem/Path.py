@@ -47,7 +47,7 @@ class Path:
     soft_max               = [0]*MAX_AXES
     slaves                 = {key: "" for key in AXES}
 
-    axes_zipped = zip(["X", "Y", "Z", "E", "H", "A", "B", "C"])
+    axes_zipped = ["X", "Y", "Z", "E", "H", "A", "B", "C"]
 
     AXIS_CONFIG_XY = 0
     AXIS_CONFIG_H_BELT = 1
@@ -93,8 +93,6 @@ class Path:
     
     def __init__(self, axes, speed, accel, cancelable=False, use_bed_matrix=True, use_backlash_compensation=True, enable_soft_endstops=True):
         """ The axes of evil, the feed rate in m/s and ABS or REL """
-
-        #logging.debug(axes)
         self.axes = axes
         self.speed = speed
         self.accel = accel
@@ -261,7 +259,7 @@ class Path:
                         num_segments
                         ) for i in xrange(Path.MAX_AXES)]) 
         vals = np.delete(vals, 0, axis=0)
-        vec_segments = [dict(Path.axes_zipped, list(val)) for val in vals]
+        vec_segments = [dict(zip(Path.axes_zipped, list(val))) for val in vals]
         path_segments = []
 
         for index, segment in enumerate(vec_segments):
@@ -331,7 +329,7 @@ class Path:
             val[:2] = (X[i], Y[i])
         vals = np.delete(vals, 0, axis=0)
 
-        vec_segments = [dict(Path.axes_zipped, list(val)) for val in vals]
+        vec_segments = [dict(zip(Path.axes_zipped, list(val))) for val in vals]
         path_segments = []
 
         for index, segment in enumerate(vec_segments):
