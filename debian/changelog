@@ -1,3 +1,11 @@
+redeem (1.1.4) UNRELEASED; urgency=low
+
+  [ Elias ]
+  * Start steppers disabled
+
+ -- Elias <elias@elias-Aspire>  Tue, 29 Dec 2015 14:06:44 +0200
+
+
 redeem (1.1.1) UNRELEASED; urgency=low
 
   [ Elias ]

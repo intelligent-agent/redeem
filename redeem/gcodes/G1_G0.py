@@ -28,12 +28,11 @@ class G0(GCodeCommand):
         smds = {}
         for i in range(g.num_tokens()):
             axis = g.token_letter(i)
-	    # Get the value, new position or vector
-	    value =  float(g.token_value(i)) / 1000.0
-	    if (axis == 'E' or axis == 'H') and self.printer.extrude_factor != 1.0:
-               value *= self.printer.extrude_factor
+            # Get the value, new position or vector
+            value =  float(g.token_value(i)) / 1000.0
+            if (axis == 'E' or axis == 'H') and self.printer.extrude_factor != 1.0:
+                value *= self.printer.extrude_factor
             smds[axis] = value
-
         if self.printer.movement == Path.ABSOLUTE:
             path = AbsolutePath(smds, self.printer.feed_rate * self.printer.factor, self.printer.accel)
         elif self.printer.movement == Path.RELATIVE:
