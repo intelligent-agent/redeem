@@ -37,7 +37,7 @@ import sys
 
 from Mosfet import Mosfet
 from Stepper import *
-from Thermistor import Thermistor
+from TemperatureSensor import *
 from Fan import Fan
 from Servo import Servo
 from EndStop import EndStop
@@ -214,9 +214,9 @@ class Redeem:
             self.printer.mosfets[e] = Mosfet(channel)
             # Thermistors
             adc = self.printer.config.get("Heaters", "path_adc_"+e)
-            chart = self.printer.config.get("Heaters", "temp_chart_"+e)
+            sensor = self.printer.config.get("Heaters", "sensor_"+e)
             resistance = self.printer.config.getfloat("Heaters", "resistance_"+e)
-            self.printer.thermistors[e] = Thermistor(adc, "MOSFET "+e, chart, resistance)
+            self.printer.thermistors[e] = TemperatureSensor(adc, "MOSFET "+e, sensor, resistance)
             self.printer.thermistors[e].printer = printer
 
             # Extruders
