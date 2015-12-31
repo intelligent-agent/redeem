@@ -69,15 +69,36 @@ class TemperatureSensor:
 			logging.error("The specified temperature sensor "+sensorIdentifier+" is not implemented")
 			sys.exit()
 
+
+	def read_adc(self):
+
+		maxAdc = 4095.0
+    	mutex = Lock()
+    	sig = -1.0
+
+    	mutex.acquire()
+    	try:
+    		with open(self.pin, "r") as file:
+    			sig = (float(file.read().rstrip())) / 4095.0 * 1.8
+		except IOError as e:
+			logging.error("Unable to get ADC value({0}: {1}".format(e.errno, e.strerror))
+		finally:
+			mutex.release()
+
+		if(adc >= maxAdc or adc <= 0.0):
+        	return -1.0
+        else:
+			return sig
+
 	def get_temperature(self):
-		self.sensor.get_temperature(sensor)
+			self.sensor.get_temperature(resistance)
+
 
 
 """ This class represents standard thermistor sensors.
 	It borrows heavily from Smoothieware's code (https://github.com/Smoothieware/Smoothieware).
 	wolfmanjm, thanks!
 """		
-
 class Thermistor:
 
 	def __init__(self, pin, name, sensorIdentifier, sensorConfiguration):
@@ -94,12 +115,12 @@ class Thermistor:
     		self.c2 = sensorConfiguration[4]
     		self.c3 = sensorConfiguration[5]
 
-
-	def get_temperature(self):
+    
+    def get_temperature(self):
         """ Return the temperature in degrees celsius. Uses Steinhart-Hart """
         maxAdc = 4095.0
         adc = read_adc()
-        if(adc >= maxAdc or adc == 0.0):
+        if(adc >= maxAdc or adc <= 0.0):
         	return -1.0
 
         r = float((self.r2 / (maxAdc / adc)) - 1.0)
@@ -125,11 +146,66 @@ class Thermistor:
 			logging.error("Unable to get ADC value({0}: {1}".format(e.errno, e.strerror))
 		finally:
 			mutex.release()
-		return ret
+		
+		if(adc >= maxAdc or adc <= 0.0):
+        	return -1.0
+        else:
+			return ret
 
 
 """ This class represents PT100 temperature sensors """
 class PT100:
+
+	def __init__(self, pin, name, sensorIdentifier, sensorConfiguration):
+
+		if len(sensorConfiguration) != 4:
+	        	logging.error("Sensor configuration is missing parameters. Should have 6, has "+len(sensorConfiguration))
+	        	sys.exit()
+    	else
+    		self.pin = pin
+        	self.name = name
+        	self.r0 = sensorConfiguration[1]
+    		self.a = sensorConfiguration[2]
+    		self.b = sensorConfiguration[3]
+
+    def get_temperature(self)
+		maxAdc = 4095.0
+        adc = read_adc()
+        if(adc >= maxAdc or adc <= 0.0):
+        	return -1.0
+
+        #BIG questionmark: Is this right?
+    	r = float(self.r0 / (maxAdc / adc)) - 1.0)
+
+		"""
+		For temperature > 0 °C, the formula is:
+		t = (-r0*a + (r0^2*a^2 - 4*r0*b * (r0-r))^(1/2)) / 2*r0*b
+		"""
+		t = float(-self.r0*self.a
+					+ math.sqrt(
+						math.pow(self.r0,2)*math.pow(self.a,2)
+						- 4*self.r0*self.b*(self.r0 - r))
+					/ (2 * self.r0 * self.b))
+		return t
+
+    def read_adc(self):
+
+    	mutex = Lock()
+    	ret = -1.0
+
+    	mutex.acquire()
+    	try:
+    		with open(self.pin, "r") as file:
+    			ret = (float(file.read().rstrip())) / 4095.0 * 1.8
+		except IOError as e:
+			logging.error("Unable to get ADC value({0}: {1}".format(e.errno, e.strerror))
+		finally:
+			mutex.release()
+
+		if(adc >= maxAdc or adc <= 0.0):
+        	return -1.0
+        else:
+			return ret
 
 
 class ThermoCouple:
