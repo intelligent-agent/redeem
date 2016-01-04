@@ -29,7 +29,21 @@ class M569(GCodeCommand):
                 logging.warning("M569: Wrong axis value. Use either 1 or -1: "+str(value))
                 return
 
-            self.printer.steppers[axis].direction = value
+            # Update the config.
+            self.printer.config.set('Steppers', 'direction_'+axis, str(value))
+
+
+        # Save the config file. 
+        self.printer.config.save('/etc/redeem/local.cfg')
+
+        self.printer.path_planner.wait_until_done()
+
+        # Recompile the firmware
+        self.printer.path_planner.pru_firmware.produce_firmware()
+
+        # Restart the path planner. 
+        self.printer.path_planner.restart()
+
 
     def get_description(self):
         return "Set stepper direction"
@@ -37,4 +51,7 @@ class M569(GCodeCommand):
     def get_long_description(self):
         return ("Set the direction for each axis. "
                 "Use <axis><direction> for each of the axes you want."
-                "Axis is one of X, Y, Z, E, H, A, B, C and direction is 1 or -1")
+                "Axis is one of X, Y, Z, E, H, A, B, C and direction is 1 or -1"
+                "Note: This will store the result in the local config and restart "
+                "the path planner")
+
