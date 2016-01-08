@@ -33,180 +33,140 @@ import math
 import logging
 from threading import Lock
 import sys
+import TemperatureSensorConfigs
 
 class TemperatureSensor:
 
-	mutex = Lock()
-	is_ntc = True 
+    mutex = Lock()
+    
 
-	def __init__(self, pin, name, sensorIdentifier):
-		""" Init """
-		try:
-        	self.sensorsThermistorSteinhart = exec(open("ThermistorSteinhartHartTables.py").read())
-        except:
-        	logging.error("no thermistor tables found")
-        try:	
-			self.sensorsPT100 = exec(open("PT100Tables.py"))
-		except:
-			logging.error("no tables for PT100 found")
+    def __init__(self, pin, heater_name, sensorIdentifier):
 
-		#Find matching entry in sensor tables and instantiate corresponding sensor
-		found = False
-		for s in self.sensorsThermistorSteinhart:
-			if s[0] == self.sensorIdentifier:
-				self.sensor = new Thermistor(pin, name, sensorIdentifier, s)
-				found = True
-				break
+        self.pin = pin
+        self.heater = heater_name
+        self.sensorIdentifier = sensorIdentifier
+        self.maxAdc = 4095.0
 
-		if found == False:
-			for s in self.sensorsPT100
-				if s[0] == self.sensorIdentifier:
-					self.sensor = new PT100((pin, name, sensorIdentifier, s)
-					found = True
-					break
+        #Find matching entry in sensor tables and instantiate corresponding sensor
+        found = False
+        for s in TemperatureSensorConfigs.thermistors_shh:
+            if s[0] == self.sensorIdentifier:
+                self.sensor = Thermistor(pin, s)
+                found = True
+                break
 
-		if found == False:
-			logging.error("The specified temperature sensor "+sensorIdentifier+" is not implemented")
-			sys.exit()
+        if found == False:
+            for p in TemperatureSensorConfigs.pt100:
+                if p[0] == self.sensorIdentifier:
+                    logging.error("PT100 temperature sensors are not supported yet.")
+                    """ Not working yet. No known hardware solution """
+                    #self.sensor = PT100((pin, heater_name, s
+                    #found = True
+                    break
+
+        if found == False:
+            logging.error("The specified temperature sensor "+sensorIdentifier+" is not implemented. You may add it's config in TemperatureSensorConfigs.")
+            sys.exit()
+
+    """
+    Returns the current temperature in degrees celsius for the given sensor.
+    """
+    def get_temperature(self):
+        voltage = self.read_adc()
+        return self.sensor.get_temperature(voltage)
 
 
-	def read_adc(self):
+    """
+    Reads the adc pin and returns the actual voltage value
+    Returns -1 if the reading is out of range.
+    """
+    def read_adc(self):
+        mutex = Lock()
+        voltage = -1.0
 
-		maxAdc = 4095.0
-    	mutex = Lock()
-    	sig = -1.0
+        mutex.acquire()
+        try:
+            with open(self.pin, "r") as file:
+                signal = float(file.read().rstrip())
+                if(signal >= self.maxAdc or signal <= 0.0):
+                    voltage = -1.0
+                else:
+                    voltage = signal / 4095.0 * 1.8 #input range is 0 ... 1.8V
+        except IOError as e:
+            logging.error("Unable to get ADC value({0}: {1}".format(e.errno, e.strerror))
+        finally:
+            mutex.release()
 
-    	mutex.acquire()
-    	try:
-    		with open(self.pin, "r") as file:
-    			sig = (float(file.read().rstrip())) / 4095.0 * 1.8
-		except IOError as e:
-			logging.error("Unable to get ADC value({0}: {1}".format(e.errno, e.strerror))
-		finally:
-			mutex.release()
-
-		if(adc >= maxAdc or adc <= 0.0):
-        	return -1.0
-        else:
-			return sig
-
-	def get_temperature(self):
-			self.sensor.get_temperature(resistance)
-
+        return voltage
 
 
 """ This class represents standard thermistor sensors.
-	It borrows heavily from Smoothieware's code (https://github.com/Smoothieware/Smoothieware).
-	wolfmanjm, thanks!
-"""		
-class Thermistor:
+    It borrows heavily from Smoothieware's code (https://github.com/Smoothieware/Smoothieware).
+    wolfmanjm, thanks!
+"""
+class Thermistor(TemperatureSensor):
 
-	def __init__(self, pin, name, sensorIdentifier, sensorConfiguration):
-		""" Init """
-        if len(sensorConfiguration) != 6:
-        	logging.error("Sensor configuration is missing parameters. Should have 6, has "+len(sensorConfiguration))
-        	sys.exit()
-    	else
-    		self.pin = pin
-        	self.name = name
-        	self.r1 = sensorConfiguration[1]
-    		self.r2 = sensorConfiguration[2]
-    		self.c1 = sensorConfiguration[3]
-    		self.c2 = sensorConfiguration[4]
-    		self.c3 = sensorConfiguration[5]
+    def __init__(self, pin, sensorConfiguration):
+        """ Init """
+        if len(sensorConfiguration) != 5:
+            logging.error("Sensor configuration is missing parameters. Should have 5, has "+len(sensorConfiguration))
+            sys.exit()
+        else:
+            self.pin = pin
+            self.r1 = sensorConfiguration[1]    #pullup resistance
+            self.c1 = sensorConfiguration[2]    #Steinhart-Hart coefficient
+            self.c2 = sensorConfiguration[3]    #Steinhart-Hart coefficient
+            self.c3 = sensorConfiguration[4]    #Steinhart-Hart coefficient
 
-    
-    def get_temperature(self):
+
+
+    def get_temperature(self, voltage):
         """ Return the temperature in degrees celsius. Uses Steinhart-Hart """
-        maxAdc = 4095.0
-        adc = read_adc()
-        if(adc >= maxAdc or adc <= 0.0):
-        	return -1.0
-
-        r = float((self.r2 / (maxAdc / adc)) - 1.0)
-        if(self.r1 > 0.0):
-        	r = (r1 * r) / (r1 - r)
+        r = self.voltage_to_resistance(voltage)
         l = float(math.log(r))
-
         t = float((1.0 / (self.c1 + self.c2 * l + self.c3 * math.pow(l,3))) - 273.15)
+        return t
 
+    def voltage_to_resistance(self,voltage):
+        """ Convert the voltage to a resistance value """
+        if voltage == 0 or (abs(voltage - 1.8) < 0.001):
+            return 10000000.0
+        return self.r1 / float((1.8 / voltage) - 1.0)
+
+
+"""
+This class represents PT100 temperature sensors
+Caution: This code is not functional. It's merely a note of some ideas
+
+"""
+class PT100(TemperatureSensor):
+
+    def __init__(self, pin, sensorConfiguration):
+
+        if len(sensorConfiguration) != 4:
+                logging.error("Sensor configuration is missing parameters. Should have 6, has "+len(sensorConfiguration))
+                sys.exit()
+        else:
+            self.pin = pin
+            self.name = name
+            self.r0 = sensorConfiguration[1]
+            self.a = sensorConfiguration[2]
+            self.b = sensorConfiguration[3]
+
+
+    def get_t(self, voltage):
+        if voltage == 0 or (abs(voltage - 1.8) < 0.001):
+            return 10000000.0
+
+        #BIG questionmark: Is this right?
+        r = float((self.r0 / (maxAdc / adc)) - 1.0)
+
+        t = float(-self.r0*self.a
+                    + math.sqrt(
+                        math.pow(self.r0,2)*math.pow(self.a,2)
+                        - 4*self.r0*self.b*(self.r0 - r))
+                    / (2 * self.r0 * self.b))
         return t
 
 
-    def read_adc(self):
-
-    	mutex = Lock()
-    	ret = -1.0
-
-    	mutex.acquire()
-    	try:
-    		with open(self.pin, "r") as file:
-    			ret = (float(file.read().rstrip())) / 4095.0 * 1.8
-		except IOError as e:
-			logging.error("Unable to get ADC value({0}: {1}".format(e.errno, e.strerror))
-		finally:
-			mutex.release()
-		
-		if(adc >= maxAdc or adc <= 0.0):
-        	return -1.0
-        else:
-			return ret
-
-
-""" This class represents PT100 temperature sensors """
-class PT100:
-
-	def __init__(self, pin, name, sensorIdentifier, sensorConfiguration):
-
-		if len(sensorConfiguration) != 4:
-	        	logging.error("Sensor configuration is missing parameters. Should have 6, has "+len(sensorConfiguration))
-	        	sys.exit()
-    	else
-    		self.pin = pin
-        	self.name = name
-        	self.r0 = sensorConfiguration[1]
-    		self.a = sensorConfiguration[2]
-    		self.b = sensorConfiguration[3]
-
-    def get_temperature(self)
-		maxAdc = 4095.0
-        adc = read_adc()
-        if(adc >= maxAdc or adc <= 0.0):
-        	return -1.0
-
-        #BIG questionmark: Is this right?
-    	r = float(self.r0 / (maxAdc / adc)) - 1.0)
-
-		"""
-		For temperature > 0 °C, the formula is:
-		t = (-r0*a + (r0^2*a^2 - 4*r0*b * (r0-r))^(1/2)) / 2*r0*b
-		"""
-		t = float(-self.r0*self.a
-					+ math.sqrt(
-						math.pow(self.r0,2)*math.pow(self.a,2)
-						- 4*self.r0*self.b*(self.r0 - r))
-					/ (2 * self.r0 * self.b))
-		return t
-
-    def read_adc(self):
-
-    	mutex = Lock()
-    	ret = -1.0
-
-    	mutex.acquire()
-    	try:
-    		with open(self.pin, "r") as file:
-    			ret = (float(file.read().rstrip())) / 4095.0 * 1.8
-		except IOError as e:
-			logging.error("Unable to get ADC value({0}: {1}".format(e.errno, e.strerror))
-		finally:
-			mutex.release()
-
-		if(adc >= maxAdc or adc <= 0.0):
-        	return -1.0
-        else:
-			return ret
-
-
-class ThermoCouple:
-
+#class ThermoCouple (TemperatureSensor):
