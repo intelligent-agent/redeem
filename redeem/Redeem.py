@@ -173,7 +173,7 @@ class Redeem:
             stepper.set_current_value(printer.config.getfloat('Steppers', 'current_' + name))
             stepper.set_steps_pr_mm(printer.config.getfloat('Steppers', 'steps_pr_mm_' + name))
             stepper.set_microstepping(printer.config.getint('Steppers', 'microstepping_' + name))
-            stepper.set_decay(printer.config.getboolean("Steppers", "slow_decay_" + name))
+            stepper.set_decay(printer.config.getint("Steppers", "slow_decay_" + name))
             # Add soft end stops
             Path.soft_min[Path.axis_to_index(name)] = printer.config.getfloat('Endstops', 'soft_end_stop_min_' + name)
             Path.soft_max[Path.axis_to_index(name)] = printer.config.getfloat('Endstops', 'soft_end_stop_max_' + name)

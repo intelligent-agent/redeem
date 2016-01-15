@@ -88,22 +88,19 @@ class CascadingConfigParser(ConfigParser.SafeConfigParser):
             logging.debug(section)
             for option in self.options(section):                
                 if self.get(section, option) != current.get(section, option):
-                    logging.info("'"+str(self.get(section, option))+"'")
-                    logging.info("'"+str(current.get(section, option))+"'")
+                    old = str(self.get(section, option))
                     val = self.get(section, option)
-                    to_save.append([section, option, val])
+                    to_save.append((section, option, val, old))
 
         # Update local config with changed values
         local = ConfigParser.SafeConfigParser()
         local.readfp(open(filename, "r"))
         for opt in to_save:         
-            section =  opt[0]
-            option = opt[1]
-            value = opt[2]
+            (section, option, value, old) = opt
             if not local.has_section(section):
                 local.add_section(section)
             local.set(section, option, value)
-            logging.info("Update setting: "+option)
+            logging.info("Update setting: {} from {} to {} ".format(option, old, value))
 
                     
         # Save changed values to file
