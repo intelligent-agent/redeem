@@ -69,11 +69,14 @@ logging.basicConfig(level=logging.DEBUG,
                     datefmt='%m-%d %H:%M')
 class Redeem:
     def __init__(self):
-        logging.info("Redeem initializing 1.1.4~Raw Deal" )
+        firmware_version = "1.1.4~Raw Deal"
+        logging.info("Redeem initializing "+firmware_version)
 
         printer = Printer()
         self.printer = printer
         Path.printer = printer
+
+        printer.firmware_version = firmware_version
 
         # check for config files
         if not os.path.exists("/etc/redeem/default.cfg"):

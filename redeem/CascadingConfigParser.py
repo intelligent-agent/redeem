@@ -64,7 +64,6 @@ class CascadingConfigParser(ConfigParser.SafeConfigParser):
         #paths.append(glob.glob("/sys/bus/i2c/devices/[1-2]-005[4-7]/eeprom"))
         for i, path in enumerate(paths):
             try:
-                logging.debug(path)
                 with open(path, "rb") as f:
                     data = f.read(100)
                     name = data[58:74].strip()
