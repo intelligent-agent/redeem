@@ -78,9 +78,7 @@ class EndStop:
     def read_value(self):
         """ Read the current endstop value from GPIO using PRU1 """
         state = PruInterface.get_shared_long(0)
-        logging.info(str(state))
         if self.name == "X1":
-            logging.info("X1: "+str(bool(state & (1 << 0))))
             self.hit = bool(state & (1 << 0))
         elif self.name == "Y1":
             self.hit = bool(state & (1 << 1))
