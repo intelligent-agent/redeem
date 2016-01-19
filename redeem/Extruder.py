@@ -82,6 +82,7 @@ class Heater(object):
 
     def disable(self):
         """ Stops the heater and the PID controller """
+        self.target_temp = 0
         self.enabled = False
         # Wait for PID to stop
         self.t.join()

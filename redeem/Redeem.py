@@ -59,6 +59,7 @@ from Enable import Enable
 from PWM import PWM
 from RotaryEncoder import *
 from FilamentSensor import *
+from Alarm import Alarm
     
 # Global vars
 printer = None
@@ -115,16 +116,22 @@ class Redeem:
         elif self.revision in ["00B1", "00B2", "00B3"]:
             PWM.set_frequency(1000)
 
+        # Test the alarm framework
+        Alarm.printer = self.printer
+        alarm = Alarm(Alarm.ALARM_TEST, self)
+        alarm.execute()
+
         # Init the Paths
         Path.axis_config = printer.config.getint('Geometry', 'axis_config')
 
         # Init the end stops
         EndStop.inputdev = self.printer.config.get("Endstops", "inputdev")
-        for es in ["X1", "X2", "Y1", "Y2", "Z1", "Z2"]:
+        for es in ["Z2", "Y2", "X2", "Z1", "Y1", "X1"]: # Order matches end stop inversion mask in Firmware
             pin = self.printer.config.get("Endstops", "pin_"+es)
             keycode = self.printer.config.getint("Endstops", "keycode_"+es)
             invert = self.printer.config.getboolean("Endstops", "invert_"+es)
             self.printer.end_stops[es] = EndStop(printer, pin, keycode, es, invert)
+            self.printer.end_stops[es].stops = self.printer.config.get('Endstops', 'end_stop_'+es+'_stops')
 
         # Init the 5 Stepper motors (step, dir, fault, DAC channel, name)
         if self.revision == "00A3":
@@ -304,9 +311,14 @@ class Redeem:
                     if self.printer.config.getboolean('Cold-ends', option):
                         c = Cooler(cold_end, fan, "Cooler-ds18b20-{}-{}".format(ce, f), False)
                         c.ok_range = 4
-                        c.set_target_temperature(60)
+                        opt_temp = "cooler_{}_target_temp".format(ce)
+                        if printer.config.has_option('Cold-ends', opt_temp): 
+                            target_temp = printer.config.getfloat('Cold-ends', opt_temp)
+                        else:            
+                            target_temp = 60    
+                        c.set_target_temperature(target_temp)
                         c.enable()
-                        self.printer.coolers.append(c)
+                        printer.coolers.append(c)
                         logging.info("Cooler connects temp sensor ds18b20 {} with fan {}".format(ce, f))
 
         # Init roatray encs. 

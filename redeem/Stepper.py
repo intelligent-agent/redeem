@@ -386,7 +386,7 @@ class Stepper_00A4(Stepper):
         if value not in [0, 1]:
             logging.warning("Ivalid decay value. Use 0 or 1. Got: {}".format(value))
             return
-        self.decay = bool(value)
+        self.decay = value
         self.state &= ~(1 << Stepper_00A4.DECAY)        # bit 5
         self.state |= (value << Stepper_00A4.DECAY)
         self.update()

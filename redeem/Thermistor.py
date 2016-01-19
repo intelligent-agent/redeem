@@ -28,7 +28,7 @@ import sys
 
 # Import the temp chart. 
 from temp_chart import *
-
+from Alarm import Alarm
 
 class Thermistor:
     """ Represents a thermistor """
@@ -58,6 +58,8 @@ class Thermistor:
                 ret = self.resistance_to_degrees(res_val) # Convert to degrees
         except IOError as e:
             logging.error("Unable to get ADC value ({0}): {1}".format(e.errno, e.strerror))
+            alarm = Alarm(Alarm.THERMISTOR_ERROR, self)
+            alarm.execute()
         finally:
             Thermistor.mutex.release()
         return ret
