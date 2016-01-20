@@ -19,33 +19,41 @@ class M574(GCodeCommand):
 
     def execute(self, g):
         tokens = g.get_tokens()
-        es = tokens[0]
-        config = tokens[1] if len(tokens) > 1 else ""
+        if len(tokens) > 0:
+            es = tokens[0]
+            config = tokens[1] if len(tokens) > 1 else ""
 
-        if not es in self.printer.end_stops:
-            logging.warning("M574: Wrong end stop: "+str(es))
+            if not es in self.printer.end_stops:
+                logging.warning("M574: Wrong end stop: "+str(es))
+            
+            logging.debug("Setting end stop config for "+str(es)+" to "+str(config))
         
-        logging.debug("Setting end stop config for "+str(es)+" to "+str(config))
-    
-        self.printer.path_planner.wait_until_done()
+            self.printer.path_planner.wait_until_done()
 
-        # Update the config.
-        self.printer.config.set('Endstops', 'end_stop_'+es+'_stops', config)
+            # Set end stop config
+            self.printer.end_stops[es].stops = config
 
-        # Save the config file. 
-        self.printer.config.save('/etc/redeem/local.cfg')
+            # Update the config.
+            self.printer.config.set('Endstops', 'end_stop_'+es+'_stops', config)
 
-        # Recompile the firmware
-        self.printer.path_planner.pru_firmware.produce_firmware()
+            # Save the config file. 
+            self.printer.config.save('/etc/redeem/local.cfg')
 
-        # Restart the path planner. 
-        self.printer.path_planner.restart()
+            # Recompile the firmware
+            self.printer.path_planner.pru_firmware.produce_firmware()
+
+            # Restart the path planner. 
+            self.printer.path_planner.restart()
+        else:
+            g.set_answer("ok "+", ".join([v.name+" stops: "+str(v.stops)+" " for _,v in sorted(self.printer.end_stops.iteritems())]))
+
 
     def get_description(self):
-        return "Set end stop config"
+        return "Set or get end stop config"
 
     def get_long_description(self):
-        return ("Set the end stop config. "
+        return ("If not tokens are given, return the current end stop config. "
+                "To set the end stop config: "
                 "This G-code takes one end stop, and one configuration "
                 "where the configuration is which stepper motors to stop and "
                 "the direction in which to stop it. Example: M574 X1 x_ccw "

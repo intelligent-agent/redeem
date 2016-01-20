@@ -28,6 +28,9 @@ class CascadingConfigParser(ConfigParser.SafeConfigParser):
 
         ConfigParser.SafeConfigParser.__init__(self)
 
+        # Write options in the case it was read. 
+        # self.optionxform = str
+
         # Parse to real path
         self.config_files = []
         for config_file in config_files:
@@ -64,7 +67,6 @@ class CascadingConfigParser(ConfigParser.SafeConfigParser):
         #paths.append(glob.glob("/sys/bus/i2c/devices/[1-2]-005[4-7]/eeprom"))
         for i, path in enumerate(paths):
             try:
-                logging.debug(path)
                 with open(path, "rb") as f:
                     data = f.read(100)
                     name = data[58:74].strip()
@@ -88,7 +90,7 @@ class CascadingConfigParser(ConfigParser.SafeConfigParser):
             logging.debug(section)
             for option in self.options(section):                
                 if self.get(section, option) != current.get(section, option):
-                    old = str(self.get(section, option))
+                    old = current.get(section, option)
                     val = self.get(section, option)
                     to_save.append((section, option, val, old))
 

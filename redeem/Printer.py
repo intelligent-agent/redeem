@@ -108,6 +108,11 @@ class Printer:
 
         self.save_bed_compensation_matrix()
 
+        # Offsets
+        for axis, offset in self.path_planner.center_offset.iteritems():
+            if self.config.has_option("Geometry", "offset_{}".format(axis)):
+                self.config.set('Geometry', "offset_{}".format(axis), str(offset))
+
         # Save Delta shit    
         opts = ["Hez", "L", "r", "Ae", "Be", "Ce", "A_radial", "B_radial", "C_radial", "A_tangential", "B_tangential", "C_tangential" ]
         for opt in opts:

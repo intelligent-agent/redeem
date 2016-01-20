@@ -36,8 +36,11 @@ class EndStop:
         self.invert = invert
         self.dev = InputDevice(EndStop.inputdev)
         self.t = Thread(target=self._wait_for_event)
+
+        # Update "hit" state
+        self.read_value()
+
         self.running = True
-        self.hit = False
         self.t.start()
 
     def get_gpio_bank_and_pin(self):
@@ -89,8 +92,7 @@ class EndStop:
             self.hit = bool(state & (1 << 5))
         else:
             raise RuntimeError('Invalid endstop name')
-        return self.hit
-
+                        
     def callback(self):
         """ An endStop has been hit """
         logging.info("End Stop " + self.name + " hit!")
