@@ -70,7 +70,7 @@ logging.basicConfig(level=logging.DEBUG,
                     datefmt='%m-%d %H:%M')
 class Redeem:
     def __init__(self):
-        firmware_version = "1.1.4~Raw Deal"
+        firmware_version = "1.1.5~Raw Deal"
         logging.info("Redeem initializing "+firmware_version)
 
         printer = Printer()
@@ -84,6 +84,10 @@ class Redeem:
             logging.error("/etc/redeem/default.cfg does not exist, this file is required for operation")
             sys.exit() # maybe use something more graceful?
             
+        if not os.path.exists("/etc/redeem/local.cfg"):
+            logging.info("/etc/redeem/local.cfg does not exist, Creating one")
+            os.mknod("/etc/redeem/local.cfg")
+    
         # Parse the config files.
         printer.config = CascadingConfigParser(
             ['/etc/redeem/default.cfg', '/etc/redeem/printer.cfg',
