@@ -70,7 +70,7 @@ logging.basicConfig(level=logging.DEBUG,
                     datefmt='%m-%d %H:%M')
 class Redeem:
     def __init__(self):
-        firmware_version = "1.1.4~Raw Deal"
+        firmware_version = "1.1.5~Raw Deal"
         logging.info("Redeem initializing "+firmware_version)
 
         printer = Printer()
