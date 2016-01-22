@@ -34,6 +34,7 @@ import logging
 from threading import Lock
 import sys
 import TemperatureSensorConfigs
+import Alarm
 
 class TemperatureSensor:
 
@@ -46,6 +47,7 @@ class TemperatureSensor:
         self.heater = heater_name
         self.sensorIdentifier = sensorIdentifier
         self.maxAdc = 4095.0
+        self.alarm = Alarm(THERMISTOR_ERROR, self)
 
         #Find matching entry in sensor tables and instantiate corresponding sensor
         found = False
@@ -65,8 +67,9 @@ class TemperatureSensor:
                     break
 
         if found == False:
-            logging.error("The specified temperature sensor "+sensorIdentifier+" is not implemented. You may add it's config in TemperatureSensorConfigs.")
-            sys.exit()
+            self.alarm.execute()
+            #logging.error("The specified temperature sensor "+sensorIdentifier+" is not implemented. You may add it's config in TemperatureSensorConfigs.")
+            #sys.exit()
 
     """
     Returns the current temperature in degrees celsius for the given sensor.
@@ -94,6 +97,7 @@ class TemperatureSensor:
                     voltage = signal / 4095.0 * 1.8 #input range is 0 ... 1.8V
         except IOError as e:
             logging.error("Unable to get ADC value({0}: {1}".format(e.errno, e.strerror))
+            self.alarm.execute()
         finally:
             mutex.release()
 
