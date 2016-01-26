@@ -45,10 +45,10 @@ class Ethernet:
 
         logging.info("Ethernet bound to port " + str(port))
         self.s.listen(backlog)
-        #self.s.setblocking(0)
+        self.client = None
         self.running = True
         self.t = Thread(target=self.get_message)
-        self.t.start()		
+        self.t.start()
 
     def get_message(self):
         """Loop that gets messages and pushes them on the queue"""
@@ -63,13 +63,12 @@ class Ethernet:
             self.s.settimeout(1.0)
             while self.running:
                 line = self.read_line()
+                if line is None:
+                    break
                 message = line.strip("\n")
                 if len(message) > 0:
                     g = Gcode({"message": message, "prot": "Eth"})
-                    if self.printer.processor.is_buffered(g):
-                        self.printer.commands.put(g)
-                    else:
-                        self.printer.unbuffered_commands.put(g)
+                    self.printer.processor.enqueue(g)
 
     def send_message(self, message):
         """Send a message"""
@@ -88,9 +87,9 @@ class Ethernet:
                 char = self.client.recv(1)
             except socket.error, (value, message):
                 logging.error("Ethernet " + message)
-                char == ""
+                char = ""
             if char == "":
-                logging.warning("Ethernet: Connection reset by Per.")
+                logging.warning("Ethernet: Connection reset by peer.")
                 self.client.close()
                 break
             chars.append(char)
@@ -100,4 +99,9 @@ class Ethernet:
     def close(self):
         """Stop receiving messages"""
         self.running = False
+        if self.client is not None:
+            self.client.shutdown(socket.SHUT_RDWR)
+            self.client.close()
+        self.s.shutdown(socket.SHUT_RDWR)
+        self.s.close()
         self.t.join()

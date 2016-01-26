@@ -63,11 +63,15 @@ class Gcode:
             self.gcode = self.tokens.pop(0)  # gcode number
             self.tokens = filter(None, self.tokens)
         except Exception as e:
+            self.gcode = "No-Gcode"
             logging.exception("Ooops: ")
 
     def code(self):
         """ The machinecode """
         return self.gcode
+
+    def is_valid(self):
+        return True if self.gcode != "No-Gcode" else False
 
     def token_letter(self, index):
         """ Get the letter """
@@ -124,9 +128,10 @@ class Gcode:
         return self.has_crc
 
     def get_answer(self):
-        """ Get the result of the execution """
         return self.answer
 
     def set_answer(self, answer):
-        """ Set a new answer other than 'ok' """
         self.answer = answer
+
+    def is_info_command(self):
+        return (self.gcode[-1] == "?")

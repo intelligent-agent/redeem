@@ -14,19 +14,27 @@ from GCodeCommand import GCodeCommand
 class M106(GCodeCommand):
 
     def execute(self, gcode):
-        fan_no = gcode.get_int_by_letter("P", 0)
+        fans = []
+        if gcode.has_letter("P"):
+            fan_no = gcode.get_int_by_letter("P", 0)
+            if fan_no < len(self.printer.fans):
+                fans.append(self.printer.fans[fan_no])
+        elif len(self.printer.controlled_fans) > 0 : # No P in gcode, use fans from settings file
+            fans = self.printer.controlled_fans
+        else: # Uee fan 0
+            fans.append(self.printer.fans[0])
 
-        if fan_no >= len(self.printer.fans):
-            return
-
+        # Get the value, 255 if not present
         value = float(gcode.get_int_by_letter("S", 255)) / 255.0
-        fan = self.printer.fans[fan_no]
-        fan.set_value(value)
+    
+        for fan in fans:
+            fan.set_value(value)
 
     def get_description(self):
         return "Set the current fan power. Specify S parameter for the " \
                "power (between 0 and 255) and the P parameter for the fan " \
-               "number. P=0 and S=255 by default."
+               "number. P=0 and S=255 by default. If no P, use fan from config. "\
+               "If no fan configured, use fan 0"
 
     def is_buffered(self):
         return True
@@ -35,13 +43,23 @@ class M106(GCodeCommand):
 class M107(GCodeCommand):
 
     def execute(self, gcode):
-        fan_no = gcode.get_int_by_letter("P", 0)
-        fan = self.printer.fans[fan_no]
-        fan.set_value(0)
+        fans = []
+        if gcode.has_letter("P"):
+            fan_no = gcode.get_int_by_letter("P", 0)
+            if fan_no < len(self.printer.fans):
+                fans.append(self.printer.fans[fan_no])
+        elif len(self.printer.controlled_fans) > 0 : # No P in gcode, use fans from settings file
+            fans = self.printer.controlled_fans
+        else: # Uee fan 0
+            fans.append(self.printer.fans[0])
+
+        for fan in fans:
+            fan.set_value(0)
 
     def get_description(self):
-        return "Turn off the specified fan. Specify the P parameter for the " \
-               "fan number. P=0 by default."
+        return "Set the current fan off. Specify P parameter for the fan " \
+               "number. If no P, use fan from config. "\
+               "If no fan configured, use fan 0"
 
     def is_buffered(self):
         return True

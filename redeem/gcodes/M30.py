@@ -1,5 +1,5 @@
 """
-GCode M30
+GCode M909
 Set stepper microstepping settings
 
 Author: Mathieu Monney
@@ -15,7 +15,7 @@ except ImportError:
     from redeem.Stepper import Stepper
 
 
-class M30(GCodeCommand):
+class M909(GCodeCommand):
 
     def execute(self, g):
         for i in range(g.num_tokens()):

@@ -28,7 +28,9 @@
 #define __PathPlanner__Path__
 
 #include <stdint.h>
+#include<stddef.h>
 #include <atomic>
+#include <vector>
 #include "config.h"
 #include "StepperCommand.h"
 
@@ -41,7 +43,8 @@
 #define FLAG_SKIP_DEACCELERATING 64
 #define FLAG_BLOCKED 128
 #define FLAG_CANCELABLE 256
-
+#define FLAG_SYNC 512
+#define FLAG_SYNC_WAIT 1024
 /** Are the step parameter computed */
 #define FLAG_JOIN_STEPPARAMS_COMPUTED 1
 /** The right speed is fixed. Don't check this block or any block to the left. */
@@ -101,9 +104,10 @@ private:
     unsigned int vStart;            ///< Starting speed in steps/s.
     unsigned int vEnd;              ///< End speed in steps/s
     unsigned int stepsRemaining;            ///< Remaining steps, until move is finished
-	
-	
-	
+
+    std::vector<SteppersCommand> commands;
+
+
 	inline bool areParameterUpToDate()
     {
         return joinFlags & FLAG_JOIN_STEPPARAMS_COMPUTED;
@@ -182,7 +186,19 @@ private:
     {
         flags |= FLAG_NOMINAL;
     }
-	
+    inline bool isSyncEvent()
+    {
+        return flags & FLAG_SYNC;
+    }
+    inline bool isSyncWaitEvent()
+    {
+        return flags & FLAG_SYNC_WAIT;
+    }
+    inline void setSyncEvent(bool wait)
+    {
+        flags |= wait ? FLAG_SYNC_WAIT : FLAG_SYNC;
+        
+    }
     inline void setXMoveFinished()
     {
         dir&=~16;
@@ -306,21 +322,18 @@ private:
 	
 	
 	void updateStepsParameter();
-	
-	
-	SteppersCommand *commands;
-	size_t commandBufferSize;
-	
+
 public:
 	
 	FLOAT_T speed; //Feedrate
 	
 	FLOAT_T startPos[NUM_AXIS];
 	FLOAT_T endPos[NUM_AXIS];
-	
-	
-	
-	
+
+
+	Path();
+	Path(const Path& path);
+
 	friend class PathPlanner;
 };
 
