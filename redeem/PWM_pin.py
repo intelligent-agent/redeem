@@ -77,8 +77,8 @@ class PWM_pin:
 
 if __name__ == '__main__':
    
-    p1 = PWM_pin("P9_14", 100, 0.1)
-    p2 = PWM_pin("P9_16", 100, 0.1)
+    p1 = PWM_pin("P9_14", 50, 0.1)
+    p2 = PWM_pin("P9_16", 50, 0.1)
     
     while 1:
         for i in range(100):
