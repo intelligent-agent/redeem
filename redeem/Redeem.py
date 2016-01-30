@@ -60,6 +60,7 @@ from PWM import PWM
 from RotaryEncoder import *
 from FilamentSensor import *
 from Alarm import Alarm
+from StepperWatchdog import StepperWatchdog
     
 # Global vars
 printer = None
@@ -279,8 +280,12 @@ class Redeem:
         while(printer.config.has_option("Servos", "servo_"+str(servo_nr)+"_enable")):
             if printer.config.getboolean("Servos", "servo_"+str(servo_nr)+"_enable"):
                 channel = printer.config.get("Servos", "servo_"+str(servo_nr)+"_channel")
-                angle_init = printer.config.getint("Servos", "servo_"+str(servo_nr)+"_angle_init")
-                s = Servo(channel, 0.05, 0.1, angle_init)
+                pulse_min = printer.config.getfloat("Servos", "servo_"+str(servo_nr)+"_pulse_min")
+                pulse_max = printer.config.getfloat("Servos", "servo_"+str(servo_nr)+"_pulse_max")
+                angle_min = printer.config.getfloat("Servos", "servo_"+str(servo_nr)+"_angle_min")
+                angle_max = printer.config.getfloat("Servos", "servo_"+str(servo_nr)+"_angle_max")
+                angle_init = printer.config.getfloat("Servos", "servo_"+str(servo_nr)+"_angle_init")
+                s = Servo(channel, pulse_min, pulse_max, angle_min, angle_max, angle_init)
                 printer.servos.append(s)
                 logging.info("Added servo "+str(servo_nr))
             servo_nr += 1
@@ -457,6 +462,12 @@ class Redeem:
         printer.enable = Enable("P9_41")
         printer.enable.set_enabled()
 
+        # Enable Stepper timeout
+        timeout = printer.config.getint('Steppers', 'timeout_seconds')
+        printer.swd = StepperWatchdog(printer, timeout)
+        if printer.config.getboolean('Steppers', 'use_timeout'):
+            printer.swd.start()
+
         # Set up communication channels
         printer.comms["USB"] = USB(self.printer)
         printer.comms["Eth"] = Ethernet(self.printer)
@@ -544,6 +555,7 @@ class Redeem:
             logging.debug("closing "+name)
             comm.close()
         self.printer.enable.set_disabled()
+        self.swd.stop()
         logging.info("Redeem exited")
 
     def _execute(self, g):

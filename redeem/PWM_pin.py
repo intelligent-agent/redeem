@@ -61,7 +61,7 @@ class PWM_pin:
     def set_frequency(self, freq):
         """ Set the PWM frequency for all fans connected on this PWM-chip """
         # period is specified in picoseconds
-        period = int((1/float(freq))*(10**9))
+        period = int( (1.0/float(freq))*(10**9) )
         self.period = period
         path = self.base+"/period"
         with open(path, "w") as f:
