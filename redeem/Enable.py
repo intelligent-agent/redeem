@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-Global enable
+Enable heaters with a pin. 
 
 Author: Elias Bakken
 email: elias(dot)bakken(at)gmail(dot)com
