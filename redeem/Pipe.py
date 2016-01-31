@@ -89,12 +89,15 @@ class Pipe:
 
     def send_message(self, message):
         if self.send_response:
+            #logging.debug("Pipe: "+str(message))
             if message[-1] != "\n":
                 message += "\n"
                 try:
                     os.write(self.wr, message)
                 except OSError:
                     logging.warning("Unable to write to file. Closing down?")
+
+
 
     def close(self):
         self.running = False

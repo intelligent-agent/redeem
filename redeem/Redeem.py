@@ -59,7 +59,7 @@ from Enable import Enable
 from PWM import PWM
 from RotaryEncoder import *
 from FilamentSensor import *
-from Alarm import Alarm
+from Alarm import Alarm, AlarmExecutor
 from StepperWatchdog import StepperWatchdog
     
 # Global vars
@@ -123,8 +123,8 @@ class Redeem:
 
         # Test the alarm framework
         Alarm.printer = self.printer
-        alarm = Alarm(Alarm.ALARM_TEST, self)
-        alarm.execute()
+        Alarm.executor = AlarmExecutor()
+        alarm = Alarm(Alarm.ALARM_TEST, "Alarm framework operational")
 
         # Init the Paths
         Path.axis_config = printer.config.getint('Geometry', 'axis_config')
@@ -249,6 +249,12 @@ class Redeem:
             self.printer.heaters[e].P = self.printer.config.getfloat('Heaters', 'pid_p_'+e)
             self.printer.heaters[e].I = self.printer.config.getfloat('Heaters', 'pid_i_'+e)
             self.printer.heaters[e].D = self.printer.config.getfloat('Heaters', 'pid_d_'+e)
+
+            # Min/max settings
+            self.printer.heaters[e].min_temp        = self.printer.config.getfloat('Heaters', 'min_temp_'+e)
+            self.printer.heaters[e].max_temp        = self.printer.config.getfloat('Heaters', 'max_temp_'+e)
+            self.printer.heaters[e].max_temp_rise   = self.printer.config.getfloat('Heaters', 'max_rise_temp_'+e)
+            self.printer.heaters[e].max_temp_fall   = self.printer.config.getfloat('Heaters', 'max_fall_temp_'+e)
 
         # Init the three fans. Argument is PWM channel number
         self.printer.fans = []
