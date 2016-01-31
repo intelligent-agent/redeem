@@ -199,7 +199,8 @@ class Heater(object):
         # Check that temperature has not fallen below a certain setpoint from target
         if self.min_temp_enabled and self.current_temp < (self.target_temp - self.min_temp):
             a = Alarm(Alarm.HEATER_TOO_COLD, 
-                "Temperature below min set point ({}) for {}".format(self.min_temp, self.name))
+                "Temperature below min set point ({}) for {}".format(self.min_temp, self.name), 
+                "Alarm: Heater {}".format(self.name))
         # Check if the temperature has gone beyond the max value
         if self.current_temp > self.max_temp:
             a = Alarm(Alarm.HEATER_TOO_HOT, 
