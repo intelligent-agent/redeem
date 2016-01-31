@@ -561,7 +561,7 @@ class Redeem:
             logging.debug("closing "+name)
             comm.close()
         self.printer.enable.set_disabled()
-        self.swd.stop()
+        self.printer.swd.stop()
         logging.info("Redeem exited")
 
     def _execute(self, g):
