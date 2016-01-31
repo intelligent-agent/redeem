@@ -26,18 +26,21 @@ import logging
 from Path import Path
 from DAC import DAC, PWM_DAC
 from ShiftRegister import ShiftRegister
-
+import Adafruit_BBIO.GPIO as GPIO
+from threading import Thread
+from Alarm import Alarm
+from Key_pin import Key_pin
 
 class Stepper(object):
 
     all_steppers = list()
     
-    def __init__(self, step_pin, dir_pin, fault_pin, dac_channel, shiftreg_nr, name):
+    def __init__(self, step_pin, dir_pin, fault_key, dac_channel, shiftreg_nr, name):
         """ Init """
         self.dac_channel     = dac_channel  # Which channel on the dac is connected to this stepper
         self.step_pin        = step_pin
         self.dir_pin         = dir_pin
-        self.fault_pin        = fault_pin
+        self.fault_key       = fault_key
         self.name            = name
         self.enabled 	     = False	    
         self.in_use          = False        
@@ -49,6 +52,10 @@ class Stepper(object):
         # Set up the Shift register
         ShiftRegister.make(8)
         self.shift_reg = ShiftRegister.registers[shiftreg_nr]
+
+        # Add a key code to the key listener
+        # Steppers have an nFAULT pin, so callback on falling
+        Key_pin(name, fault_key, Key_pin.FALLING, self.fault_callback)
 
     def get_state(self):
         """ Returns the current state """
@@ -91,6 +98,9 @@ class Stepper(object):
     def commit():
         pass
 
+    def fault_callback(self, key, event):
+        Alarm(Alarm.STEPPER_FAULT, "Stepper {}".format(self.name))
+            
 
 
 """

@@ -159,7 +159,9 @@ class Heater(object):
                 self.time_diff = self.current_time-self.prev_time
                 self.prev_time = self.current_time
                 self.current_time = time.time()
-                self.check_temperature_error()
+
+                if not self.extruder_error:
+                    self.check_temperature_error()
 
                 # Set temp if temperature is OK
                 if not self.extruder_error:

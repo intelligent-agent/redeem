@@ -45,13 +45,11 @@ class StepperWatchdog:
         self.lock.release()
         self.running = False
         self.t.join()
-        logging.debug("Stepper watchdog stopped")
 
     def reset(self):
         self.lock.acquire()
         self.time_left = self.timeout
         self.lock.release()
-        logging.debug("Stepper watchdog reset")
 
     def _run(self):
         """ While more time on the clock, 

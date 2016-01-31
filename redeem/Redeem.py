@@ -61,7 +61,9 @@ from RotaryEncoder import *
 from FilamentSensor import *
 from Alarm import Alarm, AlarmExecutor
 from StepperWatchdog import StepperWatchdog
-    
+from Key_pin import Key_pin, Key_pin_listener
+
+
 # Global vars
 printer = None
 
@@ -126,11 +128,15 @@ class Redeem:
         Alarm.executor = AlarmExecutor()
         alarm = Alarm(Alarm.ALARM_TEST, "Alarm framework operational")
 
+
         # Init the Paths
         Path.axis_config = printer.config.getint('Geometry', 'axis_config')
 
         # Init the end stops
         EndStop.inputdev = self.printer.config.get("Endstops", "inputdev")
+        # Set up key listener
+        Key_pin.listener = Key_pin_listener(EndStop.inputdev)
+        
         for es in ["Z2", "Y2", "X2", "Z1", "Y1", "X1"]: # Order matches end stop inversion mask in Firmware
             pin = self.printer.config.get("Endstops", "pin_"+es)
             keycode = self.printer.config.getint("Endstops", "keycode_"+es)
@@ -158,11 +164,11 @@ class Redeem:
             printer.steppers["E"] = Stepper_00B2("GPIO1_28", "GPIO1_15", "GPIO2_1" , 14, 3, "E")
             printer.steppers["H"] = Stepper_00B2("GPIO1_13", "GPIO1_14", "GPIO2_3" , 15, 4, "H")
         elif self.revision == "00B3":
-            printer.steppers["X"] = Stepper_00B3("GPIO0_27", "GPIO1_29", "GPIO2_4" , 11, 0, "X")
-            printer.steppers["Y"] = Stepper_00B3("GPIO1_12", "GPIO0_22", "GPIO2_5" , 12, 1, "Y")
-            printer.steppers["Z"] = Stepper_00B3("GPIO0_23", "GPIO0_26", "GPIO0_15", 13, 2, "Z")
-            printer.steppers["E"] = Stepper_00B3("GPIO1_28", "GPIO1_15", "GPIO2_1" , 14, 3, "E")
-            printer.steppers["H"] = Stepper_00B3("GPIO1_13", "GPIO1_14", "GPIO2_3" , 15, 4, "H")
+            printer.steppers["X"] = Stepper_00B3("GPIO0_27", "GPIO1_29", 90, 11, 0, "X")
+            printer.steppers["Y"] = Stepper_00B3("GPIO1_12", "GPIO0_22", 91, 12, 1, "Y")
+            printer.steppers["Z"] = Stepper_00B3("GPIO0_23", "GPIO0_26", 92, 13, 2, "Z")
+            printer.steppers["E"] = Stepper_00B3("GPIO1_28", "GPIO1_15", 93, 14, 3, "E")
+            printer.steppers["H"] = Stepper_00B3("GPIO1_13", "GPIO1_14", 94, 15, 4, "H")
         elif self.revision in ["00A4", "0A4A"]:
             printer.steppers["X"] = Stepper_00A4("GPIO0_27", "GPIO1_29", "GPIO2_4" , 0, 0, "X")
             printer.steppers["Y"] = Stepper_00A4("GPIO1_12", "GPIO0_22", "GPIO2_5" , 1, 1, "Y")
@@ -493,6 +499,7 @@ class Redeem:
         else:
             logging.warning("Neither tty0tty or socat is installed! No virtual tty pipes enabled")
 
+
     def start(self):
         """ Start the processes """
         self.running = True
@@ -510,6 +517,9 @@ class Redeem:
         p0.start()
         p1.start()
         p2.start()
+
+        Alarm.executor.start()
+        Key_pin.listener.start()
 
         # Signal everything ready
         logging.info("Redeem ready")
@@ -568,6 +578,7 @@ class Redeem:
         self.printer.enable.set_disabled()
         self.printer.swd.stop()
         Alarm.executor.stop()
+        Key_pin.listener.stop()
         logging.info("Redeem exited")
 
     def _execute(self, g):

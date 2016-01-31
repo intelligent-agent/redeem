@@ -33,7 +33,8 @@ class Alarm:
     FILAMENT_JAM        = 5 # If filamet sensor is installed
     WATCHDOG_ERROR      = 6 # Can this be detected?
     ENDSTOP_HIT         = 7 # During print. 
-    ALARM_TEST          = 8 # Testsignal, used during start-up
+    STEPPER_FAULT       = 8 # Error on a stepper
+    ALARM_TEST          = 9 # Testsignal, used during start-up
 
     printer = None
     executor = None
@@ -67,6 +68,9 @@ class Alarm:
         elif self.type == Alarm.HEATER_FALLING_FAST:
             logging.error(self.message)
             self.disable_heaters()
+            self.inform_listeners(self.message)
+        elif self.type == Alarm.STEPPER_FAULT:
+            logging.info(self.message)
             self.inform_listeners(self.message)
         elif self.type == Alarm.ALARM_TEST:
             logging.info(self.message)
@@ -115,9 +119,7 @@ class Alarm:
 class AlarmExecutor:
     def __init__(self):
         self.queue = JoinableQueue(10)
-        self.running = True
         self.t = Thread(target=self._run)
-        self.t.start()
 
     def _run(self):
         while self.running:
@@ -129,8 +131,13 @@ class AlarmExecutor:
             except Queue.Empty:
                 continue
             
+    def start(self):
+        logging.debug("Starting alarm executor")
+        self.running = True
+        self.t.start()
+
     def stop(self):
-        logging.debug("Stoppping executor")
+        logging.debug("Stoppping alarm executor")
         self.running = False
         self.t.join()
     
