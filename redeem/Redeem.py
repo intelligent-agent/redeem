@@ -301,12 +301,17 @@ class Redeem:
             for f, fan in enumerate(self.printer.fans):
                 if not self.printer.config.has_option('Cold-ends', "connect-therm-{}-fan-{}".format(t, f)):
                     continue
-                if self.printer.config.getboolean('Cold-ends', "connect-therm-{}-fan-{}".format(t, f)):
-                    c = Cooler(therm, fan, "Cooler-{}-{}".format(t, f), False)
+                if printer.config.getboolean('Cold-ends', "connect-therm-{}-fan-{}".format(t, f)):
+                    c = Cooler(therm, fan, "Cooler-{}-{}".format(t, f), True) # Use ON/OFF on these. 
                     c.ok_range = 4
-                    c.set_target_temperature(60)
+                    opt_temp = "therm-{}-fan-{}-target_temp".format(t, f)
+                    if printer.config.has_option('Cold-ends', opt_temp): 
+                        target_temp = printer.config.getfloat('Cold-ends', opt_temp)
+                    else:            
+                        target_temp = 60    
+                    c.set_target_temperature(target_temp)
                     c.enable()
-                    self.printer.coolers.append(c)
+                    printer.coolers.append(c)
                     logging.info("Cooler connects therm {} with fan {}".format(t, f))
 
         # Connect fans to M106
