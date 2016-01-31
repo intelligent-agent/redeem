@@ -80,14 +80,12 @@ class Alarm:
         """ Stop the print """
         logging.warning("Stopping print")
         self.printer.path_planner.emergency_interrupt()
-        for _, heater in self.printer.heaters.iteritems():
-            heater.disable()
+        self.disable_heaters()
 
     def disable_heaters(self):
         logging.warning("Disabling heaters")
         for _, heater in self.printer.heaters.iteritems():
-            heater.disable()
-        logging.warning("Heaters disabled")
+            heater.extruder_error = True
 
     def inform_listeners(self, message):
         """ Inform all listeners (comm channels) of the occured error """
@@ -95,19 +93,20 @@ class Alarm:
         if Alarm.printer and hasattr(Alarm.printer, "comms"):
             for _, comm in Alarm.printer.comms.iteritems():
                 comm.send_message("Alarm: "+message)
-        logging.debug("Listeners informed")
 
     def make_sound(self):
-        """ Do what you are supposed to do """        
+        """ If a speaker is connected, sound it """        
         pass
 
     def send_email(self):
+        """ Send an e-mail to a predefined address """
         pass
     
     def send_sms(self):
         pass
 
     def record_position(self):
+        """ Save last completed segment to file """
         pass
     
     
@@ -127,7 +126,6 @@ class AlarmExecutor:
                 alarm.execute() 
                 logging.debug("Alarm executed")
                 self.queue.task_done()       
-                logging.debug("Task done")
             except Queue.Empty:
                 continue
             

@@ -59,7 +59,7 @@ class StepperWatchdog:
         timeout function """
         while self.running:
             if self.time_left:
-                while self.time_left:
+                while self.time_left and self.running:
                     time.sleep(1)
                     self.lock.acquire()
                     self.time_left -= 1

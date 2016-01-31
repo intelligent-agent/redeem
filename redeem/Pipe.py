@@ -82,10 +82,13 @@ class Pipe:
         while self.running:
             r, w, x = select.select([self.rd], [], [], 1.0)
             if r:
-                message = self.rd.readline().rstrip()
-                if len(message) > 0:
-                    g = Gcode({"message": message, "prot": self.prot})
-                    self.printer.processor.enqueue(g)
+                try:
+                    message = self.rd.readline().rstrip()                
+                    if len(message) > 0:
+                        g = Gcode({"message": message, "prot": self.prot})
+                        self.printer.processor.enqueue(g)
+                except IOError:
+                    logging.warning("Could not read from pipe")
 
     def send_message(self, message):
         if self.send_response:

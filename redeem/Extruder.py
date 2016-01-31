@@ -55,6 +55,8 @@ class Heater(object):
         self.max_temp_rise      = 0      # Fastest temp can rise pr measrement
         self.max_temp_fall      = 0      # Fastest temp can fall pr measurement
 
+        self.extruder_error = False
+
     def set_target_temperature(self, temp):
         """ Set the desired temperature of the extruder """
         self.min_temp_enabled = False
@@ -154,17 +156,16 @@ class Heater(object):
                     #    logging.debug("Der: "+str(derivative)+" Err: "+str(self.error)+" avg err: "+str(self.average))
 
                 # Run safety checks
-                self.check_temperature_error()
-
-                self.mosfet.set_power(power)
-                time_diff = self.current_time-self.prev_time
-                if time_diff > 2:
-                    logging.warning("Heater time update large: " +
-                                    self.name + " temp: " +
-                                    str(self.current_temp) + " time delta: " +
-                                    str(self.current_time-self.prev_time))
+                self.time_diff = self.current_time-self.prev_time
                 self.prev_time = self.current_time
                 self.current_time = time.time()
+                self.check_temperature_error()
+
+                # Set temp if temperature is OK
+                if not self.extruder_error:
+                    self.mosfet.set_power(power)
+                else:
+                    self.mosfet.set_power(0)        
                 time.sleep(self.sleep)
         finally:
             # Disable this mosfet if anything goes wrong
@@ -201,7 +202,14 @@ class Heater(object):
         if self.current_temp > self.max_temp:
             a = Alarm(Alarm.HEATER_TOO_HOT, 
                 "Temperature beyond max ({}) for {}".format(self.max_temp, self.name))                
-            
+        # Check the time diff, only warn if something is off.     
+        if self.time_diff > 2:
+            logging.warning("Heater time update large: " +
+                            self.name + " temp: " +
+                            str(self.current_temp) + " time delta: " +
+                            str(self.current_time-self.prev_time))
+
+
 
 class Extruder(Heater):
     """ Subclass for Heater, this is an extruder """

@@ -24,14 +24,14 @@ class M562(GCodeCommand):
         if g.has_letter("P"):
             heater_nr = g.get_int_by_letter("P", 1)
             if P == 0:
-                self.printer.heaters["HBP"].enable()
+                self.printer.heaters["HBP"].extruder_error = False
             elif P == 1:
-                self.printer.heaters["E"].enable()
+                self.printer.heaters["E"].extruder_error = False
             elif P == 2:
-                self.printer.heaters["H"].enable()
+                self.printer.heaters["H"].extruder_error = False
         else: # No P, Enable all heaters
             for _, heater in self.printer.heaters.iteritems():
-                heater.enable()
+                heater.extruder_error = False
 
     def get_description(self):
         return "Reset temperature fault. "
