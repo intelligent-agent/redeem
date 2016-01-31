@@ -43,7 +43,7 @@ pathplanner = Extension(
 
 setup(
     name = "Redeem",
-    version = "1.1.5",
+    version = "1.1.6",
     packages = find_packages(exclude=["redeem/path_planner"]),
     data_files=[
         ('redeem/firmware', [
@@ -64,7 +64,9 @@ setup(
             'data/B57560G104F.cht',
             'data/B57561G0103F000.cht',
             'data/QU-BD.cht',
-            'data/SEMITEC-104GT-2.cht']),
+            'data/SEMITEC-104GT-2.cht', 
+            'data/DYZE500.cht', 
+            'data/E3D-PT100-AMPLIFIER.cht']),
     ],
     # metadata for upload to PyPI
     author = "Elias Bakken",
