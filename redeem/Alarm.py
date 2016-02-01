@@ -68,7 +68,7 @@ class Alarm:
         elif self.type == Alarm.STEPPER_FAULT:
             self.inform_listeners()
         elif self.type == Alarm.ALARM_TEST:
-            self.inform_listeners()
+            logging.info("Alarm: Operational")
         else:
             logging.warning("An Alarm of unknown type was sounded!")
 

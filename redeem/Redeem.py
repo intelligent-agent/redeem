@@ -62,7 +62,7 @@ from FilamentSensor import *
 from Alarm import Alarm, AlarmExecutor
 from StepperWatchdog import StepperWatchdog
 from Key_pin import Key_pin, Key_pin_listener
-
+from Watchdog import Watchdog
 
 # Global vars
 printer = None
@@ -128,6 +128,12 @@ class Redeem:
         Alarm.executor = AlarmExecutor()
         alarm = Alarm(Alarm.ALARM_TEST, "Alarm framework operational")
 
+        # Init the Watchdog timer
+        printer.watchdog = Watchdog()
+
+        # Enable PWM and steppers
+        printer.enable = Enable("P9_41")
+        printer.enable.set_disabled()
 
         # Init the Paths
         Path.axis_config = printer.config.getint('Geometry', 'axis_config')
@@ -475,10 +481,6 @@ class Redeem:
                 
                 logging.info("Home position = %s"%str(printer.path_planner.home_pos))
 
-        # Enable PWM and steppers
-        printer.enable = Enable("P9_41")
-        printer.enable.set_enabled()
-
         # Enable Stepper timeout
         timeout = printer.config.getint('Steppers', 'timeout_seconds')
         printer.swd = StepperWatchdog(printer, timeout)
@@ -520,6 +522,11 @@ class Redeem:
 
         Alarm.executor.start()
         Key_pin.listener.start()
+
+        if self.printer.config.getboolean('Watchdog', 'enable_watchdog'):
+            self.printer.watchdog.start()
+
+        self.printer.enable.set_enabled()
 
         # Signal everything ready
         logging.info("Redeem ready")
@@ -579,6 +586,9 @@ class Redeem:
         self.printer.swd.stop()
         Alarm.executor.stop()
         Key_pin.listener.stop()
+        self.printer.watchdog.stop()
+        self.printer.enable.set_disabled()
+
         logging.info("Redeem exited")
 
     def _execute(self, g):
