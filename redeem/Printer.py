@@ -77,6 +77,9 @@ class Printer:
         """
         This method is called for every move, so it should be fast/cached.
         """
+        # Reset Stepper watchdog
+        self.swd.reset()
+        # Enabe steppers
         for name, stepper in self.steppers.iteritems():
             if stepper.in_use and not stepper.enabled:
                 # Stepper should be enabled, but is not.

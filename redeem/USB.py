@@ -36,7 +36,7 @@ class USB:
             logging.warning("USB gadget serial not available as /dev/ttyGS0")
             return
         self.running = True
-        self.debug = 0
+        self.send_response = False
         self.t = Thread(target=self.get_message)
         self.t.start()		
 
@@ -49,12 +49,17 @@ class USB:
                 if len(message) > 0:
                     g = Gcode({"message": message, "prot": "USB"})
                     self.printer.processor.enqueue(g)
+                    # Do not enable sending messages until a 
+                    # message has been received
+                    self.send_response = True
 
     def send_message(self, message):
         """ Send a message """
-        if message[-1] != "\n":
-            message += "\n"
-        self.tty.write(message)
+        if self.send_response:
+            if message[-1] != "\n":
+                message += "\n"
+            #logging.debug("USB: "+str(message))
+            self.tty.write(message)
 
     def close(self):
         """ Stop receiving messages """

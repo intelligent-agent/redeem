@@ -59,7 +59,8 @@ from Enable import Enable
 from PWM import PWM
 from RotaryEncoder import *
 from FilamentSensor import *
-from Alarm import Alarm
+from Alarm import Alarm, AlarmExecutor
+from StepperWatchdog import StepperWatchdog
     
 # Global vars
 printer = None
@@ -122,8 +123,8 @@ class Redeem:
 
         # Test the alarm framework
         Alarm.printer = self.printer
-        alarm = Alarm(Alarm.ALARM_TEST, self)
-        alarm.execute()
+        Alarm.executor = AlarmExecutor()
+        alarm = Alarm(Alarm.ALARM_TEST, "Alarm framework operational")
 
         # Init the Paths
         Path.axis_config = printer.config.getint('Geometry', 'axis_config')
@@ -249,6 +250,12 @@ class Redeem:
             self.printer.heaters[e].I = self.printer.config.getfloat('Heaters', 'pid_i_'+e)
             self.printer.heaters[e].D = self.printer.config.getfloat('Heaters', 'pid_d_'+e)
 
+            # Min/max settings
+            self.printer.heaters[e].min_temp        = self.printer.config.getfloat('Heaters', 'min_temp_'+e)
+            self.printer.heaters[e].max_temp        = self.printer.config.getfloat('Heaters', 'max_temp_'+e)
+            self.printer.heaters[e].max_temp_rise   = self.printer.config.getfloat('Heaters', 'max_rise_temp_'+e)
+            self.printer.heaters[e].max_temp_fall   = self.printer.config.getfloat('Heaters', 'max_fall_temp_'+e)
+
         # Init the three fans. Argument is PWM channel number
         self.printer.fans = []
         if self.revision == "00A3":
@@ -279,8 +286,12 @@ class Redeem:
         while(printer.config.has_option("Servos", "servo_"+str(servo_nr)+"_enable")):
             if printer.config.getboolean("Servos", "servo_"+str(servo_nr)+"_enable"):
                 channel = printer.config.get("Servos", "servo_"+str(servo_nr)+"_channel")
-                angle_init = printer.config.getint("Servos", "servo_"+str(servo_nr)+"_angle_init")
-                s = Servo(channel, 0.1, 0.2, angle_init)
+                pulse_min = printer.config.getfloat("Servos", "servo_"+str(servo_nr)+"_pulse_min")
+                pulse_max = printer.config.getfloat("Servos", "servo_"+str(servo_nr)+"_pulse_max")
+                angle_min = printer.config.getfloat("Servos", "servo_"+str(servo_nr)+"_angle_min")
+                angle_max = printer.config.getfloat("Servos", "servo_"+str(servo_nr)+"_angle_max")
+                angle_init = printer.config.getfloat("Servos", "servo_"+str(servo_nr)+"_angle_init")
+                s = Servo(channel, pulse_min, pulse_max, angle_min, angle_max, angle_init)
                 printer.servos.append(s)
                 logging.info("Added servo "+str(servo_nr))
             servo_nr += 1
@@ -290,12 +301,17 @@ class Redeem:
             for f, fan in enumerate(self.printer.fans):
                 if not self.printer.config.has_option('Cold-ends', "connect-therm-{}-fan-{}".format(t, f)):
                     continue
-                if self.printer.config.getboolean('Cold-ends', "connect-therm-{}-fan-{}".format(t, f)):
-                    c = Cooler(therm, fan, "Cooler-{}-{}".format(t, f), False)
+                if printer.config.getboolean('Cold-ends', "connect-therm-{}-fan-{}".format(t, f)):
+                    c = Cooler(therm, fan, "Cooler-{}-{}".format(t, f), True) # Use ON/OFF on these. 
                     c.ok_range = 4
-                    c.set_target_temperature(60)
+                    opt_temp = "therm-{}-fan-{}-target_temp".format(t, f)
+                    if printer.config.has_option('Cold-ends', opt_temp): 
+                        target_temp = printer.config.getfloat('Cold-ends', opt_temp)
+                    else:            
+                        target_temp = 60    
+                    c.set_target_temperature(target_temp)
                     c.enable()
-                    self.printer.coolers.append(c)
+                    printer.coolers.append(c)
                     logging.info("Cooler connects therm {} with fan {}".format(t, f))
 
         # Connect fans to M106
@@ -457,6 +473,12 @@ class Redeem:
         printer.enable = Enable("P9_41")
         printer.enable.set_enabled()
 
+        # Enable Stepper timeout
+        timeout = printer.config.getint('Steppers', 'timeout_seconds')
+        printer.swd = StepperWatchdog(printer, timeout)
+        if printer.config.getboolean('Steppers', 'use_timeout'):
+            printer.swd.start()
+
         # Set up communication channels
         printer.comms["USB"] = USB(self.printer)
         printer.comms["Eth"] = Ethernet(self.printer)
@@ -544,6 +566,8 @@ class Redeem:
             logging.debug("closing "+name)
             comm.close()
         self.printer.enable.set_disabled()
+        self.printer.swd.stop()
+        Alarm.executor.stop()
         logging.info("Redeem exited")
 
     def _execute(self, g):

@@ -13,7 +13,7 @@ import logging
 class M280(GCodeCommand):
 
     def execute(self, g):
-        if g.has_letter("S"):
+        if g.has_letter("S"): # Angle
             angle = int(g.get_value_by_letter("S"))
         else:
             logging.warning("M280: Missing S-parameter")
@@ -41,3 +41,6 @@ class M280(GCodeCommand):
 
     def get_description(self):
         return "Set servo position"
+
+    def get_long_description(self):
+        return "Set servo position. Use 'S' to specify angle, use 'P' to specify index, use F to specify speed. "

@@ -108,7 +108,6 @@ class Gcode:
                 return float(self.get_value_by_letter(letter))
         return default
         
-
     def get_int_by_letter(self, letter, default):
         """ Get an int or return a default value """
         if self.has_letter(letter):

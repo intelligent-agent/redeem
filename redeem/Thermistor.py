@@ -57,9 +57,7 @@ class Thermistor:
                 res_val = self.voltage_to_resistance(voltage)  # Convert to resistance
                 ret = self.resistance_to_degrees(res_val) # Convert to degrees
         except IOError as e:
-            logging.error("Unable to get ADC value ({0}): {1}".format(e.errno, e.strerror))
-            alarm = Alarm(Alarm.THERMISTOR_ERROR, self)
-            alarm.execute()
+            Alarm(Alarm.THERMISTOR_ERROR, "Unable to get ADC value ({0}): {1}".format(e.errno, e.strerror))
         finally:
             Thermistor.mutex.release()
         return ret
