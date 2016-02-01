@@ -1,4 +1,4 @@
-# termistor table for Dyze 500°C thermistor by DYZE DESIGN
+# termistor table for Dyze 500 deg C thermistor by DYZE DESIGN
 temp_chart["DYZE500"]=[
 [0,14000000],
 [10,8100000],
