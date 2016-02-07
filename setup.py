@@ -43,7 +43,7 @@ pathplanner = Extension(
 
 setup(
     name = "Redeem",
-    version = "1.1.6",
+    version = "1.1.7",
     packages = find_packages(exclude=["redeem/path_planner"]),
     data_files=[
         ('redeem/firmware', [
@@ -55,7 +55,8 @@ setup(
             'configs/makerbot_cupcake.cfg', 
             'configs/maxcorexy.cfg', 
             'configs/mendelmax.cfg', 
-            'configs/testing.cfg', 
+            'configs/testing_rev_A.cfg', 
+            'configs/testing_rev_B.cfg', 
             'configs/prusa_i3.cfg',
 	        'configs/debrew.cfg', 
 	        'configs/kossel_mini.cfg']),
