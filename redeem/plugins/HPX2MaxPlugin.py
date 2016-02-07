@@ -58,11 +58,18 @@ class HPX2MaxPlugin(AbstractPlugin):
         logging.debug('Activating '+__PLUGIN_NAME__+' plugin...')
 
         # Add the servo
-        self.head_servo = Servo(int(self.printer.config.get(type(self).__name__, 'servo_channel', 1)),500,750,90,10) 
+        channel     = self.printer.config.get(type(self).__name__, 'servo_channel')
+        pulse_min   = self.printer.config.getfloat(type(self).__name__, 'pulse_min')
+        pulse_max = self.printer.config.getfloat(type(self).__name__, 'pulse_max')
+        angle_min = self.printer.config.getfloat(type(self).__name__, 'angle_min')
+        angle_max = self.printer.config.getfloat(type(self).__name__, 'angle_max')
+        angle_init = self.printer.config.getfloat(type(self).__name__, 'extruder_0_angle')
+
+        self.head_servo = Servo(channel, pulse_min, pulse_max, angle_min, angle_max, angle_init)
 
         # Load the config for angles
-        self.t0_angle = float(self.printer.config.get(type(self).__name__, 'extruder_0_angle', 20))
-        self.t1_angle = float(self.printer.config.get(type(self).__name__, 'extruder_1_angle', 175))
+        self.t0_angle = float(self.printer.config.getfloat(type(self).__name__, 'extruder_0_angle'))
+        self.t1_angle = float(self.printer.config.get(type(self).__name__, 'extruder_1_angle'))
 
         # Override the changing tool command to trigger the servo
         self.printer.processor.override_command('T0', T0_HPX2Max(self.printer))
@@ -78,20 +85,20 @@ class HPX2MaxPlugin(AbstractPlugin):
         # 3 axis, plus 2 extruders
         assert Path.NUM_AXES >= 5
 
-        for i in range(2):
-            e = self.printer.path_planner.native_planner.getExtruder(i)
+        #for i in range(2):
+        #    e = self.printer.path_planner.native_planner.getExtruder(i)
 
             # FIXME: We have hardcoded the motor to be used here.
             #       It is always the Extruder E. Patch welcome.
-            e.setStepperCommandPosition(3)
+        #    e.setStepperCommandPosition(3)
 
             # If extruder 1 angle is > 90, then we invert the motor for
             # him, otherwise for the other
             # This is how the HPX2 Max is built.
-            if i == 0:
-                e.setDirectionInverted(True if self.t0_angle <= 90 else False)
-            else:
-                e.setDirectionInverted(True if self.t1_angle <= 90 else False)
+        #    if i == 0:
+        #        e.setDirectionInverted(True if self.t0_angle <= 90 else False)
+        #    else:
+        #        e.setDirectionInverted(True if self.t1_angle <= 90 else False)
 
         # Select tool 0 as this is the default tool
         self.head_servo.set_angle(self.printer.plugins[__PLUGIN_NAME__].t0_angle, asynchronous=True)
