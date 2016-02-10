@@ -130,5 +130,7 @@ class M667(GCodeCommand):
     def get_description(self):
         return "Set delta column calibration values"
 
+    def get_long_description(self):
+        return "Set delta column calibration values. "
 
 

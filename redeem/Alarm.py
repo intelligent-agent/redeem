@@ -33,14 +33,16 @@ class Alarm:
     FILAMENT_JAM        = 5 # If filamet sensor is installed
     WATCHDOG_ERROR      = 6 # Can this be detected?
     ENDSTOP_HIT         = 7 # During print. 
-    ALARM_TEST          = 8 # Testsignal, used during start-up
+    STEPPER_FAULT       = 8 # Error on a stepper
+    ALARM_TEST          = 9 # Testsignal, used during start-up
 
     printer = None
     executor = None
 
-    def __init__(self, alarm_type, message):
+    def __init__(self, alarm_type, message, short_message=None):
         self.type = alarm_type
         self.message = message
+        self.short_message = message if short_message is None else short_message
         if Alarm.executor:
             Alarm.executor.queue.put(self)
         else:
@@ -49,28 +51,24 @@ class Alarm:
     def execute(self):
         """ Execute the alarm """
         if self.type == Alarm.THERMISTOR_ERROR:
-            logging.error(self.message)
             self.stop_print()
-            self.inform_listeners(self.message)
+            self.inform_listeners()
         elif self.type == Alarm.HEATER_TOO_COLD:
-            logging.error(self.message)
             self.stop_print()
-            self.inform_listeners(self.message)
+            self.inform_listeners()
         elif self.type == Alarm.HEATER_TOO_HOT:
-            logging.error(self.message)
             self.stop_print()
-            self.inform_listeners(self.message)
+            self.inform_listeners()
         elif self.type == Alarm.HEATER_RISING_FAST:
-            logging.error(self.message)
             self.stop_print()
-            self.inform_listeners(self.message)
+            self.inform_listeners()
         elif self.type == Alarm.HEATER_FALLING_FAST:
-            logging.error(self.message)
             self.disable_heaters()
-            self.inform_listeners(self.message)
+            self.inform_listeners()
+        elif self.type == Alarm.STEPPER_FAULT:
+            self.inform_listeners()
         elif self.type == Alarm.ALARM_TEST:
-            logging.info(self.message)
-            self.inform_listeners(self.message)
+            logging.info("Alarm: Operational")
         else:
             logging.warning("An Alarm of unknown type was sounded!")
 
@@ -87,12 +85,15 @@ class Alarm:
         for _, heater in self.printer.heaters.iteritems():
             heater.extruder_error = True
 
-    def inform_listeners(self, message):
+    def inform_listeners(self):
         """ Inform all listeners (comm channels) of the occured error """
-        logging.debug("Informing listeners")
+        logging.error("Alarm: "+self.message)
         if Alarm.printer and hasattr(Alarm.printer, "comms"):
-            for _, comm in Alarm.printer.comms.iteritems():
-                comm.send_message("Alarm: "+message)
+            for name, comm in Alarm.printer.comms.iteritems():
+                if name == "toggle":
+                    comm.send_message(self.short_message)                    
+                else:    
+                    comm.send_message("Alarm: "+self.message)
 
     def make_sound(self):
         """ If a speaker is connected, sound it """        
@@ -115,9 +116,7 @@ class Alarm:
 class AlarmExecutor:
     def __init__(self):
         self.queue = JoinableQueue(10)
-        self.running = True
         self.t = Thread(target=self._run)
-        self.t.start()
 
     def _run(self):
         while self.running:
@@ -129,8 +128,13 @@ class AlarmExecutor:
             except Queue.Empty:
                 continue
             
+    def start(self):
+        logging.debug("Starting alarm executor")
+        self.running = True
+        self.t.start()
+
     def stop(self):
-        logging.debug("Stoppping executor")
+        logging.debug("Stoppping alarm executor")
         self.running = False
         self.t.join()
     

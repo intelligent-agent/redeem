@@ -51,7 +51,7 @@ class EndStop:
 
     def stop(self):
         self.running = False
-        t.join()
+        self.t.join()
 
     def get_pin(self):
         return self.pin

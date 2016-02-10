@@ -100,7 +100,7 @@ class Autotune:
         self.heater.P = self.Kp
         self.heater.I = self.Ki
         self.heater.D = self.Kd
-        self.heater.set_target_temperature(self.steady_temperature)
+        self.heater.set_target_temperature(0)
 
     def _tune(self):
         for peak in range(self.cycles):

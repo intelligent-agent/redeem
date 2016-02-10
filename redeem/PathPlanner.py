@@ -291,10 +291,11 @@ class PathPlanner:
         # Move until endstop is hits
         self.printer.ensure_steppers_enabled()
         #push this new segment
-        start = (0.0, 0.0, 0.0, 0.0, 0.0)
+        start = (0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
         steps = np.ceil(z*Path.steps_pr_meter[2])
         z_dist = steps/Path.steps_pr_meter[2]
-        end   = (-z_dist, -z_dist, -z_dist, 0.0, 0.0)
+        # TODO: Shouldn't this be different for Delta and cartesian?
+        end   = (-z_dist, -z_dist, -z_dist, 0.0, 0.0, 0.0, 0.0, 0.0)
 
         logging.debug("Steps total: "+str(steps))
    
@@ -322,8 +323,8 @@ class PathPlanner:
 
         steps -= steps_remaining
         z_dist = steps/Path.steps_pr_meter[2]
-        start = (0.0, 0.0, 0.0, 0.0, 0.0)
-        end   = (z_dist, z_dist, z_dist, 0.0, 0.0)
+        start = (0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
+        end   = (z_dist, z_dist, z_dist, 0.0, 0.0, 0.0, 0.0, 0.0)
         
         self.native_planner.queueMove(start,
                                   end, 
