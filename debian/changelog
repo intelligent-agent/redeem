@@ -1,3 +1,10 @@
+redeem (1.1.8) UNRELEASED; urgency=low
+
+  [ Elias ]
+  * Logging to file and syslog
+
+ -- Elias <elias@elias-Aspire>  Sun, 7 Feb 2016 14:06:44 +0200
+
 redeem (1.1.7) UNRELEASED; urgency=low
 
   [ Elias ]
