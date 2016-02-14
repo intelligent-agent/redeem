@@ -26,6 +26,7 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
 import glob
 import shutil
 import logging
+import logging.handlers
 import os
 import os.path
 import signal
@@ -96,6 +97,21 @@ class Redeem:
             ['/etc/redeem/default.cfg', '/etc/redeem/printer.cfg',
              '/etc/redeem/local.cfg'])
 
+        # Get the revision and loglevel from the Config file
+        level = self.printer.config.getint('System', 'loglevel')
+        if level > 0:
+            logging.getLogger().setLevel(level)
+
+        # Set up additional logging, if present:        
+        if self.printer.config.getboolean('System', 'log_to_file'):
+            logfile = self.printer.config.get('System', 'logfile')
+            formatter = '%(asctime)s %(name)-12s %(levelname)-8s %(message)s'
+            printer.redeem_logging_handler = logging.handlers.RotatingFileHandler(logfile, maxBytes=2*1024*1024)
+            printer.redeem_logging_handler.setFormatter(logging.Formatter(formatter))
+            printer.redeem_logging_handler.setLevel(level)
+            logging.getLogger().addHandler(printer.redeem_logging_handler)
+            logging.info("-- Logfile configured --")
+
         # Find out which capes are connected
         self.printer.config.parse_capes()
         self.revision = self.printer.config.replicape_revision
@@ -112,11 +128,6 @@ class Redeem:
             Path.NUM_AXES = 8
         elif self.printer.config.reach_revision == "00B0":
             Path.NUM_AXES = 7
-
-        # Get the revision and loglevel from the Config file
-        level = self.printer.config.getint('System', 'loglevel')
-        if level > 0:
-            logging.getLogger().setLevel(level)
 
         if self.revision in ["00A4", "0A4A", "00A3"]:
             PWM.set_frequency(100)
