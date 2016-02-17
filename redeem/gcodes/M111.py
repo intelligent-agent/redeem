@@ -19,6 +19,8 @@ class M111(GCodeCommand):
         level = g.get_int_by_letter("S", 20)
         if level in [10, 20, 30, 40, 50, 60]:
             logging.getLogger().setLevel(level)
+            if hasattr(self.printer, "redeem_logging_handler"):
+                self.printer.redeem_logging_handler.setLevel(level)
             logging.info("Debug level set to "+str(level))
 
 
