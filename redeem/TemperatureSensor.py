@@ -47,7 +47,7 @@ class TemperatureSensor:
         self.heater = heater_name
         self.sensorIdentifier = sensorIdentifier
         self.maxAdc = 4095.0
-        self.alarm = Alarm('THERMISTOR_ERROR', self)
+        self.alarm = Alarm(Alarm.THERMISTOR_ERROR, self)
 
         #Find matching entry in sensor tables and instantiate corresponding sensor
         found = False
@@ -96,7 +96,7 @@ class TemperatureSensor:
                 else:
                     voltage = signal / 4095.0 * 1.8 #input range is 0 ... 1.8V
         except IOError as e:
-            logging.error("Unable to get ADC value({0}: {1}".format(e.errno, e.strerror))
+             Alarm(Alarm.THERMISTOR_ERROR, "Unable to get ADC value ({0}): {1}".format(e.errno, e.strerror))
             self.alarm.execute()
         finally:
             mutex.release()
