@@ -47,7 +47,7 @@ class TemperatureSensor:
         self.heater = heater_name
         self.sensorIdentifier = sensorIdentifier
         self.maxAdc = 4095.0
-        self.alarm = Alarm(Alarm.THERMISTOR_ERROR, self)
+        self.alarm = 
 
         #Find matching entry in sensor tables and instantiate corresponding sensor
         found = False
@@ -67,9 +67,7 @@ class TemperatureSensor:
                     break
 
         if found == False:
-            self.alarm.execute()
-            #logging.error("The specified temperature sensor "+sensorIdentifier+" is not implemented. You may add it's config in TemperatureSensorConfigs.")
-            #sys.exit()
+            Alarm(Alarm.THERMISTOR_ERROR, "The specified temperature sensor {0} is not implemented. You may add it's config in TemperatureSensorConfigs.".format(sensorIdentifier))
 
     """
     Returns the current temperature in degrees celsius for the given sensor.
