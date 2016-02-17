@@ -39,113 +39,23 @@
 #include "Path.h"
 #include "config.h"
 
-class Extruder {
-private:
-	FLOAT_T maxStartFeedrate;
-	FLOAT_T maxFeedrate;
-	unsigned long maxPrintAccelerationStepsPerSquareSecond;
-	unsigned long maxTravelAccelerationStepsPerSquareSecond;
-	unsigned long maxAccelerationMMPerSquareSecond;
-	unsigned long maxTravelAccelerationMMPerSquareSecond;
-	FLOAT_T invAxisStepsPerMM;
-	unsigned long axisStepsPerMM;
-	bool directionInverted;
-	
-	void recomputeParameters();
-	
-	unsigned int stepperCommandPosition;
-
-public:
-	
-	/**
-	 * @brief Set the maximum feedrate of the extruder
-	 * @details Set the maximum feedrate of the extruder in m/s
-	 *
-	 * @param rates The feedrate of the extruder
-	 */
-	void setMaxFeedrate(FLOAT_T rate);
-	
-	/**
-	 * @brief Set the maximum speed at which the extruder can start
-	 * @details Set the maximum speed at which the extruder can start
-	 *
-	 * @param maxstartfeedrate the maximum speed at which the extruder can start in m/s
-	 */
-	void setMaxStartFeedrate(FLOAT_T maxstartfeedrate);
-	
-	/**
-	 * @brief Set the number of steps required to move each axis by 1 meter
-	 * @details Set the number of steps required to move each axis by 1 meter
-	 *
-	 * @param stepPerM the number of steps required to move each axis by 1 meter, consisting of a NUM_AXIS length array.
-	 */
-	void setAxisStepsPerMeter(unsigned long stepPerM);
-	
-	/**
-	 * @brief Set the max acceleration for printing moves
-	 * @details Set the max acceleration for moves when the extruder is activated
-	 *
-	 * @param accel The acceleration in m/s^2
-	 */
-	void setPrintAcceleration(FLOAT_T accel);
-	
-	/**
-	 * @brief Set the max acceleration for travel moves
-	 * @details Set the max acceleration for moves when the extruder is not activated (i.e. not printing)
-	 *
-	 * @param accel The acceleration in m/s^2
-	 */
-	void setTravelAcceleration(FLOAT_T accel);
-	
-	/**
-	 * @brief Return the bit that needs to be tiggled for setting direction and step pin of the stepper driver for this extruder
-	 * @return the bit that needs to be tiggled for setting direction and step pin of the stepper driver for this extruder
-	 *
-	 */
-	inline unsigned int getStepperCommandPosition() {
-		return stepperCommandPosition;
-	}
-	
-	inline void setStepperCommandPosition(unsigned int pose) {
-		stepperCommandPosition = pose;
-	}
-	
-	inline void setDirectionInverted(bool inverted) {
-		directionInverted = inverted;
-	}
-	
-	friend class PathPlanner;
-};
-
 class PathPlanner {
 private:
-	void calculateMove(Path* p,FLOAT_T axis_diff[NUM_AXIS]);
+	void calculateMove(Path* p,FLOAT_T axis_diff[NUM_AXES]);
 	FLOAT_T safeSpeed(Path *p);
 	void updateTrapezoids();
 	void computeMaxJunctionSpeed(Path *previous,Path *current);
 	void backwardPlanner(unsigned int start,unsigned int last);
 	void forwardPlanner(unsigned int first);
 	
-	FLOAT_T maxFeedrate[NUM_AXIS];
-	unsigned long maxPrintAccelerationStepsPerSquareSecond[NUM_AXIS];
-	unsigned long maxTravelAccelerationStepsPerSquareSecond[NUM_AXIS];
-	unsigned long maxAccelerationMMPerSquareSecond[NUM_AXIS];
-	unsigned long maxTravelAccelerationMMPerSquareSecond[NUM_AXIS];
+	FLOAT_T maxSpeeds[NUM_AXES];
+	FLOAT_T minSpeeds[NUM_AXES];
+    FLOAT_T maxJerks[NUM_AXES];
+	FLOAT_T maxAccelerationStepsPerSquareSecond[NUM_AXES];
+	FLOAT_T maxAccelerationMPerSquareSecond[NUM_AXES];
 	
-	Extruder extruders[NUM_EXTRUDER];
-	
-	Extruder* currentExtruder;
-	
-	FLOAT_T maxJerk;
-	FLOAT_T maxZJerk;
-	
-	FLOAT_T minimumSpeed;
-	FLOAT_T minimumZSpeed;
-			
-	FLOAT_T invAxisStepsPerMM[NUM_AXIS];
-	unsigned long axisStepsPerMM[NUM_AXIS];
-
-    int driveSystem;
+	FLOAT_T minimumSpeed;			
+	FLOAT_T axisStepsPerM[NUM_AXES];
 
 	std::atomic_uint_fast32_t linesPos; // Position for executing line movement
 	std::atomic_uint_fast32_t linesWritePos; // Position where we write the next cached line move
@@ -158,29 +68,25 @@ private:
 	int minBufferedMoveTime;
 	int maxBufferedMoveTime;
 
-
-
     std::vector<Path> lines;
 
-	inline void previousPlannerIndex(unsigned int &p)
-    {
+	inline void previousPlannerIndex(unsigned int &p){
         p = (p ? p-1 : moveCacheSize-1);
     }
-	inline void nextPlannerIndex(unsigned int& p)
-    {
+
+	inline void nextPlannerIndex(unsigned int& p){
         p = (p == moveCacheSize - 1 ? 0 : p + 1);
     }
 
-	inline void removeCurrentLine()
-    {
+	inline void removeCurrentLine(){
         linesTicksCount -= lines[linesPos].timeInTicks;
         linesPos++;
-        if(linesPos>=moveCacheSize) linesPos=0;
+        if(linesPos>=moveCacheSize) 
+            linesPos=0;
         --linesCount;
     }
 
-    inline bool isLinesBufferFilled()
-    {
+    inline bool isLinesBufferFilled(){
         return linesTicksCount >= (F_CPU/1000)*maxBufferedMoveTime;
     }
 	
@@ -253,10 +159,10 @@ public:
 	 * @param startPos The starting position of the path in meters
 	 * @param endPos The end position of the path in meters
 	 * @param speed The feedrate (aka speed) of the move in m/s
-         * @param cancelable flags the move as cancelable.
-         * @param optimize Wait for additional commands to fill the buffer, to optimize speed.
+     * @param cancelable flags the move as cancelable.
+     * @param optimize Wait for additional commands to fill the buffer, to optimize speed.
 	 */
-	void queueMove(FLOAT_T startPos[NUM_AXIS], FLOAT_T endPos[NUM_AXIS], FLOAT_T speed, bool cancelable, bool optimize=true );
+	void queueMove(FLOAT_T startPos[NUM_AXES], FLOAT_T endPos[NUM_AXES], FLOAT_T speed, FLOAT_T accel, bool cancelable, bool optimize=true );
 
 	/**
 	 * @brief Queue a batch of line moves for execution
@@ -271,7 +177,7 @@ public:
 	 * @param cancelable flags the entire group of moves as cancelable.
 	 * @param optimize Waits upto PRINT_MOVE_BUFFER_WAIT to perform speed optimization on an entire group of moves.
 	 */
-	void queueBatchMove(FLOAT_T* batchData, int batchSize, FLOAT_T speed, bool cancelable, bool optimize=true);
+	void queueBatchMove(FLOAT_T* batchData, int batchSize, FLOAT_T speed, FLOAT_T accel, bool cancelable, bool optimize=true);
 	
 	/**
 	 * @brief Run the path planner thread
@@ -293,27 +199,6 @@ public:
 	 * @details Wait until all queued move are finished to be executed
 	 */
 	void waitUntilFinished();
-
-
-	/**
-	 * @brief Set current extruder number used
-	 * @details Set extruder number used starting with ext 0
-	 * 
-	 * @param extNr The extruder number
-	 */
-    void setExtruder(int extNr);
-	
-	/**
-	 * @brief Return the extruder extNr
-	 * @details Return the extruder extNr in order to configure it.
-	 * @warning You have to call setExtruder() again if you modify the currently used extruder.
-	 * @param extNr The extruder number to get
-	 * @return The extruder corresponding to extNr
-	 */
-	inline Extruder& getExtruder(int extNr) {
-		assert(extNr<NUM_EXTRUDER);
-		return extruders[extNr];
-	}
 
 	/**
 	 * @brief Set the print move buffer wait time
@@ -346,34 +231,33 @@ public:
 	 * @brief Set the maximum feedrates of the different axis X,Y,Z
 	 * @details Set the maximum feedrates of the different axis in m/s
 	 * 
-	 * @param rates The feedrate for each of the axis, consisting of a NUM_AXIS length array.
+	 * @param rates The feedrate for each of the axis, consisting of a NUM_AXES length array.
 	 */
-	void setMaxFeedrates(FLOAT_T rates[NUM_MOVING_AXIS]);
+	void setMaxSpeeds(FLOAT_T speeds[NUM_AXES]);
 
+	/**
+	 * @brief Set the maximum feedrates of the different axis X,Y,Z
+	 * @details Set the maximum feedrates of the different axis in m/s
+	 * 
+	 * @param rates The feedrate for each of the axis, consisting of a NUM_AXES length array.
+	 */
+	void setMinSpeeds(FLOAT_T speeds[NUM_AXES]);
 
 	/**
 	 * @brief Set the number of steps required to move each axis by 1 meter
 	 * @details Set the number of steps required to move each axis by 1 meter
 	 * 
-	 * @param stepPerM the number of steps required to move each axis by 1 meter, consisting of a NUM_AXIS length array.
+	 * @param stepPerM the number of steps required to move each axis by 1 meter, consisting of a NUM_AXES length array.
 	 */
-	void setAxisStepsPerMeter(unsigned long stepPerM[NUM_MOVING_AXIS]);
+	void setAxisStepsPerMeter(FLOAT_T stepPerM[NUM_AXES]);
 
 	/**
-	 * @brief Set the max acceleration for printing moves
+	 * @brief Set the max acceleration for all moves
 	 * @details Set the max acceleration for moves when the extruder is activated
 	 * 
 	 * @param accel The acceleration in m/s^2
 	 */
-	void setPrintAcceleration(FLOAT_T accel[NUM_MOVING_AXIS]);
-
-	/**
-	 * @brief Set the max acceleration for travel moves
-	 * @details Set the max acceleration for moves when the extruder is not activated (i.e. not printing)
-	 * 
-	 * @param accel The acceleration in m/s^2
-	 */
-	void setTravelAcceleration(FLOAT_T accel[NUM_MOVING_AXIS]);
+	void setAcceleration(FLOAT_T accel[NUM_AXES]);
 
 	/**
 	 * @brief Set the maximum speed that can be used when in a corner
@@ -399,9 +283,8 @@ public:
 	 * Corner can be printed with full speed of 50 mm/s
 	 *
 	 * @param maxJerk The maximum jerk for X and Y axis in m/s
-	 * @param maxZJerk The maximum jerk for Z axis in m/s
 	 */
-	void setMaxJerk(FLOAT_T maxJerk, FLOAT_T maxZJerk);
+	void setJerks(FLOAT_T jerks[NUM_AXES]);
 	
 	void suspend() {
 		pru.suspend();

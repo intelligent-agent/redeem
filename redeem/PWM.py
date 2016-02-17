@@ -34,6 +34,13 @@ class PWM(object):
     PCA9685_MODE1 = 0x0
     PCA9685_PRESCALE = 0xFE
 
+    def __init__(self, channel):
+        self.channel = channel
+    
+    def set_value(self, value):
+        PWM.set_value(value, self.channel)
+
+
     @staticmethod
     def __init_pwm():
         kernel_version = subprocess.check_output(["uname", "-r"]).strip()
@@ -77,19 +84,22 @@ class PWM(object):
 if __name__ == '__main__':
     import os
     import logging
+    import numpy as np
 
     logging.basicConfig(level=logging.DEBUG,
                         format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
                         datefmt='%m-%d %H:%M')
 
-   
-    PWM.set_frequency(100)
-    
-    for i in xrange(1,4095):
-        logging.info(i)
-        PWM.set_value(i/4095.0, 7)
-        PWM.set_value(i/4095.0, 8)
-        PWM.set_value(i/4095.0, 9)
-        PWM.set_value(i/4095.0, 10  )
+    exp = 2.3   
+
+    PWM.set_frequency(1000)
+    while True:
+        for i in np.linspace(0.0, 6.28, 100):
+            logging.info((0.5+0.5*np.sin(i)))        
+            PWM.set_value((0.5+0.5*np.sin(i+0.0*np.pi/2.0))**exp, 7)
+            PWM.set_value((0.5+0.5*np.sin(i+1.0*np.pi/2.0))**exp, 8)
+            PWM.set_value((0.5+0.5*np.sin(i+2.0*np.pi/2.0))**exp, 9)
+            PWM.set_value((0.5+0.5*np.sin(i+3.0*np.pi/2.0))**exp, 10)
+            time.sleep(0.01)
 
 

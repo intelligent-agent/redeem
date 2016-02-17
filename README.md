@@ -148,3 +148,14 @@ For Angstrom the packages are outdated, install from source. For legacy packages
 
 # Development:  
   Try to be PEP8 compliant: http://legacy.python.org/dev/peps/pep-0008/
+
+# Locating files 
+Hi! do an "updatedb" and then "locate Redeem.py". It should give you the location. Please note that
+if you install from source, the files will have a different location than if you install from a deb package.
+/usr/lib vs. /usr/local/lib/.
+
+# Making firmware changes
+As for the firmware files (the code that runs on PRUSS), they are moved to /tmp during compilation, but should reside in a sub directory from Redeem.py before compilation.
+A recompile of the firmware can be triggered by touching /et/redeem/local.cfg
+
+

@@ -72,10 +72,12 @@ class Ethernet:
 
     def send_message(self, message):
         """Send a message"""
+        #logging.debug("Eth: "+str(message))
         if message[-1] != "\n":
             message += "\n"
         try:
-            self.client.send(message)
+            if self.client:
+                self.client.send(message)
         except socket.error, (value, message):
             logging.error("Ethernet " + message)
 

@@ -25,16 +25,22 @@ from threading import Thread
 import time
 import logging
 import numpy as np
+try:
+    from Gcode import Gcode
+except ImportError:
+    from redeem.Gcode import Gcode
 
 
 class Autotune:
 
-    def __init__(self, heater, temp=100.0, cycles=3):        
+    def __init__(self, heater, temp=100.0, cycles=3, g=None, printer=None):        
         self.heater = heater
         self.noise_band = 0.5
         # Steady state starting temperture
         self.steady_temperature = temp
         self.cycles = cycles
+        self.g = g
+        self.printer = printer
         # Degrees to step
         self.output_step = 10.0
         self.stable_start_seconds = 10
@@ -43,6 +49,14 @@ class Autotune:
     def cancel(self):
         self.running = False
         self.t.join()
+
+
+    def send_temperature(self):
+        m105 = Gcode({"message": "M105", "prot": self.g.prot})
+        self.printer.processor.execute(m105)
+        answer = m105.get_answer()
+        m105.set_answer(answer[2:])  # strip away the "ok"
+        self.printer.reply(m105)
 
     def run(self):
         """ Start the PID autotune loop """
@@ -53,6 +67,7 @@ class Autotune:
         # Wait for temperature to stabilize
         self.heater.set_target_temperature(self.steady_temperature)
         while not self.heater.is_temperature_stable(self.stable_start_seconds):
+            self.send_temperature()
             time.sleep(1)
 
         # Set the standard parameters
@@ -85,7 +100,7 @@ class Autotune:
         self.heater.P = self.Kp
         self.heater.I = self.Ki
         self.heater.D = self.Kd
-        self.heater.set_target_temperature(self.steady_temperature)
+        self.heater.set_target_temperature(0)
 
     def _tune(self):
         for peak in range(self.cycles):
@@ -100,6 +115,7 @@ class Autotune:
                 self.temps.append(temp)
                 if not self.running: 
                     return
+
                 time.sleep(self.sleep)
 
             # Set lower temperature step
@@ -113,6 +129,7 @@ class Autotune:
                 self.temps.append(temp)
                 if not self.running: 
                     return
+                self.send_temperature()
                 time.sleep(self.sleep)
 
             if peak == 0:

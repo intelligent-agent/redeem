@@ -26,3 +26,6 @@ class M103(M101):
 
 class M108(M101):
     pass
+
+class M21(M101):
+    pass

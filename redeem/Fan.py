@@ -25,6 +25,7 @@ from Adafruit_I2C import Adafruit_I2C
 import time
 import subprocess
 from PWM import PWM
+import logging
 
 class Fan(PWM):
 
@@ -34,7 +35,16 @@ class Fan(PWM):
 
     def set_value(self, value):
         """ Set the amount of on-time from 0..1 """
+        self.value = value
         PWM.set_value(value, self.channel)
+
+
+    def ramp_to(self, value, delay=0.01):
+        ''' Set the fan/light value to the given value, in degree, with the given speed in deg / sec '''
+        for w in xrange(int(self.value*255.0), int(value*255.0), (1 if value>=self.value else -1)):
+            logging.debug("Fan value: "+str(w))
+            self.set_value(w/255.0)
+            time.sleep(delay)
 
 if __name__ == '__main__':
     import os

@@ -42,7 +42,7 @@ class M303(GCodeCommand):
         else:
             cycles = 3
         
-        tuner = Autotune(heater, temp, cycles)
+        tuner = Autotune(heater, temp, cycles, g, self.printer)
         tuner.run()
         logging.info("Max temp: {}, Min temp: {}, Ku: {}, Pu: {}".format(tuner.max_temp, tuner.min_temp, tuner.Ku, tuner.Pu))
         logging.info("P: {}, I: {}, D: {}".format(heater.P, heater.I, heater.D))
@@ -62,4 +62,9 @@ class M303(GCodeCommand):
             "generates Proportional (Kp), Integral (Ki), "
             "and Derivative (Kd) values for the hotend or "
             "bed (E-1). Send the appropriate code and wait "
-            "for the output to update the firmware. ")
+            "for the output to update the firmware. "
+            "E<0 or 1> overrides the extruder. Use E-1 for heated bed. "
+            "Default is the 'E' extruder."
+            "S overrides the temperature to calibrate for. Default is 100. "
+            "C overrides the number of cycles to run. Default is 3")
+

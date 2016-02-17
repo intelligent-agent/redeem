@@ -28,6 +28,9 @@ class CascadingConfigParser(ConfigParser.SafeConfigParser):
 
         ConfigParser.SafeConfigParser.__init__(self)
 
+        # Write options in the case it was read. 
+        # self.optionxform = str
+
         # Parse to real path
         self.config_files = []
         for config_file in config_files:
@@ -57,33 +60,25 @@ class CascadingConfigParser(ConfigParser.SafeConfigParser):
         """ Read the name and revision of each cape on the BeagleBone """
         self.replicape_revision = None
         self.reach_revision = None
-        for busNumber in ["1","2"]:
-            for addr in ["4", "5", "6", "7"]:
-                path = "/sys/bus/i2c/devices/"+busNumber+"-005"+addr
-                if(os.path.isfile(path+"/eeprom")):
-                    eeprom = path+"/eeprom"
-                elif os.path.isfile(path+"/nvmem/at24-1/nvmem"):
-                    eeprom = path+"/nvmem/at24-1/nvmem"
-                else:
-                    continue
-                try:
-                    with open(eeprom, "rb") as f:
-                        data = f.read(100)
-                        name = data[58:74].strip()
-                        if name == "BB-BONE-REPLICAP":
-                            self.replicape_revision = data[38:42]
-                        elif name[:13] == "BB-BONE-REACH":
-                            self.reach_revision = data[38:42]
-
-                        if self.replicape_revision != None and self.reach_revision != None:
-                            break
-                except IOError as e:
-                    pass
-
-            if self.replicape_revision != None and self.reach_revision != None:
-                    break
-
-
+        
+        import glob
+        paths = glob.glob("/sys/bus/i2c/devices/[1-2]-005[4-7]/at24-[1-4]/nvmem")
+        paths.extend(glob.glob("/sys/bus/i2c/devices/[1-2]-005[4-7]/nvmem/at24-[1-4]/nvmem"))
+        #paths.append(glob.glob("/sys/bus/i2c/devices/[1-2]-005[4-7]/eeprom"))
+        for i, path in enumerate(paths):
+            try:
+                with open(path, "rb") as f:
+                    data = f.read(100)
+                    name = data[58:74].strip()
+                    if name == "BB-BONE-REPLICAP":
+                        self.replicape_revision = data[38:42]
+                    elif name[:13] == "BB-BONE-REACH":
+                        self.reach_revision = data[38:42]
+                    if self.replicape_revision != None and self.reach_revision != None:
+                        break
+            except IOError as e:
+                pass
+        return 
     
     def save(self, filename):
         """ Save the changed settings to local.cfg """
@@ -95,22 +90,19 @@ class CascadingConfigParser(ConfigParser.SafeConfigParser):
             logging.debug(section)
             for option in self.options(section):                
                 if self.get(section, option) != current.get(section, option):
-                    logging.info("'"+str(self.get(section, option))+"'")
-                    logging.info("'"+str(current.get(section, option))+"'")
+                    old = current.get(section, option)
                     val = self.get(section, option)
-                    to_save.append([section, option, val])
+                    to_save.append((section, option, val, old))
 
         # Update local config with changed values
         local = ConfigParser.SafeConfigParser()
         local.readfp(open(filename, "r"))
         for opt in to_save:         
-            section =  opt[0]
-            option = opt[1]
-            value = opt[2]
+            (section, option, value, old) = opt
             if not local.has_section(section):
                 local.add_section(section)
             local.set(section, option, value)
-            logging.info("Update setting: "+option)
+            logging.info("Update setting: {} from {} to {} ".format(option, old, value))
 
                     
         # Save changed values to file

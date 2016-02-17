@@ -1,5 +1,24 @@
 from setuptools import setup, find_packages, Extension
 import numpy as np
+import os
+
+from distutils.sysconfig import get_config_vars
+
+# Remove the strict prototpyes warnings
+(opt,) = get_config_vars('OPT')
+os.environ['OPT'] = " ".join(
+    flag for flag in opt.split() if flag != '-Wstrict-prototypes'
+)
+
+
+import os
+from distutils.sysconfig import get_config_vars
+
+(opt,) = get_config_vars('OPT')
+os.environ['OPT'] = " ".join(
+    flag for flag in opt.split() if flag != '-Wstrict-prototypes'
+)
+
 
 pathplanner = Extension(
     '_PathPlannerNative', sources = [
@@ -17,17 +36,17 @@ pathplanner = Extension(
         '-Ofast',
         '-fpermissive',
         '-D_GLIBCXX_USE_NANOSLEEP',
-        '-DBUILD_PYTHON_EXT=1']
+        '-DBUILD_PYTHON_EXT=1',
+        '-Wno-write-strings', 
+        '-Wno-maybe-uninitialized']
 )
 
 setup(
     name = "Redeem",
-    version = "1.0.0",
+    version = "1.1.8",
     packages = find_packages(exclude=["redeem/path_planner"]),
     data_files=[
         ('redeem/firmware', [
-            'redeem/firmware/config_00A4.h', 
-            'redeem/firmware/config_00A3.h', 
             'redeem/firmware/firmware_runtime.p', 
             'redeem/firmware/firmware_endstops.p']),
         ('redeem/configs', [
@@ -36,7 +55,8 @@ setup(
             'configs/makerbot_cupcake.cfg', 
             'configs/maxcorexy.cfg', 
             'configs/mendelmax.cfg', 
-            'configs/testing.cfg', 
+            'configs/testing_rev_A.cfg', 
+            'configs/testing_rev_B.cfg', 
             'configs/prusa_i3.cfg',
 	        'configs/debrew.cfg', 
 	        'configs/kossel_mini.cfg']),
@@ -45,7 +65,9 @@ setup(
             'data/B57560G104F.cht',
             'data/B57561G0103F000.cht',
             'data/QU-BD.cht',
-            'data/SEMITEC-104GT-2.cht']),
+            'data/SEMITEC-104GT-2.cht', 
+            'data/DYZE500.cht', 
+            'data/E3D-PT100-AMPLIFIER.cht']),
     ],
     # metadata for upload to PyPI
     author = "Elias Bakken",

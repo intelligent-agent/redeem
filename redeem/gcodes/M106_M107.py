@@ -28,13 +28,20 @@ class M106(GCodeCommand):
         value = float(gcode.get_int_by_letter("S", 255)) / 255.0
     
         for fan in fans:
-            fan.set_value(value)
+            if gcode.has_letter("R"): # Ramp to value
+                delay = gcode.get_float_by_letter("R", 0.01)
+                fan.ramp_to(value, delay)            
+            else:
+                fan.set_value(value)
 
     def get_description(self):
+        return "Set fan power."
+
+    def get_long_description(self):
         return "Set the current fan power. Specify S parameter for the " \
                "power (between 0 and 255) and the P parameter for the fan " \
                "number. P=0 and S=255 by default. If no P, use fan from config. "\
-               "If no fan configured, use fan 0"
+               "If no fan configured, use fan 0. If 'R' is present, ramp to the value"
 
     def is_buffered(self):
         return True
@@ -57,6 +64,9 @@ class M107(GCodeCommand):
             fan.set_value(0)
 
     def get_description(self):
+        return "set fan off"
+
+    def get_long_description(self):
         return "Set the current fan off. Specify P parameter for the fan " \
                "number. If no P, use fan from config. "\
                "If no fan configured, use fan 0"

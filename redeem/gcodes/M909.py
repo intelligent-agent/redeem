@@ -23,12 +23,8 @@ class M909(GCodeCommand):
         for i in range(g.num_tokens()):
             self.printer.steppers[g.token_letter(i)].set_microstepping(int(g.token_value(i)))
         # Update the steps pr m in the native planner. 
-        self.printer.path_planner.native_planner.setAxisStepsPerMeter(tuple([long(Path.steps_pr_meter[i]) for i in range(3)]))
+        self.printer.path_planner.update_steps_pr_meter()
         logging.debug("Updated steps pr meter to "+str(Path.steps_pr_meter))
-        # Update the extruders
-        for i in range(Path.NUM_AXES - 3):
-            e = self.printer.path_planner.native_planner.getExtruder(i)
-            e.setAxisStepsPerMeter(long(Path.steps_pr_meter[i + 3]))
 
     def get_description(self):
         return "Set stepper microstepping settings"
@@ -40,4 +36,3 @@ class M909(GCodeCommand):
                 "as 2^value, so M909 X2 sets microstepping "
                 "to 2^2 = 4, M909 Y3 sets microstepping to 2^3 = 8 etc. ")
 
- 

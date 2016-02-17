@@ -33,18 +33,15 @@
     timeInTicks = 0;
     dir = 0;
 
-    for (size_t axis=0; axis < NUM_AXIS; ++axis) {
+    for (size_t axis=0; axis < NUM_AXES; ++axis) {
         delta[axis] = 0;
         error[axis] = 0;
+        speeds[axis] = 0;
         startPos[axis] = 0;
-        endPos[axis] = 0;
+        endPos[axis] = 0;        
     }
     speed = 0;
-    speedX = 0;
-    speedY = 0;
-    speedZ = 0;
-    speedE = 0;
-    speedH = 0;
+    accel = 0;
     fullSpeed = 0;
     invFullSpeed = 0;
     accelerationDistance2 = 0;
@@ -73,18 +70,14 @@
     timeInTicks = path.timeInTicks;
     dir = path.dir;
 
-    for (size_t axis=0; axis < NUM_AXIS; ++axis) {
+    for (size_t axis=0; axis < NUM_AXES; ++axis) {
         delta[axis] = path.delta[axis];
         error[axis] = path.error[axis];
         startPos[axis] = path.startPos[axis];
         endPos[axis] = path.endPos[axis];
+        speeds[axis] = path.speeds[axis];
     }
     speed = path.speed;
-    speedX = path.speedX;
-    speedY = path.speedY;
-    speedZ = path.speedZ;
-    speedE = path.speedE;
-    speedH = path.speedH;
     fullSpeed = path.fullSpeed;
     invFullSpeed = path.invFullSpeed;
     accelerationDistance2 = path.accelerationDistance2;

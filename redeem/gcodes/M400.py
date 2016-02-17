@@ -18,9 +18,9 @@ class M400(GCodeCommand):
 
         # This needs to be a standard method somewhere
         if not self.printer.path_planner.queue_sync_event(False):    # No blocking of the PRU, (notification only)
-            self.printer.path_planner.wait_until_done()                      # The move buffer is already empty! fallback to this to ensure we're in sync.
+            self.printer.path_planner.wait_until_done()              # The move buffer is already empty! fallback to this to ensure we're in sync.
             self.printer.sync_commands.task_done()                   # We should be at the front of the line.
-            self.on_sync(g)                                           # Complete execution
+            self.on_sync(g)                                          # Complete execution
 
     def on_sync(self, g):
         # self.printer.path_planner.clear_sync_event()  # Only needed if blocking the PRU
