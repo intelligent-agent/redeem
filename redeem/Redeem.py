@@ -253,7 +253,7 @@ class Redeem:
             adc = self.printer.config.get("Heaters", "path_adc_"+e)
             sensor = self.printer.config.get("Heaters", "sensor_"+e)
             resistance = self.printer.config.getfloat("Heaters", "resistance_"+e)
-            self.printer.thermistors[e] = TemperatureSensor(adc, 'MOSFET '+e, sensor, resistance)
+            self.printer.thermistors[e] = TemperatureSensor(adc, 'MOSFET '+e, sensor)
             self.printer.thermistors[e].printer = printer
 
             # Extruders
