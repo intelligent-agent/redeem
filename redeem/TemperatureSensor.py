@@ -123,15 +123,15 @@ class Thermistor(TemperatureSensor):
     def get_temperature(self, voltage):
         """ Return the temperature in degrees celsius. Uses Steinhart-Hart """
         r = self.voltage_to_resistance(voltage)
-        l = math.log(r)
-        t = (1.0 / (self.c1 + self.c2 * l + self.c3 * math.pow(l,3))) - 273.15
+        l = float(math.log(r))
+        t = float((1.0 / (self.c1 + self.c2 * l + self.c3 * math.pow(l,3))) - 273.15)
         return t
 
     def voltage_to_resistance(self,voltage):
         """ Convert the voltage to a resistance value """
         if voltage == 0 or (abs(voltage - 1.8) < 0.001):
             return 10000000.0
-        return self.r1 / ((1.8 / voltage) - 1.0)
+        return float(self.r1 / ((1.8 / voltage) - 1.0))
 
 
 """
