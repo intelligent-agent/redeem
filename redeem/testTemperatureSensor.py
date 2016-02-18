@@ -74,10 +74,10 @@ class TestTemperatureSensor(unittest.TestCase):
         self.assertEqual(self.ts.sensor.voltage_to_resistance(voltage), expected_resistance)
 
     def test_get_temperature(self):
-        """With the instantiated sensor'ssteinhart-hart coefficients.
+        """With the instantiated sensor's steinhart-hart coefficients.
         resistance is 5875 ohms, corresponding to 1 V on the input pin
         """
-        expected_temperature = 164.0632
+        expected_temperature = 100.926
         with patch.object(TemperatureSensor, 'read_adc', return_value=1.0):
             self.assertTrue(abs(self.ts.get_temperature() - expected_temperature) < 0.0001)
 
