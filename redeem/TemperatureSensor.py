@@ -46,7 +46,7 @@ class TemperatureSensor:
         self.pin = pin
         self.heater = heater_name
         self.sensorIdentifier = sensorIdentifier
-        self.maxAdc = 4095.0 
+        self.maxAdc = 4095.0
 
         #Find matching entry in sensor tables and instantiate corresponding sensor
         found = False
@@ -59,7 +59,7 @@ class TemperatureSensor:
         if found == False:
             for p in TemperatureSensorConfigs.pt100:
                 if p[0] == self.sensorIdentifier:
-                    logging.error("PT100 temperature sensors are not supported yet.")
+                    logging.warning("PT100 temperature sensors are not supported yet.")
                     """ Not working yet. No known hardware solution """
                     #self.sensor = PT100((pin, heater_name, s
                     #found = True
@@ -123,15 +123,15 @@ class Thermistor(TemperatureSensor):
     def get_temperature(self, voltage):
         """ Return the temperature in degrees celsius. Uses Steinhart-Hart """
         r = self.voltage_to_resistance(voltage)
-        l = float(math.log(r))
-        t = float((1.0 / (self.c1 + self.c2 * l + self.c3 * math.pow(l,3))) - 273.15)
+        l = math.log(r)
+        t = (1.0 / (self.c1 + self.c2 * l + self.c3 * math.pow(l,3))) - 273.15
         return t
 
     def voltage_to_resistance(self,voltage):
         """ Convert the voltage to a resistance value """
         if voltage == 0 or (abs(voltage - 1.8) < 0.001):
             return 10000000.0
-        return self.r1 / float((1.8 / voltage) - 1.0)
+        return self.r1 / ((1.8 / voltage) - 1.0)
 
 
 """

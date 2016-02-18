@@ -29,32 +29,16 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
 """
 
 thermistors_shh = [
-    #name,                  r2,   c1,                    c2,                    c3
-    ["B57540G0104F000",     4700, 0.007229943855,        0.0002161977696,       9.302254945e-08],  # EPCOS100K with b= 4066K
+    #name,                  r,    c1,                    c2,                    c3
+    ["B57540G0104F000",     4700, 0.000722378300319346,  0.000216301852054578,  9.2641025635702e-08],  # EPCOS100K with b= 4066K
     ["B57560G1104F",        4700, 0.007221363090,        0.0002167665665,       8.929358045e-08], #EPCOS100K with b = 4092K
     ["B57561G0103F000",     4700, 0.008598824746,        0.0002593587338,       1.348387402e-07], #EPCOS10K
+    ["NTCS0603E3104FXT",    4700, 0.0007022607370,       0.0002209155484,       7.101626461e-08], # Vishay100K
     ["135-104LAG-J01",      4700, 0.000596153185928425,  0.000231333192738335,  6.19534004306738e-08], # Honeywell100K
-    ["104GT-2",             4700, 0.0008110813304,       0.0002113914932,       7.163159867e-06], # Semitec
+    ["104GT-2",             4700, 0.000811290160145459,  0.000211355789144265,  7.17614730463848e-08], # Semitec
     ["DYZE",                4700, 0.004628116888,        0.0001812508833,       3.185110657e-06] #DYZE hightemp thermistor
 ]
 
-
-"""
-A list of beta values for various thermistors. Acquired in datasheets from
-the suppliers. r2 is the pullup, r1 another resistor. r0 and t0 are the
-thermistors resistance / temperature pair at room temperature. Could be used
-if Steinhart-Hart coefficients cannot be determined for a specific sensor.
-"""
-
-thermistors_beta = [
-    # name,                 r1,  r2,   beta,    r0,        t0
-    ["B57540G0104F000",     0,   4700, 4066,    100000,    25], #EPCOS100K
-    ["B57560G1104F",        0,   4700, 4092,    100000,    25], #EPCOS100K
-    ["B57561G0103F000",     0,   4700, 3450,    10000,     25], #EPCOS10K
-    ["135-104LAG-J01",      0,   4700, 3974,    100000,    25], #Honeywell100K / QU-BD
-    ["104GT-2",             0,   4700, 4267,    100000,    25], #Semitec
-    ["DYZE",                0,   4700, 5081.32, 4500000,   25]  #DYZE hightemp thermistor
-]
 
 
 """

@@ -41,9 +41,9 @@ class TestTemperatureSensor(unittest.TestCase):
         heater_name = "5"
         self.ts = TemperatureSensor(pin, heater_name, sensor)
         self.ts.r1 = 4700
-        self.ts.c1 = 0.007229943855
-        self.ts.c2 = 0.0002161977696
-        self.ts.c3 = 9.302254945e-08
+        self.ts.c1 = 0.000722378300319346
+        self.ts.c2 = 0.000216301852054578
+        self.ts.c3 = 9.2641025635702e-08
 
 
     def test_init_working(self):
@@ -61,7 +61,7 @@ class TestTemperatureSensor(unittest.TestCase):
     def test_read_adc(self):
 
         adc = str(4095.0/2)
-        expected_voltage = 0.9
+        expected_voltage = 0.9002198339032731
 
         with patch.object(builtins, 'open', mock_open(read_data = adc)):
             self.assertEqual(self.ts.read_adc(), expected_voltage)
@@ -77,7 +77,7 @@ class TestTemperatureSensor(unittest.TestCase):
         """With the instantiated sensor'ssteinhart-hart coefficients.
         resistance is 5875 ohms, corresponding to 1 V on the input pin
         """
-        expected_temperature = -164.0632
+        expected_temperature = 164.0632
         with patch.object(TemperatureSensor, 'read_adc', return_value=1.0):
             self.assertTrue(abs(self.ts.get_temperature() - expected_temperature) < 0.0001)
 
