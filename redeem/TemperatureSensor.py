@@ -34,7 +34,7 @@ import logging
 from threading import Lock
 import sys
 import TemperatureSensorConfigs
-import Alarm
+from Alarm import Alarm
 
 class TemperatureSensor:
 
@@ -46,8 +46,7 @@ class TemperatureSensor:
         self.pin = pin
         self.heater = heater_name
         self.sensorIdentifier = sensorIdentifier
-        self.maxAdc = 4095.0
-        self.alarm = 
+        self.maxAdc = 4095.0 
 
         #Find matching entry in sensor tables and instantiate corresponding sensor
         found = False
@@ -92,10 +91,9 @@ class TemperatureSensor:
                 if(signal >= self.maxAdc or signal <= 0.0):
                     voltage = -1.0
                 else:
-                    voltage = signal / 4095.0 * 1.8 #input range is 0 ... 1.8V
+                    voltage = signal / 4094.0 * 1.8 #input range is 0 ... 1.8V
         except IOError as e:
              Alarm(Alarm.THERMISTOR_ERROR, "Unable to get ADC value ({0}): {1}".format(e.errno, e.strerror))
-            self.alarm.execute()
         finally:
             mutex.release()
 
