@@ -27,7 +27,7 @@ from threading import Lock
 import sys
 
 # Import the temp chart. 
-from temp_chart import *
+from Chart import *
 from Alarm import Alarm
 
 class Thermistor:
@@ -42,7 +42,7 @@ class Thermistor:
         self.resistance = resistance
 
         try:
-            self.temp_table = np.array(temp_chart[chart_name]).transpose()
+            self.temp_table = np.array(temperature_charts.get(chart_name)).transpose()
         except:
             logging.error("unable to load temperature chart %s, this file is required for operation"%chart_name)
             sys.exit() # maybe use something more graceful?

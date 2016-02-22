@@ -29,7 +29,7 @@ class StepperWatchdog:
         self.timeout = timeout
         self.time_left = 0
         self.lock = Lock()
-        self.t = Thread(target=self._run)
+        self.t = Thread(target=self._run, name="StepperWatchdog")
         self.running = False
 
     def start(self):

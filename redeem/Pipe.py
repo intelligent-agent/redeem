@@ -73,7 +73,7 @@ class Pipe:
                      "communicate with it")
 
         self.running = True
-        self.t = Thread(target=self.get_message)
+        self.t = Thread(target=self.get_message, name="Pipe")
         self.send_response = True
         self.t.start()
 

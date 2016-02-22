@@ -35,7 +35,8 @@ class EndStop:
         self.name = name
         self.invert = invert
         self.dev = InputDevice(EndStop.inputdev)
-        self.t = Thread(target=self._wait_for_event)
+        self.t = Thread(target=self._wait_for_event, name=self.name)
+        self.t.daemon = True
 
         # Update "hit" state
         self.read_value()
@@ -101,4 +102,24 @@ class EndStop:
         if "octoprint" in self.printer.comms:
             self.printer.comms["octoprint"].send_message("End stop {} hit!".format(self.name))
     
-
+if __name__ == "__main__":
+    print "Test endstops"
+    
+    while True:
+        state = PruInterface.get_shared_long(0)
+        print bin(state) + "  ", 
+        if bool(state & (1 << 0)):
+            print "X1",
+        elif bool(state & (1 << 1)):
+            print "Y1",
+        elif bool(state & (1 << 2)):
+            print "Z1",
+        elif bool(state & (1 << 3)):
+            print "X2",
+        elif bool(state & (1 << 4)):
+            print "Y2",
+        elif bool(state & (1 << 5)):
+            print "Z2",
+        print (" "*30)+"\r", 
+            
+    

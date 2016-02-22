@@ -33,7 +33,7 @@ class RotaryEncoder:
         self.d = d
         self.distance = 0
         self.step = 0
-        self.t = Thread(target=self._wait_for_event)
+        self.t = Thread(target=self._wait_for_event, name="RotaryEncoder")
         self.running = True
         self.t.start()
 

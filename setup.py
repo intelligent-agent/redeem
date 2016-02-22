@@ -19,12 +19,15 @@ os.environ['OPT'] = " ".join(
     flag for flag in opt.split() if flag != '-Wstrict-prototypes'
 )
 
-
 pathplanner = Extension(
     '_PathPlannerNative', sources = [
         'redeem/path_planner/PathPlannerNative.i',
         'redeem/path_planner/PathPlanner.cpp',
+        'redeem/path_planner/PathPlannerSetup.cpp',
+        'redeem/path_planner/Preprocessor.cpp',
         'redeem/path_planner/Path.cpp',
+        'redeem/path_planner/Delta.cpp',
+        'redeem/path_planner/vector3.cpp',
         'redeem/path_planner/PruTimer.cpp',
         'redeem/path_planner/prussdrv.c',
         'redeem/path_planner/Logger.cpp'],

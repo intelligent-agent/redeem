@@ -37,7 +37,7 @@ class USB:
             return
         self.running = True
         self.send_response = False
-        self.t = Thread(target=self.get_message)
+        self.t = Thread(target=self.get_message, name="USB")
         self.t.start()		
 
     def get_message(self):
