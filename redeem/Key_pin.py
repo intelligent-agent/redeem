@@ -55,7 +55,8 @@ class Key_pin_listener:
     def __init__(self, fd):
         self.dev = InputDevice(fd)
         self.keys = {}
-        self.t = Thread(target=self._run)
+        self.t = Thread(target=self._run, name="Key_pin_listener")
+        self.running = False
 
     def add_pin(self, key):
         logging.debug("Adding pin with key {}".format(key.code))
@@ -66,8 +67,12 @@ class Key_pin_listener:
         self.t.start()
 
     def stop(self):
-        self.running = False
-        self.t.join()
+        if self.running:
+            logging.debug("Stoppping Key_pin_listener")
+            self.running = False
+            self.t.join()
+        else:
+            logging.debug("Attempted to stop Key_pin_listener when it is not running")
 
     def _run(self):
         while self.running:

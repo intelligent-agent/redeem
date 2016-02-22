@@ -30,6 +30,7 @@ import logging.handlers
 import os
 import os.path
 import signal
+import threading
 from threading import Thread
 from multiprocessing import JoinableQueue
 import Queue
@@ -518,11 +519,11 @@ class Redeem:
         self.running = True
         # Start the two processes
         p0 = Thread(target=self.loop,
-                    args=(self.printer.commands, "buffered"))
+                    args=(self.printer.commands, "buffered"), name="p0")
         p1 = Thread(target=self.loop,
-                    args=(self.printer.unbuffered_commands, "unbuffered"))
+                    args=(self.printer.unbuffered_commands, "unbuffered"), name="p1")
         p2 = Thread(target=self.eventloop,
-                    args=(self.printer.sync_commands, "sync"))
+                    args=(self.printer.sync_commands, "sync"), name="p2")
         p0.daemon = True
         p1.daemon = True
         p2.daemon = True
@@ -593,14 +594,22 @@ class Redeem:
         for name, comm in self.printer.comms.iteritems():
             logging.debug("closing "+name)
             comm.close()
+            
         self.printer.enable.set_disabled()
         self.printer.swd.stop()
         Alarm.executor.stop()
         Key_pin.listener.stop()
         self.printer.watchdog.stop()
         self.printer.enable.set_disabled()
-
+        
+        # list all threads that are still running
+        # note: some of these maybe daemons
+        for t in threading.enumerate():
+            logging.debug("Thread " + t.name + " is still running")
+        
         logging.info("Redeem exited")
+        
+        return
 
     def _execute(self, g):
         """ Execute a G-code """

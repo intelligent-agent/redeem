@@ -47,7 +47,7 @@ class Ethernet:
         self.s.listen(backlog)
         self.client = None
         self.running = True
-        self.t = Thread(target=self.get_message)
+        self.t = Thread(target=self.get_message, name="Ethernet")
         self.t.start()
 
     def get_message(self):

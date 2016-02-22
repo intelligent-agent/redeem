@@ -38,7 +38,7 @@ class FilamentSensor:
         self.ideal_pos = 0
         self.error_pos = 0
 
-        self.t = Thread(target=self._loop)
+        self.t = Thread(target=self._loop, name=self.name)
         self.running = True
         self.t.start()
         
