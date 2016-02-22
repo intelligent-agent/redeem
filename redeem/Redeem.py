@@ -24,7 +24,6 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
 """
 
 import glob
-import shutil
 import logging
 import logging.handlers
 import os
@@ -241,10 +240,7 @@ class Redeem:
             for opt in opts:
                 Delta.__dict__[opt] = printer.config.getfloat('Delta', opt)
 
-            Delta.recalculate()
-
         # Discover and add all DS18B20 cold ends.
-        import glob
         paths = glob.glob("/sys/bus/w1/devices/28-*/w1_slave")
         logging.debug("Found cold ends: "+str(paths))
         for i, path in enumerate(paths):
@@ -438,6 +434,8 @@ class Redeem:
         printer.print_move_buffer_wait = printer.config.getfloat('Planner', 'print_move_buffer_wait')
         printer.min_buffered_move_time = printer.config.getfloat('Planner', 'min_buffered_move_time')
         printer.max_buffered_move_time = printer.config.getfloat('Planner', 'max_buffered_move_time')
+        
+        printer.max_length = printer.config.getfloat('Planner', 'max_length')
 
         self.printer.processor = GCodeProcessor(self.printer)
         self.printer.plugins = PluginsController(self.printer)

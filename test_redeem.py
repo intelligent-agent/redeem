@@ -27,7 +27,7 @@ def test4():
     test_str = """
         G28
         G1 F5000.000
-        G1 Z0.350
+        G1 Z100
         G1 X-100.0 Y-100.0
         G1 X100.0 Y-100.0
         G1 X100.0 Y100.0
@@ -49,7 +49,7 @@ def test_load():
     r.exit()
 
 def test_run():
-	from redeem.Redeem import main
+    from redeem.Redeem import main
     main("/usr/src/redeem/configs")
 
 if __name__ == "__main__":
