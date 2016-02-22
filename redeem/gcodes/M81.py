@@ -26,6 +26,9 @@ class M81(GCodeCommand):
             os.system("shutdown -h now")
 
     def get_description(self):
+        return "Shutdown or restart Replicape"
+
+    def get_long_description(self):
         return "Shutdown the whole Replicape controller board. If paramter P is present, only exit loop. If R is present, restart daemon"
 
     def is_buffered(self):

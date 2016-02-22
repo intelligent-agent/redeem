@@ -22,7 +22,7 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
 """
 
 import logging
-
+import glob
 
 class ColdEnd: 
     def __init__(self, pin, name):

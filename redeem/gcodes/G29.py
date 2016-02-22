@@ -28,8 +28,15 @@ class G29(GCodeCommand):
             self.printer.processor.execute(G)
             self.printer.path_planner.wait_until_done()
 
+        logging.debug(self.printer.probe_heights)
+
         # Remove the offset from the probed points        
-        self.printer.probe_heights -= min(self.printer.probe_heights)
+        if self.printer.probe_points[0]["X"] == 0 and self.printer.probe_points[0]["Y"] == 0:
+            # If the origin is located in the first probe point, remove that. 
+            self.printer.probe_heights -= self.printer.probe_heights[0]
+        else:
+            # Else, remove the lowest. 
+            self.printer.probe_heights -= min(self.printer.probe_heights)
 
         # Log the found heights
         for k, v in enumerate(self.printer.probe_points):
@@ -37,15 +44,20 @@ class G29(GCodeCommand):
         logging.info("Found heights: ")
         logging.info(self.printer.probe_points)
 
-        # Update the bed compensation matrix
-        Path.update_autolevel_matrix(self.printer.probe_points, self.printer.probe_heights)
-
+        # Add 'S'=simulate To not update the bed matrix.  
+        if not g.has_letter("S"):
+            # Update the bed compensation matrix
+            Path.update_autolevel_matrix(self.printer.probe_points, self.printer.probe_heights)
+            logging.debug("New Bed level matrix: ")
+            logging.debug(Path.matrix_bed_comp)
 
     def get_description(self):
-        return "Probe the bed at three points"
+        return "Probe the bed at specified points"
 
     def get_long_description(self):
-        return "Probe the bed at specified points and update the bed compensation matrix based on the found points."
+        return ("Probe the bed at specified points and "
+                "update the bed compensation matrix based "
+                "on the found points. Add 'S' to NOT update the bed matrix.")
 
     def is_buffered(self):
         return True

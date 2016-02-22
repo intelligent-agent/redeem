@@ -25,3 +25,8 @@ class M906(GCodeCommand):
 
     def get_description(self):
         return "Set stepper current in mA"
+
+    def get_long_description(self):
+        return ("Set the stepper current. Unit is mA. Typical use is 'M906 X400'."
+            "This sets the current to 0.4A on the X stepper motor driver."
+            "Can be set for multiple stepper motor drivers at once. ")

@@ -1,6 +1,6 @@
 """
 GCode M117
-Display a message. As a first imlementation, just send to Toggle.
+Display a message. As a first implementation, just send to Toggle.
 
 Author: Elias Bakken
 email: elias(dot)bakken(at)gmail(dot)com

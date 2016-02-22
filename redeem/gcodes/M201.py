@@ -40,9 +40,10 @@ class M201(GCodeCommand):
             e = self.printer.path_planner.native_planner.getExtruder(i)
             self.set_extruder_acceleration(e,t[i + 3])
 
-              
-    
     def get_description(self):
+        return "Set print acceleration"
+    
+    def get_long_description(self):
         return ("Sets the acceleration that axes can do in units/second^2 for print moves." 
                " For consistency with the rest of G Code movement " 
                 "this should be in units/(minute^2) Example: M201 X1000 Y1000 Z100 E2000")
@@ -68,6 +69,9 @@ class M202(M201):
         pass 
 
     def get_description(self):
+        return "Set travel acceleration"
+
+    def get_long_description(self):
         return ("Sets the acceleration that axes can do in units/second^2 for travel moves." 
                " For consistency with the rest of G Code movement " 
                 "this should be in units/(minute^2) Example: M201 X1000 Y1000 Z100 E2000")

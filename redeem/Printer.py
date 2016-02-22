@@ -23,6 +23,7 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
 from Path import Path
 import numpy as np
 import logging
+from Delta import Delta
 
 class Printer:
     """ A command received from pronterface or whatever """
@@ -44,10 +45,7 @@ class Printer:
         self.extrude_factor = 1.0
         self.movement = Path.ABSOLUTE
         self.feed_rate = 0.5
-        self.acceleration = [0.5]*8
-        self.maxJerkXY = 20
-        self.maxJerkZ = 1
-        self.maxJerkEH = 4
+        self.accel = 0.5
         self.current_tool = "E"
         self.move_cache_size = 128
         self.print_move_buffer_wait = 250
@@ -58,10 +56,30 @@ class Printer:
         self.probe_heights = [0]*3
         self.probe_type = 0 # Servo
 
+        # Max number of axes. 
+        self.num_axes = 8
+
+        self.max_speeds             = np.ones(self.num_axes)
+        self.min_speeds             = np.ones(self.num_axes)*0.01
+        self.jerks                  = np.ones(self.num_axes)*0.01
+        self.acceleration           = [0.3]*self.num_axes
+        self.home_speed             = np.ones(self.num_axes)
+        self.home_backoff_speed     = np.ones(self.num_axes)
+        self.home_backoff_offset    = np.zeros(self.num_axes)
+        self.steps_pr_meter         = np.ones(self.num_axes)
+        self.backlash_compensation  = np.zeros(self.num_axes)
+        self.backlash_state         = np.zeros(self.num_axes)
+        self.soft_min               = -np.ones(self.num_axes)*1000.0
+        self.soft_max               = np.ones(self.num_axes)*1000.0
+        self.slaves                 = {key: "" for key in Path.AXES[:self.num_axes]}
+
     def ensure_steppers_enabled(self):
         """
         This method is called for every move, so it should be fast/cached.
         """
+        # Reset Stepper watchdog
+        self.swd.reset()
+        # Enabe steppers
         for name, stepper in self.steppers.iteritems():
             if stepper.in_use and not stepper.enabled:
                 # Stepper should be enabled, but is not.
@@ -92,6 +110,16 @@ class Printer:
             self.config.set('Heaters', 'pid_d_'+name, str(heater.D))
 
         self.save_bed_compensation_matrix()
+
+        # Offsets
+        for axis, offset in self.path_planner.center_offset.iteritems():
+            if self.config.has_option("Geometry", "offset_{}".format(axis)):
+                self.config.set('Geometry', "offset_{}".format(axis), str(offset))
+
+        # Save Delta shit    
+        opts = ["Hez", "L", "r", "Ae", "Be", "Ce", "A_radial", "B_radial", "C_radial", "A_tangential", "B_tangential", "C_tangential" ]
+        for opt in opts:
+            self.config.set('Delta', opt, str(Delta.__dict__[opt]))
 
         self.config.save(filename)
 

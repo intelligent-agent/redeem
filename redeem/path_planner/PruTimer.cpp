@@ -287,19 +287,31 @@ void PruTimer::stopThread(bool join) {
 	
 	blockAvailable.notify_all();
 	if(join && runningThread.joinable()) {
+        LOG( "Joining thread" << std::endl);
 		runningThread.join();
 	}
 	
 	LOG( "PruTimer stopped." << std::endl);
 }
 
+
+/**
+blockMemory - the data. 
+blockLen - number of data bytes. 
+unit - stepSize in bytes. 
+pathID - linespos. 
+totalTime - time it takes to complete the current block, in ticks. 
+*/
 void PruTimer::push_block(uint8_t* blockMemory, size_t blockLen, unsigned int unit, unsigned int pathID, unsigned long totalTime) {
 	
-	if(!ddr_write_location) return;
+	if(!ddr_write_location) 
+        return;
 	
 	//Split the block in smaller blocks if needed
 	size_t nbBlocks = ceil((blockLen+12)/(FLOAT_T)(ddr_size-12));
-	
+
+	LOG("nbBlocks: "<<nbBlocks<<std::endl);
+
 	size_t blockSize = blockLen / nbBlocks;
 	
 	//Make sure block size is a multiple of unit
@@ -489,13 +501,9 @@ void PruTimer::push_block(uint8_t* blockMemory, size_t blockLen, unsigned int un
 				
 				
 			} else {
-				
 				blocksID.emplace(currentBlockSize+4,totalTime); //FIXME: TotalTime is not /2 but doesn't it to be precise to make it work...
-				
 				ddr_mem_used+=currentBlockSize+4;
 				totalQueuedMovesTime += totalTime;
-
-
 				//First copy the data
 				//LOG( std::hex << "Writing data to 0x" << (unsigned long)ddr_write_location+4 << std::endl);
 				//LOG( std::dec << "Writing " << currentBlockSize+4 << " bytes to 0x" << std::hex << (unsigned long)ddr_write_location << std::endl);
@@ -504,7 +512,6 @@ void PruTimer::push_block(uint8_t* blockMemory, size_t blockLen, unsigned int un
 				
 				//Then write on the next free area than there is no command to execute
 				uint32_t nb = 0;
-				
 				assert(ddr_write_location+currentBlockSize+sizeof(nb)*2<=ddr_mem_end);
 				memcpy(ddr_write_location+currentBlockSize+sizeof(nb), &nb, sizeof(nb));
 				//Need it?
@@ -514,23 +521,14 @@ void PruTimer::push_block(uint8_t* blockMemory, size_t blockLen, unsigned int un
 				nbStepsWritten+=nb;
 				//LOG( std::hex << "Writing nb command to 0x" << (unsigned long)ddr_write_location << std::endl);
 				memcpy(ddr_write_location, &nb, sizeof(nb));
-				
 				//LOG( "Written " << std::dec << currentBlockSize << " bytes of stepper commands." << std::endl);
-				
 				//LOG( "Remaining free memory: " << std::dec << ddr_size-ddr_mem_used << " bytes." << std::endl);
-				
 				ddr_write_location+=currentBlockSize+sizeof(nb);
-				
 				msync(ddr_write_location, sizeof(nb), MS_SYNC);
-				
 			}
-			
-			
 		}
 	}
-	
 	assert(nbStepsWritten == blockLen/unit);
-	
 }
 
 void PruTimer::waitUntilFinished() {
@@ -546,9 +544,7 @@ void PruTimer::waitUntilLowMoveTime(unsigned long lowMoveTimeTicks) {
 }
 
 void PruTimer::run() {
-	
 	LOG( "Starting PruTimer thread..." << std::endl);
-	
 	while(!stop) {
 #ifdef DEMO_PRU
 		
@@ -558,7 +554,7 @@ void PruTimer::run() {
 			continue;
 		SteppersCommand * cmd = (SteppersCommand*)(currentReadingAddress+4);
 		FLOAT_T totalWait = 0;
-		for(int i=0;i<*nbCommand;i++) {
+		for(int i=0; i<(int)*nbCommand;i++) {
 			totalWait+=cmd->delay/200000.0;
 			cmd++;
 		}
@@ -574,9 +570,10 @@ void PruTimer::run() {
 		unsigned int nbWaitedEvent = prussdrv_pru_wait_event (PRU_EVTOUT_0,1000); // 250ms timeout
 #endif
 
-		if(stop) break;
+		if(stop) 
+            break;
 		
-		/*
+		/*  
 		if (nbWaitedEvent)
 			LOG( ("\tINFO: PRU0 completed transfer.\r\n"));
 		else
@@ -587,41 +584,25 @@ void PruTimer::run() {
 #ifndef DEMO_PRU
 		if(nbWaitedEvent)
 			prussdrv_pru_clear_event (PRU_EVTOUT_0, PRU0_ARM_INTERRUPT);
-#endif
-		
+#endif		
 		msync(ddr_nr_events, 4, MS_SYNC);
 		uint32_t nb = *ddr_nr_events;
-		
-		
-		
 		{
-			std::lock_guard<std::mutex> lk(mutex_memory);
-			
+			std::lock_guard<std::mutex> lk(mutex_memory);			
 //			LOG( "NB event " << nb << " / " << currentNbEvents << "\t\tRead event from UIO = " << nbWaitedEvent << ", block in the queue: " << ddr_mem_used << std::endl);
-
 			while(currentNbEvents!=nb && !blocksID.empty()) { //We use != to handle the overflow case
-				
 				BlockDef & front = blocksID.front();
-				
 				ddr_mem_used-=front.size;
 				totalQueuedMovesTime -=front.totalTime;
-				
 				assert(ddr_mem_used<ddr_size);
-				
 //				LOG( "Block of size " << std::dec << front.size << " and time " << front.totalTime << " done." << std::endl);
-
 				blocksID.pop();
-				
 				currentNbEvents++;
 			}
-			
 			currentNbEvents = nb;
 		}
-		
-		
 //		LOG( "NB event after " << std::dec << nb << " / " << currentNbEvents << std::endl);
 //		LOG( std::dec <<ddr_mem_used << " bytes used, free: " <<std::dec <<  ddr_size-ddr_mem_used<< "." << std::endl);
-		
 		blockAvailable.notify_all();
 	}
 }
@@ -638,13 +619,11 @@ int PruTimer::waitUntilSync() {
 void PruTimer::suspend() {
 	//We lock it so that we are thread safe
 	std::unique_lock<std::mutex> lk(mutex_memory);
-
 	*pru_control = 1;
 }
 
 void PruTimer::resume() {
 	//We lock it so that we are thread safe
 	std::unique_lock<std::mutex> lk(mutex_memory);
-	
 	*pru_control = 0;
 }

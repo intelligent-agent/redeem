@@ -28,12 +28,12 @@ import logging
 import subprocess
 import shutil
 import re
-
+from Path import Path
 
 class PruFirmware:
     def __init__(self, firmware_source_file0, binary_filename0,
-                 firmware_source_file1, binary_filename1, revision,
-                 config_parser, compiler):
+                 firmware_source_file1, binary_filename1,
+                 printer, compiler):
         """Create and initialize a PruFirmware
 
         Parameters
@@ -43,9 +43,7 @@ class PruFirmware:
             The path to the firmware source to use to produce the firmware
         binary_filename : string
             Full path to the file where to store the final firmware file
-            without the extension (without .bin)
-        revision : string
-            The revision of the board (00A3 or 00A4)
+            without the extension (without .bin)        
         config_parser : ConfigParser
             The config parser with the config file already loaded
         compiler : string
@@ -56,8 +54,8 @@ class PruFirmware:
         self.firmware_source_file1 = os.path.realpath(firmware_source_file1)
         self.binary_filename0 = os.path.realpath(binary_filename0)
         self.binary_filename1 = os.path.realpath(binary_filename1)
-        self.revision = revision
-        self.config = config_parser
+        self.config = printer.config
+        self.printer = printer
         self.compiler = os.path.realpath(compiler)
 
         #Remove the bin extension of the firmware output filename
@@ -121,78 +119,16 @@ class PruFirmware:
         if not self.is_needing_firmware_compilation():
             return True
 
-        # Create a config file
-        configFile_0 = os.path.join("/tmp", 'config.h')
+        config_file = self.make_config_file()
 
-        with open(configFile_0, 'w') as configFile:
-            if self.revision in ["00A3"]:
-                configFile.write("#define REV_A3\n")
-            else:
-                configFile.write("#define REV_A4\n")
-
-            # Define direction
-            for s in ['x', 'y', 'z', 'e', 'h']:
-                configFile.write(
-                    '#define STEPPER_' + s.upper() + '_DIRECTION\t\t' + (
-                        "0" if self.config.getint('Steppers',
-                                                  'direction_' + s) > 0 else "1") + '\n')          
-            # Construct the inversion mask
-            inversion_mask = "#define INVERSION_MASK\t\t0b00"
-            for axis in ["Z2", "Y2", "X2", "Z1", "Y1", "X1"]:
-                inversion_mask += "1" if self.config.getboolean('Endstops',
-                                                                'invert_' + axis) else "0"
-
-            configFile.write(inversion_mask + "\n");
-
-            # Construct the endstop lookup table.
-            for axis in ["X1","Y1","Z1","X2","Y2","Z2"]:
-                mask = 0
-                # stepper name is x_cw or x_ccw
-                option = 'end_stop_' + axis + '_stops'
-                for stepper in self.config.get('Endstops', option).split(","):
-                    stepper = stepper.strip()
-                    if stepper == "":
-                        continue
-                    m = re.search('^([xyzehabc])_(ccw|cw|pos|neg)$', stepper)
-                    if (m == None):
-                        raise RuntimeError("'" + stepper + "' is invalid for " + option)
-
-                    # direction should be 1 for normal operation and -1 to invert the stepper.
-                    if (m.group(2) == "pos"):
-                        direction = -1
-                    elif (m.group(2) == "neg"):
-                        direction = 1
-                    else:
-                        direction = 1 if self.config.getint('Steppers', 'direction_' + stepper[0]) > 0 else -1
-                        if (m.group(2) == "ccw"): 
-                            direction *= -1
-
-                    cur = 1 << ("xyzehabc".index(m.group(1)))
-                    if (direction == -1):
-                        cur <<= 8
-                    mask += cur
-                bin_mask = "0b"+(bin(mask)[2:]).zfill(16)
-                configFile.write("#define STEPPER_MASK_" + axis + "\t\t" + bin_mask + "\n")
-
-        if self.revision in ["0A4A", "00A4", "00B1"]:
-            configFile_1 = os.path.join(
-                os.path.dirname(self.firmware_source_file1), 'config_00A4.h')
-        else:            
-            configFile_1 = os.path.join(
-                os.path.dirname(self.firmware_source_file1), 'config_00A3.h')
-
-        cmd0 = [self.compiler, '-b', '-DHAS_CONFIG_H']
-        cmd1 = [self.compiler, '-b', '-DHAS_CONFIG_H']
+        cmd0 = [self.compiler, '-b']
+        cmd1 = [self.compiler, '-b']
 
         # Copy the files to tmp, cos the pasm is really picky!
         tmp_name_0 = "/tmp/"+os.path.splitext(os.path.basename(self.firmware_source_file0))[0]
         tmp_name_1 = "/tmp/"+os.path.splitext(os.path.basename(self.firmware_source_file1))[0]
         shutil.copyfile(self.firmware_source_file0, tmp_name_0+".p")
         shutil.copyfile(self.firmware_source_file1, tmp_name_1+".p")
-
-        # Copy the config file
-        shutil.copyfile(configFile_1, "/tmp/"+os.path.basename(configFile_1))
-        
 
         cmd0.extend([tmp_name_0+".p", tmp_name_0])
         cmd1.extend([tmp_name_1+".p", tmp_name_1])
@@ -231,4 +167,146 @@ class PruFirmware:
         if prunum == 0:
             return self.binary_filename0
         else:
-            return self.binary_filename1
+            return self.binary_filename1            
+
+    def make_config_file(self):
+        
+        # Create a config file
+        configFile_0 = os.path.join("/tmp", 'config.h')
+
+        with open(configFile_0, 'w') as configFile:
+        
+            # GPIO banks
+            banks      = {"0": 0, "1": 0, "2": 0, "3": 0}
+            step_banks = {"0": 0, "1": 0, "2": 0, "3": 0}
+            dir_banks  = {"0": 0, "1": 0, "2": 0, "3": 0}
+            direction_mask = 0
+
+            # Define step and dir pins
+            for name, stepper in self.printer.steppers.iteritems():
+                step_pin  = str(stepper.get_step_pin())
+                step_bank = str(stepper.get_step_bank())
+                dir_pin   = str(stepper.get_dir_pin())
+                dir_bank  = str(stepper.get_dir_bank())
+                configFile.write('#define STEPPER_' + name + '_STEP_BANK\t\t' + "STEPPER_GPIO_"+step_bank+'\n')          
+                configFile.write('#define STEPPER_' + name + '_STEP_PIN\t\t'  + step_pin+'\n')          
+                configFile.write('#define STEPPER_' + name + '_DIR_BANK\t\t'  + "STEPPER_GPIO_"+dir_bank+'\n')          
+                configFile.write('#define STEPPER_' + name + '_DIR_PIN\t\t'   + dir_pin+'\n')          
+
+                # Define direction
+                direction = "0" if self.config.getint('Steppers', 'direction_' + name) > 0 else "1"
+                configFile.write('#define STEPPER_'+ name +'_DIRECTION\t\t'+ direction +'\n') 
+
+                index = Path.axis_to_index(name)
+                direction_mask |= (int(direction) << index)        
+
+                # Generate the GPIO bank masks
+                banks[step_bank]      |=  (1<<int(step_pin))
+                banks[dir_bank]       |=  (1<<int(dir_pin))
+                step_banks[step_bank] |=  (1<<int(step_pin))
+                dir_banks[dir_bank]   |=  (1<<int(dir_pin))
+
+            configFile.write('#define DIRECTION_MASK '+bin(direction_mask)+'\n')            
+            configFile.write('\n')
+
+            # Define end stop pins and banks
+            for name, endstop in self.printer.end_stops.iteritems():
+                bank, pin = endstop.get_gpio_bank_and_pin()
+                configFile.write('#define STEPPER_'+ name +'_END_PIN\t\t'+ str(pin) +'\n')
+                configFile.write('#define STEPPER_'+ name +'_END_BANK\t\t'+ "GPIO_"+str(bank) +'_IN\n')
+
+            configFile.write('\n')
+
+            # Construct the end stop inversion mask
+            inversion_mask = "#define INVERSION_MASK\t\t0b00"
+            for name in ["Z2", "Y2", "X2", "Z1", "Y1", "X1"]:
+                inversion_mask += "1" if self.config.getboolean('Endstops', 'invert_' + name) else "0"
+
+            configFile.write(inversion_mask + "\n");
+
+            # Construct the endstop lookup table.
+            for name, endstop in self.printer.end_stops.iteritems():
+                mask = 0
+                # stepper name is x_cw or x_ccw
+                option = 'end_stop_' + name + '_stops'
+                for stepper in self.config.get('Endstops', option).split(","):
+                    stepper = stepper.strip()
+                    if stepper == "":
+                        continue
+                    m = re.search('^([xyzehabc])_(ccw|cw|pos|neg)$', stepper)
+                    if (m == None):
+                        raise RuntimeError("'" + stepper + "' is invalid for " + option)
+
+                    # direction should be 1 for normal operation and -1 to invert the stepper.
+                    if (m.group(2) == "pos"):
+                        direction = -1
+                    elif (m.group(2) == "neg"):
+                        direction = 1
+                    else:
+                        direction = 1 if self.config.getint('Steppers', 'direction_' + stepper[0]) > 0 else -1
+                        if (m.group(2) == "ccw"): 
+                            direction *= -1
+
+                    cur = 1 << ("xyzehabc".index(m.group(1)))
+                    if (direction == -1):
+                        cur <<= 8
+                    mask += cur
+                bin_mask = "0b"+(bin(mask)[2:]).zfill(16)
+                configFile.write("#define STEPPER_MASK_" + name + "\t\t" + bin_mask + "\n")
+        
+            configFile.write("\n");
+
+
+            # Put each dir and step pin in the proper buck if they are for GPIO0 or GPIO1 bank. 
+            # This is a restriction due to the limited capabilities of the pasm preprocessor.            
+            for name, bank in banks.iteritems():
+                #bank = (~bank & 0xFFFFFFFF)
+                configFile.write("#define GPIO"+name+"_MASK\t\t" +bin(bank)+ "\n");
+            #for name, bank in step_banks.iteritems():
+                #bank = (~bank & 0xFFFFFFFF)
+            #    configFile.write("#define GPIO"+name+"_STEP_MASK\t\t" +bin(bank)+ "\n");
+            for name, bank in dir_banks.iteritems():
+                #bank = (~bank & 0xFFFFFFFF)
+                configFile.write("#define GPIO"+name+"_DIR_MASK\t\t" +bin(bank)+ "\n");
+
+            configFile.write("\n");
+
+            # Add end stop delay to the config file
+            end_stop_delay = self.config.getint('Endstops', 'end_stop_delay_cycles')
+            configFile.write("#define END_STOP_DELAY " +str(end_stop_delay)+ "\n");
+
+        return configFile_0
+
+if __name__ == '__main__':
+    from Printer import Printer
+    from EndStop import EndStop
+    from Stepper import Stepper, Stepper_00A3, Stepper_00A4, Stepper_00B1, Stepper_00B2, Stepper_00B3
+    from CascadingConfigParser import CascadingConfigParser
+    printer = Printer()
+
+            
+    # Parse the config files.
+    printer.config = CascadingConfigParser(
+        ['/etc/redeem/default.cfg'])
+
+    # Init the 5 Stepper motors (step, dir, fault, DAC channel, name)
+    printer.steppers["X"] = Stepper("GPIO0_27", "GPIO1_29", "GPIO2_4" , 0, 0, "X")
+    printer.steppers["Y"] = Stepper("GPIO1_12", "GPIO0_22", "GPIO2_5" , 1, 1, "Y")
+    printer.steppers["Z"] = Stepper("GPIO0_23", "GPIO0_26", "GPIO0_15", 2, 2, "Z")
+    printer.steppers["E"] = Stepper("GPIO1_28", "GPIO1_15", "GPIO2_1" , 3, 3, "E")
+    printer.steppers["H"] = Stepper("GPIO1_13", "GPIO1_14", "GPIO2_3" , 4, 4, "H")
+    printer.steppers["A"] = Stepper("GPIO2_2" , "GPIO1_18", "GPIO0_14", 5, 5, "A")
+    printer.steppers["B"] = Stepper("GPIO1_16", "GPIO0_5" , "GPIO0_14", 6, 6, "B")
+    printer.steppers["C"] = Stepper("GPIO0_3" , "GPIO3_19", "GPIO0_14", 7, 7, "C")
+
+    for es in ["X1", "X2", "Y1", "Y2", "Z1", "Z2"]:
+        pin     = printer.config.get("Endstops", "pin_"+es)
+        keycode = printer.config.getint("Endstops", "keycode_"+es)
+        invert  = printer.config.getboolean("Endstops", "invert_"+es)
+        printer.end_stops[es] = EndStop(pin, keycode, es, invert)
+
+
+    pasm = "/home/elias/workspace/am335x_pru_package/pru_sw/utils/pasm"
+    pru = PruFirmware("0.p", "0.bin", "1.p", "1.bin", printer, "")
+    pru.make_config_file()
+
