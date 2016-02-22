@@ -5,7 +5,7 @@ from redeem.Gcode import Gcode
 import logging
 
 def test_redeem():
-    r = Redeem()
+    r = Redeem("/usr/src/redeem/configs")
     g = r.printer.processor
     for gcode in g.get_test_gcodes():
         logging.info("Testing '"+gcode.message+"'")
@@ -14,14 +14,14 @@ def test_redeem():
     pass
 
 def test2():
-    r = Redeem()
+    r = Redeem("/usr/src/redeem/configs")
     g = r.printer.processor
     g.execute( Gcode({"message": "G28", "prot": "testing"}) )
     r.exit()
     
 def test3():
     from redeem.Redeem import main
-    main()
+    main("/usr/src/redeem/configs")
     
 def test4():
     test_str = """
@@ -34,7 +34,7 @@ def test4():
         G1 X-100.0 Y100.0
         G1 X0.0 Y0.0
         """
-    r = Redeem()
+    r = Redeem("/usr/src/redeem/configs")
     g = r.printer.processor
     for line in test_str.splitlines():
         if line:
@@ -43,5 +43,15 @@ def test4():
         
     r.exit()
 
+
+def test_load():
+    r = Redeem("/usr/src/redeem/configs")
+    r.exit()
+
+def test_run():
+	from redeem.Redeem import main
+    main("/usr/src/redeem/configs")
+
 if __name__ == "__main__":
-    test_redeem()
+    test_load()
+    print "Test finished"

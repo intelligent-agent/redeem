@@ -39,6 +39,7 @@ import sys
 
 from Mosfet import Mosfet
 from Stepper import *
+from Chart import *
 from Thermistor import Thermistor
 from Fan import Fan
 from Servo import Servo
@@ -74,7 +75,12 @@ logging.basicConfig(level=logging.DEBUG,
                     format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
                     datefmt='%m-%d %H:%M')
 class Redeem:
-    def __init__(self):
+    def __init__(self, config_location="/etc/redeem"):
+        """
+        config_location: provide the location to look for config files.
+         - default is installed directory
+         - allows for running in a local directory when debugging
+        """
         firmware_version = "1.1.8~Raw Deal"
         logging.info("Redeem initializing "+firmware_version)
 
@@ -85,18 +91,21 @@ class Redeem:
         printer.firmware_version = firmware_version
 
         # check for config files
-        if not os.path.exists("/etc/redeem/default.cfg"):
-            logging.error("/etc/redeem/default.cfg does not exist, this file is required for operation")
+        file_path = os.path.join(config_location,"default.cfg")
+        if not os.path.exists(file_path):
+            logging.error(file_path + " does not exist, this file is required for operation")
             sys.exit() # maybe use something more graceful?
             
-        if not os.path.exists("/etc/redeem/local.cfg"):
-            logging.info("/etc/redeem/local.cfg does not exist, Creating one")
-            os.mknod("/etc/redeem/local.cfg")
+        file_path = os.path.join(config_location,"local.cfg")
+        if not os.path.exists(file_path):
+            logging.info(file_path + " does not exist, Creating one")
+            os.mknod(file_path)
     
         # Parse the config files.
         printer.config = CascadingConfigParser(
-            ['/etc/redeem/default.cfg', '/etc/redeem/printer.cfg',
-             '/etc/redeem/local.cfg'])
+            [os.path.join(config_location,'default.cfg'), 
+             os.path.join(config_location,'printer.cfg'),
+             os.path.join(config_location,'local.cfg')])
 
         # Get the revision and loglevel from the Config file
         level = self.printer.config.getint('System', 'loglevel')
@@ -241,7 +250,10 @@ class Redeem:
         for i, path in enumerate(paths):
             self.printer.cold_ends.append(ColdEnd(path, "ds18b20-"+str(i)))
             logging.info("Found Cold end "+str(i)+" on " + path)
-
+        
+        # load temperature charts
+        temperature_charts.load(printer.config.get("System", "data_path"))
+            
         # Make Mosfets, thermistors and extruders
         heaters = ["E", "H", "HBP"]
         if self.printer.config.reach_revision:
@@ -628,9 +640,9 @@ class Redeem:
 
 
 
-def main():
+def main(config_location="/etc/redeem"):
     # Create Redeem
-    r = Redeem()
+    r = Redeem(config_location)
 
     def signal_handler(signal, frame):
         r.exit()
@@ -646,10 +658,10 @@ def main():
 
 
 
-def profile():
+def profile(config_location="/etc/redeem"):
     import yappi
     yappi.start()
-    main()
+    main(config_location)
     yappi.get_func_stats().print_all()
 
 if __name__ == '__main__':
