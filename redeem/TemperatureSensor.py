@@ -109,26 +109,30 @@ class Thermistor(TemperatureSensor):
     def __init__(self, pin, sensorConfiguration):
         """ Init """
         if len(sensorConfiguration) != 5:
-            logging.error("Sensor configuration is missing parameters. Should have 5, has "+len(sensorConfiguration))
-            sys.exit()
+            Alarm(Alarm.THERMISTOR_ERROR, "Sensor configuration for {0} is missing parameters. Expected: 5, received: {1}.".format(pin, len(sensorConfiguration)))
         else:
             self.pin = pin
+            self.sensorIdentifier = sensorConfiguration[0] # The identifier
             self.r1 = sensorConfiguration[1]    #pullup resistance
             self.c1 = sensorConfiguration[2]    #Steinhart-Hart coefficient
             self.c2 = sensorConfiguration[3]    #Steinhart-Hart coefficient
             self.c3 = sensorConfiguration[4]    #Steinhart-Hart coefficient
+            logging.debug("Initialized temperature sensor at {0} (type: {1}). Pullup value = {2} Ohm. Steinhart-Hart coefficients: c1 = {3}, c2 = {4}, c3 = {5}.".format(pin, sensorConfiguration[0], sensorConfiguration[1], sensorConfiguration[2], sensorConfiguration[3],sensorConfiguration[4]))
 
 
 
     def get_temperature(self, voltage):
         """ Return the temperature in degrees celsius. Uses Steinhart-Hart """
         r = self.voltage_to_resistance(voltage)
+        logging.debug("Reading sensor {0} on {1} seeing resistance {1}".format(self.sensorIdentifier,self.pin,r))
         l = float(math.log(r))
         t = float((1.0 / (self.c1 + self.c2 * l + self.c3 * math.pow(l,3))) - 273.15)
+        logging.debug("Reading {0}. Resistance corresponds to {1} deg. celsisus".format(self.pin,t))
         return t
 
     def voltage_to_resistance(self,voltage):
         """ Convert the voltage to a resistance value """
+        print("Value of r1: {0}".format(self.r1))
         if voltage == 0 or (abs(voltage - 1.8) < 0.001):
             return 10000000.0
         return float(self.r1 / ((1.8 / voltage) - 1.0))
@@ -144,8 +148,7 @@ class PT100(TemperatureSensor):
     def __init__(self, pin, sensorConfiguration):
 
         if len(sensorConfiguration) != 4:
-                logging.error("Sensor configuration is missing parameters. Should have 6, has "+len(sensorConfiguration))
-                sys.exit()
+                Alarm(Alarm.THERMISTOR_ERROR, "Sensor configuration for {0} is missing parameters. Expected: 4, received: {1}.".format(pin, len(sensorConfiguration)))
         else:
             self.pin = pin
             self.name = name
@@ -170,3 +173,4 @@ class PT100(TemperatureSensor):
 
 
 #class ThermoCouple (TemperatureSensor):
+
