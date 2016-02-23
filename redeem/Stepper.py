@@ -394,7 +394,7 @@ class Stepper_00A4(Stepper):
     def set_decay(self, value, force_update=False):
         """ Decay mode, look in the data sheet """
         if value not in [0, 1]:
-            logging.warning("Ivalid decay value. Use 0 or 1. Got: {}".format(value))
+            logging.warning("Invalid decay value. Use 0 or 1. Got: {}".format(value))
             return
         self.decay = value
         self.state &= ~(1 << Stepper_00A4.DECAY)        # bit 5

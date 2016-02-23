@@ -116,7 +116,8 @@ class Alarm:
 class AlarmExecutor:
     def __init__(self):
         self.queue = JoinableQueue(10)
-        self.t = Thread(target=self._run)
+        self.running = False
+        self.t = Thread(target=self._run, name="AlarmExecutor")
 
     def _run(self):
         while self.running:
@@ -134,9 +135,12 @@ class AlarmExecutor:
         self.t.start()
 
     def stop(self):
-        logging.debug("Stoppping alarm executor")
-        self.running = False
-        self.t.join()
+        if self.running:
+            logging.debug("Stoppping alarm executor")
+            self.running = False
+            self.t.join()
+        else:
+            logging.debug("Attempted to stop alarm executor when it is not running")
     
 
 if __name__ == '__main__':

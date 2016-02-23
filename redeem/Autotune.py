@@ -21,7 +21,6 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
 """
 
 from __future__ import division, print_function
-from threading import Thread
 import time
 import logging
 import numpy as np
@@ -48,7 +47,6 @@ class Autotune:
         
     def cancel(self):
         self.running = False
-        self.t.join()
 
 
     def send_temperature(self):

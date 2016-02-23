@@ -46,7 +46,7 @@ class TemperatureSensor:
         self.pin = pin
         self.heater = heater_name
         self.sensorIdentifier = sensorIdentifier
-        self.maxAdc = 4095.0
+        self.maxAdc = 4095
 
         #Find matching entry in sensor tables and instantiate corresponding sensor
         found = False
@@ -82,21 +82,20 @@ class TemperatureSensor:
     """
     def read_adc(self):
         mutex = Lock()
-        voltage = -1.0
+        voltage = 0
 
         mutex.acquire()
         try:
             with open(self.pin, "r") as file:
                 signal = float(file.read().rstrip())
-                if(signal >= self.maxAdc or signal <= 0.0):
+                if(signal > self.maxAdc or signal <= 0.0):
                     voltage = -1.0
                 else:
-                    voltage = signal / 4094.0 * 1.8 #input range is 0 ... 1.8V
+                    voltage = signal / self.maxAdc * 1.8 #input range is 0 ... 1.8V
         except IOError as e:
              Alarm(Alarm.THERMISTOR_ERROR, "Unable to get ADC value ({0}): {1}".format(e.errno, e.strerror))
-        finally:
-            mutex.release()
-
+        
+        mutex.release()
         return voltage
 
 
@@ -124,18 +123,19 @@ class Thermistor(TemperatureSensor):
     def get_temperature(self, voltage):
         """ Return the temperature in degrees celsius. Uses Steinhart-Hart """
         r = self.voltage_to_resistance(voltage)
-        logging.debug("Reading sensor {0} on {1} seeing resistance {1}".format(self.sensorIdentifier,self.pin,r))
-        l = float(math.log(r))
-        t = float((1.0 / (self.c1 + self.c2 * l + self.c3 * math.pow(l,3))) - 273.15)
-        logging.debug("Reading {0}. Resistance corresponds to {1} deg. celsisus".format(self.pin,t))
+        if r > 0:
+            l = math.log(r)
+            t = float((1.0 / (self.c1 + self.c2 * l + self.c3 * math.pow(l,3))) - 273.15)
+        else:
+            t = -273.15
+            logging.debug("Reading sensor {0} on {1}, but it seems to be out of bounds. R is {2}. Setting temp to {3}.".format(self.sensorIdentifier, self.pin,r,t))
         return t
 
     def voltage_to_resistance(self,voltage):
         """ Convert the voltage to a resistance value """
-        print("Value of r1: {0}".format(self.r1))
-        if voltage == 0 or (abs(voltage - 1.8) < 0.001):
+        if voltage == 0 or (abs(voltage - 1.8) < 0.0001):
             return 10000000.0
-        return float(self.r1 / ((1.8 / voltage) - 1.0))
+        return self.r1 / ((1.8 / voltage) - 1.0)
 
 
 """

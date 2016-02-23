@@ -24,12 +24,12 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
 """
 
 import glob
-import shutil
 import logging
 import logging.handlers
 import os
 import os.path
 import signal
+import threading
 from threading import Thread
 from multiprocessing import JoinableQueue
 import Queue
@@ -73,7 +73,12 @@ logging.basicConfig(level=logging.DEBUG,
                     format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
                     datefmt='%m-%d %H:%M')
 class Redeem:
-    def __init__(self):
+    def __init__(self, config_location="/etc/redeem"):
+        """
+        config_location: provide the location to look for config files.
+         - default is installed directory
+         - allows for running in a local directory when debugging
+        """
         firmware_version = "1.1.8~Raw Deal"
         logging.info("Redeem initializing "+firmware_version)
 
@@ -84,18 +89,21 @@ class Redeem:
         printer.firmware_version = firmware_version
 
         # check for config files
-        if not os.path.exists("/etc/redeem/default.cfg"):
-            logging.error("/etc/redeem/default.cfg does not exist, this file is required for operation")
+        file_path = os.path.join(config_location,"default.cfg")
+        if not os.path.exists(file_path):
+            logging.error(file_path + " does not exist, this file is required for operation")
             sys.exit() # maybe use something more graceful?
             
-        if not os.path.exists("/etc/redeem/local.cfg"):
-            logging.info("/etc/redeem/local.cfg does not exist, Creating one")
-            os.mknod("/etc/redeem/local.cfg")
+        file_path = os.path.join(config_location,"local.cfg")
+        if not os.path.exists(file_path):
+            logging.info(file_path + " does not exist, Creating one")
+            os.mknod(file_path)
     
         # Parse the config files.
         printer.config = CascadingConfigParser(
-            ['/etc/redeem/default.cfg', '/etc/redeem/printer.cfg',
-             '/etc/redeem/local.cfg'])
+            [os.path.join(config_location,'default.cfg'), 
+             os.path.join(config_location,'printer.cfg'),
+             os.path.join(config_location,'local.cfg')])
 
         # Get the revision and loglevel from the Config file
         level = self.printer.config.getint('System', 'loglevel')
@@ -231,17 +239,14 @@ class Redeem:
             for opt in opts:
                 Delta.__dict__[opt] = printer.config.getfloat('Delta', opt)
 
-            Delta.recalculate()
-
         # Discover and add all DS18B20 cold ends.
-        import glob
         paths = glob.glob("/sys/bus/w1/devices/28-*/w1_slave")
         logging.debug("Found cold ends: "+str(paths))
         for i, path in enumerate(paths):
             self.printer.cold_ends.append(ColdEnd(path, "ds18b20-"+str(i)))
             logging.info("Found Cold end "+str(i)+" on " + path)
-
-        # Make Mosfets, thermistors and extruders
+            
+        # Make Mosfets, temperature sensors and extruders
         heaters = ["E", "H", "HBP"]
         if self.printer.config.reach_revision:
             heaters.extend(["A", "B", "C"])
@@ -251,7 +256,11 @@ class Redeem:
             self.printer.mosfets[e] = Mosfet(channel)
             # Thermistors
             adc = self.printer.config.get("Heaters", "path_adc_"+e)
-            sensor = self.printer.config.get("Heaters", "sensor_"+e)
+            if not self.printer.config.has_option("Heaters", "sensor_"+e):
+                sensor = self.printer.config.get("Heaters", "temp_chart_"+e)
+                logging.warning("Deprecated config option temp_chart_"+e+" use sensor_"+e+" instead.")
+            else:
+                sensor = self.printer.config.get("Heaters", "sensor_"+e)
             resistance = self.printer.config.getfloat("Heaters", "resistance_"+e)
             self.printer.thermistors[e] = TemperatureSensor(adc, 'MOSFET '+e, sensor)
             self.printer.thermistors[e].printer = printer
@@ -425,6 +434,8 @@ class Redeem:
         printer.print_move_buffer_wait = printer.config.getfloat('Planner', 'print_move_buffer_wait')
         printer.min_buffered_move_time = printer.config.getfloat('Planner', 'min_buffered_move_time')
         printer.max_buffered_move_time = printer.config.getfloat('Planner', 'max_buffered_move_time')
+        
+        printer.max_length = printer.config.getfloat('Planner', 'max_length')
 
         self.printer.processor = GCodeProcessor(self.printer)
         self.printer.plugins = PluginsController(self.printer)
@@ -518,11 +529,11 @@ class Redeem:
         self.running = True
         # Start the two processes
         p0 = Thread(target=self.loop,
-                    args=(self.printer.commands, "buffered"))
+                    args=(self.printer.commands, "buffered"), name="p0")
         p1 = Thread(target=self.loop,
-                    args=(self.printer.unbuffered_commands, "unbuffered"))
+                    args=(self.printer.unbuffered_commands, "unbuffered"), name="p1")
         p2 = Thread(target=self.eventloop,
-                    args=(self.printer.sync_commands, "sync"))
+                    args=(self.printer.sync_commands, "sync"), name="p2")
         p0.daemon = True
         p1.daemon = True
         p2.daemon = True
@@ -593,14 +604,22 @@ class Redeem:
         for name, comm in self.printer.comms.iteritems():
             logging.debug("closing "+name)
             comm.close()
+            
         self.printer.enable.set_disabled()
         self.printer.swd.stop()
         Alarm.executor.stop()
         Key_pin.listener.stop()
         self.printer.watchdog.stop()
         self.printer.enable.set_disabled()
-
+        
+        # list all threads that are still running
+        # note: some of these maybe daemons
+        for t in threading.enumerate():
+            logging.debug("Thread " + t.name + " is still running")
+        
         logging.info("Redeem exited")
+        
+        return
 
     def _execute(self, g):
         """ Execute a G-code """
@@ -619,9 +638,9 @@ class Redeem:
 
 
 
-def main():
+def main(config_location="/etc/redeem"):
     # Create Redeem
-    r = Redeem()
+    r = Redeem(config_location)
 
     def signal_handler(signal, frame):
         r.exit()
@@ -637,10 +656,10 @@ def main():
 
 
 
-def profile():
+def profile(config_location="/etc/redeem"):
     import yappi
     yappi.start()
-    main()
+    main(config_location)
     yappi.get_func_stats().print_all()
 
 if __name__ == '__main__':

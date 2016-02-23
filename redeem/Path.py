@@ -1,6 +1,6 @@
 """ 
 Path.py - A single movement from one point to another 
-All coordinates  in this file is in meters. 
+All coordinates  in this file is in meters.
 
 Author: Elias Bakken
 email: elias(dot)bakken(at)gmail(dot)com
@@ -23,7 +23,6 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
 
 import numpy as np
 
-from Delta import Delta
 from BedCompensation import BedCompensation
 import logging
 
@@ -42,7 +41,6 @@ class Path:
     home_backoff_offset    = [0]*MAX_AXES
     steps_pr_meter         = [1]*MAX_AXES
     backlash_compensation  = [0]*MAX_AXES
-    backlash_state         = [0]*MAX_AXES
     soft_min               = [0]*MAX_AXES
     soft_max               = [0]*MAX_AXES
     slaves                 = {key: "" for key in AXES}
@@ -64,22 +62,12 @@ class Path:
     # Numpy array type used throughout    
     DTYPE = np.float64
 
-    # Precalculate the H-belt matrix
-    matrix_H = np.matrix('-0.5 0.5; -0.5 -0.5')
-    matrix_H_inv = np.linalg.inv(matrix_H)
-
-    # Precalculate the CoreXY matrix
-    # A - motor X (top right), B - motor Y (top left)
-    # home located in bottom right corner    
-    matrix_XY = np.matrix('1.0 1.0; 1.0 -1.0')
-    matrix_XY_inv = np.linalg.inv(matrix_XY)
-
-    # Unlevel bed compensation. 
-    matrix_bed_comp     = np.identity(3)
-    matrix_bed_comp_inv = np.linalg.inv(matrix_bed_comp)
-
     # Default config is normal cartesian XY
     axis_config = AXIS_CONFIG_XY 
+    
+    # bed compensation
+    matrix_bed_comp = np.eye((3))
+    matrix_bed_comp_inv = np.linalg.inv(matrix_bed_comp)
     
     # By default, do not check for slaves
     has_slaves = False
@@ -100,19 +88,11 @@ class Path:
         self.use_bed_matrix = int(use_bed_matrix)
         self.use_backlash_compensation = int(use_backlash_compensation)
         self.enable_soft_endstops = enable_soft_endstops
-        self.mag = None
         self.next = None
         self.prev = None
         self.speeds = None
-        self.vec = None
         self.start_pos = None
         self.end_pos = None
-        self.stepper_end_pos = None
-        self.ideal_end_pos = None
-        self.num_steps = None
-        self.delta = None
-        self.compensation = None
-        self.split_size = 0.001       
 
     def is_G92(self):
         """ Special path, only set the global position on this """
@@ -129,149 +109,21 @@ class Path:
         self.next = None
         self.prev = None
 
-    def transform_vector(self, vec, cur_pos):
-        """ Transform vector to whatever coordinate system is used """
-        ret_vec = np.copy(vec)
-        if Path.axis_config == Path.AXIS_CONFIG_H_BELT:
-            X = np.dot(Path.matrix_H_inv, vec[0:2])
-            ret_vec[:2] = X[0]
-        if Path.axis_config == Path.AXIS_CONFIG_CORE_XY:
-            X = np.dot(Path.matrix_XY, vec[0:2])
-            ret_vec[:2] = X[0]
-        if Path.axis_config == Path.AXIS_CONFIG_DELTA:
-            # Subtract the current column positions
-            if hasattr(self.prev, "end_ABC"):
-                self.start_ABC = self.prev.end_ABC
-            else:
-                self.start_ABC = Delta.inverse_kinematics2(cur_pos[0], cur_pos[1],
-                                                 cur_pos[2])
-            # Find the next column positions
-            self.end_ABC = Delta.inverse_kinematics2(cur_pos[0] + vec[0],
-                                               cur_pos[1] + vec[1],
-                                               cur_pos[2] + vec[2])
-            ret_vec[:3] = self.end_ABC - self.start_ABC
-        return ret_vec
-
-    def reverse_transform_vector(self, vec, cur_pos):
-        """ Transform back from whatever """
-        ret_vec = np.copy(vec)
-        if Path.axis_config == Path.AXIS_CONFIG_H_BELT:
-            X = np.dot(Path.matrix_H, vec[0:2])
-            ret_vec[:2] = X[0]
-        if Path.axis_config == Path.AXIS_CONFIG_CORE_XY:
-            X = np.dot(Path.matrix_XY_inv, vec[0:2])
-            ret_vec[:2] = X[0]
-        if Path.axis_config == Path.AXIS_CONFIG_DELTA:
-            # Find the next column positions
-            self.end_ABC = self.start_ABC + vec[:3]
-
-            # We have the column translations and need to find what that
-            # represents in cartesian.
-            start_xyz = Delta.forward_kinematics2(self.start_ABC[0], self.start_ABC[1],
-                                                 self.start_ABC[2])
-            end_xyz = Delta.forward_kinematics2(self.end_ABC[0], self.end_ABC[1],
-                                               self.end_ABC[2])
-            ret_vec[:3] = end_xyz - start_xyz
-        return ret_vec
-
     @staticmethod
     def backlash_reset():
-	    Path.backlash_state = np.zeros(Path.MAX_AXES)
-
-    def backlash_compensate(self):
-        """ Apply compensation to the distance taken if the direction of the axis has changed. """
-        ret_vec = np.zeros(Path.MAX_AXES)
-        if self.use_backlash_compensation:
-            for index, d in enumerate(self.delta):
-                dirstate = np.sign(d)
-                #Compensate only if the direction has changed
-                if (dirstate != 0) and (dirstate != Path.backlash_state[index]):
-                    ret_vec[index] = dirstate * Path.backlash_compensation[index]
-                    # Save new backlash state
-                    Path.backlash_state[index] = dirstate
-
-            if np.any(ret_vec):
-                self.compensation = ret_vec
-
-        return ret_vec
-
-    def handle_tools(self):
-        """ If tool is != E, move the vectors to the right position """
-        if Path.printer.current_tool is not "E":
-            tool = Path.printer.current_tool
-            index = Path.axis_to_index(tool)
-            self.start_pos[index] = self.start_pos[3]
-            self.start_pos[3] = 0
-            self.stepper_end_pos[index] = self.stepper_end_pos[3]
-            self.stepper_end_pos[3] = 0
-
-    def handle_slaves(self):
-        # If slave mode is enabled, copy position now. 
-        if Path.has_slaves:
-            for slave in Path.slaves:
-                master = Path.slaves[slave]
-                if master:
-                    s_i = Path.axis_to_index(slave)
-                    m_i = Path.axis_to_index(master)
-                    self.start_pos[s_i] = self.start_pos[m_i]
-                    self.stepper_end_pos[s_i] = self.stepper_end_pos[m_i]
+        #TODO: This needs further attention
+        return
 
     def needs_splitting(self):
         #return False
-        """ Return true if this is a delta segment and longer than 1 mm """
-        # If there is no movement along the XY axis (Z+extruders) only, don't split.
-
+        """ Return true if this is a radius """
         if self.movement == Path.G2 or self.movement == Path.G3:
             return True
-
-        return (Path.axis_config == Path.AXIS_CONFIG_DELTA 
-            and self.get_magnitude() > self.split_size 
-            and ("X" in self.axes or "Y" in self.axes))
-
-    def get_magnitude(self):
-        """ Returns the magnitde in XYZ dim """
-        if not self.mag:
-            if self.rounded_vec == None:
-                logging.error("Cannot get magnitude of vector without knowing its length")
-            self.mag = np.linalg.norm(self.vec[:3])
-        return self.mag
 
     def get_segments(self):
         """ Returns split segments for delta or arcs """
         if self.movement == Path.G2 or self.movement == Path.G3:
             return self.get_arc_segments()
-        return self.get_delta_segments()
-        
-
-    def get_delta_segments(self):
-        """ A delta segment must be split into lengths of self.split_size (default 1 mm) """
-        if not self.needs_splitting():
-            return [self]
-
-        num_segments = np.round(self.get_magnitude()/self.split_size)+1
-        #logging.debug("Magnitude: "+str(self.get_magnitude()))
-        #logging.debug("Split size: "+str(self.split_size))
-        #logging.debug("Num segments: "+str(num_segments))
-        vals = np.transpose([
-                    np.linspace(
-                        self.prev.ideal_end_pos[i], 
-                        self.ideal_end_pos[i], 
-                        num_segments
-                        ) for i in xrange(Path.MAX_AXES)]) 
-        vals = np.delete(vals, 0, axis=0)
-        vec_segments = [dict(zip(Path.axes_zipped, list(val))) for val in vals]
-        path_segments = []
-
-        for index, segment in enumerate(vec_segments):
-            path = AbsolutePath(segment, self.speed, self.accel, self.cancelable, self.use_bed_matrix, False) #
-            if index is not 0:
-                path.set_prev(path_segments[-1])
-            else:
-                path.set_prev(self.prev)
-            path_segments.append(path)
-
-        return path_segments
-
 
     def parametric_circle(self, t, xc, yc, R):
         x = xc + R*np.cos(t)
@@ -295,9 +147,9 @@ class Path:
         # Find radius
         R = np.sqrt(i**2 + j**2)
 
-        logging.info(start_point)
-        logging.info(end_point)
-        logging.info(R)
+        #logging.info(start_point)
+        #logging.info(end_point)
+        #logging.info(R)
 
 
         # Find start and end points
@@ -314,7 +166,7 @@ class Path:
             arc_T = np.linspace(end_t, start_t, num_segments)
         X,Y = self.parametric_circle(arc_T, start_point[0]+i, start_point[1]+j, R)
     
-        logging.info([X, Y])
+        #logging.info([X, Y])
         
         # Interpolate the remaining values
         vals = np.transpose([
@@ -346,54 +198,6 @@ class Path:
  
 
         return path_segments
-
-
-    def set_prev_common(self, prev):
-
-        # Cap the end position based on soft end stops
-        if self.enable_soft_endstops:
-            self.ideal_end_pos = np.clip(self.ideal_end_pos, Path.soft_min, Path.soft_max)
-
-        # Calculate the position to reach, with bed levelling    
-        self.level_end_pos = np.copy(self.ideal_end_pos)
-        if self.use_bed_matrix:    
-            self.level_end_pos[:3] = np.dot(Path.matrix_bed_comp, self.ideal_end_pos[:3])
-
-        # Update the vector to move us from where we are, 
-        # to where we ideally want to be. 
-        self.vec = self.level_end_pos - self.start_pos
-
-        # Compute stepper translation, 
-        # yielding the discrete/rounded distance.
-        vec = self.transform_vector(self.vec, self.start_pos)
-        self.num_steps = np.round(np.abs(vec) * Path.steps_pr_meter)
-        self.delta = np.sign(vec) * self.num_steps / Path.steps_pr_meter
-        vec = self.reverse_transform_vector(self.delta, self.start_pos)
-
-        # Vec now contains the actual distance we travelled. 
-
-        # Calculate compensation
-        self.backlash_compensate()
-
-        # Set stepper and true posisional distance that was travelled, 
-        # and can update the new end position.
-        self.end_pos = self.start_pos + vec
-        self.stepper_end_pos = self.start_pos + self.delta
-        self.rounded_vec = vec
-
-        #logging.debug("Ideal pos: "+str(self.ideal_end_pos[:3]))
-        #logging.debug("Level pos: "+str(self.level_end_pos[:3]))
-        #logging.debug("End   pos: "+str(self.end_pos[:3]))
-
-        self.handle_tools()
-
-        # Fix slave mode, if any
-        self.handle_slaves()
-
-        if np.isnan(vec).any():
-            self.end_pos = self.start_pos
-            self.num_steps = np.zeros(Path.MAX_AXES)
-            self.delta = np.zeros(Path.MAX_AXES)
 
     def __str__(self):
         """ The vector representation of this path segment """
@@ -435,16 +239,18 @@ class AbsolutePath(Path):
 
         # Make the start, end and path vectors. 
         self.end_pos = np.copy(self.start_pos)
-        self.ideal_end_pos = np.copy(prev.ideal_end_pos)
         for index, axis in enumerate(Path.AXES):
             if axis in self.axes:
-                self.ideal_end_pos[index] = self.axes[axis]
-
-        self.set_prev_common(prev)
+                self.end_pos[index] = self.axes[axis]
 
 
 class RelativePath(Path):
-    """ A path segment with Relative movement """
+    """ 
+    A path segment with Relative movement 
+    This is an approximate relative movement, i.e. we will move according to:
+      (where we actually are) -> (somewhere close to = (where we think we are + our passed in vector))
+      but it should be pretty close!
+    """
     def __init__(self, axes, speed, accel, cancelable=False, use_bed_matrix=True, use_backlash_compensation=True, enable_soft_endstops=True):
         Path.__init__(self, axes, speed, accel, cancelable, use_bed_matrix, use_backlash_compensation, enable_soft_endstops)
         self.movement = Path.RELATIVE
@@ -463,9 +269,7 @@ class RelativePath(Path):
 
         # Calculate the ideal end position. 
         # In an ideal world, this is where we want to go. 
-        self.ideal_end_pos = prev.ideal_end_pos + vec
-
-        self.set_prev_common(prev)
+        self.end_pos = prev.end_pos + vec
 
 class G92Path(Path):
     """ A reset axes path segment. No movement occurs, only global position
@@ -479,20 +283,15 @@ class G92Path(Path):
         self.prev = prev
         if prev is not None:
             self.start_pos = prev.end_pos
-            self.ideal_end_pos = np.copy(prev.ideal_end_pos)
+            self.end_pos = np.copy(prev.end_pos)
             prev.next = self
         else:
             self.start_pos = np.zeros(Path.MAX_AXES, dtype=Path.DTYPE)
-            self.ideal_end_pos = np.copy(self.start_pos)
+            self.end_pos = np.copy(self.start_pos)
 
-        self.end_pos = np.copy(self.start_pos)
         for index, axis in enumerate(Path.AXES):
             if axis in self.axes:
-                self.end_pos[index] = self.ideal_end_pos[index] = self.axes[axis]
-        self.vec = np.zeros(Path.MAX_AXES)
-        self.rounded_vec = self.vec
-
-
+                self.end_pos[index] = self.axes[axis]
 
 
 # Simple test procedure for G2

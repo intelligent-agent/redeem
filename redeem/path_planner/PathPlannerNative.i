@@ -1,159 +1,95 @@
 %module PathPlannerNative
 
-
-%{
-#define SWIG_FILE_WITH_INIT
-%}
-%include "numpy.i"
-%init %{
-import_array();
-%}
 %include "typemaps.i"
 %include "std_string.i"
 %include <std_vector.i>
-%include <std_map.i>
 %include <typemaps.i>
 %include <stdint.i>
+%include exception.i
 
 
 %{
 #include "PathPlanner.h"
+#include "Delta.h"
 %}
 
 %include "config.h"
 
 %rename(PathPlannerNative) PathPlanner;
 
-#if FLOAT_T == double
-#define FTL "d"
-#elif FLOAT_T == float
-#define FTL "f"
-#else
-#error Unsupported float type
-#endif
-
-// Grab a 8 element array as a Python 8-tuple
-%typemap(in) FLOAT_T[8](FLOAT_T temp[8]) {   // temp[8] becomes a local variable
-  if (PyTuple_Check($input)) {
-    if (!PyArg_ParseTuple($input,""FTL""FTL""FTL""FTL""FTL""FTL""FTL""FTL,temp,temp+1,temp+2,temp+3,temp+4,temp+5,temp+6,temp+7)) {
-      PyErr_SetString(PyExc_TypeError,"tuple must have 8 elements");
-      return NULL;
-    }
-    $1 = &temp[0];
-  } else {
-    PyErr_SetString(PyExc_TypeError,"expected a tuple.");
-    return NULL;
+// exception handler
+%exception {
+  try {
+  $action
   }
-}
-// Grab a 5 element array as a Python 5-tuple
-%typemap(in) FLOAT_T[5](FLOAT_T temp[5]) {   // temp[5] becomes a local variable
-  if (PyTuple_Check($input)) {
-    if (!PyArg_ParseTuple($input,""FTL""FTL""FTL""FTL""FTL,temp,temp+1,temp+2,temp+3,temp+4)) {
-      PyErr_SetString(PyExc_TypeError,"tuple must have 5 elements");
-      return NULL;
-    }
-    $1 = &temp[0];
-  } else {
-    PyErr_SetString(PyExc_TypeError,"expected a tuple.");
-    return NULL;
+  catch (InputSizeError) {
+    PyErr_SetString(PyExc_RuntimeError,"Input size does not match required value, see path_planner/config.h");
+    return 0;
   }
 }
 
-%typemap(in) unsigned long[5](unsigned long temp[5]) {   // temp[4] becomes a local variable
-  if (PyTuple_Check($input)) {
-    if (!PyArg_ParseTuple($input,"kkkkk",temp,temp+1,temp+2,temp+3,temp+4)) {
-      PyErr_SetString(PyExc_TypeError,"tuple must have 5 elements");
-      return NULL;
-    }
-    $1 = &temp[0];
-  } else {
-    PyErr_SetString(PyExc_TypeError,"expected a tuple.");
-    return NULL;
-  }
-}
-// Grab a 4 element array as a Python 4-tuple
-%typemap(in) FLOAT_T[4](FLOAT_T temp[4]) {   // temp[4] becomes a local variable
-  if (PyTuple_Check($input)) {
-    if (!PyArg_ParseTuple($input,""FTL""FTL""FTL""FTL,temp,temp+1,temp+2,temp+3)) {
-      PyErr_SetString(PyExc_TypeError,"tuple must have 4 elements");
-      return NULL;
-    }
-    $1 = &temp[0];
-  } else {
-    PyErr_SetString(PyExc_TypeError,"expected a tuple.");
-    return NULL;
-  }
+// Instantiate template for vector<>
+namespace std {
+  %template(vector_FLOAT_T) vector<FLOAT_T>;
 }
 
-%typemap(in) unsigned long[4](unsigned long temp[4]) {   // temp[4] becomes a local variable
-  if (PyTuple_Check($input)) {
-    if (!PyArg_ParseTuple($input,"kkkk",temp,temp+1,temp+2,temp+3)) {
-      PyErr_SetString(PyExc_TypeError,"tuple must have 4 elements");
-      return NULL;
-    }
-    $1 = &temp[0];
-  } else {
-    PyErr_SetString(PyExc_TypeError,"expected a tuple.");
-    return NULL;
-  }
-}
+%apply FLOAT_T *OUTPUT { FLOAT_T* offset };
+%apply FLOAT_T *OUTPUT { FLOAT_T* X, FLOAT_T* Y , FLOAT_T* Z};
+%apply FLOAT_T *OUTPUT { FLOAT_T* Az, FLOAT_T* Bz , FLOAT_T* Cz};
 
-// Grab a 3 element array as a Python 3-tuple
-%typemap(in) FLOAT_T[3](FLOAT_T temp[3]) {   // temp[3] becomes a local variable
-  if (PyTuple_Check($input)) {
-    if (!PyArg_ParseTuple($input,""FTL""FTL""FTL,temp,temp+1,temp+2)) {
-      PyErr_SetString(PyExc_TypeError,"tuple must have 3 elements");
-      return NULL;
-    }
-    $1 = &temp[0];
-  } else {
-    PyErr_SetString(PyExc_TypeError,"expected a tuple.");
-    return NULL;
-  }
-}
 
-%typemap(in) unsigned long[3](unsigned long temp[3]) {   // temp[3] becomes a local variable
-  if (PyTuple_Check($input)) {
-    if (!PyArg_ParseTuple($input,"kkk",temp,temp+1,temp+2)) {
-      PyErr_SetString(PyExc_TypeError,"tuple must have 3 elements");
-      return NULL;
-    }
-    $1 = &temp[0];
-  } else {
-    PyErr_SetString(PyExc_TypeError,"expected a tuple.");
-    return NULL;
-  }
-}
-
-%apply (FLOAT_T* IN_ARRAY1, int DIM1 ) { (FLOAT_T* value, int othervalue) }
-%apply (FLOAT_T* IN_ARRAY1, int DIM1 ) { (FLOAT_T* batchData, int batchSize) }
-// %apply (int DIM1, FLOAT_T* IN_ARRAY1, FLOAT_T NONZERO, bool INPUT, bool INPUT) { (int batchSize, FLOAT_T* batchData, FLOAT_T speed, bool cancelable, bool optimize) }
-
-class PathPlanner {
-public:
-	PathPlanner(unsigned int cacheSize);
-	bool initPRU(const std::string& firmware_stepper, const std::string& firmware_endstops);
-	bool queueSyncEvent(bool isBlocking = true);
-    int waitUntilSyncEvent();
-    void clearSyncEvent();
-    void queueMove(FLOAT_T startPos[NUM_AXES], FLOAT_T endPos[NUM_AXES], FLOAT_T speed, FLOAT_T accel, bool cancelable, bool optimize);
-	void queueBatchMove(FLOAT_T* batchData, int batchSize, FLOAT_T speed, FLOAT_T accel, bool cancelable, bool optimize);
-    void runThread();
-    void stopThread(bool join);
-    void waitUntilFinished();
-	void setPrintMoveBufferWait(int dt);
-	void setMinBufferedMoveTime(int dt);
-	void setMaxBufferedMoveTime(int dt);
-	void setMaxSpeeds(FLOAT_T speeds[NUM_AXES]);
-	void setMinSpeeds(FLOAT_T speeds[NUM_AXES]);
-	void setAxisStepsPerMeter(FLOAT_T stepPerM[NUM_AXES]);
-	void setAcceleration(FLOAT_T accel[NUM_AXES]);
-	void setJerks(FLOAT_T jerks[NUM_AXES]);
-    void suspend();
-    void resume();
-    void reset();
-    virtual ~PathPlanner();
-
+class Delta {
+ public:
+  Delta();
+  ~Delta();
+  void setMainDimensions(FLOAT_T Hez_in, FLOAT_T L_in, FLOAT_T r_in);
+  void setEffectorOffset(FLOAT_T Ae_in, FLOAT_T Be_in, FLOAT_T Ce_in);
+  void setRadialError(FLOAT_T A_radial_in, FLOAT_T B_radial_in, FLOAT_T C_radial_in);
+  void setTangentError(FLOAT_T A_tangential_in, FLOAT_T B_tangential_in, FLOAT_T C_tangential_in);
+  void recalculate();
+  void inverse_kinematics(FLOAT_T X, FLOAT_T Y, FLOAT_T Z, FLOAT_T* Az, FLOAT_T* Bz, FLOAT_T* Cz);
+  void forward_kinematics(FLOAT_T Az, FLOAT_T Bz, FLOAT_T Cz, FLOAT_T* X, FLOAT_T* Y, FLOAT_T* Z);
+  void vertical_offset(FLOAT_T Az, FLOAT_T Bz, FLOAT_T Cz, FLOAT_T* offset);
 };
 
+class PathPlanner {
+ public:
+  Delta delta_bot;
+  PathPlanner(unsigned int cacheSize);
+  bool initPRU(const std::string& firmware_stepper, const std::string& firmware_endstops);
+  bool queueSyncEvent(bool isBlocking = true);
+  int waitUntilSyncEvent();
+  void clearSyncEvent();
+  void queueMove(std::vector<FLOAT_T> startPos, std::vector<FLOAT_T> endPos, 
+		 FLOAT_T speed, FLOAT_T accel, 
+		 bool cancelable, bool optimize, 
+		 bool enable_soft_endstops, bool use_bed_matrix, 
+		 bool use_backlash_compensation, int tool_axis, bool virgin);
+  void runThread();
+  void stopThread(bool join);
+  void waitUntilFinished();
+  void setPrintMoveBufferWait(int dt);
+  void setMinBufferedMoveTime(int dt);
+  void setMaxBufferedMoveTime(int dt);
+  void setMaxSpeeds(std::vector<FLOAT_T> speeds);
+  void setMinSpeeds(std::vector<FLOAT_T> speeds);
+  void setAxisStepsPerMeter(std::vector<FLOAT_T> stepPerM);
+  void setAcceleration(std::vector<FLOAT_T> accel);
+  void setJerks(std::vector<FLOAT_T> jerks);
+  void setSoftEndstopsMin(std::vector<FLOAT_T> stops);
+  void setSoftEndstopsMax(std::vector<FLOAT_T> stops);
+  void setBedCompensationMatrix(std::vector<FLOAT_T> matrix);
+  void setMaxPathLength(FLOAT_T maxLength);
+  void setAxisConfig(int axis);
+  void setState(std::vector<FLOAT_T> set);
+  void enableSlaves(bool enable);
+  void addSlave(int master_in, int slave_in);
+  void setBacklashCompensation(std::vector<FLOAT_T> set);
+  void resetBacklash();
+  std::vector<FLOAT_T> getState();
+  void suspend();
+  void resume();
+  void reset();
+  virtual ~PathPlanner();
 
+};

@@ -13,7 +13,16 @@ os.environ['OPT'] = " ".join(
 
 
 pathplanner = Extension('_PathPlannerNative', 
-    sources = ['PathPlannerNative.i', 'PathPlanner.cpp', 'Path.cpp', 'PruTimer.cpp','prussdrv.c','Logger.cpp'],  
+    sources = ['PathPlannerNative.i', 
+                'PathPlanner.cpp', 
+                'PathPlannerSetup.cpp',
+                'Preprocessor.cpp',
+                'Path.cpp', 
+                'Delta.cpp',
+                'vector3.cpp',
+                'PruTimer.cpp',
+                'prussdrv.c',
+                'Logger.cpp'],  
     swig_opts=['-c++','-builtin'], 
     extra_compile_args = [
         '-std=c++0x',

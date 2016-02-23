@@ -51,6 +51,8 @@ class Printer:
         self.print_move_buffer_wait = 250
         self.min_buffered_move_time = 100
         self.max_buffered_move_time = 1000
+        
+        self.max_length = 0.001
 
         self.probe_points  = [{"X": 0, "Y": 0, "Z": 0}]*3
         self.probe_heights = [0]*3
@@ -125,7 +127,7 @@ class Printer:
 
     def load_bed_compensation_matrix(self):
         mat = self.config.get('Geometry', 'bed_compensation_matrix').split(",")
-        mat = np.matrix(np.array([float(i) for i in mat]).reshape(3, 3))
+        mat = np.array([float(i) for i in mat]).reshape(3, 3)
         return mat
 
     def save_bed_compensation_matrix(self):

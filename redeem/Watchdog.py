@@ -28,7 +28,7 @@ class Watchdog:
     def __init__(self, path="/dev/watchdog", refresh=30):
         self.path = path
         self.refresh = refresh
-        self.t = Thread(target=self._run)
+        self.t = Thread(target=self._run, name="Watchdog")
         self.running = False
 
         self.nowayout = 1
