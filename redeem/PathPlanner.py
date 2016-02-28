@@ -273,7 +273,7 @@ class PathPlanner:
             self.add_path(p)
             self.wait_until_done()
             
-        else:
+        else: # AXIS_CONFIG_XY
             self._home_internal(axis)
             
         # go to the designated home position
@@ -294,9 +294,13 @@ class PathPlanner:
         start = (0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
         steps = np.ceil(z*Path.steps_pr_meter[2])
         z_dist = steps/Path.steps_pr_meter[2]
-        # TODO: Shouldn't this be different for Delta and cartesian?
-        end   = (-z_dist, -z_dist, -z_dist, 0.0, 0.0, 0.0, 0.0, 0.0)
-
+        
+        # select end point based on the type of bot
+        if Path.axis_config == Path.AXIS_CONFIG_DELTA:
+            end   = (-z_dist, -z_dist, -z_dist, 0.0, 0.0, 0.0, 0.0, 0.0)
+        else: # AXIS_CONFIG_XY, AXIS_CONFIG_H_BELT, AXIS_CONFIG_CORE_XY
+            end   = (0.0, 0.0, -z_dist, 0.0, 0.0, 0.0, 0.0, 0.0)
+        
         logging.debug("Steps total: "+str(steps))
    
         self.native_planner.queueMove(start,
@@ -321,10 +325,16 @@ class PathPlanner:
             steps_remaining = shared[3]
         logging.debug("Steps remaining : "+str(steps_remaining))
 
+        # Calculate how many steps the Z axis moved
         steps -= steps_remaining
         z_dist = steps/Path.steps_pr_meter[2]
         start = (0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
-        end   = (z_dist, z_dist, z_dist, 0.0, 0.0, 0.0, 0.0, 0.0)
+        
+        # select end point based on the type of bot
+        if Path.axis_config == Path.AXIS_CONFIG_DELTA:
+            end   = (z_dist, z_dist, z_dist, 0.0, 0.0, 0.0, 0.0, 0.0)
+        else: # AXIS_CONFIG_XY, AXIS_CONFIG_H_BELT, AXIS_CONFIG_CORE_XY
+            end   = (0.0, 0.0, z_dist, 0.0, 0.0, 0.0, 0.0, 0.0)
         
         self.native_planner.queueMove(start,
                                   end, 
