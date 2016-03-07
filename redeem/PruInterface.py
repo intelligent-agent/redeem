@@ -44,3 +44,12 @@ class PruInterface:
     @staticmethod
     def get_ddr_long(offset):
         pass
+    
+    
+    @staticmethod
+    def get_steps_remaining():
+        with open("/dev/mem", "r+b") as f:	       
+            ddr_mem = mmap.mmap(f.fileno(), PRU_ICSS_LEN, offset=PRU_ICSS) 
+            shared = struct.unpack('LLLL', ddr_mem[SHARED_RAM_START:SHARED_RAM_START+16])
+            steps_remaining = shared[3]
+        return steps_remaining
