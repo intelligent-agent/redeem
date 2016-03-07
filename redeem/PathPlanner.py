@@ -71,14 +71,45 @@ class PathPlanner:
             return
 
         self.native_planner.initPRU(fw0, fw1)
-        self.native_planner.setAcceleration(tuple(Path.acceleration))
+        
         self.native_planner.setAxisStepsPerMeter(tuple(Path.steps_pr_meter))
         self.native_planner.setMaxSpeeds(tuple(Path.max_speeds))	
         self.native_planner.setMinSpeeds(tuple(Path.min_speeds))	
+        self.native_planner.setAcceleration(tuple(Path.acceleration))
         self.native_planner.setJerks(tuple(Path.jerks))
+        
         self.native_planner.setPrintMoveBufferWait(int(self.printer.print_move_buffer_wait))
         self.native_planner.setMinBufferedMoveTime(int(self.printer.min_buffered_move_time))
         self.native_planner.setMaxBufferedMoveTime(int(self.printer.max_buffered_move_time))
+        
+        self.native_planner.setSoftEndstopsMin(tuple(Path.soft_min))
+        self.native_planner.setSoftEndstopsMax(tuple(Path.soft_max))
+        
+        self.native_planner.setBedCompensationMatrix(tuple(Path.matrix_bed_comp.ravel()))
+        
+        self.native_planner.setMaxPathLength(self.printer.max_length)
+        
+        self.native_planner.setAxisConfig(Path.axis_config)
+        
+        self.native_planner.delta_bot.setMainDimensions(Delta.Hez, Delta.L, Delta.r)
+        self.native_planner.delta_bot.setEffectorOffset(Delta.Ae, Delta.Be, Delta.Ce)
+        self.native_planner.delta_bot.setRadialError(Delta.A_radial, Delta.B_radial, Delta.C_radial);
+        self.native_planner.delta_bot.setTangentError(Delta.A_tangential, Delta.B_tangential, Delta.C_tangential)
+        self.native_planner.delta_bot.recalculate()
+            
+        self.native_planner.enableSlaves(Path.has_slaves)
+        if Path.has_slaves:
+            for master in "XYZEHABC":
+                slave = Path.slaves[master]
+                if slave:
+                    master_index = Path.axis_to_index(master)
+                    slave_index = Path.axis_to_index(slave)
+                    self.native_planner.addSlave(int(master_index), int(slave_index))
+            
+        self.native_planner.setBacklashCompensation(tuple(Path.backlash_compensation));
+        
+        self.native_planner.setState(tuple(Path.MAX_AXES*[0]))
+        
         self.printer.plugins.path_planner_initialized(self)
 
         self.native_planner.runThread()
@@ -93,15 +124,16 @@ class PathPlanner:
 
     def get_current_pos(self):
         """ Get the current pos as a dict """
-        pos = self.prev.end_pos
-        pos2 = {}
+        state = self.native_planner.getState()
+        pos = {}
         for index, axis in enumerate(Path.AXES[:Path.MAX_AXES]):
-            pos2[axis] = pos[index]
-        return pos2
+            pos[axis] = state[index]
+        return pos
 
     def get_extruder_pos(self, ext_nr):
         """ Return the current position of this extruder """
-        return self.prev.end_pos[3+ext_nr]
+        state = self.native_planner.getState()
+        return state[3+ext_nr]
 
     def wait_until_done(self):
         """ Wait until the queue is empty """
@@ -228,6 +260,7 @@ class PathPlanner:
             
         # Move to home position
         p = AbsolutePath(path_home, speed, accel, True, False, False, False)
+        
         self.add_path(p)
         self.wait_until_done()
         
@@ -264,10 +297,12 @@ class PathPlanner:
             Bz = path_center['Y']
             Cz = path_center['Z']
             
-            z_offset = Delta.vertical_offset(Az,Bz,Cz) # vertical offset
-            xyz = Delta.forward_kinematics2(Az, Bz, Cz) # effector position
+            z_offset = self.native_planner.delta_bot.vertical_offset(Az,Bz,Cz) # vertical offset
+            xyz = self.native_planner.delta_bot.forward_kinematics(Az, Bz, Cz) # effector position
             xyz[2] += z_offset
             path = {'X':xyz[0], 'Y':xyz[1], 'Z':xyz[2]}
+            
+            logging.debug("Delta Home: " + str(xyz))
             
             p = G92Path(path, speed)
             self.add_path(p)
@@ -280,7 +315,7 @@ class PathPlanner:
         self._go_to_home(axis)
 
         # Reset backlash compensation
-        Path.backlash_reset()
+        self.native_planner.resetBacklash()
 
         logging.debug("homing done for " + str(axis))
             
@@ -349,60 +384,49 @@ class PathPlanner:
     def add_path(self, new):
         """ Add a path segment to the path planner """
         """ This code, and the native planner, needs to be updated for reach. """
-        # Link to the previous segment in the chain
-
-        #logging.debug("Adding "+str(new))
+        # Link to the previous segment in the chain    
+        
         new.set_prev(self.prev)
-        if new.compensation:
-            # Apply a backlash compensation move
-            self.native_planner.queueMove(tuple(np.zeros(Path.MAX_AXES)),
-                                          tuple(new.compensation), new.speed, new.accel,
-                                          bool(new.cancelable),
-                                          False)
-
-        if new.needs_splitting():     
-            path_batch = new.get_segments()
-            # Construct a batch
-            batch_array = np.zeros(shape=(len(path_batch)*2*Path.MAX_AXES), dtype=np.float64)     # Change this to reflect NUM_AXIS.
-
-            for maj_index, path in enumerate(path_batch):
-                for subindex in range(Path.MAX_AXES):  # this needs to be NUM_AXIS
-                    batch_array[(maj_index * Path.MAX_AXES * 2) + subindex] = path.start_pos[subindex]
-                    batch_array[(maj_index * Path.MAX_AXES * 2) + Path.MAX_AXES + subindex] = path.stepper_end_pos[subindex]
-                
-            self.prev = path
-            self.prev.unlink()
-
-            # Queue the entire batch at once.
-            self.printer.ensure_steppers_enabled()
-            self.native_planner.queueBatchMove(batch_array, new.speed, new.accel, bool(new.cancelable), True)
-                
-            # Do not add the original segment
-            new.unlink()
-            return 
-
-        if not new.is_G92():
-            self.printer.ensure_steppers_enabled()
-            #push this new segment   
-
-            start = tuple(new.start_pos)
-            end   = tuple(new.stepper_end_pos)
-            can = bool(new.cancelable)
-            rel = bool(new.movement != Path.RELATIVE)
-            #logging.debug("Queueing "+str(start)+" "+str(end)+" "+str(new.speed)+" "+str(new.accel)+" "+str(can)+" "+str(rel))
+        
+        if new.is_G92():
+            self.native_planner.setState(tuple(new.end_pos))
+        elif new.needs_splitting():
+            #TODO: move this to C++
+            # this branch splits up any G2 or G3 movements (arcs)
+            # should be moved to C++ as it is math heavy
+            # need to convert it to linear segments before feeding to the queue
+            # as we want to keep the queue only dealing with linear stuff for simplicity
+            for seg in new.get_segments():
+                self.add_path(seg)
+            
+        else:
+            self.printer.ensure_steppers_enabled() 
+            
+            optimize = new.movement != Path.RELATIVE
+            tool_axis = Path.axis_to_index(self.printer.current_tool)
+            
+            self.native_planner.setAxisConfig(int(Path.axis_config))
             
             self.native_planner.queueMove(tuple(new.start_pos),
-                                      tuple(new.stepper_end_pos), 
+                                      tuple(new.end_pos), 
                                       new.speed, 
                                       new.accel,
                                       bool(new.cancelable),
-                                      bool(new.movement != Path.RELATIVE))
+                                      bool(optimize),
+                                      bool(new.enable_soft_endstops),
+                                      bool(new.use_bed_matrix),
+                                      bool(new.use_backlash_compensation), 
+                                      int(tool_axis), 
+                                      True)
 
         self.prev = new
         self.prev.unlink()  # We don't want to store the entire print
                             # in memory, so we keep only the last path.
 
     def set_extruder(self, ext_nr):
+        """
+        TODO: does this function do anything? Should it be setting the tool axis?
+        """
         if ext_nr in range(Path.MAX_AXES-3):
             logging.debug("Selecting "+str(ext_nr))
             #Path.steps_pr_meter[3] = self.printer.steppers[

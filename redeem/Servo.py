@@ -67,7 +67,7 @@ class Servo:
         self.queue = JoinableQueue(1000)
         self.lastCommandTime = 0
 
-        self.t = Thread(target=self._wait_for_event)
+        self.t = Thread(target=self._wait_for_event, name="Servo")
         self.t.daemon = True
         self.running = True
         self.t.start()

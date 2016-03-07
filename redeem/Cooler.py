@@ -64,7 +64,7 @@ class Cooler:
         """ Start the PID controller """
         self.enabled = True
         self.disabled = False
-        self.t = Thread(target=self.keep_temperature)
+        self.t = Thread(target=self.keep_temperature, name=self.name)
         self.t.daemon = True
         self.t.start()		
 

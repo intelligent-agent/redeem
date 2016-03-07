@@ -40,4 +40,9 @@
 /* Data type for floating point */
 #define FLOAT_T double
 
+#define AXIS_CONFIG_XY      0
+#define AXIS_CONFIG_H_BELT  1
+#define AXIS_CONFIG_CORE_XY 2
+#define AXIS_CONFIG_DELTA   3
+
 #endif
