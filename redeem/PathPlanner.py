@@ -29,6 +29,7 @@ from Path import Path, AbsolutePath, RelativePath, G92Path
 from Delta import Delta
 from Printer import Printer
 import numpy as np
+from PruInterface import PruInterface
 
 try:
     from path_planner.PathPlannerNative import PathPlannerNative
@@ -221,7 +222,7 @@ class PathPlanner:
         logging.debug("Coarse search done!")
 
         # Reset position to offset
-        p = G92Path(path_center, speed)
+        p = G92Path(path_center)
         self.add_path(p)
         self.wait_until_done()
 
@@ -235,7 +236,7 @@ class PathPlanner:
         self.wait_until_done()
 
         # Reset (final) position to offset
-        p = G92Path(path_center, speed)
+        p = G92Path(path_center)
         self.add_path(p)
 
         return path_center, speed
@@ -267,7 +268,7 @@ class PathPlanner:
         # Due to rounding errors, we explicitly set the found 
         # position to the right value. 
         # Reset (final) position to offset
-        p = G92Path(path_home, speed)
+        p = G92Path(path_home)
         self.add_path(p)
 
         return
@@ -304,11 +305,11 @@ class PathPlanner:
             
             logging.debug("Delta Home: " + str(xyz))
             
-            p = G92Path(path, speed)
+            p = G92Path(path)
             self.add_path(p)
             self.wait_until_done()
             
-        else:
+        else: # AXIS_CONFIG_XY
             self._home_internal(axis)
             
         # go to the designated home position
@@ -323,52 +324,48 @@ class PathPlanner:
 
     def probe(self, z, speed, accel):
         self.wait_until_done()
-        # Move until endstop is hits
+        
         self.printer.ensure_steppers_enabled()
-        #push this new segment
-        start = (0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
+        
+        # calculate how many steps the requested z movement will require
         steps = np.ceil(z*Path.steps_pr_meter[2])
         z_dist = steps/Path.steps_pr_meter[2]
-        # TODO: Shouldn't this be different for Delta and cartesian?
-        end   = (-z_dist, -z_dist, -z_dist, 0.0, 0.0, 0.0, 0.0, 0.0)
-
         logging.debug("Steps total: "+str(steps))
-   
-        self.native_planner.queueMove(start,
-                                  end, 
-                                  speed, 
-                                  accel,
-                                  True,
-                                  True)
-
+        
+        # select the relative end point
+        # this is not axis_config dependent as we are not swapping 
+        # axis_config like we do when homing
+        end   = {"Z":-z_dist}
+        
+        # add a relative move to the path planner
+        # this tells the head to move down a set distance
+        # the probe end-stop should be triggered during this move
+        path = RelativePath(end, speed, accel, 
+                            cancelable=True, 
+                            use_bed_matrix=False, 
+                            use_backlash_compensation=True, 
+                            enable_soft_endstops=False)
+        self.add_path(path)
         self.wait_until_done()
 
-
-        # TODO: Move this to PruInterface.py
-        import struct
-        import mmap
-        PRU_ICSS = 0x4A300000 
-        PRU_ICSS_LEN = 512*1024
-        RAM2_START = 0x00012000
-        with open("/dev/mem", "r+b") as f:	       
-            ddr_mem = mmap.mmap(f.fileno(), PRU_ICSS_LEN, offset=PRU_ICSS) 
-            shared = struct.unpack('LLLL', ddr_mem[RAM2_START:RAM2_START+16])
-            steps_remaining = shared[3]
+        # get the number of steps that we haven't done 
+        steps_remaining = PruInterface.get_steps_remaining()
         logging.debug("Steps remaining : "+str(steps_remaining))
 
+        # Calculate how many steps the Z axis moved
         steps -= steps_remaining
         z_dist = steps/Path.steps_pr_meter[2]
-        start = (0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
-        end   = (z_dist, z_dist, z_dist, 0.0, 0.0, 0.0, 0.0, 0.0)
         
-        self.native_planner.queueMove(start,
-                                  end, 
-                                  speed, 
-                                  accel,
-                                  True,
-                                  False)
-        
+        # make a move to take us back to where we started
+        end   = {"Z":z_dist}
+        path = RelativePath(end, speed, accel, 
+                            cancelable=True, 
+                            use_bed_matrix=False, 
+                            use_backlash_compensation=True, 
+                            enable_soft_endstops=False)
+        self.add_path(path)
         self.wait_until_done()
+        
         return steps/Path.steps_pr_meter[2]
 
     def add_path(self, new):
@@ -377,6 +374,9 @@ class PathPlanner:
         # Link to the previous segment in the chain    
         
         new.set_prev(self.prev)
+        
+        # NOTE: printing the added path slows things down SIGNIFICANTLY
+        #logging.debug("path added: "+ str(new))
         
         if new.is_G92():
             self.native_planner.setState(tuple(new.end_pos))
