@@ -22,7 +22,6 @@ class M561(GCodeCommand):
 
     def execute(self, g):
         Path.matrix_bed_comp = np.identity(3)
-        Path.matrix_bed_comp_inv = np.linalg.inv(Path.matrix_bed_comp)
 
     def get_description(self):
         return "Reset bed level matrix to identity"

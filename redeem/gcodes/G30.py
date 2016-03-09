@@ -24,8 +24,13 @@ class G30(GCodeCommand):
             index = int(g.get_value_by_letter("P"))
             point = self.printer.probe_points[index]
         else:
-            # If no porobe point is specified, use current pos
-            point = self.printer.path_planner.get_current_pos()
+            # If no probe point is specified, use current pos
+            # this value is in metres
+            # need to convert to millimetres as we are using 
+            #this value for a G0 call
+            point = self.printer.path_planner.get_current_pos(mm=True)
+            logging.debug("G30: current position (mm) :  X{} Y{} Z{}".format(point["X"], point["Y"], point["Z"]))
+            
         if g.has_letter("X"): # Override X
             point["X"] = float(g.get_value_by_letter("X"))
         if g.has_letter("Y"): # Override Y
@@ -52,19 +57,19 @@ class G30(GCodeCommand):
             probe_accel = self.printer.config.getfloat('Probe', 'accel')
         
         # Find the Probe offset
+        # values in config file are in metres, need to convert to millimetres
         offset_x = self.printer.config.getfloat('Probe', 'offset_x')*1000
         offset_y = self.printer.config.getfloat('Probe', 'offset_y')*1000
+        
+        logging.debug("G30: probing from point (mm) : X{} Y{} Z{}".format(point["X"]+offset_x, point["Y"]+offset_y, point["Z"]))
 
         # Move to the position
         G0 = Gcode({"message": "G0 X{} Y{} Z{}".format(point["X"]+offset_x, point["Y"]+offset_y, point["Z"]), "prot": g.prot})    
         self.printer.processor.execute(G0)
         self.printer.path_planner.wait_until_done()
-        bed_dist = self.printer.path_planner.probe(probe_length, probe_speed, probe_accel) # Probe one cm. TODO: get this from config
-        logging.debug("Bed dist: "+str(bed_dist*1000)+" mm")
-
-        # Add the probe offsets to the points
+        bed_dist = self.printer.path_planner.probe(probe_length, probe_speed, probe_accel)*1000.0 # convert to mm
+        logging.debug("Bed dist: "+str(bed_dist)+" mm")
         
-        #logging.info("Found Z probe height {} at (X, Y) = ({}, {})".format(bed_dist, point["X"], point["Y"]))
         if g.has_letter("S"):
             if not g.has_letter("P"):
                 logging.warning("G30: S-parameter was set, but no index (P) was set.")
