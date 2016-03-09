@@ -28,8 +28,6 @@ class G29(GCodeCommand):
             self.printer.processor.execute(G)
             self.printer.path_planner.wait_until_done()
 
-        logging.debug(self.printer.probe_heights)
-
         # Remove the offset from the probed points        
         if self.printer.probe_points[0]["X"] == 0 and self.printer.probe_points[0]["Y"] == 0:
             # If the origin is located in the first probe point, remove that. 
@@ -41,15 +39,14 @@ class G29(GCodeCommand):
         # Log the found heights
         for k, v in enumerate(self.printer.probe_points):
             self.printer.probe_points[k]["Z"] = self.printer.probe_heights[k]
-        logging.info("Found heights: ")
-        logging.info(self.printer.probe_points)
+        logging.info("Found heights: "+str(self.printer.probe_points))
 
         # Add 'S'=simulate To not update the bed matrix.  
         if not g.has_letter("S"):
             # Update the bed compensation matrix
-            Path.update_autolevel_matrix(self.printer.probe_points, self.printer.probe_heights)
-            logging.debug("New Bed level matrix: ")
-            logging.debug(Path.matrix_bed_comp)
+            self.printer.path_planner.update_autolevel_matrix(self.printer.probe_points, self.printer.probe_heights)
+            logging.info("Updated bed compensation matrix: \n"+str(Path.matrix_bed_comp))
+
 
     def get_description(self):
         return "Probe the bed at specified points"

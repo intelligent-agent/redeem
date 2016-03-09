@@ -66,6 +66,10 @@ int PathPlanner::splitInput(std::vector<FLOAT_T> startPos, std::vector<FLOAT_T> 
 {
 
   // check if the path needs to be split
+
+  if (axis_config != AXIS_CONFIG_DELTA) {
+    return 0;
+  }
     
   FLOAT_T xy2, z2, mag;
   xy2 = vec[0]*vec[0] + vec[1]*vec[1];

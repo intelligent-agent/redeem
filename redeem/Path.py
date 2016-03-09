@@ -22,8 +22,6 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
 """
 
 import numpy as np
-
-from BedCompensation import BedCompensation
 import logging
 
 class Path:
@@ -67,7 +65,6 @@ class Path:
     
     # bed compensation
     matrix_bed_comp = np.eye((3))
-    matrix_bed_comp_inv = np.linalg.inv(matrix_bed_comp)
     
     # By default, do not check for slaves
     has_slaves = False
@@ -210,20 +207,6 @@ class Path:
     @staticmethod
     def index_to_axis(index):
         return Path.AXES[index]
-
-    @staticmethod
-    def update_autolevel_matrix(probe_points, probe_heights):
-        #TODO: Fix probe offset
-        #offset_x = self.printer.config.getfloat('Probe', 'offset_x')
-        #offset_y = self.printer.config.getfloat('Probe', 'offset_y')
-        #offset_z = 0
-        #offsets = {"X": offset_x, "Y": offset_y, "Z": offset_z}
-        
-        #measure_points = {key: probe_points[key] - offsets[key] for key in probe_points.keys()}
-
-        mat = BedCompensation.create_rotation_matrix(probe_points, probe_heights)
-        Path.matrix_bed_comp = mat
-        Path.matrix_bed_comp_inv = np.linalg.inv(Path.matrix_bed_comp)
 
 class AbsolutePath(Path):
     """ A path segment with absolute movement """

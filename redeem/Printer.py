@@ -54,8 +54,8 @@ class Printer:
         
         self.max_length = 0.001
 
-        self.probe_points  = [{"X": 0, "Y": 0, "Z": 0}]*3
-        self.probe_heights = [0]*3
+        self.probe_points  = [{"X": 0, "Y": 0, "Z": 0}, {"X": 0, "Y": 0, "Z": 0}, {"X": 0, "Y": 0, "Z": 0}]
+        self.probe_heights = [0, 0, 0]
         self.probe_type = 0 # Servo
 
         # Max number of axes. 
