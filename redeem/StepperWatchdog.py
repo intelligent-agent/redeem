@@ -39,12 +39,15 @@ class StepperWatchdog:
             self.timeout))
 
     def stop(self):
-        logging.debug("Stopping stepper watchdog")
-        self.lock.acquire()
-        self.time_left = 0
-        self.lock.release()
-        self.running = False
-        self.t.join()
+        if self.running:
+            logging.debug("Stopping stepper watchdog")
+            self.lock.acquire()
+            self.time_left = 0
+            self.lock.release()
+            self.running = False
+            self.t.join()
+        else:
+            logging.debug("Attempted to stop StepperWatchdog when it is not running")
 
     def reset(self):
         self.lock.acquire()

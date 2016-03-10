@@ -30,6 +30,7 @@ from Delta import Delta
 from Printer import Printer
 import numpy as np
 from PruInterface import PruInterface
+from BedCompensation import BedCompensation
 
 try:
     from path_planner.PathPlannerNative import PathPlannerNative
@@ -123,12 +124,16 @@ class PathPlanner:
         """ Update steps pr meter from the path """
         self.native_planner.setAxisStepsPerMeter(tuple(Path.steps_pr_meter))
 
-    def get_current_pos(self):
+    def get_current_pos(self, mm=False):
         """ Get the current pos as a dict """
+        if mm:
+            scale = 1000.0
+        else:
+            scale = 1.0
         state = self.native_planner.getState()
         pos = {}
         for index, axis in enumerate(Path.AXES[:Path.MAX_AXES]):
-            pos[axis] = state[index]
+            pos[axis] = state[index]*scale
         return pos
 
     def get_extruder_pos(self, ext_nr):
@@ -366,7 +371,22 @@ class PathPlanner:
         self.add_path(path)
         self.wait_until_done()
         
-        return steps/Path.steps_pr_meter[2]
+        return -steps/Path.steps_pr_meter[2]
+        
+    def update_autolevel_matrix(self, probe_points, probe_heights):
+        """
+        updates the bed compensation matrix
+        """
+        
+        logging.debug("updating bed compensation matrix")        
+        logging.debug("Probe points = " + str(probe_points))
+        logging.debug("Probe heights = " + str(probe_heights))
+        
+        Path.matrix_bed_comp = BedCompensation.create_rotation_matrix(probe_points, probe_heights)
+        
+        self.native_planner.setBedCompensationMatrix(tuple(Path.matrix_bed_comp.ravel()))
+        
+        return
 
     def add_path(self, new):
         """ Add a path segment to the path planner """

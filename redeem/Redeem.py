@@ -405,7 +405,6 @@ class Redeem:
 
         # Bed compensation matrix
         Path.matrix_bed_comp = printer.load_bed_compensation_matrix()
-        Path.matrix_bed_comp_inv = np.linalg.inv(Path.matrix_bed_comp)
         logging.debug("Loaded bed compensation matrix: \n"+str(Path.matrix_bed_comp))
 
         for axis in printer.steppers.keys():

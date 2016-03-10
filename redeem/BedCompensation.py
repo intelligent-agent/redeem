@@ -31,35 +31,38 @@ class BedCompensation:
 
     @staticmethod
     def create_rotation_matrix(probe_points, probe_heights):
-        """ This method was based on code from Marlin, Marlin_main.cpp
-        Copyright (C) 2011 Camiel Gubbels / Erik van der Zalm """
+        """ http://math.stackexchange.com/a/476311 """
         if len(probe_points) == 3:
-            P0 = np.array([probe_points[0]["X"]/1000, probe_points[0]["Y"]/1000, probe_heights[0]])
-            P1 = np.array([probe_points[1]["X"]/1000, probe_points[1]["Y"]/1000, probe_heights[1]])
-            P2 = np.array([probe_points[2]["X"]/1000, probe_points[2]["Y"]/1000, probe_heights[2]])
+            P0 = np.array([probe_points[0]["X"]/1000.0, probe_points[0]["Y"]/1000.0, probe_heights[0]/1000.0])
+            P1 = np.array([probe_points[1]["X"]/1000.0, probe_points[1]["Y"]/1000.0, probe_heights[1]/1000.0])
+            P2 = np.array([probe_points[2]["X"]/1000.0, probe_points[2]["Y"]/1000.0, probe_heights[2]/1000.0])
         else:
             # Add Z (height) to the probe points
             for k, v in enumerate(probe_points):
                 probe_points[k]["X"] /= 1000.0
                 probe_points[k]["Y"] /= 1000.0
-                probe_points[k]["Z"] = probe_heights[k]
+                probe_points[k]["Z"] = probe_heights[k]/1000.0
 
             (P0, P1, P2) = BedCompensation.create_plane_from_points(probe_points)
+        
+        # calculate the bed normal vector
         P10 = BedCompensation.normalize(P0-P1)
         P21 = BedCompensation.normalize(P2-P1)
-        cross = BedCompensation.normalize(np.cross(P10, P21))
-        plane = np.array([cross[0], cross[1], np.abs(cross[2])])
-        return BedCompensation.create_look_at(plane)
+        bed_normal = BedCompensation.normalize(np.cross(P10, P21))
 
-    @staticmethod
-    def create_look_at(target):
-        """ This method was based on code from Marlin, vector_3.cpp
-        Copyright (c) 2012 Lars Brubaker. All right reserved. """
-        z_row = BedCompensation.normalize(target)        
-        x_row = BedCompensation.normalize(np.array([1, 0, -target[0]/target[2]]))
-        y_row = BedCompensation.normalize(np.cross(z_row, x_row))
-
-        return np.matrix([x_row, y_row, z_row])
+        # calculate a normal vector in world space in the same direction as the bed normal
+        ideal_normal = np.array([0.0, 0.0, np.sign(bed_normal[2])])
+        
+        # calculate the rotation matrix that will align the ideal normal
+        # with the bed normal
+        v = np.cross(ideal_normal, bed_normal)
+        ssc = np.array([[0.0, -v[2], v[1]],
+                        [v[2], 0.0, -v[0]],
+                        [-v[1], v[0], 0.0]])
+        
+        R = np.eye(3) + ssc + ssc**2*(1.0 - np.dot(ideal_normal, bed_normal))/(np.linalg.norm(v)**2)
+        
+        return R
 
     @staticmethod
     def normalize(vec):
@@ -99,4 +102,18 @@ class BedCompensation:
         P2 = np.array([(max(x)-min(x))/2.0, max(y), coeffs[0]+coeffs[1]*(max(x)-min(x))/2.0+coeffs[2]*max(y)])
 
         return (P0, P1, P2)
+        
+if __name__ == "__main__":
+    probe_points = [{'Y': 100.0, 'X': 0.0, 'Z': 0}, 
+                    {'Y': -50.0, 'X': -86.6, 'Z': 0}, 
+                    {'Y': -50.0, 'X': 86.6, 'Z': 0}]
+    probe_heights = [-10.0, 0.0, 0.0]
+    
+    R = BedCompensation.create_rotation_matrix(probe_points, probe_heights)
+    
+    test_point_0 = np.array([0.0, 0.0, 1.0])
+    
+    print np.dot(R, test_point_0)
+
+    
 
