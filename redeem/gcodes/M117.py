@@ -19,3 +19,7 @@ class M117(GCodeCommand):
 
     def get_description(self):
         return "Send a message to a connected display"
+
+    def get_long_description(self):
+        return ("Use 'M117 message' to send a message to a connected display. "
+                "Typically this will be a Manga Screen or similar.")

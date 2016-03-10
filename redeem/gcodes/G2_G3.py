@@ -52,8 +52,8 @@ class G2(GCodeCommand):
         self.printer.path_planner.add_path(path)
    
     def get_description(self):
-        return "Control the printer head position as well as the currently " \
-               "selected tool."
+        return ("Clockwise arc (experimental, not tested) "
+               "")
 
     def is_buffered(self):
         return True
@@ -72,4 +72,8 @@ class G3(G2):
         # Add the path. This blocks until the path planner has capacity
         self.printer.path_planner.add_path(path)
 
+
+    def get_description(self):
+        return ("Counter-clockwise arc (experimental, not tested) "
+               "")
 

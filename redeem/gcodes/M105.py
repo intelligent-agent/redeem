@@ -45,5 +45,12 @@ class M105(GCodeCommand):
     def get_description(self):
         return "Get extruder temperature"
 
+    def get_long_description(self):
+        return ("Gets the current extruder temperatures, power "
+                "and cold end temperatures.  "
+                "Extruders have prefix T, cold endsa have prefix C, "
+                "power has prefix @")
+
+
     def is_buffered(self):
         return False
