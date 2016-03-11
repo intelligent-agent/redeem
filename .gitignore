@@ -26,3 +26,4 @@ PathPlanner/PathPlanner/PathPlannerNative.py
 dist/
 Redeem.egg-info/
 build/
+sftp-config.json

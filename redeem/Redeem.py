@@ -38,8 +38,7 @@ import sys
 
 from Mosfet import Mosfet
 from Stepper import *
-from Chart import *
-from Thermistor import Thermistor
+from TemperatureSensor import *
 from Fan import Fan
 from Servo import Servo
 from EndStop import EndStop
@@ -246,11 +245,8 @@ class Redeem:
         for i, path in enumerate(paths):
             self.printer.cold_ends.append(ColdEnd(path, "ds18b20-"+str(i)))
             logging.info("Found Cold end "+str(i)+" on " + path)
-        
-        # load temperature charts
-        temperature_charts.load(printer.config.get("System", "data_path"))
             
-        # Make Mosfets, thermistors and extruders
+        # Make Mosfets, temperature sensors and extruders
         heaters = ["E", "H", "HBP"]
         if self.printer.config.reach_revision:
             heaters.extend(["A", "B", "C"])
@@ -260,9 +256,13 @@ class Redeem:
             self.printer.mosfets[e] = Mosfet(channel)
             # Thermistors
             adc = self.printer.config.get("Heaters", "path_adc_"+e)
-            chart = self.printer.config.get("Heaters", "temp_chart_"+e)
+            if not self.printer.config.has_option("Heaters", "sensor_"+e):
+                sensor = self.printer.config.get("Heaters", "temp_chart_"+e)
+                logging.warning("Deprecated config option temp_chart_"+e+" use sensor_"+e+" instead.")
+            else:
+                sensor = self.printer.config.get("Heaters", "sensor_"+e)
             resistance = self.printer.config.getfloat("Heaters", "resistance_"+e)
-            self.printer.thermistors[e] = Thermistor(adc, "MOSFET "+e, chart, resistance)
+            self.printer.thermistors[e] = TemperatureSensor(adc, 'MOSFET '+e, sensor)
             self.printer.thermistors[e].printer = printer
 
             # Extruders
