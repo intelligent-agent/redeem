@@ -43,4 +43,6 @@ class M115(GCodeCommand):
         return "Get Firmware Version and Capabilities"
 
     def get_long_description(self):
-        return "Get Firmware Version and Capabilities"
+        return ("Get Firmware Version and Capabilities"
+                "Will return the version of Redeem running, "
+                "the machine type and the extruder count. ")
