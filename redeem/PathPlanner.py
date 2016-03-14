@@ -107,6 +107,8 @@ class PathPlanner:
                     master_index = Path.axis_to_index(master)
                     slave_index = Path.axis_to_index(slave)
                     self.native_planner.addSlave(int(master_index), int(slave_index))
+                    logging.debug("Axis " + str(slave_index) + " is slaved to axis " + str(master_index))
+                    
             
         self.native_planner.setBacklashCompensation(tuple(Path.backlash_compensation));
         
@@ -332,6 +334,9 @@ class PathPlanner:
         
         self.printer.ensure_steppers_enabled()
         
+        # save the starting position
+        start = self.get_current_pos()
+        
         # calculate how many steps the requested z movement will require
         steps = np.ceil(z*Path.steps_pr_meter[2])
         z_dist = steps/Path.steps_pr_meter[2]
@@ -371,7 +376,13 @@ class PathPlanner:
         self.add_path(path)
         self.wait_until_done()
         
-        return -steps/Path.steps_pr_meter[2]
+        # reset position back to  where we actually are
+        path = G92Path(start)
+        
+        self.add_path(path)
+        self.wait_until_done()
+        
+        return -z_dist
         
     def update_autolevel_matrix(self, probe_points, probe_heights):
         """
