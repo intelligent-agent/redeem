@@ -123,7 +123,6 @@ void PathPlanner::clearSyncEvent(){
   PyEval_RestoreThread(_save);
 }
 
-
 void PathPlanner::queueMove(std::vector<FLOAT_T> startPos, std::vector<FLOAT_T> endPos, 
 			    FLOAT_T speed, FLOAT_T accel, 
 			    bool cancelable, bool optimize, 
@@ -219,9 +218,9 @@ void PathPlanner::queueMove(std::vector<FLOAT_T> startPos, std::vector<FLOAT_T> 
   // handle any slaving activity
   handleSlaves(startPos, endPos);
 
-  // LOG("Preprocessing done:\n");
+  // LOG("MOVE COMMAND:\n");
   // for (int i = 0; i<NUM_AXES; ++i) {
-  //   LOG("AXIS " << i << ": start = " << startPos[i] << ", end = " << endPos[i] << "\n");
+  //   LOG("AXIS " << i << ": start = " << startPos[i] << ", end = " << state[i] << "\n");
   // }
     	
   ////////////////////////////////////////////////////////////////////
