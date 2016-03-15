@@ -86,7 +86,7 @@ class Path {
   std::atomic_uint_fast32_t flags;
 	
   int primaryAxis;                /// < Axis with longest move. 
-  unsigned long timeInTicks;      /// < Time for completing a move. 
+  unsigned long long timeInTicks; /// < Time for completing a move. 
   unsigned int dir;               /// < Direction of movement. 1 = X+, 2 = Y+, 4= Z+, values can be combined.
   std::vector<int> delta;         /// < Steps we want to move.
   std::vector<int> error;         /// < Error calculation for Bresenham algorithm

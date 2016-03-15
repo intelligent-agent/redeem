@@ -234,8 +234,8 @@ void PathPlanner::queueMove(std::vector<FLOAT_T> startPos, std::vector<FLOAT_T> 
 
   unsigned int linesQueued = 0;
   unsigned int linesCacheRemaining = 0;
-  long linesTicksRemaining = 0;
-  long linesTicksQueued = 0;
+  long long linesTicksRemaining = 0;
+  long long linesTicksQueued = 0;
 
   // wait for the worker
   if(linesCacheRemaining == 0 || linesTicksRemaining == 0){
