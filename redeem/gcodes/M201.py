@@ -8,6 +8,7 @@ License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 """
 
 from GCodeCommand import GCodeCommand
+import logging
 try:
     from redeem.Path import Path
 except ImportError:
@@ -31,14 +32,10 @@ class M201(GCodeCommand):
             # Delta should have same accelerations on all axis
             t[1] = t[0]
             t[2] = t[0]
-
-        # Setup 3d movement accel
-        self.set_acceleration(tuple(t[:3]))
-
-        # Setup the extruder accel
-        for i in range(Path.NUM_AXES - 3):
-            e = self.printer.path_planner.native_planner.getExtruder(i)
-            self.set_extruder_acceleration(e,t[i + 3])
+            
+        logging.debug("M201: acceleration = "+str(t))
+            
+        self.printer.path_planner.native_planner.setAcceleration(t)
 
     def get_description(self):
         return "Set print acceleration"
@@ -50,29 +47,5 @@ class M201(GCodeCommand):
 
     def is_buffered(self):
         return False
-
-    def set_acceleration(self, t):
-        self.printer.path_planner.native_planner.setPrintAcceleration(t)
-
-    def set_extruder_acceleration(self, e, accel):
-        e.setPrintAcceleration(accel)
     
-
-
-
-class M202(M201):
-    def set_acceleration(self, t):
-        self.printer.path_planner.native_planner.setTravelAcceleration(t)
-
-    def set_extruder_acceleration(self,e, accel):
-        # We do nothing for the extruder for travel moves
-        pass 
-
-    def get_description(self):
-        return "Set travel acceleration"
-
-    def get_long_description(self):
-        return ("Sets the acceleration that axes can do in units/second^2 for travel moves." 
-               " For consistency with the rest of G Code movement " 
-                "this should be in units/(minute^2) Example: M201 X1000 Y1000 Z100 E2000")
  
