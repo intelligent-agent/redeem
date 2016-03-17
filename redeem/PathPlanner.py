@@ -101,7 +101,7 @@ class PathPlanner:
             
         self.native_planner.enableSlaves(Path.has_slaves)
         if Path.has_slaves:
-            for master in "XYZEHABC":
+            for master in Path.AXES:
                 slave = Path.slaves[master]
                 if slave:
                     master_index = Path.axis_to_index(master)
