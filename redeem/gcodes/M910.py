@@ -9,12 +9,6 @@ License: GPLv3
 """
 
 from GCodeCommand import GCodeCommand
-try:
-    from Stepper import Stepper
-    from Path import Path
-except ImportError:
-    from redeem.Stepper import Stepper
-    from redeem.Path import Path
 import logging
 
 class M910(GCodeCommand):

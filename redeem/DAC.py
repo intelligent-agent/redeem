@@ -27,7 +27,6 @@ from PWM import PWM
 
 import time
 import logging
-from Path import Path
 
 # Load SPI module
 try:

@@ -9,12 +9,6 @@ License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 """
 
 from GCodeCommand import GCodeCommand
-try:
-    from Stepper import Stepper
-    from Path import Path
-except ImportError:
-    from redeem.Stepper import Stepper
-    from redeem.Path import Path
 import logging
 
 class M909(GCodeCommand):
@@ -24,7 +18,7 @@ class M909(GCodeCommand):
             self.printer.steppers[g.token_letter(i)].set_microstepping(int(g.token_value(i)))
         # Update the steps pr m in the native planner. 
         self.printer.path_planner.update_steps_pr_meter()
-        logging.debug("Updated steps pr meter to "+str(Path.steps_pr_meter))
+        logging.debug("Updated steps pr meter to "+str(self.printer.steps_pr_meter))
 
     def get_description(self):
         return "Set stepper microstepping settings"

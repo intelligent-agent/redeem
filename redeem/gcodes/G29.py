@@ -45,7 +45,7 @@ class G29(GCodeCommand):
         if not g.has_letter("S"):
             # Update the bed compensation matrix
             self.printer.path_planner.update_autolevel_matrix(self.printer.probe_points, self.printer.probe_heights)
-            logging.info("Updated bed compensation matrix: \n"+str(Path.matrix_bed_comp))
+            logging.info("Updated bed compensation matrix: \n"+str(self.printer.matrix_bed_comp))
 
 
     def get_description(self):

@@ -62,6 +62,9 @@ class PathPlanner:
             self.__init_path_planner()
         else:
             self.native_planner = None
+            
+        # do some checking of values
+        self.printer.check_values()
 
     def __init_path_planner(self):
         self.native_planner = PathPlannerNative(int(self.printer.move_cache_size))
@@ -74,24 +77,24 @@ class PathPlanner:
 
         self.native_planner.initPRU(fw0, fw1)
         
-        self.native_planner.setAxisStepsPerMeter(tuple(Path.steps_pr_meter))
-        self.native_planner.setMaxSpeeds(tuple(Path.max_speeds))	
-        self.native_planner.setMinSpeeds(tuple(Path.min_speeds))	
-        self.native_planner.setAcceleration(tuple(Path.acceleration))
-        self.native_planner.setJerks(tuple(Path.jerks))
+        self.native_planner.setAxisStepsPerMeter(tuple(self.printer.steps_pr_meter))
+        self.native_planner.setMaxSpeeds(tuple(self.printer.max_speeds))	
+        self.native_planner.setMinSpeeds(tuple(self.printer.min_speeds))	
+        self.native_planner.setAcceleration(tuple(self.printer.acceleration))
+        self.native_planner.setJerks(tuple(self.printer.jerks))
         
         self.native_planner.setPrintMoveBufferWait(int(self.printer.print_move_buffer_wait))
         self.native_planner.setMinBufferedMoveTime(int(self.printer.min_buffered_move_time))
         self.native_planner.setMaxBufferedMoveTime(int(self.printer.max_buffered_move_time))
         
-        self.native_planner.setSoftEndstopsMin(tuple(Path.soft_min))
-        self.native_planner.setSoftEndstopsMax(tuple(Path.soft_max))
+        self.native_planner.setSoftEndstopsMin(tuple(self.printer.soft_min))
+        self.native_planner.setSoftEndstopsMax(tuple(self.printer.soft_max))
         
-        self.native_planner.setBedCompensationMatrix(tuple(Path.matrix_bed_comp.ravel()))
+        self.native_planner.setBedCompensationMatrix(tuple(self.printer.matrix_bed_comp.ravel()))
         
         self.native_planner.setMaxPathLength(self.printer.max_length)
         
-        self.native_planner.setAxisConfig(Path.axis_config)
+        self.native_planner.setAxisConfig(self.printer.axis_config)
         
         self.native_planner.delta_bot.setMainDimensions(Delta.Hez, Delta.L, Delta.r)
         self.native_planner.delta_bot.setEffectorOffset(Delta.Ae, Delta.Be, Delta.Ce)
@@ -99,20 +102,20 @@ class PathPlanner:
         self.native_planner.delta_bot.setTangentError(Delta.A_tangential, Delta.B_tangential, Delta.C_tangential)
         self.native_planner.delta_bot.recalculate()
             
-        self.native_planner.enableSlaves(Path.has_slaves)
-        if Path.has_slaves:
-            for master in Path.AXES:
-                slave = Path.slaves[master]
+        self.native_planner.enableSlaves(self.printer.has_slaves)
+        if self.printer.has_slaves:
+            for master in Printer.AXES:
+                slave = self.printer.slaves[master]
                 if slave:
-                    master_index = Path.axis_to_index(master)
-                    slave_index = Path.axis_to_index(slave)
+                    master_index = Printer.axis_to_index(master)
+                    slave_index = Printer.axis_to_index(slave)
                     self.native_planner.addSlave(int(master_index), int(slave_index))
                     logging.debug("Axis " + str(slave_index) + " is slaved to axis " + str(master_index))
                     
             
-        self.native_planner.setBacklashCompensation(tuple(Path.backlash_compensation));
+        self.native_planner.setBacklashCompensation(tuple(self.printer.backlash_compensation));
         
-        self.native_planner.setState(tuple(Path.MAX_AXES*[0]))
+        self.native_planner.setState(tuple(Printer.MAX_AXES*[0]))
         
         self.printer.plugins.path_planner_initialized(self)
 
@@ -124,7 +127,11 @@ class PathPlanner:
 
     def update_steps_pr_meter(self):
         """ Update steps pr meter from the path """
-        self.native_planner.setAxisStepsPerMeter(tuple(Path.steps_pr_meter))
+        self.native_planner.setAxisStepsPerMeter(tuple(self.printer.steps_pr_meter))
+        
+    def update_backlash(self):
+        """ Update steps pr meter from the path """
+        self.native_planner.setBacklashCompensation(tuple(self.printer.backlash_compensation));
 
     def get_current_pos(self, mm=False):
         """ Get the current pos as a dict """
@@ -134,7 +141,7 @@ class PathPlanner:
             scale = 1.0
         state = self.native_planner.getState()
         pos = {}
-        for index, axis in enumerate(Path.AXES[:Path.MAX_AXES]):
+        for index, axis in enumerate(Printer.AXES[:Printer.MAX_AXES]):
             pos[axis] = state[index]*scale
         return pos
 
@@ -193,7 +200,7 @@ class PathPlanner:
         path_center = {}
         path_zero = {}
 
-        speed = Path.home_speed[0] # TODO: speed for each axis
+        speed = self.printer.home_speed[0] # TODO: speed for each axis
         accel = self.printer.acceleration[0] # TODO: accel for each axis
 
         for a in axis:
@@ -201,7 +208,7 @@ class PathPlanner:
                 logging.debug("Skipping homing for " + str(a))
                 continue
             logging.debug("Doing homing for " + str(a))
-            if Path.home_speed[Path.axis_to_index(a)] < 0:
+            if self.printer.home_speed[Printer.axis_to_index(a)] < 0:
                 # Search to positive ends
                 path_search[a] = self.travel_length[a]
                 path_center[a] = self.center_offset[a]
@@ -210,12 +217,12 @@ class PathPlanner:
                 path_search[a] = -self.travel_length[a]
                 path_center[a] = -self.center_offset[a]
 
-            backoff_length = -np.sign(path_search[a]) * Path.home_backoff_offset[Path.axis_to_index(a)]
+            backoff_length = -np.sign(path_search[a]) * self.printer.home_backoff_offset[Printer.axis_to_index(a)]
             path_backoff[a] = backoff_length;
             path_fine_search[a] = -backoff_length * 1.2;
             
-            speed = min(abs(speed), abs(Path.home_speed[Path.axis_to_index(a)]))
-            fine_search_speed =  min(abs(speed), abs(Path.home_backoff_speed[Path.axis_to_index(a)]))
+            speed = min(abs(speed), abs(self.printer.home_speed[Printer.axis_to_index(a)]))
+            fine_search_speed =  min(abs(speed), abs(self.printer.home_backoff_speed[Printer.axis_to_index(a)]))
                     
         logging.debug("Search: %s" % path_search)
         logging.debug("Backoff to: %s" % path_backoff)
@@ -257,12 +264,12 @@ class PathPlanner:
         
         path_home = {}
         
-        speed = Path.home_speed[0]
+        speed = self.printer.home_speed[0]
         accel = self.printer.acceleration[0]
 
         for a in axis:
             path_home[a] = self.home_pos[a]
-            speed = min(abs(speed), abs(Path.home_speed[Path.axis_to_index(a)]))
+            speed = min(abs(speed), abs(self.printer.home_speed[Printer.axis_to_index(a)]))
             
         logging.debug("Home: %s" % path_home)
             
@@ -286,17 +293,17 @@ class PathPlanner:
 
         # Home axis for core X,Y and H-Belt independently to avoid hardware
         # damages.
-        if Path.axis_config == Path.AXIS_CONFIG_CORE_XY or \
-                        Path.axis_config == Path.AXIS_CONFIG_H_BELT:
+        if self.printer.axis_config == Printer.AXIS_CONFIG_CORE_XY or \
+                        self.printer.axis_config == Printer.AXIS_CONFIG_H_BELT:
             for a in axis:
                 self._home_internal(a)
         # For delta, switch to cartesian when homing
-        elif Path.axis_config == Path.AXIS_CONFIG_DELTA:
+        elif self.printer.axis_config == Printer.AXIS_CONFIG_DELTA:
             if 0 < len({"X", "Y", "Z"}.intersection(set(axis))) < 3:
                 axis = list(set(axis).union({"X", "Y", "Z"}))	# Deltas must home all axes.
-            Path.axis_config = Path.AXIS_CONFIG_XY
+            self.printer.axis_config = Printer.AXIS_CONFIG_XY
             path_center, speed = self._home_internal(axis)
-            Path.axis_config = Path.AXIS_CONFIG_DELTA
+            self.printer.axis_config = Printer.AXIS_CONFIG_DELTA
 
             # homing was performed in cartesian mode
             # need to convert back to delta
@@ -338,8 +345,8 @@ class PathPlanner:
         start = self.get_current_pos()
         
         # calculate how many steps the requested z movement will require
-        steps = np.ceil(z*Path.steps_pr_meter[2])
-        z_dist = steps/Path.steps_pr_meter[2]
+        steps = np.ceil(z*self.printer.steps_pr_meter[2])
+        z_dist = steps/self.printer.steps_pr_meter[2]
         logging.debug("Steps total: "+str(steps))
         
         # select the relative end point
@@ -364,7 +371,7 @@ class PathPlanner:
 
         # Calculate how many steps the Z axis moved
         steps -= steps_remaining
-        z_dist = steps/Path.steps_pr_meter[2]
+        z_dist = steps/self.printer.steps_pr_meter[2]
         
         # make a move to take us back to where we started
         end   = {"Z":z_dist}
@@ -393,9 +400,9 @@ class PathPlanner:
         logging.debug("Probe points = " + str(probe_points))
         logging.debug("Probe heights = " + str(probe_heights))
         
-        Path.matrix_bed_comp = BedCompensation.create_rotation_matrix(probe_points, probe_heights)
+        self.printer.matrix_bed_comp = BedCompensation.create_rotation_matrix(probe_points, probe_heights)
         
-        self.native_planner.setBedCompensationMatrix(tuple(Path.matrix_bed_comp.ravel()))
+        self.native_planner.setBedCompensationMatrix(tuple(self.printer.matrix_bed_comp.ravel()))
         
         return
 
@@ -424,9 +431,9 @@ class PathPlanner:
             self.printer.ensure_steppers_enabled() 
             
             optimize = new.movement != Path.RELATIVE
-            tool_axis = Path.axis_to_index(self.printer.current_tool)
+            tool_axis = Printer.axis_to_index(self.printer.current_tool)
             
-            self.native_planner.setAxisConfig(int(Path.axis_config))
+            self.native_planner.setAxisConfig(int(self.printer.axis_config))
             
             self.native_planner.queueMove(tuple(new.start_pos),
                                       tuple(new.end_pos), 
@@ -448,14 +455,15 @@ class PathPlanner:
         """
         TODO: does this function do anything? Should it be setting the tool axis?
         """
-        if ext_nr in range(Path.MAX_AXES-3):
+        if ext_nr in range(Printer.MAX_AXES-3):
             logging.debug("Selecting "+str(ext_nr))
-            #Path.steps_pr_meter[3] = self.printer.steppers[
-            #        Path.index_to_axis(ext_nr+3)
+            #Printer.steps_pr_meter[3] = self.printer.steppers[
+            #        Printer.index_to_axis(ext_nr+3)
             #        ].get_steps_pr_meter()
             #self.native_planner.setExtruder(ext_nr)
 
-
+"""
+# needs updating after the changes to Path and Printer
 if __name__ == '__main__':
     import numpy as np
     import os
@@ -468,7 +476,7 @@ if __name__ == '__main__':
     from Stepper import Stepper, Stepper_00B1
     from PruFirmware import PruFirmware
 
-    Path.steps_pr_meter = np.array(
+    Printer.steps_pr_meter = np.array(
         [3.125 * (2 ** 4) * 1000.0, 3.125 * (2 ** 4) * 1000.0,
          133.33333333 * (2 ** 4) * 1000.0, 33.4375 * (2 ** 4) * 1000.0,
          33.4375 * (2 ** 4) * 1000.0])
@@ -506,7 +514,7 @@ if __name__ == '__main__':
     revision = printer.config.replicape_revision
     
     dirname = os.path.dirname(os.path.realpath(__file__))
-    Path.set_axes(5)
+    Printer.set_axes(5)
 
     path_planner = PathPlanner(printer, None)
 
@@ -525,3 +533,4 @@ if __name__ == '__main__':
     path_planner.wait_until_done()
 
     path_planner.force_exit()
+"""
