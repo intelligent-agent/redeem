@@ -9,10 +9,6 @@ License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 
 from GCodeCommand import GCodeCommand
 import logging
-try:
-    from redeem.Path import Path
-except ImportError:
-    from Path import Path
 
 
 class M201(GCodeCommand):
@@ -22,13 +18,13 @@ class M201(GCodeCommand):
         t = self.printer.acceleration[:];
       
         for i in range(g.num_tokens()):
-            axis = Path.axis_to_index(g.token_letter(i))
+            axis = self.printer.axis_to_index(g.token_letter(i))
             t[axis] = float(g.token_value(i)) / 3600.0
 
-        if Path.axis_config == Path.AXIS_CONFIG_CORE_XY or Path.axis_config == Path.AXIS_CONFIG_H_BELT:
+        if self.printer.axis_config == self.printer.AXIS_CONFIG_CORE_XY or self.printer.axis_config == self.printer.AXIS_CONFIG_H_BELT:
             # x and y should have same accelerations for lines to be straight
             t[1] = t[0] 
-        elif Path.axis_config == Path.AXIS_CONFIG_DELTA:
+        elif self.printer.axis_config == self.printer.AXIS_CONFIG_DELTA:
             # Delta should have same accelerations on all axis
             t[1] = t[0]
             t[2] = t[0]

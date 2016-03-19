@@ -27,6 +27,16 @@ from Delta import Delta
 
 class Printer:
     """ A command received from pronterface or whatever """
+    
+    AXES = "XYZEHABC"
+    axes_zipped = ["X", "Y", "Z", "E", "H", "A", "B", "C"]
+    MAX_AXES = 8
+    NUM_AXES = 5
+    
+    AXIS_CONFIG_XY = 0
+    AXIS_CONFIG_H_BELT = 1
+    AXIS_CONFIG_CORE_XY = 2
+    AXIS_CONFIG_DELTA = 3
 
     def __init__(self):
         self.steppers = {}
@@ -44,6 +54,7 @@ class Printer:
         self.factor = 1.0
         self.extrude_factor = 1.0
         self.movement = Path.ABSOLUTE
+        self.axis_config = self.AXIS_CONFIG_XY
         self.feed_rate = 0.5
         self.accel = 0.5
         self.current_tool = "E"
@@ -73,7 +84,42 @@ class Printer:
         self.backlash_state         = np.zeros(self.num_axes)
         self.soft_min               = -np.ones(self.num_axes)*1000.0
         self.soft_max               = np.ones(self.num_axes)*1000.0
-        self.slaves                 = {key: "" for key in Path.AXES[:self.num_axes]}
+        self.slaves                 = {key: "" for key in self.AXES[:self.num_axes]}
+        
+        # bed compensation
+        matrix_bed_comp = np.eye((3))
+    
+        # By default, do not check for slaves
+        has_slaves = False
+        
+        return
+        
+    def add_slave(self, master, slave):
+        ''' Make an axis copy the movement of another. 
+        the slave will get the same position as the axis'''
+        self.slaves[master] = slave
+        self.has_slaves = True
+        return
+        
+    def check_values(self):
+        """
+        make sure that values are valid
+        """
+        
+        # check min speed
+        for axis in self.steppers:
+            stepper = self.steppers[axis]
+            if stepper.in_use:
+                idx = Printer.axis_to_index(axis)
+                steps_per_second = self.min_speeds[idx]*self.steps_pr_meter[idx]
+                logging.debug("Axis {0} min steps/s = {1}".format(axis, steps_per_second))
+                if steps_per_second < 1:
+                    err = "minimum speed of axis {0} is too low. Increase min_speed_{0}, microstepping_{0}, or adjust steps_pr_mm_{0}".format(axis.lower())
+                    logging.warning(err)
+                    raise RuntimeError(err)
+                
+                
+        return
 
     def ensure_steppers_enabled(self):
         """
@@ -132,9 +178,16 @@ class Printer:
 
     def save_bed_compensation_matrix(self):
         mat = "\n"
-        for idx, i in enumerate(Path.matrix_bed_comp):
+        for idx, i in enumerate(self.matrix_bed_comp):
             mat += "\t"+", ".join([str(j) for j in i.tolist()[0]])+("" if idx == 2 else ",\n")
         # Only update if they are different
         if mat.replace('\t', '') != self.config.get('Geometry', 'bed_compensation_matrix'):
             self.config.set('Geometry', 'bed_compensation_matrix', mat)        
 
+    @staticmethod
+    def axis_to_index(axis):
+        return Printer.AXES.index(axis)
+
+    @staticmethod
+    def index_to_axis(index):
+        return Printer.AXES[index]

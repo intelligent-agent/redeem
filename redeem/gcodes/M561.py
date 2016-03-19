@@ -12,16 +12,12 @@ License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 from GCodeCommand import GCodeCommand
 import numpy as np
 import logging
-try:
-    from Path import Path
-except ImportError:
-    from redeem.Path import Path
 
 
 class M561(GCodeCommand):
 
     def execute(self, g):
-        Path.matrix_bed_comp = np.identity(3)
+        self.printer.matrix_bed_comp = np.identity(3)
 
     def get_description(self):
         return "Reset bed level matrix to identity"

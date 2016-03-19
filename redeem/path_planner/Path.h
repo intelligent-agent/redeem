@@ -96,7 +96,7 @@ class Path {
   FLOAT_T invFullSpeed;           /// < 1.0/fullSpeed for fatser computation
   FLOAT_T accelerationDistance2;  /// < Real 2.0*distanceÜacceleration mm²/s²
   FLOAT_T maxJunctionSpeed;       /// < Max. junction speed between this and next segment
-  FLOAT_T startSpeed;             /// < Staring speed in m/s
+  FLOAT_T startSpeed;             /// < Starting speed in m/s
   FLOAT_T endSpeed;               /// < Exit speed in m/s
   FLOAT_T minSpeed;
   FLOAT_T distance;
@@ -104,7 +104,7 @@ class Path {
   unsigned int accelSteps;        /// < How much steps does it take, to reach the plateau.
   unsigned int decelSteps;        /// < How much steps does it take, to reach the end speed.
   unsigned int accelerationPrim;  /// < Acceleration along primary axis in steps/s²
-  unsigned int fAcceleration;            /// < accelerationPrim*262144/F_CPU
+  unsigned int fAcceleration;     /// < accelerationPrim*262144/F_CPU
   FLOAT_T vMax;                   /// < Maximum reached speed in steps/s.
   FLOAT_T vStart;                 /// < Starting speed in steps/s.
   FLOAT_T vEnd;                   /// < End speed in steps/s

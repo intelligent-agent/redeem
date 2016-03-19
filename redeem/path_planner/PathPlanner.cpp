@@ -807,7 +807,8 @@ void PathPlanner::run() {
 	if(vMaxReached>cur->vMax) 
 	  vMaxReached = cur->vMax;
 	unsigned long v = vMaxReached;
-	interval = F_CPU/(v);
+	if (v > 0)
+	  interval = F_CPU/(v);
 	timer_accel+=interval;
       }
       else if (cur->moveDecelerating(stepNumber)){     // time to slow down
@@ -820,8 +821,8 @@ void PathPlanner::run() {
 	  if (v < cur->vEnd)
 	    v = cur->vEnd; // extra steps at the end of desceleration due to rounding erros
 	}
-				
-	interval = F_CPU/(v);
+	if (v > 0)
+	  interval = F_CPU/(v);
 	timer_decel += interval;
       }
       else{ // full speed reached

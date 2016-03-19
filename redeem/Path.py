@@ -25,30 +25,8 @@ import numpy as np
 import logging
 
 class Path:
-    AXES = "XYZEHABC"
-    MAX_AXES = 8
-    NUM_AXES = 5
-
-    # Variables set from config.
-    max_speeds             = [0]*MAX_AXES
-    min_speeds             = [0]*MAX_AXES
-    jerks                  = [0]*MAX_AXES
-    acceleration           = [0]*MAX_AXES
-    home_speed             = [0]*MAX_AXES
-    home_backoff_speed     = [0]*MAX_AXES
-    home_backoff_offset    = [0]*MAX_AXES
-    steps_pr_meter         = [1]*MAX_AXES
-    backlash_compensation  = [0]*MAX_AXES
-    soft_min               = [0]*MAX_AXES
-    soft_max               = [0]*MAX_AXES
-    slaves                 = {key: "" for key in AXES}
-
-    axes_zipped = ["X", "Y", "Z", "E", "H", "A", "B", "C"]
-
-    AXIS_CONFIG_XY = 0
-    AXIS_CONFIG_H_BELT = 1
-    AXIS_CONFIG_CORE_XY = 2
-    AXIS_CONFIG_DELTA = 3
+    
+    printer = None
 
     # Different types of paths
     ABSOLUTE = 0
@@ -59,22 +37,6 @@ class Path:
 
     # Numpy array type used throughout    
     DTYPE = np.float64
-
-    # Default config is normal cartesian XY
-    axis_config = AXIS_CONFIG_XY 
-    
-    # bed compensation
-    matrix_bed_comp = np.eye((3))
-    
-    # By default, do not check for slaves
-    has_slaves = False
-
-    @staticmethod
-    def add_slave(master, slave):
-        ''' Make an axis copy the movement of another. 
-        the slave will get the same position as the axis'''
-        Path.slaves[master] = slave
-        Path.has_slaves = True
     
     def __init__(self, axes, speed, accel, cancelable=False, use_bed_matrix=True, use_backlash_compensation=True, enable_soft_endstops=True):
         """ The axes of evil, the feed rate in m/s and ABS or REL """
@@ -90,6 +52,7 @@ class Path:
         self.speeds = None
         self.start_pos = None
         self.end_pos = None
+        
 
     def is_G92(self):
         """ Special path, only set the global position on this """
@@ -171,14 +134,14 @@ class Path:
                         self.prev.ideal_end_pos[i], 
                         self.ideal_end_pos[i], 
                         num_segments
-                        ) for i in xrange(Path.MAX_AXES)]) 
+                        ) for i in xrange(self.printer.MAX_AXES)]) 
 
         # Update the X and Y positions
         for i, val in enumerate(vals):
             val[:2] = (X[i], Y[i])
         vals = np.delete(vals, 0, axis=0)
 
-        vec_segments = [dict(zip(Path.axes_zipped, list(val))) for val in vals]
+        vec_segments = [dict(zip(self.printer.axes_zipped, list(val))) for val in vals]
         path_segments = []
 
         for index, segment in enumerate(vec_segments):
@@ -200,14 +163,6 @@ class Path:
         """ The vector representation of this path segment """
         return "Path from " + str(self.start_pos) + " to " + str(self.end_pos)
 
-    @staticmethod
-    def axis_to_index(axis):
-        return Path.AXES.index(axis)
-
-    @staticmethod
-    def index_to_axis(index):
-        return Path.AXES[index]
-
 class AbsolutePath(Path):
     """ A path segment with absolute movement """
     def __init__(self, axes, speed, accel, cancelable=False, use_bed_matrix=True, use_backlash_compensation=True, enable_soft_endstops=True):
@@ -222,7 +177,7 @@ class AbsolutePath(Path):
 
         # Make the start, end and path vectors. 
         self.end_pos = np.copy(self.start_pos)
-        for index, axis in enumerate(Path.AXES):
+        for index, axis in enumerate(self.printer.AXES):
             if axis in self.axes:
                 self.end_pos[index] = self.axes[axis]
 
@@ -245,8 +200,8 @@ class RelativePath(Path):
         self.start_pos = prev.end_pos
 
         # Generate the vector
-        vec = np.zeros(Path.MAX_AXES, dtype=Path.DTYPE)
-        for index, axis in enumerate(Path.AXES):
+        vec = np.zeros(self.printer.MAX_AXES, dtype=Path.DTYPE)
+        for index, axis in enumerate(self.printer.AXES):
             if axis in self.axes:
                 vec[index] = self.axes[axis]
 
@@ -269,34 +224,12 @@ class G92Path(Path):
             self.end_pos = np.copy(prev.end_pos)
             prev.next = self
         else:
-            self.start_pos = np.zeros(Path.MAX_AXES, dtype=Path.DTYPE)
+            self.start_pos = np.zeros(self.printer.MAX_AXES, dtype=Path.DTYPE)
             self.end_pos = np.copy(self.start_pos)
 
-        for index, axis in enumerate(Path.AXES):
+        for index, axis in enumerate(self.printer.AXES):
             if axis in self.axes:
                 self.end_pos[index] = self.axes[axis]
 
-
-# Simple test procedure for G2
-if __name__ == '__main__':
-    import numpy as np
-    import os
-
-    logging.basicConfig(level=logging.DEBUG,
-                        format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
-                        datefmt='%m-%d %H:%M')
-
-    Path.set_axes(5)
-    Path.steps_pr_meter = np.ones(5)*10000
-    g92 = G92Path({})
-    g92.set_prev(None)
-
-    p0 = RelativePath({"Y": 0.01}, 1, 1) 
-    p0.set_prev(g92)
-
-    p = RelativePath({"X": 0.01}, 1, 1)
-    p.set_prev(p0)
-    for seg in p.get_arc_segments(0.1, 0.1):
-        print seg
     
 
