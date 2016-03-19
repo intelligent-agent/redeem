@@ -12,10 +12,6 @@ License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 from GCodeCommand import GCodeCommand
 import numpy as np
 import logging
-try:
-    from Path import Path
-except ImportError:
-    from redeem.Path import Path
 
 
 class M562(GCodeCommand):

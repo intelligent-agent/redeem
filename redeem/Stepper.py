@@ -23,7 +23,7 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
 
 import time
 import logging
-from Path import Path
+from Printer import Printer
 from DAC import DAC, PWM_DAC
 from ShiftRegister import ShiftRegister
 import Adafruit_BBIO.GPIO as GPIO
@@ -32,6 +32,8 @@ from Alarm import Alarm
 from Key_pin import Key_pin
 
 class Stepper(object):
+    
+    printer = None
 
     all_steppers = list()
     
@@ -165,9 +167,9 @@ class Stepper_00B1(Stepper):
         self.shift_reg.set_state(state,0xF0)
         self.mmPrStep    = 1.0/(self.steps_pr_mm*self.microsteps)
 
-        # update the Path class with new values
-        stepper_num = Path.axis_to_index(self.name)
-        Path.steps_pr_meter[stepper_num] = self.get_steps_pr_meter()
+        # update the Printer class with new values
+        stepper_num = self.printer.axis_to_index(self.name)
+        self.printer.steps_pr_meter[stepper_num] = self.get_steps_pr_meter()
         logging.debug("Updated stepper "+self.name+" to microstepping "+str(value)+" = "+str(self.microsteps))   
         self.microstepping = value
 
@@ -378,9 +380,9 @@ class Stepper_00A4(Stepper):
         #self.state = int("0b"+bin(self.state)[2:].rjust(8, '0')[:4]+bin(value)[2:].rjust(3, '0')+bin(self.state)[-1:], 2)
         self.mmPrStep    = 1.0/(self.steps_pr_mm*self.microsteps)
 
-        # update the Path class with new values
-        stepper_num = Path.axis_to_index(self.name)
-        Path.steps_pr_meter[stepper_num] = self.get_steps_pr_meter()
+        # update the Printer class with new values
+        stepper_num = self.printer.axis_to_index(self.name)
+        self.printer.steps_pr_meter[stepper_num] = self.get_steps_pr_meter()
         logging.debug("Updated stepper "+self.name+" to microstepping "+str(value)+" = "+str(self.microsteps))   
         self.update()
 

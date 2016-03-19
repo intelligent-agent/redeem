@@ -130,13 +130,13 @@ class Redeem:
             logging.warning("Oh no! No Replicape present!")
             self.revision = "00B3"
         # We set it to 5 axis by default
-        Path.NUM_AXES = 5
+        Printer.NUM_AXES = 5
         if self.printer.config.reach_revision:
             logging.info("Found Reach rev. "+self.printer.config.reach_revision)
         if self.printer.config.reach_revision == "00A0":
-            Path.NUM_AXES = 8
+            Printer.NUM_AXES = 8
         elif self.printer.config.reach_revision == "00B0":
-            Path.NUM_AXES = 7
+            Printer.NUM_AXES = 7
 
         if self.revision in ["00A4", "0A4A", "00A3"]:
             PWM.set_frequency(100)
@@ -156,7 +156,7 @@ class Redeem:
         printer.enable.set_disabled()
 
         # Init the Paths
-        Path.axis_config = printer.config.getint('Geometry', 'axis_config')
+        printer.axis_config = printer.config.getint('Geometry', 'axis_config')
 
         # Init the end stops
         EndStop.inputdev = self.printer.config.get("Endstops", "inputdev")
@@ -171,6 +171,7 @@ class Redeem:
             self.printer.end_stops[es].stops = self.printer.config.get('Endstops', 'end_stop_'+es+'_stops')
 
         # Init the 5 Stepper motors (step, dir, fault, DAC channel, name)
+        Stepper.printer = printer
         if self.revision == "00A3":
             printer.steppers["X"] = Stepper_00A3("GPIO0_27", "GPIO1_29", "GPIO2_4" , 0, "X")
             printer.steppers["Y"] = Stepper_00A3("GPIO1_12", "GPIO0_22", "GPIO2_5" , 1, "Y")
@@ -222,11 +223,11 @@ class Redeem:
             stepper.set_microstepping(printer.config.getint('Steppers', 'microstepping_' + name))
             stepper.set_decay(printer.config.getint("Steppers", "slow_decay_" + name))
             # Add soft end stops
-            Path.soft_min[Path.axis_to_index(name)] = printer.config.getfloat('Endstops', 'soft_end_stop_min_' + name)
-            Path.soft_max[Path.axis_to_index(name)] = printer.config.getfloat('Endstops', 'soft_end_stop_max_' + name)
+            printer.soft_min[Printer.axis_to_index(name)] = printer.config.getfloat('Endstops', 'soft_end_stop_min_' + name)
+            printer.soft_max[Printer.axis_to_index(name)] = printer.config.getfloat('Endstops', 'soft_end_stop_max_' + name)
             slave = printer.config.get('Steppers', 'slave_' + name)
             if slave:
-                Path.add_slave(name, slave)
+                printer.add_slave(name, slave)
                 logging.debug("Axis "+name+" has slave "+slave)
 
         # Commit changes for the Steppers
@@ -235,7 +236,7 @@ class Redeem:
         Stepper.printer = printer
 
         # Delta printer setup
-        if Path.axis_config == Path.AXIS_CONFIG_DELTA:
+        if printer.axis_config == Printer.AXIS_CONFIG_DELTA:
             opts = ["Hez", "L", "r", "Ae", "Be", "Ce", "A_radial", "B_radial", "C_radial", "A_tangential", "B_tangential", "C_tangential" ]
             for opt in opts:
                 Delta.__dict__[opt] = printer.config.getfloat('Delta', opt)
@@ -389,7 +390,7 @@ class Redeem:
                 r = RotaryEncoder(event, cpr, diameter)
                 printer.rotary_encoders.append(r)
                 # Append as Filament Sensor
-                ext_nr = Path.axis_to_index(ex)-3
+                ext_nr = Printer.axis_to_index(ex)-3
                 sensor = FilamentSensor(ex, r, ext_nr, printer)
                 alarm_level = printer.config.getfloat("Filament-sensors", "alarm-level-{}".format(ex))
                 logging.debug("Alarm level"+str(alarm_level))
@@ -404,19 +405,19 @@ class Redeem:
         self.printer.unbuffered_commands = JoinableQueue(10)
 
         # Bed compensation matrix
-        Path.matrix_bed_comp = printer.load_bed_compensation_matrix()
-        logging.debug("Loaded bed compensation matrix: \n"+str(Path.matrix_bed_comp))
+        printer.matrix_bed_comp = printer.load_bed_compensation_matrix()
+        logging.debug("Loaded bed compensation matrix: \n"+str(printer.matrix_bed_comp))
 
         for axis in printer.steppers.keys():
-            i = Path.axis_to_index(axis)
-            Path.max_speeds[i] = printer.config.getfloat('Planner', 'max_speed_'+axis.lower())
-            Path.min_speeds[i] = printer.config.getfloat('Planner', 'min_speed_'+axis.lower())
-            Path.jerks[i] = printer.config.getfloat('Planner', 'max_jerk_'+axis.lower())
-            Path.home_speed[i] = printer.config.getfloat('Homing', 'home_speed_'+axis.lower())
-            Path.home_backoff_speed[i] = printer.config.getfloat('Homing', 'home_backoff_speed_'+axis.lower())
-            Path.home_backoff_offset[i] = printer.config.getfloat('Homing', 'home_backoff_offset_'+axis.lower())
-            Path.steps_pr_meter[i] = printer.steppers[axis].get_steps_pr_meter()
-            Path.backlash_compensation[i] = printer.config.getfloat('Steppers', 'backlash_'+axis.lower())
+            i = Printer.axis_to_index(axis)
+            printer.max_speeds[i] = printer.config.getfloat('Planner', 'max_speed_'+axis.lower())
+            printer.min_speeds[i] = printer.config.getfloat('Planner', 'min_speed_'+axis.lower())
+            printer.jerks[i] = printer.config.getfloat('Planner', 'max_jerk_'+axis.lower())
+            printer.home_speed[i] = printer.config.getfloat('Homing', 'home_speed_'+axis.lower())
+            printer.home_backoff_speed[i] = printer.config.getfloat('Homing', 'home_backoff_speed_'+axis.lower())
+            printer.home_backoff_offset[i] = printer.config.getfloat('Homing', 'home_backoff_offset_'+axis.lower())
+            printer.steps_pr_meter[i] = printer.steppers[axis].get_steps_pr_meter()
+            printer.backlash_compensation[i] = printer.config.getfloat('Steppers', 'backlash_'+axis.lower())
 
         dirname = os.path.dirname(os.path.realpath(__file__))
 
@@ -446,26 +447,26 @@ class Redeem:
 
         # Setting acceleration before PathPlanner init
         for axis in printer.steppers.keys():
-            Path.acceleration[Path.axis_to_index(axis)] = printer.config.getfloat(
+            printer.acceleration[Printer.axis_to_index(axis)] = printer.config.getfloat(
                                                         'Planner', 'acceleration_' + axis.lower())
 
         self.printer.path_planner = PathPlanner(self.printer, pru_firmware)
         for axis in printer.steppers.keys():
-            i = Path.axis_to_index(axis)
+            i = Printer.axis_to_index(axis)
             
             # Sometimes soft_end_stop aren't defined to be at the exact hardware boundary.
             # Adding 100mm for searching buffer.
             if printer.config.has_option('Geometry', 'travel_' + axis.lower()):
                 printer.path_planner.travel_length[axis] = printer.config.getfloat('Geometry', 'travel_' + axis.lower())
             else:
-                printer.path_planner.travel_length[axis] = (Path.soft_max[i] - Path.soft_min[i]) + .1
+                printer.path_planner.travel_length[axis] = (printer.soft_max[i] - printer.soft_min[i]) + .1
                 if axis in ['X','Y','Z']:                
                     travel_default = True
             
             if printer.config.has_option('Geometry', 'offset_' + axis.lower()):
                 printer.path_planner.center_offset[axis] = printer.config.getfloat('Geometry', 'offset_' + axis.lower())
             else:
-                printer.path_planner.center_offset[axis] =(Path.soft_min[i] if Path.home_speed[i] > 0 else Path.soft_max[i])
+                printer.path_planner.center_offset[axis] =(printer.soft_min[i] if printer.home_speed[i] > 0 else printer.soft_max[i])
                 if axis in ['X','Y','Z']:                
                     center_default = True
 
@@ -476,7 +477,7 @@ class Redeem:
                 if axis in ['X','Y','Z']:                   
                     home_default = True
                 
-        if Path.axis_config == Path.AXIS_CONFIG_DELTA:
+        if printer.axis_config == Printer.AXIS_CONFIG_DELTA:
             if travel_default:
                 logging.warning("Axis travel (travel_*) set by soft limits, manual setup is recommended for a delta")
             if center_default:

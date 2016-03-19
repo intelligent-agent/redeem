@@ -28,7 +28,7 @@ import logging
 import subprocess
 import shutil
 import re
-from Path import Path
+from Printer import Printer
 
 class PruFirmware:
     def __init__(self, firmware_source_file0, binary_filename0,
@@ -197,7 +197,7 @@ class PruFirmware:
                 direction = "0" if self.config.getint('Steppers', 'direction_' + name) > 0 else "1"
                 configFile.write('#define STEPPER_'+ name +'_DIRECTION\t\t'+ direction +'\n') 
 
-                index = Path.axis_to_index(name)
+                index = Printer.axis_to_index(name)
                 direction_mask |= (int(direction) << index)        
 
                 # Generate the GPIO bank masks

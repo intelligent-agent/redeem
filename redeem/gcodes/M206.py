@@ -8,10 +8,6 @@ License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 """
 
 from GCodeCommand import GCodeCommand
-try:
-    from redeem.Path import Path
-except ImportError:
-    from Path import Path
 import logging
 
 class M206(GCodeCommand):

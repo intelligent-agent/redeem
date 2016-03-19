@@ -11,10 +11,6 @@ License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 """
 
 from GCodeCommand import GCodeCommand
-try:
-    from Path import Path
-except ImportError:
-    from redeem.Path import Path
 
 import logging
 
@@ -25,8 +21,8 @@ class M270(GCodeCommand):
         if g.has_letter("S"):
             axis_config = int(g.get_value_by_letter("S"))
             if axis_config in [0, 1, 2, 3]:
-                Path.axis_config = axis_config
-                logging.info("Coordinate system set to " + str(axis_config))
+                self.printer.axis_config = axis_config
+                logging.info("Coordinate system set to " + str(self.printer.axis_config))
 
     def get_long_description(self):
         return ("Set coordinate system. Parameter S set the type, which is "
