@@ -87,10 +87,10 @@ class Printer:
         self.slaves                 = {key: "" for key in self.AXES[:self.num_axes]}
         
         # bed compensation
-        matrix_bed_comp = np.eye((3))
+        self.matrix_bed_comp = np.eye((3))
     
         # By default, do not check for slaves
-        has_slaves = False
+        self.has_slaves = False
         
         return
         
