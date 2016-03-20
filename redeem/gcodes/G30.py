@@ -70,15 +70,17 @@ class G30(GCodeCommand):
         bed_dist = self.printer.path_planner.probe(probe_length, probe_speed, probe_accel)*1000.0 # convert to mm
         logging.debug("Bed dist: "+str(bed_dist)+" mm")
         
+        self.printer.send_message(
+            g.prot,
+            "Found Z probe distance {} mm at (X, Y) = ({}, {})".format(
+                    bed_dist, point["X"], point["Y"]))
+
         if g.has_letter("S"):
             if not g.has_letter("P"):
                 logging.warning("G30: S-parameter was set, but no index (P) was set.")
             else:
                 self.printer.probe_heights[index] = bed_dist
-                self.printer.send_message(g.prot, 
-                    "Found Z probe height {} at (X, Y) = ({}, {})".format(bed_dist, point["X"], point["Y"]))
         
-
     def get_description(self):
         return "Probe the bed at current point"
 
