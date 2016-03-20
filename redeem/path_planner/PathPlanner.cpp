@@ -284,6 +284,7 @@ void PathPlanner::queueMove(std::vector<FLOAT_T> startPos, std::vector<FLOAT_T> 
 	
   if(p->isNoMove()){
     LOG( "Warning: no move path" << std::endl);
+    PyEval_RestoreThread(_save);
     return; // No steps included
   }
 
