@@ -43,7 +43,7 @@ class G30(GCodeCommand):
         if g.has_letter("F"):
             probe_speed = float(g.get_value_by_letter("F")) / 60000.0
         else:
-            probe_speed = self.printer.config.getfloat('Probe', 'length')
+            probe_speed = self.printer.config.getfloat('Probe', 'speed')
         
         # Get acceleration. If not present, use value from config.        
         if g.has_letter("A"):
