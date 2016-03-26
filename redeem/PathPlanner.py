@@ -33,7 +33,7 @@ from PruInterface import PruInterface
 from BedCompensation import BedCompensation
 
 try:
-    from pah_planner.PathPlannerNative import PathPlannerNative
+    from path_planner.PathPlannerNative import PathPlannerNative
 except Exception, e:
     try:
         from _PathPlannerNative import PathPlannerNative
