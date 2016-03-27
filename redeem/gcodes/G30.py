@@ -40,7 +40,7 @@ class G30(GCodeCommand):
 
         # Get probe length, if present, else use 1 cm. 
         if g.has_letter("D"):
-            probe_length = float(g.get_value_by_letter("D"))
+            probe_length = float(g.get_value_by_letter("D")) / 1000.
         else:
             probe_length = self.printer.config.getfloat('Probe', 'length')
 
