@@ -14,6 +14,7 @@ License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 
 from GCodeCommand import GCodeCommand
 import logging
+import os
 
 
 class M569(GCodeCommand):
@@ -34,7 +35,7 @@ class M569(GCodeCommand):
 
 
         # Save the config file. 
-        self.printer.config.save('/etc/redeem/local.cfg')
+        self.printer.config.save(os.path.join(self.printer.config_location,'local.cfg'))
 
         self.printer.path_planner.wait_until_done()
 
