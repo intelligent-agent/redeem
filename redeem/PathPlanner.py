@@ -35,12 +35,14 @@ from BedCompensation import BedCompensation
 try:
     from path_planner.PathPlannerNative import PathPlannerNative
 except Exception, e:
-    logging.error("You have to compile the native path planner before running"
+    try:
+        from _PathPlannerNative import PathPlannerNative
+    except:
+        logging.error("You have to compile the native path planner before running"
                   " Redeem. Make sure you have swig installed (apt-get "
                   "install swig) and run cd ../../PathPlanner/PathPlanner && "
                   "python setup.py install")
-    raise e
-
+        raise e
 
 class PathPlanner:
 

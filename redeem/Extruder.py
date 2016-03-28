@@ -191,20 +191,20 @@ class Heater(object):
         # Check that temperature is not rising too quickly
         if temp_delta > self.max_temp_rise:
             a = Alarm(Alarm.HEATER_RISING_FAST, 
-                "Temperature rising too quickly ({}) for {}".format(temp_delta, self.name))
+                "Temperature rising too quickly ({} degrees) for {}".format(temp_delta, self.name))
         # Check that temperature is not falling too quickly
         if temp_delta < -self.max_temp_fall:
             a = Alarm(Alarm.HEATER_FALLING_FAST, 
-                "Temperature falling too quickly ({}) for {}".format(temp_delta, self.name))
+                "Temperature falling too quickly ({} degrees) for {}".format(temp_delta, self.name))
         # Check that temperature has not fallen below a certain setpoint from target
         if self.min_temp_enabled and self.current_temp < (self.target_temp - self.min_temp):
             a = Alarm(Alarm.HEATER_TOO_COLD, 
-                "Temperature below min set point ({}) for {}".format(self.min_temp, self.name), 
+                "Temperature below min set point ({} degrees) for {}".format(self.min_temp, self.name), 
                 "Alarm: Heater {}".format(self.name))
         # Check if the temperature has gone beyond the max value
         if self.current_temp > self.max_temp:
             a = Alarm(Alarm.HEATER_TOO_HOT, 
-                "Temperature beyond max ({}) for {}".format(self.max_temp, self.name))                
+                "Temperature beyond max ({} degrees) for {}".format(self.max_temp, self.name))                
         # Check the time diff, only warn if something is off.     
         if self.time_diff > 2:
             logging.warning("Heater time update large: " +

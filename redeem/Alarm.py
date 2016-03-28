@@ -53,22 +53,38 @@ class Alarm:
         if self.type == Alarm.THERMISTOR_ERROR:
             self.stop_print()
             self.inform_listeners()
+            Alarm.action_command("pause")
+            Alarm.action_command("alarm_thermistor_error", self.message)
         elif self.type == Alarm.HEATER_TOO_COLD:
             self.stop_print()
             self.inform_listeners()
+            Alarm.action_command("pause")
+            Alarm.action_command("alarm_heater_too_cold", self.message)
         elif self.type == Alarm.HEATER_TOO_HOT:
             self.stop_print()
             self.inform_listeners()
+            Alarm.action_command("pause")
+            Alarm.action_command("alarm_heater_too_hot", self.message)
         elif self.type == Alarm.HEATER_RISING_FAST:
             self.stop_print()
             self.inform_listeners()
+            Alarm.action_command("pause")
+            Alarm.action_command("alarm_heater_rising_fast", self.message)
         elif self.type == Alarm.HEATER_FALLING_FAST:
             self.disable_heaters()
             self.inform_listeners()
+            Alarm.action_command("pause")
+            Alarm.action_command("alarm_heater_falling_fast", self.message)
         elif self.type == Alarm.STEPPER_FAULT:
             self.inform_listeners()
+            Alarm.action_command("pause")
+            Alarm.action_command("alarm_stepper_fault", self.message)
+        elif self.type == Alarm.FILAMENT_JAM:
+            Alarm.action_command("pause")
+            Alarm.action_command("alarm_filament_jam", self.message)
         elif self.type == Alarm.ALARM_TEST:
             logging.info("Alarm: Operational")
+            Alarm.action_command("alarm_operational", self.message)
         else:
             logging.warning("An Alarm of unknown type was sounded!")
 
@@ -95,6 +111,17 @@ class Alarm:
                 else:    
                     comm.send_message("Alarm: "+self.message)
 
+    @staticmethod    
+    def action_command(command, message=""):
+        if Alarm.printer and hasattr(Alarm.printer, "comms"):
+            if "octoprint" in Alarm.printer.comms:
+                comm = Alarm.printer.comms["octoprint"]
+                # Send action command to listeners
+                if message:
+                    comm.send_message("// action:{}@{}".format(command, message))
+                else:
+                    comm.send_message("// action:{}".format(command))
+
     def make_sound(self):
         """ If a speaker is connected, sound it """        
         pass
@@ -109,7 +136,6 @@ class Alarm:
     def record_position(self):
         """ Save last completed segment to file """
         pass
-    
     
 
 
