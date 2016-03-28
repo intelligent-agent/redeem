@@ -24,6 +24,7 @@ from Path import Path
 import numpy as np
 import logging
 from Delta import Delta
+import os
 
 class Printer:
     """ A command received from pronterface or whatever """
@@ -39,6 +40,9 @@ class Printer:
     AXIS_CONFIG_DELTA = 3
 
     def __init__(self):
+
+        self.config_location = None        
+        
         self.steppers = {}
         self.heaters = {}
         self.thermistors = {}
@@ -141,6 +145,33 @@ class Printer:
     def send_message(self, prot, msg):
         """ Send a message back to host """
         self.comms[prot].send_message(msg)
+        
+    def homing(self,is_homing=False):
+        """
+        if the printer is homing the firmware may need to be updated to 
+        allow for endstops that are only active during the homing procedure
+        """
+        
+        if self.config.get('Endstops', 'homing_only_endstops'):
+
+            if is_homing:
+                self.config.set('Endstops', 'homing_now', "1")
+                logging.debug("Printer homing state = 1")
+            else:
+                self.config.set('Endstops', 'homing_now', "0")
+                logging.debug("Printer homing state = 0")
+                
+            # Save the config file. 
+            self.config.save(os.path.join(self.config_location,'local.cfg'))
+            
+             # Recompile the firmware
+            self.path_planner.pru_firmware.produce_firmware()
+
+            # Restart the path planner. 
+            self.path_planner.restart()
+            
+        return
+        
 
     def save_settings(self, filename):
         for name, stepper in self.steppers.iteritems():
@@ -170,7 +201,7 @@ class Printer:
             self.config.set('Delta', opt, str(Delta.__dict__[opt]))
 
         self.config.save(filename)
-
+        
     def load_bed_compensation_matrix(self):
         mat = self.config.get('Geometry', 'bed_compensation_matrix').split(",")
         mat = np.array([float(i) for i in mat]).reshape(3, 3)

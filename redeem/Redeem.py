@@ -88,6 +88,8 @@ class Redeem:
         Path.printer = printer
 
         printer.firmware_version = firmware_version
+        
+        printer.config_location = config_location
 
         # check for config files
         file_path = os.path.join(config_location,"default.cfg")
@@ -162,6 +164,8 @@ class Redeem:
         EndStop.inputdev = self.printer.config.get("Endstops", "inputdev")
         # Set up key listener
         Key_pin.listener = Key_pin_listener(EndStop.inputdev)
+        
+        homing_only_endstops = self.printer.config.get('Endstops', 'homing_only_endstops')
         
         for es in ["Z2", "Y2", "X2", "Z1", "Y1", "X1"]: # Order matches end stop inversion mask in Firmware
             pin = self.printer.config.get("Endstops", "pin_"+es)

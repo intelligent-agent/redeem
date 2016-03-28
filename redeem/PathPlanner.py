@@ -117,7 +117,7 @@ class PathPlanner:
             
         self.native_planner.setBacklashCompensation(tuple(self.printer.backlash_compensation));
         
-        self.native_planner.setState(tuple(Printer.MAX_AXES*[0]))
+        self.native_planner.setState(self.prev.end_pos)
         
         self.printer.plugins.path_planner_initialized(self)
 
@@ -292,6 +292,9 @@ class PathPlanner:
     def home(self, axis):
         """ Home the given axis using endstops (min) """
         logging.debug("homing " + str(axis))
+        
+        # allow for endstops that may only be active during homing
+        self.printer.homing(True)
 
         # Home axis for core X,Y and H-Belt independently to avoid hardware
         # damages.
@@ -327,6 +330,10 @@ class PathPlanner:
             
         else: # AXIS_CONFIG_XY
             self._home_internal(axis)
+        
+        
+        # allow for endstops that may only be active during homing
+        self.printer.homing(False)
             
         # go to the designated home position
         self._go_to_home(axis)
@@ -355,6 +362,9 @@ class PathPlanner:
         # this is not axis_config dependent as we are not swapping 
         # axis_config like we do when homing
         end   = {"Z":-z_dist}
+
+        # tell the printer we are now in homing mode (updates firmware if required)        
+        self.printer.homing(True)
         
         # add a relative move to the path planner
         # this tells the head to move down a set distance
@@ -390,6 +400,9 @@ class PathPlanner:
         
         self.add_path(path)
         self.wait_until_done()
+        
+        # tell the printer we are no longer in homing mode (updates firmware if required)     
+        self.printer.homing(False)
         
         return -z_dist
         
