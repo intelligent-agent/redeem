@@ -1,3 +1,33 @@
+"""
+Delta printer linear least squares autocalibration.
+
+Most of the code in this package is a pretty straightforward
+translation of David Crocker's linear least squares calibration
+algorithm: http://escher3d.com/pages/wizards/wizarddelta.php .
+
+For additional information on the algorithm, visit the following
+Wikipedia page:
+https://en.wikipedia.org/wiki/Linear_least_squares_(mathematics)
+
+Author: Matti Airas
+email: mairas(at)iki(dot)fi
+Website: http://www.thing-printer.com
+License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
+
+ Redeem is free software: you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation, either version 3 of the License, or
+ (at your option) any later version.
+
+ Redeem is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
+
+ You should have received a copy of the GNU General Public License
+ along with Redeem.  If not, see <http://www.gnu.org/licenses/>.
+"""
+
 import copy
 import logging
 
