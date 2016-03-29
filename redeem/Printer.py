@@ -190,8 +190,9 @@ class Printer:
             self.config.set('Heaters', 'pid_i_'+name, str(heater.I))
             self.config.set('Heaters', 'pid_d_'+name, str(heater.D))
 
-        logging.debug("save_settings: saving bed compensation matrix")
-        self.save_bed_compensation_matrix()
+        # FIXME: broken!
+        # logging.debug("save_settings: saving bed compensation matrix")
+        # self.save_bed_compensation_matrix()
 
         # Offsets
         logging.debug("save_settings: setting offsets")
