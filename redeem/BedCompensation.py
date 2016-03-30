@@ -19,13 +19,7 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
  along with Redeem.  If not, see <http://www.gnu.org/licenses/>.
 """
 
-
-
-
-
-
-# Helper functions for kinematics for Delta printers
-import numpy as np  # Needed for sqrt
+import numpy as np
 
 class BedCompensation:
 
@@ -62,7 +56,12 @@ class BedCompensation:
         
         R = np.eye(3) + ssc + ssc**2*(1.0 - np.dot(ideal_normal, bed_normal))/(np.linalg.norm(v)**2)
         
-        return R
+        # check if the rotation matrix is valid, if not then return identity matrix
+        if np.all(np.isfinite(R)):
+            return R
+        else:
+            return np.eye(3)
+        
 
     @staticmethod
     def normalize(vec):
