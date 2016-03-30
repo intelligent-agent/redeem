@@ -40,7 +40,7 @@ class G30(GCodeCommand):
 
         # Get probe length, if present, else use 1 cm. 
         if g.has_letter("D"):
-            probe_length = float(g.get_value_by_letter("D"))
+            probe_length = float(g.get_value_by_letter("D")) / 1000.
         else:
             probe_length = self.printer.config.getfloat('Probe', 'length')
 
@@ -48,7 +48,7 @@ class G30(GCodeCommand):
         if g.has_letter("F"):
             probe_speed = float(g.get_value_by_letter("F")) / 60000.0
         else:
-            probe_speed = self.printer.config.getfloat('Probe', 'length')
+            probe_speed = self.printer.config.getfloat('Probe', 'speed')
         
         # Get acceleration. If not present, use value from config.        
         if g.has_letter("A"):
@@ -70,15 +70,17 @@ class G30(GCodeCommand):
         bed_dist = self.printer.path_planner.probe(probe_length, probe_speed, probe_accel)*1000.0 # convert to mm
         logging.debug("Bed dist: "+str(bed_dist)+" mm")
         
+        self.printer.send_message(
+            g.prot,
+            "Found Z probe distance {} mm at (X, Y) = ({}, {})".format(
+                    bed_dist, point["X"], point["Y"]))
+
         if g.has_letter("S"):
             if not g.has_letter("P"):
                 logging.warning("G30: S-parameter was set, but no index (P) was set.")
             else:
                 self.printer.probe_heights[index] = bed_dist
-                self.printer.send_message(g.prot, 
-                    "Found Z probe height {} at (X, Y) = ({}, {})".format(bed_dist, point["X"], point["Y"]))
         
-
     def get_description(self):
         return "Probe the bed at current point"
 

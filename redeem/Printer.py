@@ -174,6 +174,7 @@ class Printer:
         
 
     def save_settings(self, filename):
+        logging.debug("save_settings: setting stepper parameters")
         for name, stepper in self.steppers.iteritems():
             self.config.set('Steppers', 'in_use_' + name, str(stepper.in_use))
             self.config.set('Steppers', 'direction_' + name, str(stepper.direction))
@@ -183,25 +184,32 @@ class Printer:
             self.config.set('Steppers', 'microstepping_' + name, str(stepper.microstepping))
             self.config.set('Steppers', 'slow_decay_' + name, str(stepper.decay))
 
+        logging.debug("save_settings: setting heater parameters")
         for name, heater in self.heaters.iteritems():
             self.config.set('Heaters', 'pid_p_'+name, str(heater.P))
             self.config.set('Heaters', 'pid_i_'+name, str(heater.I))
             self.config.set('Heaters', 'pid_d_'+name, str(heater.D))
 
-        self.save_bed_compensation_matrix()
+        # FIXME: broken!
+        # logging.debug("save_settings: saving bed compensation matrix")
+        # self.save_bed_compensation_matrix()
 
         # Offsets
+        logging.debug("save_settings: setting offsets")
         for axis, offset in self.path_planner.center_offset.iteritems():
             if self.config.has_option("Geometry", "offset_{}".format(axis)):
                 self.config.set('Geometry', "offset_{}".format(axis), str(offset))
 
-        # Save Delta shit    
+        # Save Delta shit
+        logging.debug("save_settings: setting delta shit")
         opts = ["Hez", "L", "r", "Ae", "Be", "Ce", "A_radial", "B_radial", "C_radial", "A_tangential", "B_tangential", "C_tangential" ]
         for opt in opts:
             self.config.set('Delta', opt, str(Delta.__dict__[opt]))
 
+        logging.debug("save_settings: saving config to file")
         self.config.save(filename)
-        
+        logging.debug("save_settings: done")
+
     def load_bed_compensation_matrix(self):
         mat = self.config.get('Geometry', 'bed_compensation_matrix').split(",")
         mat = np.array([float(i) for i in mat]).reshape(3, 3)

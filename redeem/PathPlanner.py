@@ -31,6 +31,7 @@ from Printer import Printer
 import numpy as np
 from PruInterface import PruInterface
 from BedCompensation import BedCompensation
+from DeltaAutoCalibration import delta_auto_calibration
 
 try:
     from path_planner.PathPlannerNative import PathPlannerNative
@@ -420,6 +421,32 @@ class PathPlanner:
         self.native_planner.setBedCompensationMatrix(tuple(self.printer.matrix_bed_comp.ravel()))
         
         return
+
+    def autocalibrate_delta_printer(self, num_factors, max_std,
+                                    simulate_only,
+                                    probe_points, print_head_zs):
+        if self.printer.axis_config != Printer.AXIS_CONFIG_DELTA:
+            logging.warning("autocalibrate_delta_printer only supports "
+                            "delta printers")
+            return
+
+        delta_auto_calibration(Delta, self.center_offset,
+                               num_factors, max_std,
+                               simulate_only,
+                               probe_points, print_head_zs)
+
+        # update the native planner with the new values
+
+        self.native_planner.delta_bot.setMainDimensions(
+                Delta.Hez, Delta.L, Delta.r)
+        self.native_planner.delta_bot.setEffectorOffset(
+                Delta.Ae, Delta.Be, Delta.Ce)
+        self.native_planner.delta_bot.setRadialError(
+                Delta.A_radial, Delta.B_radial, Delta.C_radial)
+        self.native_planner.delta_bot.setTangentError(
+                Delta.A_tangential, Delta.B_tangential, Delta.C_tangential)
+        self.native_planner.delta_bot.recalculate()
+
 
     def add_path(self, new):
         """ Add a path segment to the path planner """
