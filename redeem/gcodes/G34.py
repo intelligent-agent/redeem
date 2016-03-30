@@ -72,21 +72,9 @@ class G34(GCodeCommand):
         logging.debug("G34: deploying probe")
         exec_and_wait("G32")
 
-        # FIXME: probing needs to be done by setting M557 and calling G30
-        # because calling path_planner.probe() directly gives incorrect results
+        bed_dist = 1000. * self.printer.path_planner.probe(
+                probe_length / 1000., probe_speed, probe_accel)
 
-        # store the probing start point (same as current location) in P0
-        logging.debug("G34: storing the probe start point")
-        exec_and_wait("M557 P0 X{} Y{} ZP{}".format(
-            *self.printer.path_planner.get_current_pos(mm=True)))
-
-        # do the actual probing
-        logging.debug("G34: probing")
-        exec_and_wait("G30 P0 S D{} F{} A{}".format(
-            probe_length, 60000. * probe_speed, probe_accel))
-        # retrieve the result
-
-        bed_dist = self.printer.probe_heights[0]
         logging.debug("G34: bed_dist = %f", bed_dist)
 
         # retract probe
