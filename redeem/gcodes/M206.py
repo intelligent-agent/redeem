@@ -1,38 +1,68 @@
 """
-GCode M206 - set home offset
+GCode M206
+Set home offset
 
-Author: Boris Lasic
-email: boris(at)max(dot)si
-Website: http://www.max.si
-License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
+License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
+
+ Redeem is free software: you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation, either version 3 of the License, or
+ (at your option) any later version.
+
+ Redeem is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
+
+ You should have received a copy of the GNU General Public License
+ along with Redeem.  If not, see <http://www.gnu.org/licenses/>.
 """
 
 from GCodeCommand import GCodeCommand
 import logging
 
+from redeem.Printer import Printer
+
+
 class M206(GCodeCommand):
 
+    def _get_offset_str(self):
+        offsets = sorted(self.printer.path_planner.center_offset.iteritems())
+        offset_strs = ["{}: {}".format(k, 1000. * v) for k, v
+                       in offsets]
+        return ", ".join(offset_strs)
+
     def execute(self, g):
-        tokens = g.get_tokens()
-        if len(tokens) > 0:
-            axis = tokens[0]
-            if not axis in self.printer.path_planner.center_offset:
-                logging.warning("M206: Wrong axis {}".format(axis))
-                return
-            try:
-                offset = float(tokens[1])
-            except ValueError:
-                logging.warning("Not a float: {}".format(tokens[1]))
-                return
-            self.printer.path_planner.center_offset[axis] = offset
-            logging.info("Updated offset for {} to {}".format(axis, offset))
+        offset = self.printer.path_planner.center_offset
+        if len(g.get_tokens()) == 0:
+            # print out current offset values
+            g.set_answer("ok " + self._get_offset_str())
         else:
-            g.set_answer("ok "+", ".join(["{}: {}".format(k, v) for k,v in sorted(self.printer.path_planner.center_offset.iteritems())]))
+            for axis in offset.keys():
+                if g.has_letter(axis):
+                    val = float(g.get_value_by_letter(axis))
+                    g.remove_token_by_letter(axis)
+                    adj = val / 1000.
+                    if self.printer.axis_config == Printer.AXIS_CONFIG_DELTA:
+                        # for delta, it's more logical if positive values
+                        # raise the head
+                        offset[axis] -= adj
+                    else:
+                        # for others, just do the simplest thing
+                        offset[axis] += adj
+                    logging.info("M206: Updated offset for %s to %f",
+                                 axis, offset[axis])
+            remaining = g.get_tokens()
+            for tok in remaining:
+                logging.warning("M206: Unknown axis: %s", tok[0])
 
     def get_description(self):
         return "Set or get end stop offsets"
     
     def get_long_description(self):
-        return ("If no parameters are given, get the current X, Y and Z end stop offsets. " 
-                "To set offset, first token is axis, second is offset. Negative values are OK"
-                "Example: M206 X 0.01")
+        return """
+If no parameters are given, get the current end stop offsets.
+To set the offset, provide the axes and their offset relative to
+the current value. All values are in mm.
+
+Example: M206 X0.1 Y-0.05 Z0.03"""
