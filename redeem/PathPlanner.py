@@ -225,9 +225,10 @@ class PathPlanner:
             path_fine_search[a] = -backoff_length * 1.2;
             
             speed = min(abs(speed), abs(self.printer.home_speed[Printer.axis_to_index(a)]))
+            accel = min(accel, self.printer.acceleration[Printer.axis_to_index(a)])
             fine_search_speed =  min(abs(speed), abs(self.printer.home_backoff_speed[Printer.axis_to_index(a)]))
                     
-        logging.debug("Search: %s" % path_search)
+        logging.debug("Search: %s at %s m/s, %s m/s^2" % (path_search, speed, accel))
         logging.debug("Backoff to: %s" % path_backoff)
         logging.debug("Fine search: %s" % path_fine_search)
         logging.debug("Center: %s" % path_center)
