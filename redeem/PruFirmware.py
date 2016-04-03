@@ -223,10 +223,6 @@ class PruFirmware:
                 inversion_mask += "1" if self.config.getboolean('Endstops', 'invert_' + name) else "0"
 
             configFile.write(inversion_mask + "\n");
-            
-            # are we in a homing state?
-            is_homing = int(self.config.get('Endstops', 'homing_now'))
-            homing_only_endstops = self.config.get('Endstops','homing_only_endstops')
 
             # Construct the endstop lookup table.
             for name, endstop in self.printer.end_stops.iteritems():
@@ -256,11 +252,6 @@ class PruFirmware:
                     if (direction == -1):
                         cur <<= 8
                     mask += cur
-
-                # check if this is a homing only endstop
-                if name in homing_only_endstops:
-                    if not is_homing:
-                        mask = 0
                 
                 logging.debug("Endstop {0} mask = {1}".format(name, bin(mask)))
                 

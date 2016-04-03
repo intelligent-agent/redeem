@@ -24,6 +24,7 @@ from Path import Path
 import numpy as np
 import logging
 from Delta import Delta
+from PruInterface import PruInterface
 import os
 
 class Printer:
@@ -146,30 +147,40 @@ class Printer:
         """ Send a message back to host """
         self.comms[prot].send_message(msg)
         
-    def homing(self,is_homing=False):
+    def homing(self, is_homing):
         """
-        if the printer is homing the firmware may need to be updated to 
+        if the printer is homing the endstops may need to be updated to 
         allow for endstops that are only active during the homing procedure
         """
         
-        if self.config.get('Endstops', 'homing_only_endstops'):
-
-            if is_homing:
-                self.config.set('Endstops', 'homing_now', "1")
-                logging.debug("Printer homing state = 1")
-            else:
-                self.config.set('Endstops', 'homing_now', "0")
-                logging.debug("Printer homing state = 0")
-                
-            # Save the config file. 
-            self.config.save(os.path.join(self.config_location,'local.cfg'))
+        homing_only_endstops = self.config.get('Endstops','homing_only_endstops')
+        if homing_only_endstops:
+            for es in self.end_stops.items():
+                if es[0] in homing_only_endstops:
+                    es[1].active = is_homing
+                    
+        self.set_active_endstops()
             
-             # Recompile the firmware
-            self.path_planner.pru_firmware.produce_firmware()
+        return
+        
+    def set_active_endstops(self):
+        """
+        go through the list of endstops and load their active status into the PRU
+        """
 
-            # Restart the path planner. 
-            self.path_planner.restart()
-            
+        # generate a binary representation of the active status
+        active = 0
+        for i, es in enumerate(["X1","Y1","Z1","X2","Y2","Z2"]):
+            if self.end_stops[es].active:
+                active += 1 << i
+        
+        logging.debug("endstop active mask = " + bin(active))
+        
+        # write to shared memory
+        PruInterface.set_active_endstops(active)
+        
+        
+        
         return
         
 
