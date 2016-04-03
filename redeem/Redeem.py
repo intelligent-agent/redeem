@@ -173,6 +173,9 @@ class Redeem:
             invert = self.printer.config.getboolean("Endstops", "invert_"+es)
             self.printer.end_stops[es] = EndStop(printer, pin, keycode, es, invert)
             self.printer.end_stops[es].stops = self.printer.config.get('Endstops', 'end_stop_'+es+'_stops')
+        
+        # activate all the endstops
+        self.printer.set_active_endstops()
 
         # Init the 5 Stepper motors (step, dir, fault, DAC channel, name)
         Stepper.printer = printer

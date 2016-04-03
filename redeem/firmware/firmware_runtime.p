@@ -245,7 +245,7 @@ NEXT_COMMAND:
 
     //Store the number of steps remaining
     ADD r22, r22, r1
-    SBCO r22, C28, 12, 4
+    SBCO r22, C28, 16, 4
 
     //Remove all the command from the buffer
 start_loop_remove:
@@ -259,7 +259,7 @@ notcancel:
     MOV r22, 0                                              // Reset the Remaining steps loop
 
     AND r7, r7, 0x000000FF
-    SBCO r7, C28, 8, 4
+    SBCO r7, C28, 12, 4
     AND pinCommand.step, pinCommand.step, r7.b0               // Mask the step pins with the end stop mask
  
     //Store the pins of the banks in registers

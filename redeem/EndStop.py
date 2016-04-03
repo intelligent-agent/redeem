@@ -37,6 +37,7 @@ class EndStop:
         self.dev = InputDevice(EndStop.inputdev)
         self.t = Thread(target=self._wait_for_event, name=self.name)
         self.t.daemon = True
+        self.active = True
 
         # Update "hit" state
         self.read_value()
@@ -105,6 +106,8 @@ class EndStop:
 if __name__ == "__main__":
     print "Test endstops"
     
+    import time
+    
     while True:
         state = PruInterface.get_shared_long(0)
         print bin(state) + "  ", 
@@ -120,6 +123,8 @@ if __name__ == "__main__":
             print "Y2",
         elif bool(state & (1 << 5)):
             print "Z2",
-        print (" "*30)+"\r", 
+        print (" "*30)+"\r",
+        time.sleep(0.01)
+        
             
     
