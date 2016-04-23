@@ -111,7 +111,8 @@ class Gcode:
     def get_int_by_letter(self, letter, default):
         """ Get an int or return a default value """
         if self.has_letter(letter):
-            return int(self.get_value_by_letter(letter))
+            # Convert to float first since Cura 2.1 sends M104 as 255.0
+            return int(float(self.get_value_by_letter(letter)))
         return int(default)
 
     def has_letter_value(self, letter):
