@@ -1,3 +1,11 @@
+redeem (1.2.1) UNRELEASED; urgency=low
+
+  [ Elias ]
+  * Missing stuff from default.cfg
+  * M109 does not stop
+
+ -- Elias <elias@elias-Aspire>  Thu, 28 Apr 2016 14:06:44 +0200
+
 redeem (1.2.0) UNRELEASED; urgency=low
 
   [ Elias ]

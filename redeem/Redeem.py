@@ -80,7 +80,7 @@ class Redeem:
          - default is installed directory
          - allows for running in a local directory when debugging
         """
-        firmware_version = "1.2.0~Predator"
+        firmware_version = "1.2.1~Predator"
         logging.info("Redeem initializing "+firmware_version)
 
         printer = Printer()
