@@ -66,13 +66,17 @@ class TemperatureSensor:
                     break
 
         if found == False:
-            Alarm(Alarm.THERMISTOR_ERROR, "The specified temperature sensor {0} is not implemented. You may add it's config in TemperatureSensorConfigs.".format(sensorIdentifier))
+            logging.error("The specified temperature sensor {0} is not implemented. \
+            You may add it's config in TemperatureSensorConfigs.".format(sensorIdentifier))
+            self.sensor = None
 
     """
     Returns the current temperature in degrees celsius for the given sensor.
     """
     def get_temperature(self):
         voltage = self.read_adc()
+        if not self.sensor: 
+            return 0.0
         return self.sensor.get_temperature(voltage)
 
 
@@ -122,7 +126,9 @@ class Thermistor(TemperatureSensor):
 
     def get_temperature(self, voltage):
         """ Return the temperature in degrees celsius. Uses Steinhart-Hart """
+        logging.debug("Voltage: "+str(voltage))
         r = self.voltage_to_resistance(voltage)
+        logging.debug("resistance: "+str(r))
         if r > 0:
             l = math.log(r)
             t = float((1.0 / (self.c1 + self.c2 * l + self.c3 * math.pow(l,3))) - 273.15)
