@@ -35,19 +35,20 @@ class Heater(object):
         """ Init """
         self.thermistor = thermistor
         self.mosfet = mosfet
-        self.name = name                   # Name, used for debugging
+        self.name = name                    # Name, used for debugging
         self.current_temp = 0.0
-        self.target_temp = 0.0             # Target temperature (Ts). Start off. 
-        self.last_error = 0.0              # Previous error term, used in calculating the derivative
-        self.error_integral = 0.0          # Accumulated integral since the temperature came within the boudry
-        self.error_integral_limit = 100.0  # Integral temperature boundary
-        self.P = 1.0                      # Proportional 
-        self.I = 0.0                      # Integral 
-        self.D = 0.0                      # Derivative
+        self.target_temp = 0.0              # Target temperature (Ts). Start off. 
+        self.last_error = 0.0               # Previous error term, used in calculating the derivative
+        self.error_integral = 0.0           # Accumulated integral since the temperature came within the boudry
+        self.error_integral_limit = 100.0   # Integral temperature boundary
+        self.P = 1.0                        # Proportional 
+        self.I = 0.0                        # Integral 
+        self.D = 0.0                        # Derivative
         self.onoff_control = onoff_control  # If we use PID or ON/OFF control
         self.ok_range = 4.0
         self.prefix = ""
-        self.sleep = 0.1                 # Time to sleep between measurements
+        self.sleep = 0.1                    # Time to sleep between measurements
+        self.max_power = 1.0                # Maximum power
 
         self.min_temp_enabled   = False  # Temperature error limit 
         self.min_temp           = 0      # If temperature falls below this point from the target, disable. 
@@ -65,6 +66,10 @@ class Heater(object):
     def get_temperature(self):
         """ get the temperature of the thermistor"""
         return np.average(self.temperatures[-self.avg:])
+
+    def get_temperature_raw(self):
+        """ Get unaveraged temp measurement """
+        return self.temperatures[-1]
 
     def get_target_temperature(self):
         """ get the temperature of the thermistor"""
@@ -87,6 +92,16 @@ class Heater(object):
         if min(self.temperatures[-int(seconds/self.sleep):]) < (self.target_temp - self.ok_range):
             return False
         return True
+
+    def get_noise_magnitude(self, measurements=10):
+        """ Calculate and return the magnitude in the noise """
+        measurements = min(measurements, len(self.temperatures))
+        #logging.debug("Measurements: "+str(self.temperatures))
+        avg = np.average(self.temperatures[-measurements:])
+        mag = np.max(self.temperatures[-measurements:])
+        #logging.debug("Avg: "+str(avg))
+        #logging.debug("Mag: "+str(mag))
+        return abs(mag-avg)
 
     def set_min_temp(self, min_temp):
         """ Set the minimum temperature. If current temp goes below this, 
@@ -140,8 +155,8 @@ class Heater(object):
                 self.averages.pop(0)
 
                 if self.onoff_control:
-                    if self.error > 1.0:
-                        power = 1.0
+                    if self.error > 0.0:
+                        power = self.max_power
                     else:
                         power = 0.0
                 else:
@@ -151,7 +166,7 @@ class Heater(object):
                         self.error_integral = 0
                         integral = 0
                     power = self.P*(self.average + self.D*derivative + self.I*integral)  # The standard formula for the PID
-                    power = max(min(power, 1.0), 0.0)                           # Normalize to 0,1
+                    power = max(min(power, self.max_power), 0.0)                         # Normalize to 0, max
                     #if self.name =="E":
                     #    logging.debug("Der: "+str(derivative)+" Err: "+str(self.error)+" avg err: "+str(self.average))
 

@@ -277,6 +277,7 @@ class Redeem:
             # Extruders
             onoff = self.printer.config.getboolean('Heaters', 'onoff_'+e)
             prefix =  self.printer.config.get('Heaters', 'prefix_'+e)
+            max_power = self.printer.config.getfloat('Heaters', 'max_power_'+e)
             if e != "HBP":
                 self.printer.heaters[e] = Extruder(
                                         self.printer.steppers[e],
