@@ -35,12 +35,12 @@ class M303(GCodeCommand):
         if g.has_letter("S"):
             temp = float(g.get_value_by_letter("S"))
         else:
-            temp = 100.0
+            temp = 200.0
 
         if g.has_letter("C"):
             cycles = int(g.get_value_by_letter("C"))
         else:
-            cycles = 3
+            cycles = 5
         
         tuner = Autotune(heater, temp, cycles, g, self.printer)
         tuner.run()
@@ -65,6 +65,6 @@ class M303(GCodeCommand):
             "for the output to update the firmware. "
             "E<0 or 1> overrides the extruder. Use E-1 for heated bed. "
             "Default is the 'E' extruder."
-            "S overrides the temperature to calibrate for. Default is 100. "
+            "S overrides the temperature to calibrate for. Default is 200. "
             "C overrides the number of cycles to run. Default is 3")
 

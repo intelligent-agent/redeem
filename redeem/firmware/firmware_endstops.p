@@ -24,13 +24,16 @@
 
 // Endstop/mask bit buildup: 0b00<Z+><Y+><X+><Z-><Y-><X->
 // r7 : contains the endstop values 
-// r9 : Contains the endstop inversion mask
 // r8 : Contains the XYZ direction mask after lookup
+// r9 : Contains the endstop inversion mask
+// r20 : Contains the 'active' endstops
+
 
 //Memory map in shared RAM:
 //0x0120:       Endstop state in the latest byte (0b00<Z+><Y+><X+><Z-><Y-><X->)    
 //0x0124:       Direction mask produced by the endstops for negative direction    
 //0x0125:       Direction mask produced by the endstops for positive direction
+//0x0128:       Endstop active state (0b00<Z+><Y+><X+><Z-><Y-><X->)
 
 INIT:
     LBCO r0, C4, 4, 4              // Load the PRU-ICSS SYSCFG register (4 bytes) into R0
@@ -67,24 +70,27 @@ COLLECT:
     LBBO GPIO_1_IN, r3, 0, 4
     LBBO GPIO_2_IN, r4, 0, 4
     LBBO GPIO_3_IN, r5, 0, 4
+    
+    // initialize r7 to null
+    MOV r7, 0x0
 
     // Endstop X1
     LSR r0, STEPPER_X1_END_BANK, STEPPER_X1_END_PIN     // Right shift pin to bit 0
-    AND r7,r0,0x01                                      // Endstop Xmin - Build a mask into r7.b0 that contains the end stop state. This will be used to mask the command.step field.
+    AND r7, r0,0x01                                     // Endstop Xmin - Build a mask into r7.b0 that contains the end stop state. This will be used to mask the command.step field.
 
     // Endstop Y1
     LSR r0,STEPPER_Y1_END_BANK,STEPPER_Y1_END_PIN       // Right shift the end stop pin to bit 0
     AND r0,r0,0x01                                      // Clear the other bits 
     LSL r0,r0,0x01                                      // Shift pin one left since it is Y
-    OR r7,r7.b0,r0                                      // Mask away the step pin if the end stop is set
+    OR r7, r7,r0                                        // Mask away the step pin if the end stop is set
 
-    // Endstop Z1              
+    // Endstop Z1    
     LSR r0,STEPPER_Z1_END_BANK,STEPPER_Z1_END_PIN
     AND r0,r0,0x01
     LSL r0,r0,0x02
     OR  r7, r7,r0                                      
 
-    // Endstop X2         
+    // Endstop X2      
     LSR r0, STEPPER_X2_END_BANK, STEPPER_X2_END_PIN               
     AND r0,r0,0x01                                  
     LSL r0,r0,0x03
@@ -104,6 +110,13 @@ COLLECT:
 
     // r9 has the invert mask for all endstops
     XOR r7, r7, r9
+    
+    // Read active mask
+    // 0b00<Z2><Y2><X2><Z1><Y1><X1>
+    LBCO r20, C28, 8, 4
+    
+    // Only allow active endstops to have an effect
+    AND r7, r7, r20
 
 MASK:
     MOV r8, 0
@@ -125,7 +138,7 @@ MASK_Y_MAX:
 MASK_Z_MAX:
     QBBC PUBLISH, r7, 5
     OR r8, r8, r15
-
+    
 PUBLISH: 
     NOT r8.w0, r8.w0         // Invert so that the 1 (meaning do not move) becomes 0 for masking the step in PRU0
     SBCO r7, C28, 0, 8       // Publish the endstop states from r7/r8

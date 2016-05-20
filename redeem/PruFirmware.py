@@ -28,7 +28,7 @@ import logging
 import subprocess
 import shutil
 import re
-from Path import Path
+from Printer import Printer
 
 class PruFirmware:
     def __init__(self, firmware_source_file0, binary_filename0,
@@ -197,7 +197,7 @@ class PruFirmware:
                 direction = "0" if self.config.getint('Steppers', 'direction_' + name) > 0 else "1"
                 configFile.write('#define STEPPER_'+ name +'_DIRECTION\t\t'+ direction +'\n') 
 
-                index = Path.axis_to_index(name)
+                index = Printer.axis_to_index(name)
                 direction_mask |= (int(direction) << index)        
 
                 # Generate the GPIO bank masks
@@ -227,6 +227,7 @@ class PruFirmware:
             # Construct the endstop lookup table.
             for name, endstop in self.printer.end_stops.iteritems():
                 mask = 0
+
                 # stepper name is x_cw or x_ccw
                 option = 'end_stop_' + name + '_stops'
                 for stepper in self.config.get('Endstops', option).split(","):
@@ -251,6 +252,9 @@ class PruFirmware:
                     if (direction == -1):
                         cur <<= 8
                     mask += cur
+                
+                logging.debug("Endstop {0} mask = {1}".format(name, bin(mask)))
+                
                 bin_mask = "0b"+(bin(mask)[2:]).zfill(16)
                 configFile.write("#define STEPPER_MASK_" + name + "\t\t" + bin_mask + "\n")
         

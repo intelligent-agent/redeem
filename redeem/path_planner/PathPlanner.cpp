@@ -123,7 +123,6 @@ void PathPlanner::clearSyncEvent(){
   PyEval_RestoreThread(_save);
 }
 
-
 void PathPlanner::queueMove(std::vector<FLOAT_T> startPos, std::vector<FLOAT_T> endPos, 
 			    FLOAT_T speed, FLOAT_T accel, 
 			    bool cancelable, bool optimize, 
@@ -219,9 +218,9 @@ void PathPlanner::queueMove(std::vector<FLOAT_T> startPos, std::vector<FLOAT_T> 
   // handle any slaving activity
   handleSlaves(startPos, endPos);
 
-  // LOG("Preprocessing done:\n");
+  // LOG("MOVE COMMAND:\n");
   // for (int i = 0; i<NUM_AXES; ++i) {
-  //   LOG("AXIS " << i << ": start = " << startPos[i] << ", end = " << endPos[i] << "\n");
+  //   LOG("AXIS " << i << ": start = " << startPos[i] << ", end = " << state[i] << "\n");
   // }
     	
   ////////////////////////////////////////////////////////////////////
@@ -235,8 +234,8 @@ void PathPlanner::queueMove(std::vector<FLOAT_T> startPos, std::vector<FLOAT_T> 
 
   unsigned int linesQueued = 0;
   unsigned int linesCacheRemaining = 0;
-  long linesTicksRemaining = 0;
-  long linesTicksQueued = 0;
+  long long linesTicksRemaining = 0;
+  long long linesTicksQueued = 0;
 
   // wait for the worker
   if(linesCacheRemaining == 0 || linesTicksRemaining == 0){
@@ -285,6 +284,7 @@ void PathPlanner::queueMove(std::vector<FLOAT_T> startPos, std::vector<FLOAT_T> 
 	
   if(p->isNoMove()){
     LOG( "Warning: no move path" << std::endl);
+    PyEval_RestoreThread(_save);
     return; // No steps included
   }
 
@@ -808,7 +808,8 @@ void PathPlanner::run() {
 	if(vMaxReached>cur->vMax) 
 	  vMaxReached = cur->vMax;
 	unsigned long v = vMaxReached;
-	interval = F_CPU/(v);
+	if (v > 0)
+	  interval = F_CPU/(v);
 	timer_accel+=interval;
       }
       else if (cur->moveDecelerating(stepNumber)){     // time to slow down
@@ -821,8 +822,8 @@ void PathPlanner::run() {
 	  if (v < cur->vEnd)
 	    v = cur->vEnd; // extra steps at the end of desceleration due to rounding erros
 	}
-				
-	interval = F_CPU/(v);
+	if (v > 0)
+	  interval = F_CPU/(v);
 	timer_decel += interval;
       }
       else{ // full speed reached

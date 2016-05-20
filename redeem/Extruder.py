@@ -35,19 +35,20 @@ class Heater(object):
         """ Init """
         self.thermistor = thermistor
         self.mosfet = mosfet
-        self.name = name                   # Name, used for debugging
+        self.name = name                    # Name, used for debugging
         self.current_temp = 0.0
-        self.target_temp = 0.0             # Target temperature (Ts). Start off. 
-        self.last_error = 0.0              # Previous error term, used in calculating the derivative
-        self.error_integral = 0.0          # Accumulated integral since the temperature came within the boudry
-        self.error_integral_limit = 100.0  # Integral temperature boundary
-        self.P = 1.0                      # Proportional 
-        self.I = 0.0                      # Integral 
-        self.D = 0.0                      # Derivative
+        self.target_temp = 0.0              # Target temperature (Ts). Start off. 
+        self.last_error = 0.0               # Previous error term, used in calculating the derivative
+        self.error_integral = 0.0           # Accumulated integral since the temperature came within the boudry
+        self.error_integral_limit = 100.0   # Integral temperature boundary
+        self.P = 1.0                        # Proportional 
+        self.I = 0.0                        # Integral 
+        self.D = 0.0                        # Derivative
         self.onoff_control = onoff_control  # If we use PID or ON/OFF control
         self.ok_range = 4.0
         self.prefix = ""
-        self.sleep = 0.1                 # Time to sleep between measurements
+        self.sleep = 0.1                    # Time to sleep between measurements
+        self.max_power = 1.0                # Maximum power
 
         self.min_temp_enabled   = False  # Temperature error limit 
         self.min_temp           = 0      # If temperature falls below this point from the target, disable. 
@@ -65,6 +66,10 @@ class Heater(object):
     def get_temperature(self):
         """ get the temperature of the thermistor"""
         return np.average(self.temperatures[-self.avg:])
+
+    def get_temperature_raw(self):
+        """ Get unaveraged temp measurement """
+        return self.temperatures[-1]
 
     def get_target_temperature(self):
         """ get the temperature of the thermistor"""
@@ -87,6 +92,16 @@ class Heater(object):
         if min(self.temperatures[-int(seconds/self.sleep):]) < (self.target_temp - self.ok_range):
             return False
         return True
+
+    def get_noise_magnitude(self, measurements=10):
+        """ Calculate and return the magnitude in the noise """
+        measurements = min(measurements, len(self.temperatures))
+        #logging.debug("Measurements: "+str(self.temperatures))
+        avg = np.average(self.temperatures[-measurements:])
+        mag = np.max(self.temperatures[-measurements:])
+        #logging.debug("Avg: "+str(avg))
+        #logging.debug("Mag: "+str(mag))
+        return abs(mag-avg)
 
     def set_min_temp(self, min_temp):
         """ Set the minimum temperature. If current temp goes below this, 
@@ -140,8 +155,8 @@ class Heater(object):
                 self.averages.pop(0)
 
                 if self.onoff_control:
-                    if self.error > 1.0:
-                        power = 1.0
+                    if self.error > 0.0:
+                        power = self.max_power
                     else:
                         power = 0.0
                 else:
@@ -151,7 +166,7 @@ class Heater(object):
                         self.error_integral = 0
                         integral = 0
                     power = self.P*(self.average + self.D*derivative + self.I*integral)  # The standard formula for the PID
-                    power = max(min(power, 1.0), 0.0)                           # Normalize to 0,1
+                    power = max(min(power, self.max_power), 0.0)                         # Normalize to 0, max
                     #if self.name =="E":
                     #    logging.debug("Der: "+str(derivative)+" Err: "+str(self.error)+" avg err: "+str(self.average))
 
@@ -191,20 +206,20 @@ class Heater(object):
         # Check that temperature is not rising too quickly
         if temp_delta > self.max_temp_rise:
             a = Alarm(Alarm.HEATER_RISING_FAST, 
-                "Temperature rising too quickly ({}) for {}".format(temp_delta, self.name))
+                "Temperature rising too quickly ({} degrees) for {}".format(temp_delta, self.name))
         # Check that temperature is not falling too quickly
         if temp_delta < -self.max_temp_fall:
             a = Alarm(Alarm.HEATER_FALLING_FAST, 
-                "Temperature falling too quickly ({}) for {}".format(temp_delta, self.name))
+                "Temperature falling too quickly ({} degrees) for {}".format(temp_delta, self.name))
         # Check that temperature has not fallen below a certain setpoint from target
         if self.min_temp_enabled and self.current_temp < (self.target_temp - self.min_temp):
             a = Alarm(Alarm.HEATER_TOO_COLD, 
-                "Temperature below min set point ({}) for {}".format(self.min_temp, self.name), 
+                "Temperature below min set point ({} degrees) for {}".format(self.min_temp, self.name), 
                 "Alarm: Heater {}".format(self.name))
         # Check if the temperature has gone beyond the max value
         if self.current_temp > self.max_temp:
             a = Alarm(Alarm.HEATER_TOO_HOT, 
-                "Temperature beyond max ({}) for {}".format(self.max_temp, self.name))                
+                "Temperature beyond max ({} degrees) for {}".format(self.max_temp, self.name))                
         # Check the time diff, only warn if something is off.     
         if self.time_diff > 2:
             logging.warning("Heater time update large: " +

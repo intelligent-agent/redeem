@@ -10,6 +10,7 @@ License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 
 from GCodeCommand import GCodeCommand
 import logging
+import os
 
 class M119(GCodeCommand):
     def execute(self, g):
@@ -33,7 +34,7 @@ class M119(GCodeCommand):
             self.printer.config.set('Endstops', 'invert_'+es, str(val))
 
             # Save the config file. 
-            self.printer.config.save('/etc/redeem/local.cfg')
+            self.printer.config.save(os.path.join(self.printer.config_location,'local.cfg'))
 
             # Recompile the firmware
             self.printer.path_planner.pru_firmware.produce_firmware()
