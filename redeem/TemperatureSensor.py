@@ -39,20 +39,19 @@ from Alarm import Alarm
 class TemperatureSensor:
 
     mutex = Lock()
-    
 
     def __init__(self, pin, heater_name, sensorIdentifier):
 
         self.pin = pin
         self.heater = heater_name
         self.sensorIdentifier = sensorIdentifier
-        self.maxAdc = 4095
+        self.maxAdc = 4095.0
 
         #Find matching entry in sensor tables and instantiate corresponding sensor
         found = False
         for s in TemperatureSensorConfigs.thermistors_shh:
             if s[0] == self.sensorIdentifier:
-                self.sensor = Thermistor(pin, s)
+                self.sensor = Thermistor(pin, s, self.heater)
                 found = True
                 break
 
@@ -85,10 +84,9 @@ class TemperatureSensor:
     Returns -1 if the reading is out of range.
     """
     def read_adc(self):
-        mutex = Lock()
         voltage = 0
 
-        mutex.acquire()
+        TemperatureSensor.mutex.acquire()
         try:
             with open(self.pin, "r") as file:
                 signal = float(file.read().rstrip())
@@ -99,7 +97,7 @@ class TemperatureSensor:
         except IOError as e:
              Alarm(Alarm.THERMISTOR_ERROR, "Unable to get ADC value ({0}): {1}".format(e.errno, e.strerror))
         
-        mutex.release()
+        TemperatureSensor.mutex.release()
         return voltage
 
 
@@ -109,8 +107,9 @@ class TemperatureSensor:
 """
 class Thermistor(TemperatureSensor):
 
-    def __init__(self, pin, sensorConfiguration):
+    def __init__(self, pin, sensorConfiguration, name):
         """ Init """
+        self.name = name
         if len(sensorConfiguration) != 5:
             Alarm(Alarm.THERMISTOR_ERROR, "Sensor configuration for {0} is missing parameters. Expected: 5, received: {1}.".format(pin, len(sensorConfiguration)))
         else:
@@ -126,16 +125,17 @@ class Thermistor(TemperatureSensor):
 
     def get_temperature(self, voltage):
         """ Return the temperature in degrees celsius. Uses Steinhart-Hart """
-        logging.debug("Voltage: "+str(voltage))
         r = self.voltage_to_resistance(voltage)
-        logging.debug("resistance: "+str(r))
+        #if self.name == "MOSFET E":
+        #    logging.debug("Voltage: "+str(voltage))
+        #    logging.debug("resistance: "+str(r))
         if r > 0:
             l = math.log(r)
             t = float((1.0 / (self.c1 + self.c2 * l + self.c3 * math.pow(l,3))) - 273.15)
         else:
             t = -273.15
             logging.debug("Reading sensor {0} on {1}, but it seems to be out of bounds. R is {2}. Setting temp to {3}.".format(self.sensorIdentifier, self.pin,r,t))
-        return t
+        return max(t, 0.0) # Cap it at 0 
 
     def voltage_to_resistance(self,voltage):
         """ Convert the voltage to a resistance value """

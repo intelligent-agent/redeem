@@ -270,7 +270,6 @@ class Redeem:
                 logging.warning("Deprecated config option temp_chart_"+e+" use sensor_"+e+" instead.")
             else:
                 sensor = self.printer.config.get("Heaters", "sensor_"+e)
-            resistance = (5100.0 if self.revision == "00B2" else 4700.0) # Bug on B2.
             self.printer.thermistors[e] = TemperatureSensor(adc, 'MOSFET '+e, sensor)
             self.printer.thermistors[e].printer = printer
 
