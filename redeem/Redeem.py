@@ -287,9 +287,9 @@ class Redeem:
                                         self.printer.thermistors[e],
                                         self.printer.mosfets[e], onoff)
             self.printer.heaters[e].prefix = prefix
-            self.printer.heaters[e].P = self.printer.config.getfloat('Heaters', 'pid_p_'+e)
-            self.printer.heaters[e].I = self.printer.config.getfloat('Heaters', 'pid_i_'+e)
-            self.printer.heaters[e].D = self.printer.config.getfloat('Heaters', 'pid_d_'+e)
+            self.printer.heaters[e].Kp = self.printer.config.getfloat('Heaters', 'pid_Kp_'+e)
+            self.printer.heaters[e].Ti = self.printer.config.getfloat('Heaters', 'pid_Ti_'+e)
+            self.printer.heaters[e].Td = self.printer.config.getfloat('Heaters', 'pid_Td_'+e)
 
             # Min/max settings
             self.printer.heaters[e].min_temp        = self.printer.config.getfloat('Heaters', 'min_temp_'+e)

@@ -13,41 +13,39 @@ PID Tuning refers to a control algorithm used in some repraps to tune heating be
 
 from GCodeCommand import GCodeCommand
 try:
-    from Autotune import Autotune
+    from Autotune_1 import Autotune_1
+    from Autotune_2 import Autotune_2
 except ImportError:
-    from redeem.Autotune import Autotune
+    from redeem.Autotune_1 import Autotune_1
+    from redeem.Autotune_2 import Autotune_2
+
 import logging
 
 
 class M303(GCodeCommand):
 
     def execute(self, g):
-        if g.has_letter("E"):
-            if int(g.get_value_by_letter("E")) == 0:
-                heater = self.printer.heaters["E"]
-            elif int(g.get_value_by_letter("E")) == 1:
-                heater = self.printer.heaters["H"]
-            elif int(g.get_value_by_letter("E")) == -1:
-                heater = self.printer.heaters["HBP"]
-        else:
-            heater = self.printer.heaters["E"]
+        heater_nr = g.get_int_by_letter("E", 0)
+        heater_name = ["HBP", "E", "H", "A", "B", "C"][heater_nr+1] # Map to name
+        if not heater_name in self.printer.heaters:
+            logging.warning("M303: Heater does not exist")
+        heater = self.printer.heaters["E"]
+        temp     = g.get_float_by_letter("S", 200.0)
+        cycles   = g.get_int_by_letter("C", 4)            
+        tuner_nr = g.get_int_by_letter("N", 1)
 
-        if g.has_letter("S"):
-            temp = float(g.get_value_by_letter("S"))
+        if tuner_nr == 1:
+            tuner = Autotune_1(heater, temp, cycles, g, self.printer)
+        elif tuner_nr == 2:
+            tuner = Autotune_2(heater, temp, cycles, g, self.printer)
         else:
-            temp = 200.0
-
-        if g.has_letter("C"):
-            cycles = int(g.get_value_by_letter("C"))
-        else:
-            cycles = 5
-        
-        tuner = Autotune(heater, temp, cycles, g, self.printer)
+            logging.warning("M303: Tuner does not exist")
+            return
         tuner.run()
         logging.info("Max temp: {}, Min temp: {}, Ku: {}, Pu: {}".format(tuner.max_temp, tuner.min_temp, tuner.Ku, tuner.Pu))
-        logging.info("P: {}, I: {}, D: {}".format(heater.P, heater.I, heater.D))
+        logging.info("Kp: {}, Ti: {}, Td: {}".format(heater.Kp, heater.Ti, heater.Td))
         self.printer.send_message(g.prot,"Max temp: {}, Min temp: {}, Ku: {}, Pu: {}".format(tuner.max_temp, tuner.min_temp, tuner.Ku, tuner.Pu))
-        self.printer.send_message(g.prot, "P: {}, I: {}, D: {}".format(heater.P, heater.I, heater.D))
+        self.printer.send_message(g.prot, "P: {}, I: {}, D: {}".format(heater.Kp, heater.Ti, heater.Td))
 
     def is_buffered(self):
         return True
@@ -63,8 +61,11 @@ class M303(GCodeCommand):
             "and Derivative (Kd) values for the hotend or "
             "bed (E-1). Send the appropriate code and wait "
             "for the output to update the firmware. "
-            "E<0 or 1> overrides the extruder. Use E-1 for heated bed. "
-            "Default is the 'E' extruder."
-            "S overrides the temperature to calibrate for. Default is 200. "
-            "C overrides the number of cycles to run. Default is 3")
+            "E<0 or 1> overrides the extruder. Use E-1 for heated bed. \n"
+            "Default is the 'E' extruder with index 0. \n"
+            "S overrides the temperature to calibrate for. Default is 200. \n"
+            "C overrides the number of cycles to run, default is 3 \n"
+            "N overrides the tuner number. 1 is the standard tuner, 2 is more advanced.")
+
+
 
