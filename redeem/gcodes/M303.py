@@ -29,7 +29,8 @@ class M303(GCodeCommand):
         heater_name = ["HBP", "E", "H", "A", "B", "C"][heater_nr+1] # Map to name
         if not heater_name in self.printer.heaters:
             logging.warning("M303: Heater does not exist")
-        heater = self.printer.heaters["E"]
+            return
+        heater = self.printer.heaters[heater_name]
         temp     = g.get_float_by_letter("S", 200.0)
         cycles   = g.get_int_by_letter("C", 4)            
         tuner_nr = g.get_int_by_letter("N", 1)
@@ -45,7 +46,16 @@ class M303(GCodeCommand):
         logging.info("Max temp: {}, Min temp: {}, Ku: {}, Pu: {}".format(tuner.max_temp, tuner.min_temp, tuner.Ku, tuner.Pu))
         logging.info("Kp: {}, Ti: {}, Td: {}".format(heater.Kp, heater.Ti, heater.Td))
         self.printer.send_message(g.prot,"Max temp: {}, Min temp: {}, Ku: {}, Pu: {}".format(tuner.max_temp, tuner.min_temp, tuner.Ku, tuner.Pu))
-        self.printer.send_message(g.prot, "P: {}, I: {}, D: {}".format(heater.Kp, heater.Ti, heater.Td))
+        self.printer.send_message(g.prot, "Kp: {}, Ti: {}, Td: {}".format(heater.Kp, heater.Ti, heater.Td))
+        self.printer.send_message(g.prot, "Settings by G-code: ")
+        self.printer.send_message(g.prot, "M130 P{} S{0:.4f}".format(heater_nr, heater.Kp))
+        self.printer.send_message(g.prot, "M131 P{} S{0:.4f}".format(heater_nr, heater.Ti))
+        self.printer.send_message(g.prot, "M132 P{} S{0:.4f}".format(heater_nr, heater.Td))
+        self.printer.send_message(g.prot, "Settings in local.cfg: ")
+        self.printer.send_message(g.prot, "pid_{}_Kp = {0:.4f}".format(heater_name.lower(), heater.Kp))
+        self.printer.send_message(g.prot, "pid_{}_Ti = {0:.4f}".format(heater_name.lower(), heater.Ti))
+        self.printer.send_message(g.prot, "pid_{}_Td = {0:.4f}".format(heater_name.lower(), heater.Td))
+
 
     def is_buffered(self):
         return True

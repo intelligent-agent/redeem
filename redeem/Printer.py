@@ -26,44 +26,39 @@ import logging
 from Delta import Delta
 from PruInterface import PruInterface
 import os
+import json
 
-class Printer:
-    """ A command received from pronterface or whatever """
-    
+class Printer:    
     AXES = "XYZEHABC"
     axes_zipped = ["X", "Y", "Z", "E", "H", "A", "B", "C"]
     MAX_AXES = 8
     NUM_AXES = 5
     
-    AXIS_CONFIG_XY = 0
-    AXIS_CONFIG_H_BELT = 1
+    AXIS_CONFIG_XY      = 0
+    AXIS_CONFIG_H_BELT  = 1
     AXIS_CONFIG_CORE_XY = 2
-    AXIS_CONFIG_DELTA = 3
+    AXIS_CONFIG_DELTA   = 3
 
     def __init__(self):
-
         self.config_location = None        
-        
-        self.steppers = {}
-        self.heaters = {}
+        self.steppers    = {}
+        self.heaters     = {}
         self.thermistors = {}
-        self.mosfets = {}
-        self.end_stops = {}
-        self.fans = []
-        self.cold_ends = []
-        self.coolers = []
-
-        self.comms = {}  # Communication channels
-        self.path_planner = None
-
-        self.factor = 1.0
+        self.mosfets     = {}
+        self.end_stops   = {}
+        self.fans        = []
+        self.cold_ends   = []
+        self.coolers     = []
+        self.comms       = {}  # Communication channels
+        self.path_planner   = None
+        self.factor         = 1.0
         self.extrude_factor = 1.0
-        self.movement = Path.ABSOLUTE
-        self.axis_config = self.AXIS_CONFIG_XY
-        self.feed_rate = 0.5
-        self.accel = 0.5
-        self.current_tool = "E"
-        self.move_cache_size = 128
+        self.movement       = Path.ABSOLUTE
+        self.axis_config    = self.AXIS_CONFIG_XY
+        self.feed_rate      = 0.5
+        self.accel          = 0.5
+        self.current_tool   = "E"
+        self.move_cache_size        = 128
         self.print_move_buffer_wait = 250
         self.min_buffered_move_time = 100
         self.max_buffered_move_time = 1000
@@ -178,9 +173,6 @@ class Printer:
         
         # write to shared memory
         PruInterface.set_active_endstops(active)
-        
-        
-        
         return
         
 
@@ -197,13 +189,13 @@ class Printer:
 
         logging.debug("save_settings: setting heater parameters")
         for name, heater in self.heaters.iteritems():
-            self.config.set('Heaters', 'pid_p_'+name, str(heater.P))
-            self.config.set('Heaters', 'pid_i_'+name, str(heater.I))
-            self.config.set('Heaters', 'pid_d_'+name, str(heater.D))
+            self.config.set('Heaters', 'pid_Kp_'+name, str(heater.Kp))
+            self.config.set('Heaters', 'pid_Ti_'+name, str(heater.Ti))
+            self.config.set('Heaters', 'pid_Td_'+name, str(heater.Td))
 
         # FIXME: broken!
-        # logging.debug("save_settings: saving bed compensation matrix")
-        # self.save_bed_compensation_matrix()
+        logging.debug("save_settings: saving bed compensation matrix")
+        self.save_bed_compensation_matrix()
 
         # Offsets
         logging.debug("save_settings: setting offsets")
@@ -222,16 +214,17 @@ class Printer:
         logging.debug("save_settings: done")
 
     def load_bed_compensation_matrix(self):
-        mat = self.config.get('Geometry', 'bed_compensation_matrix').split(",")
-        mat = np.array([float(i) for i in mat]).reshape(3, 3)
+        try:
+            mat = self.config.get('Geometry', 'bed_compensation_matrix')
+            mat = np.array(json.loads(mat))
+        except: 
+            mat = np.eye(3)
         return mat
 
     def save_bed_compensation_matrix(self):
-        mat = "\n"
-        for idx, i in enumerate(self.matrix_bed_comp):
-            mat += "\t"+", ".join([str(j) for j in i.tolist()[0]])+("" if idx == 2 else ",\n")
+        mat = json.dumps(self.matrix_bed_comp.tolist())
         # Only update if they are different
-        if mat.replace('\t', '') != self.config.get('Geometry', 'bed_compensation_matrix'):
+        if mat != self.config.get('Geometry', 'bed_compensation_matrix'):
             self.config.set('Geometry', 'bed_compensation_matrix', mat)        
 
     @staticmethod
