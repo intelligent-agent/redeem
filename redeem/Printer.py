@@ -186,6 +186,7 @@ class Printer:
             self.config.set('Steppers', 'steps_pr_mm_' + name, str(stepper.steps_pr_mm))
             self.config.set('Steppers', 'microstepping_' + name, str(stepper.microstepping))
             self.config.set('Steppers', 'slow_decay_' + name, str(stepper.decay))
+            self.config.set('Steppers', 'slave_' + name, str(self.slaves[name]))
 
         logging.debug("save_settings: setting heater parameters")
         for name, heater in self.heaters.iteritems():
@@ -193,8 +194,8 @@ class Printer:
             self.config.set('Heaters', 'pid_Ti_'+name, str(heater.Ti))
             self.config.set('Heaters', 'pid_Td_'+name, str(heater.Td))
 
-        # FIXME: broken!
         logging.debug("save_settings: saving bed compensation matrix")
+        # Bed compensation
         self.save_bed_compensation_matrix()
 
         # Offsets
@@ -208,7 +209,7 @@ class Printer:
         opts = ["Hez", "L", "r", "Ae", "Be", "Ce", "A_radial", "B_radial", "C_radial", "A_tangential", "B_tangential", "C_tangential" ]
         for opt in opts:
             self.config.set('Delta', opt, str(Delta.__dict__[opt]))
-
+    
         logging.debug("save_settings: saving config to file")
         self.config.save(filename)
         logging.debug("save_settings: done")

@@ -34,7 +34,7 @@ except ImportError:
 
 class Autotune_1:
 
-    def __init__(self, heater, temp=200.0, cycles=4, g=None, printer=None):        
+    def __init__(self, heater, temp=200.0, cycles=4, g=None, printer=None, pre_calibrate=False):        
         self.heater                 = heater
         self.steady_temperature     = temp        # Steady state starting temperture
         self.cycles                 = cycles
@@ -43,7 +43,9 @@ class Autotune_1:
         self.output_step            = 10.0        # Degrees to step
         self.E                      = 1.0         # Hysteresis
         self.tuning_algorithm       = "TL"        # Ziegler-Nichols
-
+        self.starting_temp          = 30.0
+        self.pre_calibrate_temp     = 100.0
+        self.pre_calibrate_enabled  = pre_calibrate
         self.plot_temps = []
 
     def cancel(self):
@@ -77,8 +79,11 @@ class Autotune_1:
         self.d = self.bias = 0.5
         self.heater.max_power = 1.0
 
+        # Pre calibrate
+        if self.pre_calibrate_enabled:
+            self.pre_calibrate()
+
         # Start stepping temperatures
-        logging.debug("Starting cycles")
         self._tune()
         #logging.debug("Tuning data: "+str(self.temps))
 
@@ -87,18 +92,18 @@ class Autotune_1:
         self.heater.Ti = self.Ti
         self.heater.Td = self.Td
 
-        # Clean shit up
+        # Clean stuff up
         self.heater.onoff_control = self.has_onoff_control
         self.running = False
         self.t.join()
 
 
     def _tune(self):
+        logging.debug("Starting Tuning")
         self.temps = np.array([])
         self.times = np.array([])
         for cycle in range(self.cycles):
             logging.debug("Doing cycle: "+str(cycle))
-
 
             # Turn on heater and wait until temp>setpoint
             self.t_high = time.time()
@@ -117,8 +122,9 @@ class Autotune_1:
             self.t_low = time.time() - self.t_low
 
             if cycle > 0:
+                # Calculate gain skew
                 logging.debug("th: {}, tl: {}".format(self.t_low, self.t_high))
-                self.bias += (self.d*(self.t_high - self.t_low))/(self.t_low + self.t_high);
+                self.bias += (self.d*(self.t_high - self.t_low))/(self.t_low + self.t_high)
                 self.bias = np.clip(self.bias, 0.1 , 0.9)
                 self.d = 1.0 - self.bias if self.bias > 0.5 else self.bias
 
@@ -137,25 +143,9 @@ class Autotune_1:
                     logging.debug("Max: "+str(self.max_temp))
                     logging.debug("Min: "+str(self.min_temp))
                 
-                    # Calculate amplitude response
-                    #a_single=(abs_max-abs_min)/2.0
-                    #d_single=(self.high_cycle_power)/2.0
-
-                    # Calculate the ultimate gain 
-                    #Ku=(4.0/np.pi) * (self.d / np.sqrt(a_single**2 + self.E**2))
-
                     a = self.max_temp-self.min_temp
                     self.Ku = (4.0 * self.d) / (np.pi * np.sqrt(a**2 + self.E**2))
                     self.Pu = self.t_low + self.t_high
-
-
-                    # (13) Geometric mean 
-                    #d_single = np.sqrt((self.setpoint_power-0)*(self.high_cycle_power-self.setpoint_power))
-
-                    # Calculate the oscillation period of the peaks
-                    #Pu = (times[peaks[-2]]-times[peaks[-3]])
-
-
 
                     # Tyreus-Luyben: 
                     if self.tuning_algorithm == "TL":
@@ -182,6 +172,212 @@ class Autotune_1:
         logging.debug("Cycles completed")
         self.heater.set_target_temperature(0)
         self.heater.max_power = 1.0
+
+
+    def _pre_calibrate(self):
+        logging.debug("Starting pre-calibrate")
+        # Wait for temperature to reach < 30 deg.
+        self.heater.set_target_temperature(0)
+        while self.heater.get_temperature() > self.starting_temp:
+            time.sleep(1)
+
+        # Get the noise band from the thermistor
+        self.noise_band = self.heater.get_noise_magnitude()
+        # Rev B has a very low noise floor, so if 0 is returned, 
+        # set it to 0.5 
+        self.noise_band = self.noise_band
+        logging.debug("Found noise magnitude: "+str(self.noise_band))
+
+        current_temp = self.heater.get_temperature()
+        # Set the heater at 25% max power
+        self.heater.max_power = 0.25
+
+        heatup_temps = []
+
+        # Start heating at 25%
+        dead_time = 0
+        stop_temp = current_temp + 2.0*self.noise_band
+        self.heater.set_target_temperature(self.pre_calibrate_temp)
+        while self.heater.get_temperature_raw() < stop_temp:
+            time.sleep(0.1)
+            dead_time += 0.1
+            heatup_temps.append( "({}, {:10.4f})".format(time.time(), self.heater.get_temperature_raw()) )
+        logging.debug("Found dead time: "+str(dead_time))
+
+        # Wait for heatup curve to establish
+        stop_time = 2.0*dead_time
+        while stop_time > 0:
+            time.sleep(0.1)
+            heatup_temps.append("({}, {:10.4f})".format(time.time(), self.heater.get_temperature_raw() ))
+            stop_time -= 0.1
+
+        # (5) Record slope of heat up curve
+        delta_temps = []
+        delta_times = []
+        delta_time = np.minimum(np.maximum(dead_time*4.0, 10.0), 30.0)
+        self.delta_time = delta_time
+        logging.debug("Starting delta measurements, time: "+str(delta_time))
+        while delta_time > 0:
+            delta_temps.append(self.heater.get_temperature_raw())
+            delta_times.append(time.time())
+            time.sleep(0.1)
+            delta_time -= 0.1
+            heatup_temps.append("({}, {:10.4f})".format(time.time(), self.heater.get_temperature_raw() ))
+        
+        logging.debug("Stopping delta measurements")
+
+        #logging.debug("Heatup temps: "+str(heatup_temps))
+
+        # (6) Calculate heat-up rate        
+        heat_rate = (delta_temps[-1]-delta_temps[0])/(delta_times[-1]-delta_times[0])
+        logging.debug("heat up rate at 25%: "+str(heat_rate)+" deg/s")
+
+        # (7) Calculate max heat rate
+        self.max_heat_rate = heat_rate*4.0# * 1.16
+        logging.debug("Max heat rate: "+str(self.max_heat_rate)+" deg/s")
+
+        # (8) Estimate cutoff point
+        self.cutoff_band = self.max_heat_rate*dead_time
+        logging.debug("Cutoff band: "+str(self.cutoff_band)+" deg")
+
+        # (9) Raise temp until cutoff. 
+        cutoff_temp = self.pre_calibrate_temp - self.cutoff_band
+        self.heater.max_power = 1.0
+        cutoff_temps = []
+        cutoff_times = []
+        logging.debug("Cutoff temp: "+str(cutoff_temp)+ " deg")
+        while self.heater.get_temperature_raw() < cutoff_temp:
+            cutoff_temps.append(self.heater.get_temperature_raw())
+            cutoff_times.append(time.time())
+            time.sleep(0.1)
+            
+        # (10) Calculate slope in degrees/second, store as setpoint_heating_rate
+        self.setpoint_heating_rate = (cutoff_temps[-1]-cutoff_temps[-20])/(cutoff_times[-1]-cutoff_times[-20])
+        logging.debug("Found setpoint heating rate: "+str(self.setpoint_heating_rate))
+        
+        if self.setpoint_heating_rate > self.max_heat_rate:
+            self.max_heat_rate = self.setpoint_heating_rate
+            logging.debug("Updated max heat rate to: "+str(self.setpoint_heating_rate))
+
+        # (11) Set power to zero
+        self.heater.set_target_temperature(0)
+        logging.debug("Disabling heater and looking for peak")
+
+        # (12) Find temp peak
+        highest_temp = self.heater.get_temperature_raw()
+        new_temp = highest_temp
+        while new_temp >= highest_temp:
+            time.sleep(0.1)
+            highest_temp = new_temp
+            new_temp = self.heater.get_temperature_raw()
+        logging.debug("Found max peak: "+str(highest_temp)+" deg")
+
+        # (13) Adding dead time
+        dead_time = highest_temp-20
+        while self.heater.get_temperature_raw() > dead_time:
+            time.sleep(0.1)
+
+        # (14) Record cooling rates
+        logging.debug("Started recording cooling rates")
+        cooling_temps = []
+        cooling_times = []
+        cooldown_temps = []
+        # Get 120 seconds of cooling data
+        for temp in range(1200):
+            cooling_temps.append(self.heater.get_temperature_raw())
+            cooling_times.append(time.time())
+            time.sleep(0.1)
+            cooldown_temps.append("({}, {:10.4f})".format(time.time(), self.heater.get_temperature_raw() ))
+
+        temps = ",".join(cooldown_temps)
+        logging.debug("Cooling temps: "+str(temps))
+
+        diffs = np.array([(cooling_temps[200+(i*200)]-cooling_temps[0+(i*200)]) for i in range(5)])
+        times = np.array([(cooling_times[200+(i*200)]-cooling_times[0+(i*200)]) for i in range(5)])
+        slopes = abs(diffs/times)
+        temp_deltas = [cooling_temps[100+(i*200)]-self.ambient_temp for i in range(5)]
+        
+        # Wait until we are below cutoff-temp, so we can get some traction
+        while self.heater.get_temperature_raw() > cutoff_temp - 20.0:
+            time.sleep(1)
+
+        # (15) Record setpoint cooling rate
+        self.cooling_rate = slopes[0]
+
+        logging.debug("Cooling rate: "+str(self.cooling_rate)+ " deg/s")
+        logging.debug("Diffs: "+str(diffs)+ " deg")
+        logging.debug("Times: "+str(times)+ " s")
+        logging.debug("Cooling rates: "+str(slopes)+ " deg/s")
+        logging.debug("Deltas: "+str(temp_deltas)+ " deg")
+        
+        # (16) Calculate heat_loss_constant
+        self.heat_loss_constant = [ slopes[n]/temp_deltas[n] for n in range(len(slopes))]
+        logging.debug("Heat loss constant: "+str(self.heat_loss_constant))
+        
+        # (17) Calculate heat_loss_K
+        self.heat_loss_k = np.average(self.heat_loss_constant)
+        logging.debug("Heat loss K: "+str(self.heat_loss_k))
+
+        # (19) Calculate gain skew
+        self.gain_skew = np.sqrt(self.setpoint_heating_rate/self.cooling_rate)
+        
+        logging.debug("Gain skew: "+str(self.gain_skew))
+
+        # (20) Calculate rate of heat loss in degrees/second at desired setpoint using heat loss model, 
+        setpoint_loss = self.heat_loss_k * (self.steady_temperature - self.ambient_temp)
+        logging.debug("Setpoint loss: "+str(setpoint_loss))
+
+        # (21) Calculate setpoint heater power requirement, 
+        self.setpoint_power = setpoint_loss / self.max_heat_rate
+        logging.debug("Setpoint_power: "+str(self.setpoint_power))
+
+        # (22) Calculate high-cycle power 
+        self.high_cycle_power = self.setpoint_power*(1.0+1.0/(self.gain_skew**2))
+        logging.debug("High-cycle_power: "+str(self.high_cycle_power))
+        
+        # (23) Check if high-cycle power exceeds max_PWM 
+        if self.high_cycle_power > 1.0: 
+            # notify user the heater is too weak to cycle effectively at the chosen setpoint, 
+            # and change setpoint_power=max_PWM/2, ignore gain_skew, and use high-cycle power = max_PWM.
+            # TODO: fix this
+            logging.warning("High cycle power exceedes max. Setting to 1.0")
+            self.high_cycle_power = 1.0
+
+        # Apply max heater power until reaching temp=setpoint - cutoff_band 
+                
+        cutoff_temp = self.steady_temperature - self.cutoff_band
+        self.heater.max_power = 1.0
+        self.heater.set_target_temperature(self.steady_temperature)
+        logging.debug("Cutoff temp: "+str(cutoff_temp)+ " deg")
+        while self.heater.get_temperature_raw() < cutoff_temp:
+            time.sleep(0.1)
+        logging.debug("Cutoff temp reached")
+
+        self.heater.set_target_temperature(0)
+        logging.debug("Disabling heater and looking for peak")
+
+        highest_temp = self.heater.get_temperature_raw()
+        new_temp = highest_temp
+        while new_temp >= highest_temp:
+            time.sleep(0.1)
+            highest_temp = new_temp
+            new_temp = self.heater.get_temperature_raw()
+        logging.debug("Found max peak: "+str(highest_temp)+" deg")
+
+        # (6) Apply setpoint_power heater power and hold until stable 
+        self.heater.max_power = self.setpoint_power
+        # Set temp to something above the desired. setpoint power should enforce this.
+        #self.heater.set_target_temperature(230)
+        #while self.heater.get_noise_magnitude(300) > 1.0:
+        #    time.sleep(1)
+
+        #logging.debug("Stable temp reached")
+
+        self.heater.max_power = self.high_cycle_power
+
+        logging.debug("Pre calibrate done")
+
+
 
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
