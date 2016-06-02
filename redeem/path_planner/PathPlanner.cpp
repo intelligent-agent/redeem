@@ -204,9 +204,6 @@ void PathPlanner::queueMove(std::vector<FLOAT_T> startPos, std::vector<FLOAT_T> 
     backlashCompensation(delta);
   }
 
-  // if the tool is not using axis 3, then shift axis 3 moves to the correct axis
-  handleTools(delta, vec, tool_axis);
-	
   // change startPos and endPos to give the change in position using machine coordinates
   // also update the state of the machine, i.e. where the effector really is in physical space
   for (int i = 0; i<NUM_AXES; ++i) {

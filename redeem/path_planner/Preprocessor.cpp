@@ -218,18 +218,6 @@ void PathPlanner::backlashCompensation(std::vector<FLOAT_T> &delta)
   return;
 }
 
-void PathPlanner::handleTools(std::vector<FLOAT_T> &delta, std::vector<FLOAT_T> &vec, int tool_axis)
-{
-  if (tool_axis != 3) {
-    delta[tool_axis] = delta[3];
-    delta[3] = 0.0;
-    vec[tool_axis] = vec[3];
-    vec[3] = 0.0;
-  }
-    
-  return;
-}
-
 void PathPlanner::handleSlaves(std::vector<FLOAT_T> &startPos, std::vector<FLOAT_T> &endPos)
 {
   if ( has_slaves) {
