@@ -85,26 +85,26 @@ class PathPlanner:
         self.native_planner.setMinSpeeds(tuple(self.printer.min_speeds))	
         self.native_planner.setAcceleration(tuple(self.printer.acceleration))
         self.native_planner.setJerks(tuple(self.printer.jerks))
-        
         self.native_planner.setPrintMoveBufferWait(int(self.printer.print_move_buffer_wait))
         self.native_planner.setMinBufferedMoveTime(int(self.printer.min_buffered_move_time))
         self.native_planner.setMaxBufferedMoveTime(int(self.printer.max_buffered_move_time))
-        
         self.native_planner.setSoftEndstopsMin(tuple(self.printer.soft_min))
         self.native_planner.setSoftEndstopsMax(tuple(self.printer.soft_max))
-        
         self.native_planner.setBedCompensationMatrix(tuple(self.printer.matrix_bed_comp.ravel()))
-        
         self.native_planner.setMaxPathLength(self.printer.max_length)
-        
         self.native_planner.setAxisConfig(self.printer.axis_config)
-        
         self.native_planner.delta_bot.setMainDimensions(Delta.Hez, Delta.L, Delta.r)
         self.native_planner.delta_bot.setEffectorOffset(Delta.Ae, Delta.Be, Delta.Ce)
         self.native_planner.delta_bot.setRadialError(Delta.A_radial, Delta.B_radial, Delta.C_radial);
         self.native_planner.delta_bot.setTangentError(Delta.A_tangential, Delta.B_tangential, Delta.C_tangential)
         self.native_planner.delta_bot.recalculate()
-            
+        self.configure_slaves()
+        self.native_planner.setBacklashCompensation(tuple(self.printer.backlash_compensation));
+        self.native_planner.setState(self.prev.end_pos)
+        self.printer.plugins.path_planner_initialized(self)
+        self.native_planner.runThread()
+
+    def configure_slaves(self):
         self.native_planner.enableSlaves(self.printer.has_slaves)
         if self.printer.has_slaves:
             for master in Printer.AXES:
@@ -114,15 +114,6 @@ class PathPlanner:
                     slave_index = Printer.axis_to_index(slave)
                     self.native_planner.addSlave(int(master_index), int(slave_index))
                     logging.debug("Axis " + str(slave_index) + " is slaved to axis " + str(master_index))
-                    
-            
-        self.native_planner.setBacklashCompensation(tuple(self.printer.backlash_compensation));
-        
-        self.native_planner.setState(self.prev.end_pos)
-        
-        self.printer.plugins.path_planner_initialized(self)
-
-        self.native_planner.runThread()
 
     def restart(self):
         self.native_planner.stopThread(True)        

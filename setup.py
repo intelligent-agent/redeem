@@ -46,7 +46,7 @@ pathplanner = Extension(
 
 setup(
     name = "Redeem",
-    version = "1.2.0",
+    version = "1.2.5",
     packages = find_packages(exclude=["redeem/path_planner"]),
     data_files=[
         ('redeem/firmware', [
@@ -68,6 +68,7 @@ setup(
             'data/B57560G104F.cht',
             'data/B57561G0103F000.cht',
             'data/QU-BD.cht',
+            'data/HT100K3950.cht',
             'data/SEMITEC-104GT-2.cht', 
             'data/DYZE500.cht', 
             'data/E3D-PT100-AMPLIFIER.cht']),

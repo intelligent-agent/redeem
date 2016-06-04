@@ -38,8 +38,7 @@ import sys
 
 from Mosfet import Mosfet
 from Stepper import *
-from Chart import *
-from Thermistor import Thermistor
+from TemperatureSensor import *
 from Fan import Fan
 from Servo import Servo
 from EndStop import EndStop
@@ -80,7 +79,7 @@ class Redeem:
          - default is installed directory
          - allows for running in a local directory when debugging
         """
-        firmware_version = "1.2.0~Predator"
+        firmware_version = "1.2.5~Predator"
         logging.info("Redeem initializing "+firmware_version)
 
         printer = Printer()
@@ -101,6 +100,7 @@ class Redeem:
         if not os.path.exists(file_path):
             logging.info(file_path + " does not exist, Creating one")
             os.mknod(file_path)
+            os.chmod(file_path, 0o777)
     
         # Parse the config files.
         printer.config = CascadingConfigParser(
@@ -254,11 +254,8 @@ class Redeem:
         for i, path in enumerate(paths):
             self.printer.cold_ends.append(ColdEnd(path, "ds18b20-"+str(i)))
             logging.info("Found Cold end "+str(i)+" on " + path)
-        
-        # load temperature charts
-        temperature_charts.load(printer.config.get("System", "data_path"))
             
-        # Make Mosfets, thermistors and extruders
+        # Make Mosfets, temperature sensors and extruders
         heaters = ["E", "H", "HBP"]
         if self.printer.config.reach_revision:
             heaters.extend(["A", "B", "C"])
@@ -268,14 +265,18 @@ class Redeem:
             self.printer.mosfets[e] = Mosfet(channel)
             # Thermistors
             adc = self.printer.config.get("Heaters", "path_adc_"+e)
-            chart = self.printer.config.get("Heaters", "temp_chart_"+e)
-            resistance = self.printer.config.getfloat("Heaters", "resistance_"+e)
-            self.printer.thermistors[e] = Thermistor(adc, "MOSFET "+e, chart, resistance)
+            if not self.printer.config.has_option("Heaters", "sensor_"+e):
+                sensor = self.printer.config.get("Heaters", "temp_chart_"+e)
+                logging.warning("Deprecated config option temp_chart_"+e+" use sensor_"+e+" instead.")
+            else:
+                sensor = self.printer.config.get("Heaters", "sensor_"+e)
+            self.printer.thermistors[e] = TemperatureSensor(adc, 'MOSFET '+e, sensor)
             self.printer.thermistors[e].printer = printer
 
             # Extruders
             onoff = self.printer.config.getboolean('Heaters', 'onoff_'+e)
             prefix =  self.printer.config.get('Heaters', 'prefix_'+e)
+            max_power = self.printer.config.getfloat('Heaters', 'max_power_'+e)
             if e != "HBP":
                 self.printer.heaters[e] = Extruder(
                                         self.printer.steppers[e],
@@ -286,9 +287,9 @@ class Redeem:
                                         self.printer.thermistors[e],
                                         self.printer.mosfets[e], onoff)
             self.printer.heaters[e].prefix = prefix
-            self.printer.heaters[e].P = self.printer.config.getfloat('Heaters', 'pid_p_'+e)
-            self.printer.heaters[e].I = self.printer.config.getfloat('Heaters', 'pid_i_'+e)
-            self.printer.heaters[e].D = self.printer.config.getfloat('Heaters', 'pid_d_'+e)
+            self.printer.heaters[e].Kp = self.printer.config.getfloat('Heaters', 'pid_Kp_'+e)
+            self.printer.heaters[e].Ti = self.printer.config.getfloat('Heaters', 'pid_Ti_'+e)
+            self.printer.heaters[e].Td = self.printer.config.getfloat('Heaters', 'pid_Td_'+e)
 
             # Min/max settings
             self.printer.heaters[e].min_temp        = self.printer.config.getfloat('Heaters', 'min_temp_'+e)

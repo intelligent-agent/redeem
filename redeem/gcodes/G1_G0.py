@@ -28,11 +28,18 @@ class G0(GCodeCommand):
         smds = {}
         for i in range(g.num_tokens()):
             axis = g.token_letter(i)
+
+            # If extruding, change an "E" to the current tool
+            if axis == 'E':
+                logging.debug("Changing axis from E to {}".format(self.printer.current_tool))
+                axis = self.printer.current_tool
+
             # Get the value, new position or vector
             value =  float(g.token_value(i)) / 1000.0
             if axis in ('E', 'H', 'A', 'B', 'C') and self.printer.extrude_factor != 1.0:
                 value *= self.printer.extrude_factor
             smds[axis] = value
+
         if self.printer.movement == Path.ABSOLUTE:
             path = AbsolutePath(smds, self.printer.feed_rate * self.printer.factor, self.printer.accel)
         elif self.printer.movement == Path.RELATIVE:

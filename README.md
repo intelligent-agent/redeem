@@ -125,3 +125,26 @@ Mathieu Monney
 Daryl Bond
 
 
+
+
+
+
+
+# Install Redeem on Debian 8.3 (WIP)
+ - Disable universal cape manager
+    nano /boot/uEnv.txt
+    delete cape_universal=enable
+ - Download and install Replicape firmware
+    git clone https://github.com/eliasbakken/bb.org-overlays
+    cd bb.org-overlays/
+    ./dtc-overlay.sh
+    ./install.sh
+ - Manual installation of redeem from feed
+ - Disable logging to file
+    nano /etc/redeem/local.cfg
+ - Disable loading overlays
+   nano /opt/source/adafruit-beaglebone-io-python/source/spimodule.c
+ - Install socat
+ - Install octoprint
+ - Install python-octoprint-redeem
+

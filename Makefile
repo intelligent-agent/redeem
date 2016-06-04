@@ -20,6 +20,9 @@ source:
 install:
 	$(PYTHON) setup.py install --root $(DESTDIR) $(COMPILE)
 
+install_py:
+    $(PYTHON) setup.py install --single-version-externally-managed --root=/
+
 buildrpm:
 	$(PYTHON) setup.py bdist_rpm --post-install=rpm/postinstall --pre-uninstall=rpm/preuninstall
 

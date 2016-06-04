@@ -35,25 +35,26 @@ class Heater(object):
         """ Init """
         self.thermistor = thermistor
         self.mosfet = mosfet
-        self.name = name                   # Name, used for debugging
+        self.name = name                    # Name, used for debugging
         self.current_temp = 0.0
-        self.target_temp = 0.0             # Target temperature (Ts). Start off. 
-        self.last_error = 0.0              # Previous error term, used in calculating the derivative
-        self.error_integral = 0.0          # Accumulated integral since the temperature came within the boudry
-        self.error_integral_limit = 100.0  # Integral temperature boundary
-        self.P = 1.0                      # Proportional 
-        self.I = 0.0                      # Integral 
-        self.D = 0.0                      # Derivative
+        self.target_temp = 0.0              # Target temperature (Ts). Start off. 
+        self.last_error = 0.0               # Previous error term, used in calculating the derivative
+        self.error_integral = 0.0           # Accumulated integral since the temperature came within the boudry
+        self.error_integral_limit = 100.0   # Integral temperature boundary
+        self.Kp = 0.1
+        self.Ti = 100.0
+        self.Td = 1.0
         self.onoff_control = onoff_control  # If we use PID or ON/OFF control
         self.ok_range = 4.0
         self.prefix = ""
-        self.sleep = 0.1                 # Time to sleep between measurements
+        self.sleep = 0.1                    # Time to sleep between measurements
+        self.max_power = 1.0                # Maximum power
 
         self.min_temp_enabled   = False  # Temperature error limit 
         self.min_temp           = 0      # If temperature falls below this point from the target, disable. 
-        self.max_temp           = 0      # Max temp that can be reached before disabling printer. 
-        self.max_temp_rise      = 0      # Fastest temp can rise pr measrement
-        self.max_temp_fall      = 0      # Fastest temp can fall pr measurement
+        self.max_temp           = 250.0  # Max temp that can be reached before disabling printer. 
+        self.max_temp_rise      = 4.0    # Fastest temp can rise pr measrement
+        self.max_temp_fall      = 4.0    # Fastest temp can fall pr measurement
 
         self.extruder_error = False
 
@@ -65,6 +66,10 @@ class Heater(object):
     def get_temperature(self):
         """ get the temperature of the thermistor"""
         return np.average(self.temperatures[-self.avg:])
+
+    def get_temperature_raw(self):
+        """ Get unaveraged temp measurement """
+        return self.temperatures[-1]
 
     def get_target_temperature(self):
         """ get the temperature of the thermistor"""
@@ -87,6 +92,16 @@ class Heater(object):
         if min(self.temperatures[-int(seconds/self.sleep):]) < (self.target_temp - self.ok_range):
             return False
         return True
+
+    def get_noise_magnitude(self, measurements=10):
+        """ Calculate and return the magnitude in the noise """
+        measurements = min(measurements, len(self.temperatures))
+        #logging.debug("Measurements: "+str(self.temperatures))
+        avg = np.average(self.temperatures[-measurements:])
+        mag = np.max(self.temperatures[-measurements:])
+        #logging.debug("Avg: "+str(avg))
+        #logging.debug("Mag: "+str(mag))
+        return abs(mag-avg)
 
     def set_min_temp(self, min_temp):
         """ Set the minimum temperature. If current temp goes below this, 
@@ -119,7 +134,8 @@ class Heater(object):
         self.average = 0
         self.averages = [0]*self.avg
         self.prev_time = self.current_time = time.time()
-        self.temperatures = []  
+        self.current_temp = self.thermistor.get_temperature()
+        self.temperatures = [self.current_temp]  
         self.enabled = True
         self.t = Thread(target=self.keep_temperature, name=self.name)
         self.t.start()
@@ -135,25 +151,20 @@ class Heater(object):
                 self.error = self.target_temp-self.current_temp
                 self.errors.append(self.error)
                 self.errors.pop(0)
-                self.average = sum(self.errors)/self.avg
-                self.averages.append(self.average)
-                self.averages.pop(0)
 
                 if self.onoff_control:
-                    if self.error > 1.0:
-                        power = 1.0
+                    if self.error > 0.0:
+                        power = self.max_power
                     else:
                         power = 0.0
                 else:
                     derivative = self.get_error_derivative()
                     integral = self.get_error_integral()
-                    if abs(self.error) > 20:  # Avoid windup
-                        self.error_integral = 0
-                        integral = 0
-                    power = self.P*(self.average + self.D*derivative + self.I*integral)  # The standard formula for the PID
-                    power = max(min(power, 1.0), 0.0)                           # Normalize to 0,1
+                    # The standard formula for the PID
+                    power = self.Kp*(self.error + (1.0/self.Ti)*integral + self.Td*derivative)  
+                    power = max(min(power, self.max_power), 0.0)                         # Normalize to 0, max
                     #if self.name =="E":
-                    #    logging.debug("Der: "+str(derivative)+" Err: "+str(self.error)+" avg err: "+str(self.average))
+                    #    logging.debug("Err: {0:.3f}, der: {1:.4f} int: {2:.2f}".format(self.error, derivative, integral))
 
                 # Run safety checks
                 self.time_diff = self.current_time-self.prev_time
@@ -174,12 +185,23 @@ class Heater(object):
             self.mosfet.set_power(0)
 
     def get_error_derivative(self):
-        """ Get the derivative of the error term """
-        return (self.average-self.averages[-2])/self.sleep		# Calculate the diff
+        """ Get the derivative of the temperature"""
+        # Using temperature and not error for calculating derivative 
+        # gets rid of the derivative kick. dT/dt
+        der = (self.temperatures[-2]-self.temperatures[-1])/self.sleep
+        self.averages.append(der)
+        if len(self.averages) > 11:
+            self.averages.pop(0)
+        #if self.name =="E":
+        #    logging.debug(self.averages)
+        return np.average(self.averages)
 
     def get_error_integral(self):
         """ Calculate and return the error integral """
         self.error_integral += self.error*self.sleep
+        # Avoid windup by clippping the integral part 
+        # to teh reciprocal of the integral term
+        self.error_integral = np.clip(self.error_integral, 0, self.max_power*self.Ti/self.Kp)
         return self.error_integral
 
     def check_temperature_error(self):
