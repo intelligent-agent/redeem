@@ -69,12 +69,26 @@ class G33(GCodeCommand):
         simulate_only = g.has_letter("S")
 
         # run the actual delta autocalibration
-        self.printer.path_planner.autocalibrate_delta_printer(
-                num_factors, max_std, simulate_only,
-                self.printer.probe_points, print_head_zs)
+        params = self.printer.path_planner.autocalibrate_delta_printer(
+                    num_factors, max_std, simulate_only,
+                    self.printer.probe_points, print_head_zs)
         logging.info("Finished printer autocalibration\n")
 
-        # FIXME: print new parameter values
+        if g.has_letter("P"):
+            # dump the dictionary to log file
+            logging.debug(str(params)) 
+            
+            #pretty print to printer output
+            self.printer.send_message(g.prot, "delta calibration : L = %g"%params["L"])
+            self.printer.send_message(g.prot, "delta calibration : r = %g"%params["r"])
+            self.printer.send_message(g.prot, "delta calibration : A_tangential = %g"%params["A_tangential"])
+            self.printer.send_message(g.prot, "delta calibration : B_tangential = %g"%params["B_tangential"])
+            self.printer.send_message(g.prot, "delta calibration : C_tangential = %g"%params["C_tangential"])
+            self.printer.send_message(g.prot, "delta calibration : offset_x = %g"%params["offset_x"])
+            self.printer.send_message(g.prot, "delta calibration : offset_y = %g"%params["offset_y"])
+            self.printer.send_message(g.prot, "delta calibration : offset_z = %g"%params["offset_z"])
+        
+        return
 
     def get_description(self):
         return "Autocalibrate a delta printer"
@@ -98,7 +112,9 @@ Fn  Number of factors to optimize:
 En  Maximum allowed point residual as a multiplier of residual
     standard deviation. Try 2.0 for good results.
 
-S   Do NOT update the printer configuration."""
+S   Do NOT update the printer configuration.
+
+P   Print the calculated variables"""
 
     def is_buffered(self):
         return True

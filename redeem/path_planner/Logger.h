@@ -72,6 +72,8 @@ public:
 	}
 };
 
+#define LOGERROR(x) Logger() << x
+
 #ifndef NDEBUG
 #define LOG(x) //Logger() << x
 #else
