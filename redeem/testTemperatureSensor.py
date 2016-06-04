@@ -64,7 +64,7 @@ class TestTemperatureSensor(unittest.TestCase):
         expected_voltage = 0.9002198339032731
 
         with patch.object(builtins, 'open', mock_open(read_data = adc)):
-            self.assertEqual(self.ts.read_adc(), expected_voltage)
+            self.assertTrue(abs(self.ts.read_adc() - expected_voltage) < 0.001)
 
     def test_voltage_to_resistance(self):
 

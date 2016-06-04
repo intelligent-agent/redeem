@@ -185,6 +185,33 @@ class AutoCalibrationDeltaParameters:
                       center_offsets['Y'])
         logging.debug("output delta parameters: center_offsets['Z'] = %f",
                       center_offsets['Z'])
+                      
+    def to_dict(self):
+        L = self.diagonal / 1000.
+        r = self.radius / 1000.
+        A_tangential = self.xadj
+        B_tangential = self.yadj
+        C_tangential = self.zadj
+
+        cox = self.height + self.xstop
+        coy = self.height + self.ystop
+        coz = self.height + self.zstop
+
+        offset_x = -1. * cox / 1000.
+        offset_y = -1. * coy / 1000.
+        offset_z = -1. * coz / 1000.
+        
+        out = {}
+        out["L"] = L
+        out["r"] = r
+        out["A_tangential"] = A_tangential
+        out["B_tangential"] = B_tangential
+        out["C_tangential"] = C_tangential
+        out["offset_x"] = offset_x
+        out["offset_y"] = offset_y
+        out["offset_z"] = offset_z
+        
+        return out
 
     def recalculate(self):
         self.towerX = []
@@ -478,3 +505,5 @@ def delta_auto_calibration(delta, center_offsets,
 
     if not simulate_only:
         delta_params.to_redeem_delta(delta, center_offsets)
+        
+    return delta_params.to_dict()
