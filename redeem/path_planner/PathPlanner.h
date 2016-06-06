@@ -131,7 +131,6 @@ class PathPlanner {
   void transformVector(std::vector<FLOAT_T> &vec, std::vector<FLOAT_T> &startPos);
   void reverseTransformVector(std::vector<FLOAT_T> &vec);
   void backlashCompensation(std::vector<FLOAT_T> &delta);
-  void handleTools(std::vector<FLOAT_T> &delta, std::vector<FLOAT_T> &vec, int tool_axis);
   void handleSlaves(std::vector<FLOAT_T> &startPos, std::vector<FLOAT_T> &endPos);
 	
 	

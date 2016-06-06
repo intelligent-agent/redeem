@@ -68,6 +68,7 @@ setup(
             'data/B57560G104F.cht',
             'data/B57561G0103F000.cht',
             'data/QU-BD.cht',
+            'data/HT100K3950.cht',
             'data/SEMITEC-104GT-2.cht', 
             'data/DYZE500.cht', 
             'data/E3D-PT100-AMPLIFIER.cht']),

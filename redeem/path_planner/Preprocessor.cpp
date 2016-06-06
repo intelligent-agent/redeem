@@ -29,17 +29,26 @@
 int PathPlanner::softEndStopApply(std::vector<FLOAT_T> &startPos, std::vector<FLOAT_T> &endPos)
 {
   for (size_t i = 0; i<startPos.size(); ++i) {
-        
-    if ((startPos[i] < soft_endstops_min[i]) || (startPos[i] > soft_endstops_max[i])) {
-      LOG( "queueMove FAILED: startPos outside of soft end stops");
+    if (startPos[i] < soft_endstops_min[i]) {
+      LOGERROR( "queueMove FAILED: axis " << i 
+		<< " start position outside of soft limit (start = " << startPos[i] 
+		<< ", min limit = " << soft_endstops_min[i] << ")\n");
       return 1;
-    }
-        
-    if (endPos[i] < soft_endstops_min[i]) {
-      endPos[i] = soft_endstops_min[i];
-    }
-    if (endPos[i] > soft_endstops_max[i]) {
-      endPos[i] = soft_endstops_max[i];
+    } else if (startPos[i] > soft_endstops_max[i]) {
+      LOGERROR( "queueMove FAILED: axis " << i 
+		<< " start position outside of soft limit (start = " << startPos[i] 
+		<< ", max limit = " << soft_endstops_max[i] << ")\n");
+      return 1;
+    } else if (endPos[i] < soft_endstops_min[i]) {
+      LOGERROR( "queueMove FAILED: axis " << i 
+		<< " end position outside of soft limit (end = " << endPos[i] 
+		<< ", min limit = " << soft_endstops_min[i] << ")\n");
+      return 1;
+    } else if (endPos[i] > soft_endstops_max[i]) {
+      LOGERROR( "queueMove FAILED: axis " << i 
+		<< " end position outside of soft limit (end = " << endPos[i] 
+		<< ", max limit = " << soft_endstops_max[i] << ")\n");
+      return 1;
     }
   }
 
@@ -213,18 +222,6 @@ void PathPlanner::backlashCompensation(std::vector<FLOAT_T> &delta)
       backlash_state[i] = dirstate;
       delta[i] += dirstate*backlash_compensation[i];
     }
-  }
-    
-  return;
-}
-
-void PathPlanner::handleTools(std::vector<FLOAT_T> &delta, std::vector<FLOAT_T> &vec, int tool_axis)
-{
-  if (tool_axis != 3) {
-    delta[tool_axis] = delta[3];
-    delta[3] = 0.0;
-    vec[tool_axis] = vec[3];
-    vec[3] = 0.0;
   }
     
   return;

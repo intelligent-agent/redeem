@@ -422,10 +422,11 @@ class PathPlanner:
                             "delta printers")
             return
 
-        delta_auto_calibration(Delta, self.center_offset,
-                               num_factors, max_std,
-                               simulate_only,
-                               probe_points, print_head_zs)
+        params = delta_auto_calibration(Delta, 
+                                         self.center_offset,
+                                         num_factors, max_std,
+                                         simulate_only,
+                                         probe_points, print_head_zs)
 
         # update the native planner with the new values
 
@@ -438,6 +439,8 @@ class PathPlanner:
         self.native_planner.delta_bot.setTangentError(
                 Delta.A_tangential, Delta.B_tangential, Delta.C_tangential)
         self.native_planner.delta_bot.recalculate()
+        
+        return params
 
 
     def add_path(self, new):
@@ -480,10 +483,15 @@ class PathPlanner:
                                       bool(new.use_backlash_compensation), 
                                       int(tool_axis), 
                                       True)
+                                      
 
         self.prev = new
         self.prev.unlink()  # We don't want to store the entire print
                             # in memory, so we keep only the last path.
+        
+        # make sure that the current state of the printer is correct
+        self.prev.end_pos = self.native_planner.getState()
+        #logging.debug("end pos: "+ str(self.prev.end_pos))
 
     def set_extruder(self, ext_nr):
         """

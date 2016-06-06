@@ -37,7 +37,8 @@ thermistors_shh = [
     ["NTCS0603E3104FXT",    4700, 0.0007022607370,       0.0002209155484,       7.101626461e-08],       # Vishay100K
     ["135-104LAG-J01",      4700, 0.000596153185928425,  0.000231333192738335,  6.19534004306738e-08],  # Honeywell100K
     ["SEMITEC-104GT-2",     4700, 0.000811290160145459,  0.000211355789144265,  7.17614730463848e-08],  # Semitec (E3D V6)
-    ["DYZE",                4700, 0.004628116888,        0.0001812508833,       3.185110657e-06]        # DYZE hightemp thermistor, these values might be incorrect.
+    ["DYZE",                4700, 0.004628116888,        0.0001812508833,       3.185110657e-06],       # DYZE hightemp thermistor, these values might be incorrect.
+    ["HT100K3950",          4700, 0.7413760971e-3,       2.117947876e-4,        1.141950936e-7]         # RobotDigg.com's 3950-100K thermistor (part number HT100K3950-1)
 ]
 
 

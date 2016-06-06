@@ -505,8 +505,10 @@ class Redeem:
                 Bz = printer.path_planner.home_pos['Y']
                 Cz = printer.path_planner.home_pos['Z']
                 
-                z_offset = Delta.vertical_offset(Az,Bz,Cz) # vertical offset
-                xyz = Delta.forward_kinematics2(Az, Bz, Cz) # effector position
+                delta_bot = self.printer.path_planner.native_planner.delta_bot
+                
+                z_offset = delta_bot.vertical_offset(Az,Bz,Cz) # vertical offset
+                xyz = delta_bot.forward_kinematics(Az, Bz, Cz) # effector position
                 
                 # The default home_pos, provided above, is based on effector space 
                 # coordinates for carriage positions. We need to transform these to 
