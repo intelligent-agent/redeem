@@ -108,4 +108,29 @@ class CascadingConfigParser(ConfigParser.SafeConfigParser):
         # Save changed values to file
         local.write(open(filename, "w+"))
 
+
+    def check(self, filename):
+        """ Check the settings currently set against default.cfg """
+        default = ConfigParser.SafeConfigParser()
+        default.readfp(open("/etc/redeem/default.cfg"))
+        local   = ConfigParser.SafeConfigParser()
+        local.readfp(open(filename))
+
+        local_ok = True
+        diff = set(local.sections())-set(default.sections())
+        for section in diff:
+            logging.warning("Section {} does not exist in {}".format(section, "default.cfg"))
+            local_ok = False
+        for section in local.sections():
+            if not default.has_section(section):
+                continue
+            diff = set(local.options(section))-set(default.options(section))
+            for option in diff:
+                logging.warning("Option {} in section {} does not exist in {}".format(option, section, "default.cfg"))
+                local_ok = False
+        if local_ok:
+            logging.info("{} is OK".format(filename))
+        else:
+            logging.warning("{} contains errors.".format(filename))
+        return local_ok
     

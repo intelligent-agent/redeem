@@ -10,12 +10,16 @@ License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 
 from GCodeCommand import GCodeCommand
 import logging
+import json
+        
 try:
     from Gcode import Gcode
     from Path import Path
+    from Alarm import Alarm
 except ImportError:
     from redeem.Gcode import Gcode
     from redeem.Path import Path
+    from redeem.Alarm import Alarm
 
 class G29(GCodeCommand):
 
@@ -50,6 +54,7 @@ class G29(GCodeCommand):
             self.printer.path_planner.update_autolevel_matrix(self.printer.probe_points, self.printer.probe_heights)
             logging.info("Updated bed compensation matrix: \n"+str(self.printer.matrix_bed_comp))
 
+        Alarm.action_command("bed_probe_data", json.dumps(self.printer.probe_points))
 
     def get_description(self):
         return "Probe the bed at specified points"

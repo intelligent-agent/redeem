@@ -96,17 +96,23 @@ class Redeem:
             logging.error(file_path + " does not exist, this file is required for operation")
             sys.exit() # maybe use something more graceful?
             
-        file_path = os.path.join(config_location,"local.cfg")
-        if not os.path.exists(file_path):
-            logging.info(file_path + " does not exist, Creating one")
-            os.mknod(file_path)
-            os.chmod(file_path, 0o777)
-    
+        local_path = os.path.join(config_location,"local.cfg")
+        if not os.path.exists(local_path):
+            logging.info(local_path + " does not exist, Creating one")
+            os.mknod(local_path)
+            os.chmod(local_path, 0o777)            
+
         # Parse the config files.
         printer.config = CascadingConfigParser(
             [os.path.join(config_location,'default.cfg'), 
              os.path.join(config_location,'printer.cfg'),
              os.path.join(config_location,'local.cfg')])
+
+        # Check the local and printer files
+        printer_path = os.path.join(config_location,"printer.cfg")
+        if os.path.exists(printer_path):
+            printer.config.check(printer_path)
+        printer.config.check(os.path.join(config_location,'local.cfg'))
 
         # Get the revision and loglevel from the Config file
         level = self.printer.config.getint('System', 'loglevel')

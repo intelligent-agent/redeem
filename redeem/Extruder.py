@@ -57,6 +57,11 @@ class Heater(object):
         self.max_temp_fall      = 4.0    # Fastest temp can fall pr measurement
 
         self.extruder_error = False
+        if not thermistor.sensor:
+            logging.warning("Temperature sensor is not set, heater disabled")
+            self.extruder_error = True
+
+
 
     def set_target_temperature(self, temp):
         """ Set the desired temperature of the extruder """

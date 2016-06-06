@@ -10,12 +10,15 @@ License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 
 from GCodeCommand import GCodeCommand
 import logging
+import json
 try:
     from Gcode import Gcode
     from Path import G92Path
+    from Alarm import Alarm
 except ImportError:
     from redeem.Gcode import Gcode
     from redeem.Path import G92Path
+    from redeem.Alarm import Alarm
 
 class G30(GCodeCommand):
 
@@ -75,6 +78,9 @@ class G30(GCodeCommand):
             "Found Z probe distance {} mm at (X, Y) = ({}, {})".format(
                     bed_dist, point["X"], point["Y"]))
 
+
+        Alarm.action_command("bed_probe_point", json.dumps([point["X"], point["Y"], bed_dist]))
+
         # Must have S to save the probe bed distance
         # this is required for calculation of the bed compensation matrix
         # NOTE: the use of S in G30 is different to that in G29, here "S" means "save"
@@ -88,12 +94,12 @@ class G30(GCodeCommand):
         return "Probe the bed at current point"
 
     def get_long_description(self):
-        return ("Probe the bed at the current position, or if specified, a point "
+        return ("Probe the bed at the current position, or if specified, a point"
                 "previously set by M557. X, Y, and Z starting probe positions can be overridden, "
-                "D sets the probe length, or taken from config if nothing is specified. "
-                "F sets the probe speed. If not present, it's taken from the config"
-                "A sets the probe acceleration. If not present, it's taken from the config"
-                "P the point at which to probe, previously set by M557"
+                "D sets the probe length, or taken from config if nothing is specified. \n"
+                "F sets the probe speed. If not present, it's taken from the config. \n"
+                "A sets the probe acceleration. If not present, it's taken from the config. \n"
+                "P the point at which to probe, previously set by M557. \n"
                 "P and S save the probed bed distance to a list that corresponds with point P")
    
     def is_buffered(self):
