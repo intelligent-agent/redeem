@@ -1,6 +1,6 @@
 """
 GCode G29
-Probe bed
+This is a macro function followed by saving the new bed matrix
 
 Author: Elias Bakken
 email: elias(dot)bakken(at)gmail dot com
@@ -16,10 +16,12 @@ try:
     from Gcode import Gcode
     from Path import Path
     from Alarm import Alarm
+    from BedCompensation import BedCompensation
 except ImportError:
     from redeem.Gcode import Gcode
     from redeem.Path import Path
     from redeem.Alarm import Alarm
+    from redeem.BedCompensation import BedCompensation
 
 class G29(GCodeCommand):
 
@@ -53,6 +55,9 @@ class G29(GCodeCommand):
             # Update the bed compensation matrix
             self.printer.path_planner.update_autolevel_matrix(self.printer.probe_points, self.printer.probe_heights)
             logging.info("Updated bed compensation matrix: \n"+str(self.printer.matrix_bed_comp))
+        else:
+            # Update probe points to make comparable with update
+            BedCompensation.create_rotation_matrix(self.printer.probe_points, self.printer.probe_heights)
 
         Alarm.action_command("bed_probe_data", json.dumps(self.printer.probe_points))
 

@@ -87,7 +87,7 @@ class CascadingConfigParser(ConfigParser.SafeConfigParser):
         # Get list of changed values
         to_save = []
         for section in self.sections():
-            logging.debug(section)
+            #logging.debug(section)
             for option in self.options(section):                
                 if self.get(section, option) != current.get(section, option):
                     old = current.get(section, option)

@@ -52,6 +52,7 @@ class Path:
         self.speeds = None
         self.start_pos = None
         self.end_pos = None
+        self.ideal_end_post = None
         
 
     def is_G92(self):
@@ -176,11 +177,14 @@ class AbsolutePath(Path):
         self.start_pos = prev.end_pos
 
         # Make the start, end and path vectors. 
-        self.end_pos = np.copy(self.start_pos)
+        self.end_pos = np.copy(prev.ideal_end_pos)
         for index, axis in enumerate(self.printer.AXES):
             if axis in self.axes:
                 self.end_pos[index] = self.axes[axis]
-
+    
+        # Store the ideal end pos, so the target 
+        # coordinates are pushed forward
+        self.ideal_end_pos = np.copy(self.end_pos)
 
 class RelativePath(Path):
     """ 
@@ -207,7 +211,8 @@ class RelativePath(Path):
 
         # Calculate the ideal end position. 
         # In an ideal world, this is where we want to go. 
-        self.end_pos = prev.end_pos + vec
+        self.end_pos = self.ideal_end_pos = prev.ideal_end_pos + vec
+        
 
 class G92Path(Path):
     """ A reset axes path segment. No movement occurs, only global position
@@ -222,14 +227,18 @@ class G92Path(Path):
         if prev is not None:
             self.start_pos = prev.end_pos
             self.end_pos = np.copy(prev.end_pos)
+            self.ideal_end_pos = np.copy(prev.ideal_end_pos)
             prev.next = self
         else:
             self.start_pos = np.zeros(self.printer.MAX_AXES, dtype=Path.DTYPE)
             self.end_pos = np.copy(self.start_pos)
+            self.ideal_end_pos = np.copy(self.start_pos)
 
         for index, axis in enumerate(self.printer.AXES):
             if axis in self.axes:
                 self.end_pos[index] = self.axes[axis]
-
-    
+                self.ideal_end_pos[index] = self.axes[axis]
+        
+        
+        self.ideal_end_pos = self.end_pos
 

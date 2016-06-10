@@ -59,6 +59,8 @@ class G30(GCodeCommand):
         else:
             probe_accel = self.printer.config.getfloat('Probe', 'accel')
         
+        use_bed_matrix = bool(g.get_int_by_letter("B", 0))
+
         # Find the Probe offset
         # values in config file are in metres, need to convert to millimetres
         offset_x = self.printer.config.getfloat('Probe', 'offset_x')*1000
@@ -70,7 +72,7 @@ class G30(GCodeCommand):
         G0 = Gcode({"message": "G0 X{} Y{} Z{}".format(point["X"]+offset_x, point["Y"]+offset_y, point["Z"]), "prot": g.prot})    
         self.printer.processor.execute(G0)
         self.printer.path_planner.wait_until_done()
-        bed_dist = self.printer.path_planner.probe(probe_length, probe_speed, probe_accel)*1000.0 # convert to mm
+        bed_dist = self.printer.path_planner.probe(probe_length, probe_speed, probe_accel, use_bed_matrix)*1000.0 # convert to mm
         logging.debug("Bed dist: "+str(bed_dist)+" mm")
         
         self.printer.send_message(

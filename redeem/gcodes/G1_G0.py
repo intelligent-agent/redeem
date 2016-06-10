@@ -31,7 +31,7 @@ class G0(GCodeCommand):
 
             # If extruding, change an "E" to the current tool
             if axis == 'E':
-                logging.debug("Changing axis from E to {}".format(self.printer.current_tool))
+                #logging.debug("Changing axis from E to {}".format(self.printer.current_tool))
                 axis = self.printer.current_tool
 
             # Get the value, new position or vector

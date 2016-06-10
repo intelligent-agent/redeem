@@ -338,7 +338,7 @@ class PathPlanner:
             
         return
 
-    def probe(self, z, speed, accel):
+    def probe(self, z, speed, accel, use_a_bed_matrix=False):
         self.wait_until_done()
         
         self.printer.ensure_steppers_enabled()
@@ -364,7 +364,7 @@ class PathPlanner:
         # the probe end-stop should be triggered during this move
         path = RelativePath(end, speed, accel, 
                             cancelable=True, 
-                            use_bed_matrix=False, 
+                            use_bed_matrix=use_a_bed_matrix, 
                             use_backlash_compensation=True, 
                             enable_soft_endstops=False)
         self.add_path(path)
@@ -382,7 +382,7 @@ class PathPlanner:
         end   = {"Z":z_dist}
         path = RelativePath(end, speed, accel, 
                             cancelable=True, 
-                            use_bed_matrix=False, 
+                            use_bed_matrix=use_a_bed_matrix,
                             use_backlash_compensation=True, 
                             enable_soft_endstops=False)
         self.add_path(path)
@@ -447,7 +447,6 @@ class PathPlanner:
         """ Add a path segment to the path planner """
         """ This code, and the native planner, needs to be updated for reach. """
         # Link to the previous segment in the chain    
-        
         new.set_prev(self.prev)
         
         # NOTE: printing the added path slows things down SIGNIFICANTLY
