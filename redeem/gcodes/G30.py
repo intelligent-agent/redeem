@@ -77,7 +77,7 @@ class G30(GCodeCommand):
         
         self.printer.send_message(
             g.prot,
-            "Found Z probe distance {} mm at (X, Y) = ({}, {})".format(
+            "Found Z probe distance {0:.2f} mm at (X, Y) = ({1:.2f}, {2:.2f})".format(
                     bed_dist, point["X"], point["Y"]))
 
 
@@ -101,6 +101,7 @@ class G30(GCodeCommand):
                 "D sets the probe length, or taken from config if nothing is specified. \n"
                 "F sets the probe speed. If not present, it's taken from the config. \n"
                 "A sets the probe acceleration. If not present, it's taken from the config. \n"
+                "B determines if the bed marix is used or not. (0 or 1)\n"
                 "P the point at which to probe, previously set by M557. \n"
                 "P and S save the probed bed distance to a list that corresponds with point P")
    

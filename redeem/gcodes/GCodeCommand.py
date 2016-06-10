@@ -26,7 +26,8 @@ class GCodeCommand(object):
         pass
 
     def get_long_description(self):
-        return "Long description missing"
+        # Return short description if long description is missing
+        return self.get_description()
 
     def is_buffered(self):
         """ Return true if the command has to wait in the command buffer or

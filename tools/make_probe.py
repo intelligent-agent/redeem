@@ -10,13 +10,14 @@ import random
 # Change these parameters
 bed_diameter_mm = 130 # Biggest circle
 circles = 3
-points_pr_circle = 5
-probe_start_height = 2
+points_pr_circle = 6
+probe_start_height = 4
 add_zero = True
 probe_speed = 1000
 print_test_pattern = True
+print_test_matrix_pattern = True
 test_pattern_delay = 1000 # dealy ms
-plot_result = True
+plot_result = False
 
 theta = np.linspace(0, 2*np.pi, points_pr_circle, endpoint=False)
 
@@ -40,7 +41,7 @@ for i, p in enumerate(probes):
 print "    G32 ; Undock probe"
 print "    G28 ; Home steppers"
 for i in range(len(probes)):
-    print "    G30 P{} S F{} Q; Probe point {}".format(i, probe_speed, i)
+    print "    G30 P{} S F{}; Probe point {}".format(i, probe_speed, i)
 print "    G31 ; Dock probe"
 print ""    
 
@@ -52,6 +53,17 @@ if print_test_pattern:
         print "G0 X{0:+02.2f} Y{1:+02.2f} Z0".format(p[0], p[1])
         print "M400"
         print "G4 {}".format(test_pattern_delay)
+
+if print_test_matrix_pattern:
+    print "Copy-paste this into a file called test-matrix.gcode and upload/execute"
+    print "G28"
+    print "G90; Absolute coordinates"
+    print "G32"
+    print "G0 Z{}".format(probe_start_height)
+    for p in probes:
+        print "G30 X{0:+02.2f} Y{1:+02.2f} B1".format(p[0], p[1])
+    print "G31"
+
 
 if plot_result:
     fig = plt.figure()
