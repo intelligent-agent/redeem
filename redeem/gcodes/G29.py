@@ -33,17 +33,17 @@ class G29(GCodeCommand):
             G = Gcode({"message": gcode, "prot": g.prot})
             self.printer.processor.execute(G)
             self.printer.path_planner.wait_until_done()
-            
-        
 
         # Remove the offset from the probed points        
-        if self.printer.probe_points[0]["X"] == 0 and self.printer.probe_points[0]["Y"] == 0:
-             min_value = self.printer.probe_heights[0]
-        else:
-            min_value = min(self.printer.probe_heights)
+        #if self.printer.probe_points[0]["X"] == 0 and self.printer.probe_points[0]["Y"] == 0:
+        #     min_value = self.printer.probe_heights[0]
+        #else:
+        #    min_value = min(self.printer.probe_heights)
         
+        min_value = self.printer.probe_points[0]["Z"]
+
         for i in range(len(self.printer.probe_heights)):
-            self.printer.probe_heights[i] -= min_value
+            self.printer.probe_heights[i] += min_value
 
         # Log the found heights
         for k, v in enumerate(self.printer.probe_points):

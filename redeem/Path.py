@@ -162,7 +162,7 @@ class Path:
 
     def __str__(self):
         """ The vector representation of this path segment """
-        return "Path from " + str(self.start_pos) + " to " + str(self.end_pos)
+        return "Path from " + str(self.start_pos[:4]) + " to " + str(self.end_pos[:4])
 
 class AbsolutePath(Path):
     """ A path segment with absolute movement """
@@ -177,14 +177,19 @@ class AbsolutePath(Path):
         self.start_pos = prev.end_pos
 
         # Make the start, end and path vectors. 
-        self.end_pos = np.copy(prev.ideal_end_pos)
+        self.ideal_end_pos = np.copy(prev.ideal_end_pos)
         for index, axis in enumerate(self.printer.AXES):
             if axis in self.axes:
-                self.end_pos[index] = self.axes[axis]
+                self.ideal_end_pos[index] = self.axes[axis]
     
         # Store the ideal end pos, so the target 
         # coordinates are pushed forward
-        self.ideal_end_pos = np.copy(self.end_pos)
+        self.end_pos = np.copy(self.ideal_end_pos)
+        if self.use_bed_matrix:
+            self.end_pos[:3] = self.end_pos[:3].dot(np.linalg.inv(self.printer.matrix_bed_comp))
+            #self.end_pos[:3] = self.end_pos[:3].dot(self.printer.matrix_bed_comp)
+
+        logging.debug("Ideal: "+str(self.ideal_end_pos[2])+" matrix: "+str(self.end_pos[2]))
 
 class RelativePath(Path):
     """ 
@@ -211,7 +216,8 @@ class RelativePath(Path):
 
         # Calculate the ideal end position. 
         # In an ideal world, this is where we want to go. 
-        self.end_pos = self.ideal_end_pos = prev.ideal_end_pos + vec
+        self.end_pos = self.start_pos + vec
+        self.ideal_end_pos = prev.ideal_end_pos + vec
         
 
 class G92Path(Path):
@@ -226,19 +232,19 @@ class G92Path(Path):
         self.prev = prev
         if prev is not None:
             self.start_pos = prev.end_pos
-            self.end_pos = np.copy(prev.end_pos)
+            #self.end_pos = np.copy(prev.end_pos)
             self.ideal_end_pos = np.copy(prev.ideal_end_pos)
             prev.next = self
         else:
             self.start_pos = np.zeros(self.printer.MAX_AXES, dtype=Path.DTYPE)
-            self.end_pos = np.copy(self.start_pos)
+            #self.end_pos = np.copy(self.start_pos)
             self.ideal_end_pos = np.copy(self.start_pos)
 
         for index, axis in enumerate(self.printer.AXES):
             if axis in self.axes:
-                self.end_pos[index] = self.axes[axis]
+                #self.end_pos[index] = self.axes[axis]
                 self.ideal_end_pos[index] = self.axes[axis]
         
-        
-        self.ideal_end_pos = self.end_pos
+        # G92 Sets the current end pos to the ideal end pos. 
+        self.end_pos = self.ideal_end_pos
 

@@ -10,10 +10,10 @@ import random
 # Change these parameters
 bed_diameter_mm = 130 # Biggest circle
 circles = 3
-points_pr_circle = 6
+points_pr_circle = 12
 probe_start_height = 4
 add_zero = True
-probe_speed = 1000
+probe_speed = 3000
 print_test_pattern = True
 print_test_matrix_pattern = True
 test_pattern_delay = 1000 # dealy ms
@@ -51,8 +51,6 @@ if print_test_pattern:
     print "G90; Absolute coordinates"
     for p in probes:
         print "G0 X{0:+02.2f} Y{1:+02.2f} Z0".format(p[0], p[1])
-        print "M400"
-        print "G4 {}".format(test_pattern_delay)
 
 if print_test_matrix_pattern:
     print "Copy-paste this into a file called test-matrix.gcode and upload/execute"
@@ -61,7 +59,7 @@ if print_test_matrix_pattern:
     print "G32"
     print "G0 Z{}".format(probe_start_height)
     for p in probes:
-        print "G30 X{0:+02.2f} Y{1:+02.2f} B1".format(p[0], p[1])
+        print "G30 X{0:+02.2f} Y{1:+02.2f}".format(p[0], p[1])
     print "G31"
 
 

@@ -74,10 +74,10 @@ public:
 
 #define LOGERROR(x) Logger() << x
 
-#ifndef NDEBUG
-#define LOG(x) //Logger() << x
-#else
-#define LOG(x) //Logger() << x
+#ifdef DEBUG
+   #define LOG(x) Logger() << x
+  #else
+    #define LOG(x) //Logger() << x
 #endif
 
 #endif /* defined(__PathPlanner__Logger__) */

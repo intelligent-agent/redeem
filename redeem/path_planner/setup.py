@@ -33,7 +33,8 @@ pathplanner = Extension('_PathPlannerNative',
         '-DBUILD_PYTHON_EXT=1', 
         '-Wno-write-strings', 
         '-Wno-maybe-uninitialized', 
-    	'-Wno-format'])
+    	'-Wno-format', 
+	'-DDEBUG=1'])
 
 setup(name='PathPlannerNative',
       version='1.0',

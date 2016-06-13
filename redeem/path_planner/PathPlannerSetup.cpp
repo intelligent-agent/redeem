@@ -109,6 +109,7 @@ void PathPlanner::setAxisConfig(int axis)
 void PathPlanner::setState(std::vector<FLOAT_T> set)
 {
   if ( set.size() != NUM_AXES ) {throw InputSizeError();}
+  applyBedCompensation(set);
   state = set;
 }
 

@@ -169,7 +169,7 @@ class Printer:
             if self.end_stops[es].active:
                 active += 1 << i
         
-        logging.debug("endstop active mask = " + bin(active))
+        #logging.debug("endstop active mask = " + bin(active))
         
         # write to shared memory
         PruInterface.set_active_endstops(active)

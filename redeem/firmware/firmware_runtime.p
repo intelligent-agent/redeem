@@ -257,7 +257,8 @@ start_loop_remove:
 
 notcancel:
     MOV r22, 0                                              // Reset the Remaining steps loop
-
+    SBCO r22, C28, 16, 4                                    // Store 0 to the shared memory
+    
     AND r7, r7, 0x000000FF
     SBCO r7, C28, 12, 4
     AND pinCommand.step, pinCommand.step, r7.b0               // Mask the step pins with the end stop mask

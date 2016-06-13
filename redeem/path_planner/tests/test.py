@@ -13,7 +13,10 @@ t.setMinSpeeds(tuple([0.01]*8))
 t.setJerks(tuple([0.01]*8))
 #t.setAxes(5)
 t.runThread()
-
+#t.setBedCompensationMatrix((1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0))
+t.setBedCompensationMatrix((1.0, 0.0, 0.01978955219479585, 0.0, 1.0, -0.006212847825189273, -0.019405449540676818, 0.006251693127867221, 1.0))
+#t.setBedCompensationMatrix((1.0, 0.0, 0.1, 0.0, 1.0, 0.0, -0.1, 0.0, 1.0))
+t.setBedCompensationMatrix((1.0, 0.0, 0.01921552892159129, 0.0, 1.0, -0.008267264546443482, -0.01885318314460967, 0.008336190659107847, 1.0))
 
 #start = (0, 0, 0, 0, 0)
 #end = (-1, -1, -1, -1, -1)
@@ -32,13 +35,35 @@ for i in range(10):
 for i in range(45):
     start = (0.1*math.sin(2*math.pi*(i*8)/360), 0.1*math.cos(2*math.pi*(i*8)/360), 0, 0, 0, 0, 0, 0)
     end = (0.1*math.sin(2*math.pi*(i+1*8)/360), 0.1*math.cos(2*math.pi*(i+1*8)/360), 0, 0, 0, 0, 0, 0)
-    #t.queueMove(start, end, 1.0, 1.0, False, False)
+    speed       = 0.00001
+    accel       = 0.5
+    cancelable  = False
+    optimize    = False
+    enable_soft_endstops = False
+    use_bed_matrix       = True
+    use_backlash_compensation = False
+    tool_axis            = 3
+    virgin               = True
+    #t.queueMove(start, end, speed, accel, cancelable,
+    #optimize, enable_soft_endstops, use_bed_matrix, use_backlash_compensation,
+    #tool_axis, virgin)
 
 
 # Long Z-move
-start = (0, 0, 0, 0, 0, 0, 0, 0)
-end   = (0.01, 0, 0, 0, 0, 0, 0, 0)
-t.queueMove(start, end, 0.00001, 0.5, False, False)
+start       = (0, 0, 0, 0, 0, 0, 0, 0)
+end         = (0.1, 0, 0, 0, 0, 0, 0, 0)
+speed       = 0.00001
+accel       = 0.5
+cancelable  = False
+optimize    = False
+enable_soft_endstops = False
+use_bed_matrix       = True
+use_backlash_compensation = False
+tool_axis            = 3
+virgin               = True
+t.queueMove(start, end, speed, accel, cancelable,
+    optimize, enable_soft_endstops, use_bed_matrix, use_backlash_compensation,
+    tool_axis, virgin)
 
 #t.runThread()
 t.waitUntilFinished()

@@ -421,6 +421,8 @@ class Redeem:
         # Bed compensation matrix
         printer.matrix_bed_comp = printer.load_bed_compensation_matrix()
         logging.debug("Loaded bed compensation matrix: \n"+str(printer.matrix_bed_comp))
+        printer.matrix_bed_comp = printer.matrix_bed_comp*0.5+np.eye(3)*0.5
+        logging.debug("Loaded bed compensation matrix: \n"+str(printer.matrix_bed_comp))
 
         for axis in printer.steppers.keys():
             i = Printer.axis_to_index(axis)

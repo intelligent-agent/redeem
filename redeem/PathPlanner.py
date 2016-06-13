@@ -127,13 +127,15 @@ class PathPlanner:
         """ Update steps pr meter from the path """
         self.native_planner.setBacklashCompensation(tuple(self.printer.backlash_compensation));
 
-    def get_current_pos(self, mm=False):
+    def get_current_pos(self, mm=False, ideal=False):
         """ Get the current pos as a dict """
         if mm:
             scale = 1000.0
         else:
             scale = 1.0
         state = self.native_planner.getState()
+        if ideal:
+            state = self.prev.ideal_end_pos
         pos = {}
         for index, axis in enumerate(Printer.AXES[:Printer.MAX_AXES]):
             pos[axis] = state[index]*scale
@@ -338,13 +340,13 @@ class PathPlanner:
             
         return
 
-    def probe(self, z, speed, accel, use_a_bed_matrix=False):
+    def probe(self, z, speed, accel):
         self.wait_until_done()
         
         self.printer.ensure_steppers_enabled()
         
         # save the starting position
-        start = self.get_current_pos()
+        start = self.get_current_pos(ideal=True)
         
         # calculate how many steps the requested z movement will require
         steps = np.ceil(z*self.printer.steps_pr_meter[2])
@@ -364,7 +366,7 @@ class PathPlanner:
         # the probe end-stop should be triggered during this move
         path = RelativePath(end, speed, accel, 
                             cancelable=True, 
-                            use_bed_matrix=use_a_bed_matrix, 
+                            use_bed_matrix=False, 
                             use_backlash_compensation=True, 
                             enable_soft_endstops=False)
         self.add_path(path)
@@ -382,7 +384,7 @@ class PathPlanner:
         end   = {"Z":z_dist}
         path = RelativePath(end, speed, accel, 
                             cancelable=True, 
-                            use_bed_matrix=use_a_bed_matrix,
+                            use_bed_matrix=False,
                             use_backlash_compensation=True, 
                             enable_soft_endstops=False)
         self.add_path(path)
@@ -390,10 +392,8 @@ class PathPlanner:
         
         # reset position back to  where we actually are
         path = G92Path(start)
-        
         self.add_path(path)
         self.wait_until_done()
-        
         # tell the printer we are no longer in homing mode (updates firmware if required)     
         self.printer.homing(False)
         
@@ -408,7 +408,8 @@ class PathPlanner:
         logging.debug("Probe points = " + str(probe_points))
         logging.debug("Probe heights = " + str(probe_heights))
         
-        self.printer.matrix_bed_comp = BedCompensation.create_rotation_matrix(probe_points, probe_heights)
+        mat = BedCompensation.create_rotation_matrix(probe_points, probe_heights)
+        self.printer.matrix_bed_comp = mat
         
         self.native_planner.setBedCompensationMatrix(tuple(self.printer.matrix_bed_comp.ravel()))
         
@@ -470,7 +471,6 @@ class PathPlanner:
             tool_axis = Printer.axis_to_index(self.printer.current_tool)
             
             self.native_planner.setAxisConfig(int(self.printer.axis_config))
-            
             self.native_planner.queueMove(tuple(new.start_pos),
                                       tuple(new.end_pos), 
                                       new.speed, 
@@ -478,7 +478,7 @@ class PathPlanner:
                                       bool(new.cancelable),
                                       bool(optimize),
                                       bool(new.enable_soft_endstops),
-                                      bool(new.use_bed_matrix),
+                                      False, #bool(new.use_bed_matrix),
                                       bool(new.use_backlash_compensation), 
                                       int(tool_axis), 
                                       True)

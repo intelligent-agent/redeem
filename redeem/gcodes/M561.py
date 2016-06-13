@@ -17,7 +17,14 @@ import logging
 class M561(GCodeCommand):
 
     def execute(self, g):
-        self.printer.matrix_bed_comp = np.identity(3)
+        if g.has_letter("S"):
+             self.printer.send_message(
+            g.prot,
+            "Current bed compensation matrix: {}".format(
+                self.printer.matrix_bed_comp))
+        else:
+            self.printer.matrix_bed_comp = np.identity(3)
+            self.printer.path_planner.native_planner.setBedCompensationMatrix(tuple(self.printer.matrix_bed_comp.ravel()))
 
     def get_description(self):
         return "Reset bed level matrix to identity"
@@ -25,4 +32,6 @@ class M561(GCodeCommand):
     def get_long_description(self):
         return ("This cancels any bed-plane fitting as the result of probing"
                 " (or anything else) and returns the machine "
-                "to moving in the user's coordinate system.")
+                "to moving in the user's coordinate system."
+                "Add 'S' to show the marix instead of resetting it.")
+

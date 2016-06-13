@@ -139,7 +139,7 @@ void PathPlanner::queueMove(std::vector<FLOAT_T> startPos, std::vector<FLOAT_T> 
   // PRE-PROCESSING
   ////////////////////////////////////////////////////////////////////
 	
-  // LOG("NEW MOVE:\n");
+  LOG("NEW MOVE:\n");
   // for (int i = 0; i<NUM_AXES; ++i) {
   //   LOG("AXIS " << i << ": start = " << startPos[i] << "(" << state[i] << "), end = " << endPos[i] << "\n");
   // }
@@ -150,12 +150,14 @@ void PathPlanner::queueMove(std::vector<FLOAT_T> startPos, std::vector<FLOAT_T> 
     // Cap the end position based on soft end stops
     if ( enable_soft_endstops) {
       if (softEndStopApply(startPos, endPos)) {
-	return;
+        return;
       }
     }
     // Calculate the position to reach, with bed levelling
     if (use_bed_matrix) {
+      LOG("Before matrix X: "<<endPos[0]<<" Y: "<<endPos[1]<<" Z: "<<endPos[2]<<"\n");  
       applyBedCompensation(endPos);
+      LOG("After matrix X: "<<endPos[0]<<" Y: "<<endPos[1]<<" Z: "<<endPos[2]<<"\n");  
     }
   }
 	
