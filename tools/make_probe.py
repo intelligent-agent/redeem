@@ -8,10 +8,10 @@ import matplotlib.pyplot as plt
 import random
 
 # Change these parameters
-bed_diameter_mm = 130 # Biggest circle
-circles = 3
-points_pr_circle = 12
-probe_start_height = 4
+bed_diameter_mm = 140 # Biggest circle
+circles = 2
+points_pr_circle = 8
+probe_start_height = 6
 add_zero = True
 probe_speed = 3000
 print_test_pattern = True
@@ -43,7 +43,8 @@ print "    G28 ; Home steppers"
 for i in range(len(probes)):
     print "    G30 P{} S F{}; Probe point {}".format(i, probe_speed, i)
 print "    G31 ; Dock probe"
-print ""    
+print "    M561 U; Update the matrix based on probe data" 
+print "    M561 S; Show the current matrix"    
 
 if print_test_pattern:
     print "Copy-paste this into a file called test-pattern.gcode and upload/execute"

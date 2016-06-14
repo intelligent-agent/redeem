@@ -11,7 +11,8 @@ License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 from GCodeCommand import GCodeCommand
 import logging
 import json
-        
+import numpy as np 
+import copy         
 try:
     from Gcode import Gcode
     from Path import Path
@@ -26,40 +27,26 @@ except ImportError:
 class G29(GCodeCommand):
 
     def execute(self, g):
-
         gcodes = self.printer.config.get("Macros", "G29").split("\n")
         self.printer.path_planner.wait_until_done()
         for gcode in gcodes:        
-            G = Gcode({"message": gcode, "prot": g.prot})
-            self.printer.processor.execute(G)
-            self.printer.path_planner.wait_until_done()
-
-        # Remove the offset from the probed points        
-        #if self.printer.probe_points[0]["X"] == 0 and self.printer.probe_points[0]["Y"] == 0:
-        #     min_value = self.printer.probe_heights[0]
-        #else:
-        #    min_value = min(self.printer.probe_heights)
-        
-        min_value = self.printer.probe_points[0]["Z"]
-
-        for i in range(len(self.printer.probe_heights)):
-            self.printer.probe_heights[i] += min_value
-
-        # Log the found heights
-        for k, v in enumerate(self.printer.probe_points):
-            self.printer.probe_points[k]["Z"] = self.printer.probe_heights[k]
-        logging.info("Found heights: "+str(self.printer.probe_points))
-
-        # Add 'S'=simulate To not update the bed matrix.  
-        if not g.has_letter("S"):
-            # Update the bed compensation matrix
-            self.printer.path_planner.update_autolevel_matrix(self.printer.probe_points, self.printer.probe_heights)
-            logging.info("Updated bed compensation matrix: \n"+str(self.printer.matrix_bed_comp))
-        else:
-            # Update probe points to make comparable with update
-            BedCompensation.create_rotation_matrix(self.printer.probe_points, self.printer.probe_heights)
-
-        Alarm.action_command("bed_probe_data", json.dumps(self.printer.probe_points))
+            # If 'S' (imulate) remove M561 and M500 codes 
+            if g.has_letter("S"):
+                if "RFS" in gcode:
+                    logging.debug("G29: Removing due to RFS: "+str(gcode)) 
+                else:
+                    G = Gcode({"message": gcode, "prot": g.prot})
+                    self.printer.processor.execute(G)
+                    self.printer.path_planner.wait_until_done()
+            else: # Execute all 
+                G = Gcode({"message": gcode, "prot": g.prot})
+                self.printer.processor.execute(G)
+                self.printer.path_planner.wait_until_done()
+                
+        probe_data = copy.deepcopy(self.printer.probe_points)
+        for k, v in enumerate(probe_data):
+            probe_data[k]["Z"] = self.printer.probe_heights[k]
+        Alarm.action_command("bed_probe_data", json.dumps(probe_data))
 
     def get_description(self):
         return "Probe the bed at specified points"
@@ -74,4 +61,54 @@ class G29(GCodeCommand):
 
     def get_test_gcodes(self):
         return ["G29"]
+
+
+
+class G29C(GCodeCommand):
+
+    def execute(self, g):
+        bed_diameter_mm = g.get_float_by_letter("D", 140.0)     # Bed diameter
+        circles = g.get_int_by_letter("C", 2)                   # Number of circles
+        points_pr_circle = g.get_int_by_letter("P", 8)          # Points pr circle
+        probe_start_height = g.get_float_by_letter("S", 6.0)    # Probe starting point above bed
+        add_zero = bool(g.get_int_by_letter("Z", 1))            # Add probe point in 0, 0
+        probe_speed = g.get_float_by_letter("K", 3000)
+
+        theta = np.linspace(0, 2*np.pi, points_pr_circle, endpoint=False)
+
+        probes = []
+        r = bed_diameter_mm/2
+        for a in np.linspace(r, 0, circles, endpoint=False):
+            for t in theta:
+                x, y = a*np.cos(t), a*np.sin(t)
+                probes.append((x, y))
+        if add_zero:
+            probes.append((0, 0))
+    
+        gcodes = "M561; (RFS) Reset bed matrix\n"
+        for i, p in enumerate(probes):
+            gcodes += "M557 P{0} X{1:+02.2f} Y{2:+02.2f} Z{3}\n".format(i, p[0], p[1], probe_start_height)
+        gcodes += "    G32 ; Undock probe\n"
+        gcodes += "    G28 ; Home steppers\n"
+        for i in range(len(probes)):
+            gcodes += "    G30 P{} S F{}; Probe point {}\n".format(i, probe_speed, i)
+        gcodes += "    G31 ; Dock probe\n"
+        gcodes += "    M561 U; (RFS) Update the matrix based on probe data\n" 
+        gcodes += "    M561 S; Show the current matrix\n"
+        gcodes += "    M500; (RFS) Save data\n"
+
+        self.printer.config.set("Macros", "G29", gcodes)
+        Alarm.action_command("new_g29", json.dumps(gcodes))
+
+    def get_description(self):
+        return "Generate Probe pattern"
+
+    def get_long_description(self):
+        return ("Generate a G29 Probing pattern\n"
+                "D = bed_diameter_mm, default: 140\n"
+                "C = Circles, default = 2\n"
+                "P = points_pr_circle, default: 8\n"
+                "S = probe_start_height, default: 6.0\n"
+                "Z = add_zero, default = 1\n"
+                "K = probe_speed, default: 3000.0\n")
 

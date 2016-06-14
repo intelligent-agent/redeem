@@ -90,7 +90,7 @@ class PathPlanner:
         self.native_planner.setMaxBufferedMoveTime(int(self.printer.max_buffered_move_time))
         self.native_planner.setSoftEndstopsMin(tuple(self.printer.soft_min))
         self.native_planner.setSoftEndstopsMax(tuple(self.printer.soft_max))
-        self.native_planner.setBedCompensationMatrix(tuple(self.printer.matrix_bed_comp.ravel()))
+        self.native_planner.setBedCompensationMatrix(tuple(np.identity(3).ravel()))
         self.native_planner.setMaxPathLength(self.printer.max_length)
         self.native_planner.setAxisConfig(self.printer.axis_config)
         self.native_planner.delta_bot.setMainDimensions(Delta.Hez, Delta.L, Delta.r)
@@ -346,8 +346,10 @@ class PathPlanner:
         self.printer.ensure_steppers_enabled()
         
         # save the starting position
-        start = self.get_current_pos(ideal=True)
-        
+        start_pos   = self.get_current_pos(ideal=True)
+        start_state = self.native_planner.getState()
+
+        logging.debug("Start pos: "+str(start_pos))
         # calculate how many steps the requested z movement will require
         steps = np.ceil(z*self.printer.steps_pr_meter[2])
         z_dist = steps/self.printer.steps_pr_meter[2]
@@ -366,7 +368,7 @@ class PathPlanner:
         # the probe end-stop should be triggered during this move
         path = RelativePath(end, speed, accel, 
                             cancelable=True, 
-                            use_bed_matrix=False, 
+                            use_bed_matrix=True, 
                             use_backlash_compensation=True, 
                             enable_soft_endstops=False)
         self.add_path(path)
@@ -384,37 +386,26 @@ class PathPlanner:
         end   = {"Z":z_dist}
         path = RelativePath(end, speed, accel, 
                             cancelable=True, 
-                            use_bed_matrix=False,
+                            use_bed_matrix=True,
                             use_backlash_compensation=True, 
                             enable_soft_endstops=False)
         self.add_path(path)
         self.wait_until_done()
         
         # reset position back to  where we actually are
-        path = G92Path(start)
+        path = G92Path(start_pos)
         self.add_path(path)
         self.wait_until_done()
+        logging.debug("State before: "+str(start_state))
+        start_state = self.native_planner.getState()
+        logging.debug("State after:  "+str(start_state))
+        #self.native_planner.setState(start_state)
+        
         # tell the printer we are no longer in homing mode (updates firmware if required)     
         self.printer.homing(False)
         
         return -z_dist
         
-    def update_autolevel_matrix(self, probe_points, probe_heights):
-        """
-        updates the bed compensation matrix
-        """
-        
-        logging.debug("updating bed compensation matrix")        
-        logging.debug("Probe points = " + str(probe_points))
-        logging.debug("Probe heights = " + str(probe_heights))
-        
-        mat = BedCompensation.create_rotation_matrix(probe_points, probe_heights)
-        self.printer.matrix_bed_comp = mat
-        
-        self.native_planner.setBedCompensationMatrix(tuple(self.printer.matrix_bed_comp.ravel()))
-        
-        return
-
     def autocalibrate_delta_printer(self, num_factors, max_std,
                                     simulate_only,
                                     probe_points, print_head_zs):
