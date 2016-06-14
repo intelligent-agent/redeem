@@ -349,7 +349,6 @@ class PathPlanner:
         start_pos   = self.get_current_pos(ideal=True)
         start_state = self.native_planner.getState()
 
-        logging.debug("Start pos: "+str(start_pos))
         # calculate how many steps the requested z movement will require
         steps = np.ceil(z*self.printer.steps_pr_meter[2])
         z_dist = steps/self.printer.steps_pr_meter[2]
@@ -393,18 +392,15 @@ class PathPlanner:
         self.wait_until_done()
         
         # reset position back to  where we actually are
-        path = G92Path(start_pos)
+        path = G92Path({"Z": start_pos["Z"]}, use_bed_matrix=True)
         self.add_path(path)
         self.wait_until_done()
-        logging.debug("State before: "+str(start_state))
         start_state = self.native_planner.getState()
-        logging.debug("State after:  "+str(start_state))
-        #self.native_planner.setState(start_state)
         
         # tell the printer we are no longer in homing mode (updates firmware if required)     
         self.printer.homing(False)
         
-        return -z_dist
+        return -z_dist+start_pos["Z"]
         
     def autocalibrate_delta_printer(self, num_factors, max_std,
                                     simulate_only,
@@ -462,7 +458,9 @@ class PathPlanner:
             tool_axis = Printer.axis_to_index(self.printer.current_tool)
             
             self.native_planner.setAxisConfig(int(self.printer.axis_config))
-            self.native_planner.queueMove(tuple(new.start_pos),
+            # Start_pos is unused. TODO: Remove it.  
+            # Bed matrix behaviour is handled in Python space, it is fast enough for that. 
+            self.native_planner.queueMove((0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0),#tuple(new.start_pos),
                                       tuple(new.end_pos), 
                                       new.speed, 
                                       new.accel,

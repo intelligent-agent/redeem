@@ -73,8 +73,10 @@ class G29C(GCodeCommand):
         probe_start_height = g.get_float_by_letter("S", 6.0)    # Probe starting point above bed
         add_zero = bool(g.get_int_by_letter("Z", 1))            # Add probe point in 0, 0
         probe_speed = g.get_float_by_letter("K", 3000)
+        reverse = g.get_int_by_letter("R", 0)
+        reverse = -1 if bool(reverse) else 1
 
-        theta = np.linspace(0, 2*np.pi, points_pr_circle, endpoint=False)
+        theta = np.linspace(0, reverse*2*np.pi, points_pr_circle, endpoint=False)
 
         probes = []
         r = bed_diameter_mm/2

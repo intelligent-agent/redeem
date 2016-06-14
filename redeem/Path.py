@@ -188,8 +188,8 @@ class AbsolutePath(Path):
         if self.use_bed_matrix:
             self.end_pos[:3] = self.end_pos[:3].dot(self.printer.matrix_bed_comp)
 
-        logging.debug("Ideal: "+str(self.ideal_end_pos[2])+" matrix: "+str(self.end_pos[2]))
-
+        #logging.debug("Abs before: "+str(self.ideal_end_pos[:3])+" after: "+str(self.end_pos[:3]))
+        
 class RelativePath(Path):
     """ 
     A path segment with Relative movement 
@@ -218,15 +218,13 @@ class RelativePath(Path):
         self.ideal_end_pos = np.copy(prev.ideal_end_pos) + vec
         
         self.end_pos = self.start_pos + vec
-        #if self.use_bed_matrix:
-        #    self.end_pos[:3] = self.end_pos[:3].dot(self.printer.matrix_bed_comp)
         
 
 class G92Path(Path):
     """ A reset axes path segment. No movement occurs, only global position
     setting """
-    def __init__(self, axes, cancelable=False):
-        Path.__init__(self, axes, 0, 0)
+    def __init__(self, axes, cancelable=False, use_bed_matrix=False):
+        Path.__init__(self, axes, 0, 0, cancelable, use_bed_matrix)
         self.movement = Path.G92
 
 
@@ -247,14 +245,14 @@ class G92Path(Path):
         for index, axis in enumerate(self.printer.AXES):
             if axis in self.axes:
                 self.ideal_end_pos[index] = self.axes[axis]
+                self.end_pos[index] = self.axes[axis]
 
         # Update the matrix compensated pos
-        if self.use_bed_matrix and prev is not None:
+        if self.use_bed_matrix:
             matrix_pos = np.copy(self.ideal_end_pos)
             matrix_pos[:3] = matrix_pos[:3].dot(self.printer.matrix_bed_comp)
             for index, axis in enumerate(self.printer.AXES):
                 if axis in self.axes:
                     self.end_pos[index] = matrix_pos[index]
-
-
+        #logging.debug("G92 before: "+str(self.ideal_end_pos[:3])+" after: "+str(self.end_pos[:3]))
 

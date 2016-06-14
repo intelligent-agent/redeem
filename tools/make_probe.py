@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 import random
 
 # Change these parameters
-bed_diameter_mm = 140 # Biggest circle
+bed_diameter_mm = 130 # Biggest circle
 circles = 2
 points_pr_circle = 8
 probe_start_height = 6
