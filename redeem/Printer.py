@@ -28,19 +28,19 @@ from PruInterface import PruInterface
 import os
 import json
 
-class Printer:    
+class Printer:
     AXES = "XYZEHABC"
     axes_zipped = ["X", "Y", "Z", "E", "H", "A", "B", "C"]
     MAX_AXES = 8
     NUM_AXES = 5
-    
+
     AXIS_CONFIG_XY      = 0
     AXIS_CONFIG_H_BELT  = 1
     AXIS_CONFIG_CORE_XY = 2
     AXIS_CONFIG_DELTA   = 3
 
     def __init__(self):
-        self.config_location = None        
+        self.config_location = None
         self.steppers    = {}
         self.heaters     = {}
         self.thermistors = {}
@@ -62,14 +62,14 @@ class Printer:
         self.print_move_buffer_wait = 250
         self.min_buffered_move_time = 100
         self.max_buffered_move_time = 1000
-        
+
         self.max_length = 0.001
 
-        self.probe_points  = [{"X": 0, "Y": 0, "Z": 0}, {"X": 0, "Y": 0, "Z": 0}, {"X": 0, "Y": 0, "Z": 0}]
+        self.probe_points  = []
         self.probe_heights = [0, 0, 0]
         self.probe_type = 0 # Servo
 
-        # Max number of axes. 
+        # Max number of axes.
         self.num_axes = 8
 
         self.max_speeds             = np.ones(self.num_axes)
@@ -85,27 +85,27 @@ class Printer:
         self.soft_min               = -np.ones(self.num_axes)*1000.0
         self.soft_max               = np.ones(self.num_axes)*1000.0
         self.slaves                 = {key: "" for key in self.AXES[:self.num_axes]}
-        
+
         # bed compensation
         self.matrix_bed_comp = np.eye((3))
-    
+
         # By default, do not check for slaves
         self.has_slaves = False
-        
+
         return
-        
+
     def add_slave(self, master, slave):
-        ''' Make an axis copy the movement of another. 
+        ''' Make an axis copy the movement of another.
         the slave will get the same position as the axis'''
         self.slaves[master] = slave
         self.has_slaves = True
         return
-        
+
     def check_values(self):
         """
         make sure that values are valid
         """
-        
+
         # check min speed
         for axis in self.steppers:
             stepper = self.steppers[axis]
@@ -117,8 +117,8 @@ class Printer:
                     err = "minimum speed of axis {0} is too low. Increase min_speed_{0}, microstepping_{0}, or adjust steps_pr_mm_{0}".format(axis.lower())
                     logging.warning(err)
                     raise RuntimeError(err)
-                
-                
+
+
         return
 
     def ensure_steppers_enabled(self):
@@ -141,23 +141,23 @@ class Printer:
     def send_message(self, prot, msg):
         """ Send a message back to host """
         self.comms[prot].send_message(msg)
-        
+
     def homing(self, is_homing):
         """
-        if the printer is homing the endstops may need to be updated to 
+        if the printer is homing the endstops may need to be updated to
         allow for endstops that are only active during the homing procedure
         """
-        
+
         homing_only_endstops = self.config.get('Endstops','homing_only_endstops')
         if homing_only_endstops:
             for es in self.end_stops.items():
                 if es[0] in homing_only_endstops:
                     es[1].active = is_homing
-                    
+
         self.set_active_endstops()
-            
+
         return
-        
+
     def set_active_endstops(self):
         """
         go through the list of endstops and load their active status into the PRU
@@ -168,13 +168,13 @@ class Printer:
         for i, es in enumerate(["X1","Y1","Z1","X2","Y2","Z2"]):
             if self.end_stops[es].active:
                 active += 1 << i
-        
+
         #logging.debug("endstop active mask = " + bin(active))
-        
+
         # write to shared memory
         PruInterface.set_active_endstops(active)
         return
-        
+
 
     def save_settings(self, filename):
         logging.debug("save_settings: setting stepper parameters")
@@ -209,7 +209,7 @@ class Printer:
         opts = ["Hez", "L", "r", "Ae", "Be", "Ce", "A_radial", "B_radial", "C_radial", "A_tangential", "B_tangential", "C_tangential" ]
         for opt in opts:
             self.config.set('Delta', opt, str(Delta.__dict__[opt]))
-    
+
         logging.debug("save_settings: saving config to file")
         self.config.save(filename)
         logging.debug("save_settings: done")
@@ -218,7 +218,7 @@ class Printer:
         try:
             mat = self.config.get('Geometry', 'bed_compensation_matrix')
             mat = np.array(json.loads(mat))
-        except: 
+        except:
             mat = np.eye(3)
         return mat
 
@@ -226,7 +226,7 @@ class Printer:
         mat = json.dumps(self.matrix_bed_comp.tolist())
         # Only update if they are different
         if mat != self.config.get('Geometry', 'bed_compensation_matrix'):
-            self.config.set('Geometry', 'bed_compensation_matrix', mat)        
+            self.config.set('Geometry', 'bed_compensation_matrix', mat)
 
     @staticmethod
     def axis_to_index(axis):
