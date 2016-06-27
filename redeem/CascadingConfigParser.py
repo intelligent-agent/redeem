@@ -21,6 +21,7 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
 import ConfigParser
 import os
 import logging
+import struct
 
 
 class CascadingConfigParser(ConfigParser.SafeConfigParser):
@@ -28,7 +29,7 @@ class CascadingConfigParser(ConfigParser.SafeConfigParser):
 
         ConfigParser.SafeConfigParser.__init__(self)
 
-        # Write options in the case it was read. 
+        # Write options in the case it was read.
         # self.optionxform = str
 
         # Parse to real path
@@ -51,7 +52,7 @@ class CascadingConfigParser(ConfigParser.SafeConfigParser):
         for config_file in self.config_files:
             if os.path.isfile(config_file):
                 ts = max(ts, os.path.getmtime(config_file))
-        
+
         if os.path.islink("/etc/redeem/printer.cfg"):
             ts = max(ts, os.lstat("/etc/redeem/printer.cfg").st_mtime)
         return ts
@@ -60,7 +61,7 @@ class CascadingConfigParser(ConfigParser.SafeConfigParser):
         """ Read the name and revision of each cape on the BeagleBone """
         self.replicape_revision = None
         self.reach_revision = None
-        
+
         import glob
         paths = glob.glob("/sys/bus/i2c/devices/[1-2]-005[4-7]/at24-[1-4]/nvmem")
         paths.extend(glob.glob("/sys/bus/i2c/devices/[1-2]-005[4-7]/nvmem/at24-[1-4]/nvmem"))
@@ -68,18 +69,22 @@ class CascadingConfigParser(ConfigParser.SafeConfigParser):
         for i, path in enumerate(paths):
             try:
                 with open(path, "rb") as f:
-                    data = f.read(100)
+                    data = f.read(120)
                     name = data[58:74].strip()
                     if name == "BB-BONE-REPLICAP":
                         self.replicape_revision = data[38:42]
+                        self.replicape_data = data
+                        self.replicape_path = path
                     elif name[:13] == "BB-BONE-REACH":
                         self.reach_revision = data[38:42]
+                        self.reach_data = data
+                        self.reach_path = path
                     if self.replicape_revision != None and self.reach_revision != None:
                         break
             except IOError as e:
                 pass
-        return 
-    
+        return
+
     def save(self, filename):
         """ Save the changed settings to local.cfg """
         current = CascadingConfigParser(self.config_files)
@@ -88,7 +93,7 @@ class CascadingConfigParser(ConfigParser.SafeConfigParser):
         to_save = []
         for section in self.sections():
             #logging.debug(section)
-            for option in self.options(section):                
+            for option in self.options(section):
                 if self.get(section, option) != current.get(section, option):
                     old = current.get(section, option)
                     val = self.get(section, option)
@@ -97,14 +102,14 @@ class CascadingConfigParser(ConfigParser.SafeConfigParser):
         # Update local config with changed values
         local = ConfigParser.SafeConfigParser()
         local.readfp(open(filename, "r"))
-        for opt in to_save:         
+        for opt in to_save:
             (section, option, value, old) = opt
             if not local.has_section(section):
                 local.add_section(section)
             local.set(section, option, value)
             logging.info("Update setting: {} from {} to {} ".format(option, old, value))
 
-                    
+
         # Save changed values to file
         local.write(open(filename, "w+"))
 
@@ -133,4 +138,22 @@ class CascadingConfigParser(ConfigParser.SafeConfigParser):
         else:
             logging.warning("{} contains errors.".format(filename))
         return local_ok
-    
+
+    def get_key(self):
+        """ Get the generated key from the config or create one """
+        self.replicape_key = "".join(struct.unpack('20c', self.replicape_data[100:120]))
+        logging.debug("Found Replicape key: '"+self.replicape_key+"'")
+        if self.replicape_key == '\x00'*20:
+            logging.debug("Replicape key invalid")
+            import random
+            import string
+            self.replicape_key = ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits) for _ in range(20))
+            self.replicape_data = self.replicape_data[:100] + self.replicape_key
+            logging.debug("New Replicape key: '"+self.replicape_key+"'")
+            #logging.debug("".join(struct.unpack('20c', self.new_replicape_data[100:120])))
+            try:
+                with open(self.replicape_path, "wb") as f:
+                    f.write(self.replicape_data[:120])
+            except IOError as e:
+                logging.warning("Unable to write new key to EEPROM")
+        return self.replicape_key

@@ -13,6 +13,7 @@ from GCodeCommand import GCodeCommand
 class M115(GCodeCommand):
     def execute(self, g):
         protocol_version = 0.1
+        replicape_key = self.printer.replicape_key
         firmware_name = "Redeem"
         firmware_version = self.printer.firmware_version
         firmware_url = "http%3A//wiki.thing-printer.com/index.php?title=Redeem"
@@ -23,14 +24,16 @@ class M115(GCodeCommand):
             "PROTOCOL_VERSION:{} "\
             "FIRMWARE_NAME:{} "\
             "FIRMWARE_VERSION:{} "\
+            "REPLICAPE_KEY:{} "\
             "FIRMWARE_URL:{} "\
             "MACHINE_TYPE:{} "\
             "EXTRUDER_COUNT: {}".format(
-                protocol_version, 
+                protocol_version,
                 firmware_name,
-                firmware_version, 
-                firmware_url, 
-                machine_type, 
+                firmware_version,
+                replicape_key,
+                firmware_url,
+                machine_type,
                 extruder_count
             )
         )

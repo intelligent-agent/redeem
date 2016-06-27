@@ -40,7 +40,7 @@ pathplanner = Extension(
         '-fpermissive',
         '-D_GLIBCXX_USE_NANOSLEEP',
         '-DBUILD_PYTHON_EXT=1',
-        '-Wno-write-strings', 
+        '-Wno-write-strings',
         '-Wno-maybe-uninitialized']
 )
 
@@ -50,27 +50,28 @@ setup(
     packages = find_packages(exclude=["redeem/path_planner"]),
     data_files=[
         ('redeem/firmware', [
-            'redeem/firmware/firmware_runtime.p', 
+            'redeem/firmware/firmware_runtime.p',
             'redeem/firmware/firmware_endstops.p']),
         ('redeem/configs', [
-            'configs/default.cfg', 
+            'configs/default.cfg',
             'configs/thing.cfg',
-            'configs/makerbot_cupcake.cfg', 
-            'configs/maxcorexy.cfg', 
-            'configs/mendelmax.cfg', 
-            'configs/testing_rev_A.cfg', 
-            'configs/testing_rev_B.cfg', 
+            'configs/makerbot_cupcake.cfg',
+            'configs/maxcorexy.cfg',
+            'configs/mendelmax.cfg',
+            'configs/testing_rev_A.cfg',
+            'configs/testing_rev_B.cfg',
             'configs/prusa_i3.cfg',
-	        'configs/debrew.cfg', 
-	        'configs/kossel_mini.cfg']),
+	        'configs/debrew.cfg',
+	        'configs/kossel_mini.cfg',
+            'configs/rostock_max_v2.cfg']),
         ('redeem/data',[
             'data/B57540G0104F000.cht',
             'data/B57560G104F.cht',
             'data/B57561G0103F000.cht',
             'data/QU-BD.cht',
             'data/HT100K3950.cht',
-            'data/SEMITEC-104GT-2.cht', 
-            'data/DYZE500.cht', 
+            'data/SEMITEC-104GT-2.cht',
+            'data/DYZE500.cht',
             'data/E3D-PT100-AMPLIFIER.cht']),
     ],
     # metadata for upload to PyPI
@@ -89,4 +90,3 @@ setup(
     },
     include_package_data = True
 )
-

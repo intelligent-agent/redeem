@@ -87,7 +87,7 @@ class Redeem:
         Path.printer = printer
 
         printer.firmware_version = firmware_version
-        
+
         printer.config_location = config_location
 
         # check for config files
@@ -95,16 +95,16 @@ class Redeem:
         if not os.path.exists(file_path):
             logging.error(file_path + " does not exist, this file is required for operation")
             sys.exit() # maybe use something more graceful?
-            
+
         local_path = os.path.join(config_location,"local.cfg")
         if not os.path.exists(local_path):
             logging.info(local_path + " does not exist, Creating one")
             os.mknod(local_path)
-            os.chmod(local_path, 0o777)            
+            os.chmod(local_path, 0o777)
 
         # Parse the config files.
         printer.config = CascadingConfigParser(
-            [os.path.join(config_location,'default.cfg'), 
+            [os.path.join(config_location,'default.cfg'),
              os.path.join(config_location,'printer.cfg'),
              os.path.join(config_location,'local.cfg')])
 
@@ -119,7 +119,7 @@ class Redeem:
         if level > 0:
             logging.getLogger().setLevel(level)
 
-        # Set up additional logging, if present:        
+        # Set up additional logging, if present:
         if self.printer.config.getboolean('System', 'log_to_file'):
             logfile = self.printer.config.get('System', 'logfile')
             formatter = '%(asctime)s %(name)-12s %(levelname)-8s %(message)s'
@@ -134,6 +134,7 @@ class Redeem:
         self.revision = self.printer.config.replicape_revision
         if self.revision:
             logging.info("Found Replicape rev. " + self.revision)
+            printer.replicape_key = printer.config.get_key()
         else:
             logging.warning("Oh no! No Replicape present!")
             self.revision = "00B3"
@@ -170,16 +171,16 @@ class Redeem:
         EndStop.inputdev = self.printer.config.get("Endstops", "inputdev")
         # Set up key listener
         Key_pin.listener = Key_pin_listener(EndStop.inputdev)
-        
+
         homing_only_endstops = self.printer.config.get('Endstops', 'homing_only_endstops')
-        
+
         for es in ["Z2", "Y2", "X2", "Z1", "Y1", "X1"]: # Order matches end stop inversion mask in Firmware
             pin = self.printer.config.get("Endstops", "pin_"+es)
             keycode = self.printer.config.getint("Endstops", "keycode_"+es)
             invert = self.printer.config.getboolean("Endstops", "invert_"+es)
             self.printer.end_stops[es] = EndStop(printer, pin, keycode, es, invert)
             self.printer.end_stops[es].stops = self.printer.config.get('Endstops', 'end_stop_'+es+'_stops')
-        
+
         # activate all the endstops
         self.printer.set_active_endstops()
 
@@ -215,7 +216,7 @@ class Redeem:
             printer.steppers["Z"] = Stepper_00A4("GPIO0_23", "GPIO0_26", "GPIO0_15", 2, 2, "Z")
             printer.steppers["E"] = Stepper_00A4("GPIO1_28", "GPIO1_15", "GPIO2_1" , 3, 3, "E")
             printer.steppers["H"] = Stepper_00A4("GPIO1_13", "GPIO1_14", "GPIO2_3" , 4, 4, "H")
-        # Init Reach steppers, if present. 
+        # Init Reach steppers, if present.
         if printer.config.reach_revision == "00A0":
             printer.steppers["A"] = Stepper_reach_00A4("GPIO2_2" , "GPIO1_18", "GPIO0_14", 5, 5, "A")
             printer.steppers["B"] = Stepper_reach_00A4("GPIO1_16", "GPIO0_5" , "GPIO0_14", 6, 6, "B")
@@ -260,7 +261,7 @@ class Redeem:
         for i, path in enumerate(paths):
             self.printer.cold_ends.append(ColdEnd(path, "ds18b20-"+str(i)))
             logging.info("Found Cold end "+str(i)+" on " + path)
-            
+
         # Make Mosfets, temperature sensors and extruders
         heaters = ["E", "H", "HBP"]
         if self.printer.config.reach_revision:
@@ -286,7 +287,7 @@ class Redeem:
             if e != "HBP":
                 self.printer.heaters[e] = Extruder(
                                         self.printer.steppers[e],
-                                        self.printer.thermistors[e], 
+                                        self.printer.thermistors[e],
                                         self.printer.mosfets[e], e, onoff)
             else:
                 self.printer.heaters[e] = HBP(
@@ -349,13 +350,13 @@ class Redeem:
                 if not self.printer.config.has_option('Cold-ends', "connect-therm-{}-fan-{}".format(t, f)):
                     continue
                 if printer.config.getboolean('Cold-ends', "connect-therm-{}-fan-{}".format(t, f)):
-                    c = Cooler(therm, fan, "Cooler-{}-{}".format(t, f), True) # Use ON/OFF on these. 
+                    c = Cooler(therm, fan, "Cooler-{}-{}".format(t, f), True) # Use ON/OFF on these.
                     c.ok_range = 4
                     opt_temp = "therm-{}-fan-{}-target_temp".format(t, f)
-                    if printer.config.has_option('Cold-ends', opt_temp): 
+                    if printer.config.has_option('Cold-ends', opt_temp):
                         target_temp = printer.config.getfloat('Cold-ends', opt_temp)
-                    else:            
-                        target_temp = 60    
+                    else:
+                        target_temp = 60
                     c.set_target_temperature(target_temp)
                     c.enable()
                     printer.coolers.append(c)
@@ -379,16 +380,16 @@ class Redeem:
                         c = Cooler(cold_end, fan, "Cooler-ds18b20-{}-{}".format(ce, f), False)
                         c.ok_range = 4
                         opt_temp = "cooler_{}_target_temp".format(ce)
-                        if printer.config.has_option('Cold-ends', opt_temp): 
+                        if printer.config.has_option('Cold-ends', opt_temp):
                             target_temp = printer.config.getfloat('Cold-ends', opt_temp)
-                        else:            
-                            target_temp = 60    
+                        else:
+                            target_temp = 60
                         c.set_target_temperature(target_temp)
                         c.enable()
                         printer.coolers.append(c)
                         logging.info("Cooler connects temp sensor ds18b20 {} with fan {}".format(ce, f))
 
-        # Init roatray encs. 
+        # Init roatray encs.
         printer.filament_sensors = []
 
         # Init rotary encoders
@@ -410,7 +411,7 @@ class Redeem:
                 logging.debug("Alarm level"+str(alarm_level))
                 sensor.alarm_level = alarm_level
                 printer.filament_sensors.append(sensor)
-    
+
         # Make a queue of commands
         self.printer.commands = JoinableQueue(10)
 
@@ -443,12 +444,12 @@ class Redeem:
             dirname + "/firmware/firmware_endstops.bin",
             self.printer, "/usr/bin/pasm")
 
-        
+
         printer.move_cache_size = printer.config.getfloat('Planner', 'move_cache_size')
         printer.print_move_buffer_wait = printer.config.getfloat('Planner', 'print_move_buffer_wait')
         printer.min_buffered_move_time = printer.config.getfloat('Planner', 'min_buffered_move_time')
         printer.max_buffered_move_time = printer.config.getfloat('Planner', 'max_buffered_move_time')
-        
+
         printer.max_length = printer.config.getfloat('Planner', 'max_length')
 
         self.printer.processor = GCodeProcessor(self.printer)
@@ -467,30 +468,30 @@ class Redeem:
         self.printer.path_planner = PathPlanner(self.printer, pru_firmware)
         for axis in printer.steppers.keys():
             i = Printer.axis_to_index(axis)
-            
+
             # Sometimes soft_end_stop aren't defined to be at the exact hardware boundary.
             # Adding 100mm for searching buffer.
             if printer.config.has_option('Geometry', 'travel_' + axis.lower()):
                 printer.path_planner.travel_length[axis] = printer.config.getfloat('Geometry', 'travel_' + axis.lower())
             else:
                 printer.path_planner.travel_length[axis] = (printer.soft_max[i] - printer.soft_min[i]) + .1
-                if axis in ['X','Y','Z']:                
+                if axis in ['X','Y','Z']:
                     travel_default = True
-            
+
             if printer.config.has_option('Geometry', 'offset_' + axis.lower()):
                 printer.path_planner.center_offset[axis] = printer.config.getfloat('Geometry', 'offset_' + axis.lower())
             else:
                 printer.path_planner.center_offset[axis] =(printer.soft_min[i] if printer.home_speed[i] > 0 else printer.soft_max[i])
-                if axis in ['X','Y','Z']:                
+                if axis in ['X','Y','Z']:
                     center_default = True
 
             if printer.config.has_option('Homing', 'home_' + axis.lower()):
                 printer.path_planner.home_pos[axis] = printer.config.getfloat('Homing', 'home_' + axis.lower())
             else:
                 printer.path_planner.home_pos[axis] = printer.path_planner.center_offset[axis]
-                if axis in ['X','Y','Z']:                   
+                if axis in ['X','Y','Z']:
                     home_default = True
-                
+
         if printer.axis_config == Printer.AXIS_CONFIG_DELTA:
             if travel_default:
                 logging.warning("Axis travel (travel_*) set by soft limits, manual setup is recommended for a delta")
@@ -499,24 +500,24 @@ class Redeem:
             if home_default:
                 logging.warning("Home position (home_*) set by soft limits or offset_*")
                 logging.info("Home position will be recalculated...")
-        
+
                 # convert home_pos to effector space
                 Az = printer.path_planner.home_pos['X']
                 Bz = printer.path_planner.home_pos['Y']
                 Cz = printer.path_planner.home_pos['Z']
-                
+
                 delta_bot = self.printer.path_planner.native_planner.delta_bot
-                
+
                 z_offset = delta_bot.vertical_offset(Az,Bz,Cz) # vertical offset
                 xyz = delta_bot.forward_kinematics(Az, Bz, Cz) # effector position
-                
-                # The default home_pos, provided above, is based on effector space 
-                # coordinates for carriage positions. We need to transform these to 
+
+                # The default home_pos, provided above, is based on effector space
+                # coordinates for carriage positions. We need to transform these to
                 # get where the effector actually is.
                 xyz[2] += z_offset
                 for i, a in enumerate(['X','Y','Z']):
                     printer.path_planner.home_pos[a] = xyz[i]
-                
+
                 logging.info("Home position = %s"%str(printer.path_planner.home_pos))
 
         # Enable Stepper timeout
@@ -620,21 +621,21 @@ class Redeem:
         for name, comm in self.printer.comms.iteritems():
             logging.debug("closing "+name)
             comm.close()
-            
+
         self.printer.enable.set_disabled()
         self.printer.swd.stop()
         Alarm.executor.stop()
         Key_pin.listener.stop()
         self.printer.watchdog.stop()
         self.printer.enable.set_disabled()
-        
+
         # list all threads that are still running
         # note: some of these maybe daemons
         for t in threading.enumerate():
             logging.debug("Thread " + t.name + " is still running")
-        
+
         logging.info("Redeem exited")
-        
+
         return
 
     def _execute(self, g):

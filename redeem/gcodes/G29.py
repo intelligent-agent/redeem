@@ -44,8 +44,10 @@ class G29(GCodeCommand):
                 self.printer.path_planner.wait_until_done()
 
         probe_data = copy.deepcopy(self.printer.probe_points)
-        bed_data = {"probe_data": {"x": [], "y": [], "z": []},
-            "probe_type": "test" if g.has_letter("S") else "probe"}
+        bed_data = {
+            "probe_data": {"x": [], "y": [], "z": []},
+            "probe_type": "test" if g.has_letter("S") else "probe",
+            "replicape_key": self.printer.replicape_key}
         for k, v in enumerate(probe_data):
             bed_data["probe_data"]["x"].append(probe_data[k]["X"])
             bed_data["probe_data"]["y"].append(probe_data[k]["Y"])
