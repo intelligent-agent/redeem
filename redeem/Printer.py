@@ -140,7 +140,12 @@ class Printer:
 
     def send_message(self, prot, msg):
         """ Send a message back to host """
-        self.comms[prot].send_message(msg)
+        if "\n" in msg:
+            for m in msg.split("\n"):
+                if len(m) > 0:
+                    self.comms[prot].send_message(m)
+        else:
+            self.comms[prot].send_message(msg)
 
     def homing(self, is_homing):
         """

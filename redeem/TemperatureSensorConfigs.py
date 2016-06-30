@@ -60,3 +60,8 @@ pt100 = [
     ["E3D-PT100-AMPLIFIER", 100,    0.0039083, -5.77e-07],
     ["PT100-GENERIC-PLATINUM", 100,    0.0039083, -5.77e-07]
 ]
+
+""" Configuration for thermocouple boards having linear v/deg scale"""
+tboard = [
+    ["Tboard", 0.005],
+]

@@ -65,6 +65,15 @@ class TemperatureSensor:
                     break
 
         if found == False:
+            for p in TemperatureSensorConfigs.tboard:
+                if p[0] == self.sensorIdentifier:
+                    logging.warning("Tboard sensors are experimental")
+                    """ Not working yet. No known hardware solution """
+                    self.sensor = Tboard(pin, p, self.heater)
+                    found = True
+                    break
+
+        if found == False:
             logging.error("The specified temperature sensor {0} is not implemented. \
             You may add it's config in TemperatureSensorConfigs.".format(sensorIdentifier))
             self.sensor = None
@@ -74,7 +83,7 @@ class TemperatureSensor:
     """
     def get_temperature(self):
         voltage = self.read_adc()
-        if not self.sensor: 
+        if not self.sensor:
             return 0.0
         return self.sensor.get_temperature(voltage)
 
@@ -96,7 +105,7 @@ class TemperatureSensor:
                     voltage = signal / self.maxAdc * 1.8 #input range is 0 ... 1.8V
         except IOError as e:
              Alarm(Alarm.THERMISTOR_ERROR, "Unable to get ADC value ({0}): {1}".format(e.errno, e.strerror))
-        
+
         TemperatureSensor.mutex.release()
         return voltage
 
@@ -135,7 +144,7 @@ class Thermistor(TemperatureSensor):
         else:
             t = -273.15
             logging.debug("Reading sensor {0} on {1}, but it seems to be out of bounds. R is {2}. Setting temp to {3}.".format(self.sensorIdentifier, self.pin,r,t))
-        return max(t, 0.0) # Cap it at 0 
+        return max(t, 0.0) # Cap it at 0
 
     def voltage_to_resistance(self,voltage):
         """ Convert the voltage to a resistance value """
@@ -178,5 +187,16 @@ class PT100(TemperatureSensor):
         return t
 
 
-#class ThermoCouple (TemperatureSensor):
+""" Tboard returns a linear temp of 5mv/deg C"""
+class Tboard (TemperatureSensor):
 
+    def __init__(self, pin, sensorConfiguration, name):
+
+        self.pin = pin
+        self.name = name
+        self.voltage_pr_degree = float(sensorConfiguration[1])
+        logging.debug("Initialized temperature sensor at {0} with temp/deg = {1}".format(pin, sensorConfiguration[1]))
+
+
+    def get_temperature(self, voltage):
+        return voltage/self.voltage_pr_degree

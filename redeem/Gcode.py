@@ -58,7 +58,7 @@ class Gcode:
                 Gcode.line_number += 1  # Increase the global counter
                 self.has_crc = True
 
-            # Parse 
+            # Parse
             self.tokens = self.message.split(" ")
             self.gcode = self.tokens.pop(0)  # gcode number
             self.tokens = filter(None, self.tokens)
@@ -107,7 +107,7 @@ class Gcode:
             if self.has_letter_value(letter):
                 return float(self.get_value_by_letter(letter))
         return default
-        
+
     def get_int_by_letter(self, letter, default):
         """ Get an int or return a default value """
         if self.has_letter(letter):
