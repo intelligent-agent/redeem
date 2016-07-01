@@ -43,7 +43,7 @@ class PruFirmware:
             The path to the firmware source to use to produce the firmware
         binary_filename : string
             Full path to the file where to store the final firmware file
-            without the extension (without .bin)        
+            without the extension (without .bin)
         config_parser : ConfigParser
             The config parser with the config file already loaded
         compiler : string
@@ -167,15 +167,15 @@ class PruFirmware:
         if prunum == 0:
             return self.binary_filename0
         else:
-            return self.binary_filename1            
+            return self.binary_filename1
 
     def make_config_file(self):
-        
+
         # Create a config file
         configFile_0 = os.path.join("/tmp", 'config.h')
 
         with open(configFile_0, 'w') as configFile:
-        
+
             # GPIO banks
             banks      = {"0": 0, "1": 0, "2": 0, "3": 0}
             step_banks = {"0": 0, "1": 0, "2": 0, "3": 0}
@@ -188,17 +188,17 @@ class PruFirmware:
                 step_bank = str(stepper.get_step_bank())
                 dir_pin   = str(stepper.get_dir_pin())
                 dir_bank  = str(stepper.get_dir_bank())
-                configFile.write('#define STEPPER_' + name + '_STEP_BANK\t\t' + "STEPPER_GPIO_"+step_bank+'\n')          
-                configFile.write('#define STEPPER_' + name + '_STEP_PIN\t\t'  + step_pin+'\n')          
-                configFile.write('#define STEPPER_' + name + '_DIR_BANK\t\t'  + "STEPPER_GPIO_"+dir_bank+'\n')          
-                configFile.write('#define STEPPER_' + name + '_DIR_PIN\t\t'   + dir_pin+'\n')          
+                configFile.write('#define STEPPER_' + name + '_STEP_BANK\t\t' + "STEPPER_GPIO_"+step_bank+'\n')
+                configFile.write('#define STEPPER_' + name + '_STEP_PIN\t\t'  + step_pin+'\n')
+                configFile.write('#define STEPPER_' + name + '_DIR_BANK\t\t'  + "STEPPER_GPIO_"+dir_bank+'\n')
+                configFile.write('#define STEPPER_' + name + '_DIR_PIN\t\t'   + dir_pin+'\n')
 
                 # Define direction
                 direction = "0" if self.config.getint('Steppers', 'direction_' + name) > 0 else "1"
-                configFile.write('#define STEPPER_'+ name +'_DIRECTION\t\t'+ direction +'\n') 
+                configFile.write('#define STEPPER_'+ name +'_DIRECTION\t\t'+ direction +'\n')
 
                 index = Printer.axis_to_index(name)
-                direction_mask |= (int(direction) << index)        
+                direction_mask |= (int(direction) << index)
 
                 # Generate the GPIO bank masks
                 banks[step_bank]      |=  (1<<int(step_pin))
@@ -206,7 +206,7 @@ class PruFirmware:
                 step_banks[step_bank] |=  (1<<int(step_pin))
                 dir_banks[dir_bank]   |=  (1<<int(dir_pin))
 
-            configFile.write('#define DIRECTION_MASK '+bin(direction_mask)+'\n')            
+            configFile.write('#define DIRECTION_MASK '+bin(direction_mask)+'\n')
             configFile.write('\n')
 
             # Define end stop pins and banks
@@ -245,24 +245,24 @@ class PruFirmware:
                         direction = 1
                     else:
                         direction = 1 if self.config.getint('Steppers', 'direction_' + stepper[0]) > 0 else -1
-                        if (m.group(2) == "ccw"): 
+                        if (m.group(2) == "ccw"):
                             direction *= -1
 
                     cur = 1 << ("xyzehabc".index(m.group(1)))
                     if (direction == -1):
                         cur <<= 8
                     mask += cur
-                
+
                 logging.debug("Endstop {0} mask = {1}".format(name, bin(mask)))
-                
+
                 bin_mask = "0b"+(bin(mask)[2:]).zfill(16)
                 configFile.write("#define STEPPER_MASK_" + name + "\t\t" + bin_mask + "\n")
-        
+
             configFile.write("\n");
 
 
-            # Put each dir and step pin in the proper buck if they are for GPIO0 or GPIO1 bank. 
-            # This is a restriction due to the limited capabilities of the pasm preprocessor.            
+            # Put each dir and step pin in the proper buck if they are for GPIO0 or GPIO1 bank.
+            # This is a restriction due to the limited capabilities of the pasm preprocessor.
             for name, bank in banks.iteritems():
                 #bank = (~bank & 0xFFFFFFFF)
                 configFile.write("#define GPIO"+name+"_MASK\t\t" +bin(bank)+ "\n");
@@ -288,7 +288,7 @@ if __name__ == '__main__':
     from CascadingConfigParser import CascadingConfigParser
     printer = Printer()
 
-            
+
     # Parse the config files.
     printer.config = CascadingConfigParser(
         ['/etc/redeem/default.cfg'])
@@ -313,4 +313,3 @@ if __name__ == '__main__':
     pasm = "/home/elias/workspace/am335x_pru_package/pru_sw/utils/pasm"
     pru = PruFirmware("0.p", "0.bin", "1.p", "1.bin", printer, "")
     pru.make_config_file()
-

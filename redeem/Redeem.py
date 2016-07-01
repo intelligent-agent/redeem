@@ -137,7 +137,7 @@ class Redeem:
             printer.replicape_key = printer.config.get_key()
         else:
             logging.warning("Oh no! No Replicape present!")
-            self.revision = "00B3"
+            self.revision = "0B3A"
         # We set it to 5 axis by default
         Printer.NUM_AXES = 5
         if self.printer.config.reach_revision:
@@ -149,7 +149,7 @@ class Redeem:
 
         if self.revision in ["00A4", "0A4A", "00A3"]:
             PWM.set_frequency(100)
-        elif self.revision in ["00B1", "00B2", "00B3"]:
+        elif self.revision in ["00B1", "00B2", "00B3", "0B3A"]:
             PWM.set_frequency(1000)
 
         # Test the alarm framework
@@ -204,7 +204,7 @@ class Redeem:
             printer.steppers["Z"] = Stepper_00B2("GPIO0_23", "GPIO0_26", "GPIO0_15", 13, 2, "Z")
             printer.steppers["E"] = Stepper_00B2("GPIO1_28", "GPIO1_15", "GPIO2_1" , 14, 3, "E")
             printer.steppers["H"] = Stepper_00B2("GPIO1_13", "GPIO1_14", "GPIO2_3" , 15, 4, "H")
-        elif self.revision == "00B3":
+        elif self.revision in ["00B3", "0B3A"]:
             printer.steppers["X"] = Stepper_00B3("GPIO0_27", "GPIO1_29", 90, 11, 0, "X")
             printer.steppers["Y"] = Stepper_00B3("GPIO1_12", "GPIO0_22", 91, 12, 1, "Y")
             printer.steppers["Z"] = Stepper_00B3("GPIO0_23", "GPIO0_26", 92, 13, 2, "Z")
@@ -314,7 +314,7 @@ class Redeem:
             self.printer.fans.append(Fan(8))
             self.printer.fans.append(Fan(9))
             self.printer.fans.append(Fan(10))
-        elif self.revision in ["00B1", "00B2", "00B3"]:
+        elif self.revision in ["00B1", "00B2", "00B3", "0B3A"]:
             self.printer.fans.append(Fan(7))
             self.printer.fans.append(Fan(8))
             self.printer.fans.append(Fan(9))
