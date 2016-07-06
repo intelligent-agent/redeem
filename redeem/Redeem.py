@@ -520,6 +520,11 @@ class Redeem:
 
                 logging.info("Home position = %s"%str(printer.path_planner.home_pos))
 
+
+        # Read end stop value again now that PRU is running
+        for _, es in self.printer.end_stops.iteritems():
+            es.read_value()
+
         # Enable Stepper timeout
         timeout = printer.config.getint('Steppers', 'timeout_seconds')
         printer.swd = StepperWatchdog(printer, timeout)
