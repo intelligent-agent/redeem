@@ -299,6 +299,7 @@ class Stepper_00B3(Stepper_00B2):
 
     def set_stepper_power_down(self, pd):
         ''' Enables stepper low current mode on all steppers '''
+        logging.debug("Setting pwerdown to  "+str(pd))
         if pd:
             ShiftRegister.registers[4].add_state(0x1)
         else:
