@@ -25,7 +25,7 @@ class M106(GCodeCommand):
             fans.append(self.printer.fans[0])
 
         # Get the value, 255 if not present
-        value = float(gcode.get_int_by_letter("S", 255)) / 255.0
+        value = float(gcode.get_float_by_letter("S", 255)) / 255.0
     
         for fan in fans:
             if gcode.has_letter("R"): # Ramp to value
