@@ -25,6 +25,11 @@ class G0(GCodeCommand):
             self.printer.feed_rate = float(g.get_value_by_letter("F"))
             self.printer.feed_rate /= 60000.0
             g.remove_token_by_letter("F")
+        if  g.has_letter("Q"):  # Get the Accel
+            # Convert from mm/min^2 to SI unit m/s^2
+            self.printer.accel = float(g.get_value_by_letter("Q"))
+            self.printer.feed_rate /= 3600000.0
+            g.remove_token_by_letter("Q")
         smds = {}
         for i in range(g.num_tokens()):
             axis = g.token_letter(i)
@@ -54,6 +59,19 @@ class G0(GCodeCommand):
     def get_description(self):
         return "Control the printer head position as well as the currently " \
                "selected tool."
+
+    def get_long_description(self):
+        return ("Move each axis by the amount and direction depicted.\n"
+                "X = X-axis (mm)\n"
+                "Y = Y-axis (mm)\n"
+                "Z = Z-axis (mm)\n"
+                "E = E-axis (mm)\n"
+                "H = H-axis (mm)\n"
+                "A = A-axis (mm) - only if axis present\n"
+                "B = B-axis (mm) - only if axis present\n"
+                "C = C-axis (mm) - only if axis present\n"
+                "F = move speed (mm/min) - stored until daemon reset\n"
+                "Q = move acceleration (mm/min^2) - stored until daemon reset\n")
 
     def is_buffered(self):
         return True

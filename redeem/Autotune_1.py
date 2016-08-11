@@ -128,7 +128,7 @@ class Autotune_1:
                 self.bias = np.clip(self.bias, 0.1 , 0.9)
                 self.d = 1.0 - self.bias if self.bias > 0.5 else self.bias
 
-                if cycle > 2:
+                if cycle > 1:
                     logging.debug("Smoothing")
                     self.smooth_temps = Util.smooth(self.temps, 1000)
                     self.smooth_temps = self.smooth_temps[:-1000] # Remove window length
