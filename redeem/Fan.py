@@ -45,6 +45,7 @@ class Fan(PWM):
             logging.debug("Fan value: "+str(w))
             self.set_value(w/255.0)
             time.sleep(delay)
+        self.set_value(value)
 
 if __name__ == '__main__':
     import os
