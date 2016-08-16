@@ -24,7 +24,7 @@ class G92(GCodeCommand):
             g.set_tokens(["X0", "Y0", "Z0", "E0", "H0"])
         pos = {}
         for i in range(g.num_tokens()):
-            axis = g.token_letter(i)  # Get the axis, X, Y, Z or E
+            axis = self.printer.movement_axis(g.token_letter(i))  # Get the axis, X, Y, Z or E
             # Get the value, new position or vector
             pos[axis] = float(g.token_value(i)) / 1000.0
 

@@ -58,6 +58,9 @@ class Printer:
         self.feed_rate      = 0.5
         self.accel          = 0.5
         self.current_tool   = "E"
+        # For movement commands, whether the E axis refers to the active
+        # tool (more common with other firmwares), or only the actual E axis
+        self.e_axis_active = True
         self.move_cache_size        = 128
         self.print_move_buffer_wait = 250
         self.min_buffered_move_time = 100
@@ -232,6 +235,12 @@ class Printer:
         # Only update if they are different
         if mat != self.config.get('Geometry', 'bed_compensation_matrix'):
             self.config.set('Geometry', 'bed_compensation_matrix', mat)
+
+    def movement_axis(self, axis):
+        if self.e_axis_active and axis == "E":
+            return self.current_tool
+
+        return axis
 
     @staticmethod
     def axis_to_index(axis):

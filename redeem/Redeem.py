@@ -434,6 +434,8 @@ class Redeem:
             printer.steps_pr_meter[i] = printer.steppers[axis].get_steps_pr_meter()
             printer.backlash_compensation[i] = printer.config.getfloat('Steppers', 'backlash_'+axis.lower())
 
+        printer.e_axis_active = printer.config.getboolean('Planner', 'e_axis_active')
+
         dirname = os.path.dirname(os.path.realpath(__file__))
 
         # Create the firmware compiler
