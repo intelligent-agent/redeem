@@ -32,12 +32,7 @@ class G0(GCodeCommand):
             g.remove_token_by_letter("Q")
         smds = {}
         for i in range(g.num_tokens()):
-            axis = g.token_letter(i)
-
-            # If extruding, change an "E" to the current tool
-            if axis == 'E':
-                #logging.debug("Changing axis from E to {}".format(self.printer.current_tool))
-                axis = self.printer.current_tool
+            axis = self.printer.movement_axis(g.token_letter(i))
 
             # Get the value, new position or vector
             value =  float(g.token_value(i)) / 1000.0
