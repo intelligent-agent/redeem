@@ -539,21 +539,17 @@ void PathPlanner::updateTrapezoids(){
 
 // TODO: Remove dependency on Extruder. 
 void PathPlanner::computeMaxJunctionSpeed(Path *previous, Path *current){
-  std::vector<FLOAT_T> d(NUM_AXES);
-  FLOAT_T jerk = 0; 
   FLOAT_T factor = 1;
     
   LOG("Computing Max junction speed"<<std::endl);
-    
 
   for(int i=0; i<NUM_AXES; i++){
-    d[i] = std::fabs(current->speeds[i] - previous->speeds[i])*F_CPU;
-    jerk += d[i]*d[i];
-  }
+    FLOAT_T jerk = std::fabs(current->speeds[i] - previous->speeds[i]);
 
-  jerk = sqrt(jerk);
-  if(jerk>maxJerks[0])
-    factor = maxJerks[0] / jerk;
+    if (jerk > maxJerks[i]){
+      factor = std::min(factor, maxJerks[i] / jerk);
+    }
+  }
 
   previous->maxJunctionSpeed = std::min(previous->fullSpeed * factor, current->fullSpeed);
   LOG("Max junction speed = "<<previous->maxJunctionSpeed<<std::endl);
