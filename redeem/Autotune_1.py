@@ -34,7 +34,7 @@ except ImportError:
 
 class Autotune_1:
 
-    def __init__(self, heater, temp=200.0, cycles=4, g=None, printer=None, pre_calibrate=False):        
+    def __init__(self, heater, temp=200.0, cycles=4, g=None, printer=None, pre_calibrate=False, tuning_algo="TL"):        
         self.heater                 = heater
         self.steady_temperature     = temp        # Steady state starting temperture
         self.cycles                 = cycles
@@ -42,7 +42,7 @@ class Autotune_1:
         self.printer                = printer
         self.output_step            = 10.0        # Degrees to step
         self.E                      = 1.0         # Hysteresis
-        self.tuning_algorithm       = "TL"        # Ziegler-Nichols
+        self.tuning_algorithm       = tuning_algo # Ziegler-Nichols
         self.starting_temp          = 30.0
         self.pre_calibrate_temp     = 100.0
         self.pre_calibrate_enabled  = pre_calibrate

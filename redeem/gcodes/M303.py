@@ -19,12 +19,10 @@ from GCodeCommand import GCodeCommand
 import json
 
 try:
-    from Autotune_1 import Autotune_1
-    from Autotune_2 import Autotune_2
+    from Autotune import Autotune
     from Alarm import Alarm
 except ImportError:
-    from redeem.Autotune_1 import Autotune_1
-    from redeem.Autotune_2 import Autotune_2
+    from redeem.Autotune import Autotune
     from redeem.Alarm import Alarm
 
 import logging
@@ -39,17 +37,16 @@ class M303(GCodeCommand):
             logging.warning("M303: Heater does not exist")
             return
         heater = self.printer.heaters[heater_name]
-        temp     = g.get_float_by_letter("S", 200.0)
+        temp     = g.get_float_by_letter("S", 200.0)        
         cycles   = min(3, g.get_int_by_letter("C", 4))       
-        tuner_nr = g.get_int_by_letter("N", 1)
+        pre_cal  = bool(g.get_int_by_letter("P", 0))
+        tuning_algo_nr = g.get_int_by_letter("Q", 0)
+        if tuning_algo_nr not in [0, 1]:
+            logging.warning("Unknown uning algorithm '{}'. Use one of 0, 1. Choosing 0.".format(tuning_algo_nr))
+            tuning_algo_nr = 0
+        tuning_algo = ["TL","ZN"][tuning_algo_nr]
 
-        if tuner_nr == 1:
-            tuner = Autotune_1(heater, temp, cycles, g, self.printer)
-        elif tuner_nr == 2:
-            tuner = Autotune_2(heater, temp, cycles, g, self.printer)
-        else:
-            logging.warning("M303: Tuner does not exist")
-            return
+        tuner = Autotune(heater, temp, cycles, g, self.printer, pre_cal, tuning_algo)
         tuner.run()
         logging.info("Max temp: {}, Min temp: {}, Ku: {}, Pu: {}".format(tuner.max_temp, tuner.min_temp, tuner.Ku, tuner.Pu))
         logging.info("Kp: {}, Ti: {}, Td: {}".format(heater.Kp, heater.Ti, heater.Td))
@@ -89,7 +86,8 @@ class M303(GCodeCommand):
             "Default is the 'E' extruder with index 0. \n"
             "S overrides the temperature to calibrate for. Default is 200. \n"
             "C overrides the number of cycles to run, default is 4 \n"
-            "N overrides the tuner number. 1 is the standard tuner, 2 is more advanced.")
+            "P (0,1) Enable pre-calibration. Useful for systems with very high power\n"
+            "Q Tuning algorithm. 0 = Tyreus-Luyben, 1 = Zieger-Nichols classic")
 
 
 
