@@ -58,10 +58,10 @@ class TemperatureSensor:
         if found == False:
             for p in TemperatureSensorConfigs.pt100:
                 if p[0] == self.sensorIdentifier:
-                    logging.warning("PT100 temperature sensors are not supported yet.")
-                    """ Not working yet. No known hardware solution """
-                    #self.sensor = PT100((pin, heater_name, s
-                    #found = True
+                    logging.warning("PT100 temperature sensor support is experimental at this stage.")
+                    """ Experimental solution """
+                    self.sensor = PT100(pin, p, self.heater)
+                    found = True
                     break
 
         if found == False:
@@ -162,8 +162,9 @@ class PT100(TemperatureSensor):
 
     def __init__(self, pin, sensorConfiguration, name):
 
-        if len(sensorConfiguration) != 4:
-                Alarm(Alarm.THERMISTOR_ERROR, "PT100 Sensor configuration for {0} is missing parameters. Expected: 4, received: {1}.".format(pin, len(sensorConfiguration)))
+        if len(sensorConfiguration) != 5:
+            logging.error("PT100 Sensor configuration for {0} is missing parameters. Expected: 5, received: {1}.".format(pin, len(sensorConfiguration)))    
+            Alarm(Alarm.THERMISTOR_ERROR, "PT100 Sensor configuration for {0} is missing parameters. Expected: 5, received: {1}.".format(pin, len(sensorConfiguration)))
         else:
             self.pin = pin
             self.name = name
@@ -180,7 +181,7 @@ class PT100(TemperatureSensor):
         """ Convert the voltage to a resistance value """
         if voltage == 0 or (abs(voltage - 1.8) < 0.0001):
             return 10000000.0
-        return self.r0 / ((1.8 / voltage) - 1.0)
+        return self.R0 / ((1.8 / voltage) - 1.0)
 
 
     def get_temperature(self, voltage):
