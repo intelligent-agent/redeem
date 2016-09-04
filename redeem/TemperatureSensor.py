@@ -155,36 +155,58 @@ class Thermistor(TemperatureSensor):
 
 """
 This class represents PT100 temperature sensors
-Caution: This code is not functional. It's merely a note of some ideas
+Caution: This code is experimental.
 
 """
 class PT100(TemperatureSensor):
 
-    def __init__(self, pin, sensorConfiguration):
+    def __init__(self, pin, sensorConfiguration, name):
 
         if len(sensorConfiguration) != 4:
-                Alarm(Alarm.THERMISTOR_ERROR, "Sensor configuration for {0} is missing parameters. Expected: 4, received: {1}.".format(pin, len(sensorConfiguration)))
+                Alarm(Alarm.THERMISTOR_ERROR, "PT100 Sensor configuration for {0} is missing parameters. Expected: 4, received: {1}.".format(pin, len(sensorConfiguration)))
         else:
             self.pin = pin
             self.name = name
-            self.r0 = sensorConfiguration[1]
-            self.a = sensorConfiguration[2]
-            self.b = sensorConfiguration[3]
+            self.sensorIdentifier = sensorConfiguration[0] # The identifier
+            self.pullup = sensorConfiguration[1]
+            self.R0 = sensorConfiguration[2]
+            self.A  = sensorConfiguration[3]
+            self.B  = sensorConfiguration[4]
 
+    # The following calculations are based on the PT100 connected in the same as as a thermistor.
+    # Connecting it this way will give very low accuracy, but better accuracy require hardware modification.
+    def voltage_to_resistance(self,voltage):
 
-    def get_t(self, voltage):
-        if voltage == 0 or (abs(voltage - 1.8) < 0.001):
+        """ Convert the voltage to a resistance value """
+        if voltage == 0 or (abs(voltage - 1.8) < 0.0001):
             return 10000000.0
+        return self.r0 / ((1.8 / voltage) - 1.0)
 
-        #BIG questionmark: Is this right?
-        r = float((self.r0 / (maxAdc / adc)) - 1.0)
 
-        t = float(-self.r0*self.a
-                    + math.sqrt(
-                        math.pow(self.r0,2)*math.pow(self.a,2)
-                        - 4*self.r0*self.b*(self.r0 - r))
-                    / (2 * self.r0 * self.b))
-        return t
+    def get_temperature(self, voltage):
+        """ Return the temperature in degrees celsius. """
+        r = self.voltage_to_resistance(voltage)
+        t = 0.0
+
+        if r > 0:
+            temp_low = 0
+            temp_high = 400
+
+            # Calculate resistances up until the measured resistance is found
+            #for T in range(temp_low, temp_high+1):
+            for T in np.arange(temp_low, temp_high, 0.1):
+                R = self.R0 * ( 1 + self.A*T + self.B * math.pow(T, 2) )
+                if (R >= r):
+                    t = T
+                    break;
+
+        else:
+            t = 0.0
+            logging.debug("Reading sensor {0} on {1}, but it seems to be out of bounds. R is {2}. Setting temp to {3}.".format(self.sensorIdentifier, self.pin,r,t))
+        
+        #logging.debug("Read {0} from sensor {1}. V: {2} Res: {3}".format(t,self.sensorIdentifier, voltage, r));
+        return max(t, 0.0) # Cap it at 0
+
 
 
 """ Tboard returns a linear temp of 5mv/deg C"""
