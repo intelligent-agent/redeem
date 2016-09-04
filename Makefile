@@ -22,6 +22,7 @@ install:
 
 install_py:
 	$(PYTHON) setup.py install --single-version-externally-managed --root=/
+	cp configs/*.cfg
 
 buildrpm:
 	$(PYTHON) setup.py bdist_rpm --post-install=rpm/postinstall --pre-uninstall=rpm/preuninstall
