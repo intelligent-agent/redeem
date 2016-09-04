@@ -22,7 +22,8 @@ install:
 
 install_py:
 	$(PYTHON) setup.py install --single-version-externally-managed --root=/
-	cp configs/*.cfg
+	cp configs/*.cfg /etc/redeem/
+
 
 buildrpm:
 	$(PYTHON) setup.py bdist_rpm --post-install=rpm/postinstall --pre-uninstall=rpm/preuninstall
