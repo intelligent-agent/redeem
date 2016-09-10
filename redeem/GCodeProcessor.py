@@ -21,6 +21,8 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
  along with Redeem.  If not, see <http://www.gnu.org/licenses/>.
 """
 
+import sys
+import traceback
 import inspect
 import logging
 import re
@@ -125,6 +127,7 @@ class GCodeProcessor:
 
         except Exception, e:
             logging.error("Error while executing "+gcode.code()+": "+str(e))
+            logging.error(traceback.format_exc(sys.exc_info()[2]))
         return gcode
 
     def enqueue(self, gcode):
