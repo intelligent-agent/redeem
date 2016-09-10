@@ -32,7 +32,7 @@ import copy
 import logging
 
 import numpy as np
-
+from scipy.optimize import least_squares
 
 def calculate_probe_points(max_radius, radius_steps=2, angle_steps=6):
     """
@@ -81,18 +81,15 @@ A_AXIS, B_AXIS, C_AXIS = 0, 1, 2
 class AutoCalibrationDeltaParameters:
     def __init__(self, diagonal, radius, height,
                  xstop, ystop, zstop,
-                 xadj, yadj, zadj):
+                 yadj, zadj):
         self.diagonal = diagonal
         self.radius = radius
         self.height = height
         self.xstop = xstop
         self.ystop = ystop
         self.zstop = zstop
-        self.xadj = xadj
         self.yadj = yadj
         self.zadj = zadj
-
-        self.homed_carriage_height = None
 
         # internal parameters
 
@@ -122,32 +119,30 @@ class AutoCalibrationDeltaParameters:
         radius = 1000. * (delta.r - delta.Ae)
 
         # center_offsets are negative, hence the minus sign
-        cox = -1000. * center_offsets["X"]
-        coy = -1000. * center_offsets["Y"]
-        coz = -1000. * center_offsets["Z"]
+        xstop = -1000. * center_offsets["X"]
+        ystop = -1000. * center_offsets["Y"]
+        zstop = -1000. * center_offsets["Z"]
 
-        height = np.mean([cox, coy, coz]) - delta.Hez
-        xstop = cox - height
-        ystop = coy - height
-        zstop = coz - height
-        xadj = delta.A_tangential
-        yadj = delta.B_tangential
-        zadj = delta.C_tangential
+        height = min(xstop, ystop, zstop)
+
+        xstop -= height
+        ystop -= height
+        zstop -= height
+
+        yadj = delta.B_tangential - delta.A_tangential
+        zadj = delta.C_tangential - delta.A_tangential
 
         logging.debug("input delta parameters: diagonal = %f", diagonal)
         logging.debug("input delta parameters: radius = %f", radius)
-        logging.debug("input delta parameters: height = %f", height)
         logging.debug("input delta parameters: xstop = %f", xstop)
         logging.debug("input delta parameters: ystop = %f", ystop)
         logging.debug("input delta parameters: zstop = %f", zstop)
-        logging.debug("input delta parameters: xadj = %f", xadj)
         logging.debug("input delta parameters: yadj = %f", yadj)
         logging.debug("input delta parameters: zadj = %f", zadj)
 
-        return cls(diagonal, radius,
-                   height,
+        return cls(diagonal, radius, height,
                    xstop, ystop, zstop,
-                   xadj, yadj, zadj)
+                   yadj, zadj)
 
     def to_redeem_delta(self, delta, center_offsets):
         delta.Hez = 0.
@@ -159,17 +154,13 @@ class AutoCalibrationDeltaParameters:
         delta.A_radial = 0.
         delta.B_radial = 0.
         delta.C_radial = 0.
-        delta.A_tangential = self.xadj
+        delta.A_tangential = 0
         delta.B_tangential = self.yadj
         delta.C_tangential = self.zadj
 
-        cox = self.height + self.xstop
-        coy = self.height + self.ystop
-        coz = self.height + self.zstop
-
-        center_offsets["X"] = -1. * cox / 1000.
-        center_offsets["Y"] = -1. * coy / 1000.
-        center_offsets["Z"] = -1. * coz / 1000.
+        center_offsets["X"] = -1. * (self.height + self.xstop) / 1000.
+        center_offsets["Y"] = -1. * (self.height + self.ystop) / 1000.
+        center_offsets["Z"] = -1. * (self.height + self.zstop) / 1000.
 
         logging.debug("output delta parameters: L = %f", delta.L)
         logging.debug("output delta parameters: r = %f", delta.r)
@@ -185,22 +176,46 @@ class AutoCalibrationDeltaParameters:
                       center_offsets['Y'])
         logging.debug("output delta parameters: center_offsets['Z'] = %f",
                       center_offsets['Z'])
-                      
+
+    @classmethod
+    def from_base_and_raw_params(cls, base, new_params):
+        ret = None
+
+        if len(new_params) == 3:
+            ret = cls(base.diagonal, base.radius, base.height, new_params[0], new_params[1], new_params[2], base.yadj, base.zadj)
+        elif len(new_params) == 4:
+            ret = cls(base.diagonal, new_params[0], base.height, new_params[1], new_params[2], new_params[3], base.yadj, base.zadj)
+        elif len(new_params) == 6:
+            ret = cls(base.diagonal, new_params[0], base.height, new_params[1], new_params[2], new_params[3], new_params[4], new_params[5])
+        elif len(new_params) == 7:
+            ret = cls(new_params[0], new_params[1], base.height, new_params[2], new_params[3], new_params[4], new_params[5], new_params[6])
+        else:
+            raise ValueError("Only 3, 4, 6, or 7 parameters supported")
+
+        ret.update_height(base)
+        return ret
+
+    def to_raw_params(self, num_factors):
+        if num_factors == 3:
+            return [self.xstop, self.ystop, self.zstop]
+        elif num_factors == 4:
+            return [self.radius, self.xstop, self.ystop, self.zstop]
+        elif num_factors == 6:
+            return [self.radius, self.xstop, self.ystop, self.zstop, self.yadj, self.zadj]
+        elif num_factors == 7:
+            return [self.diagonal, self.radius, self.xstop, self.ystop, self.zstop, self.yadj, self.zadj]
+
     def to_dict(self):
         L = self.diagonal / 1000.
         r = self.radius / 1000.
-        A_tangential = self.xadj
+        A_tangential = 0
         B_tangential = self.yadj
         C_tangential = self.zadj
 
-        cox = self.height + self.xstop
-        coy = self.height + self.ystop
-        coz = self.height + self.zstop
+        offset_x = -1. * (self.height + self.xstop) / 1000.
+        offset_y = -1. * (self.height + self.ystop) / 1000.
+        offset_z = -1. * (self.height + self.zstop) / 1000.
 
-        offset_x = -1. * cox / 1000.
-        offset_y = -1. * coy / 1000.
-        offset_z = -1. * coz / 1000.
-        
         out = {}
         out["L"] = L
         out["r"] = r
@@ -210,18 +225,18 @@ class AutoCalibrationDeltaParameters:
         out["offset_x"] = offset_x
         out["offset_y"] = offset_y
         out["offset_z"] = offset_z
-        
+
         return out
 
     def recalculate(self):
         self.towerX = []
         self.towerY = []
-        self.towerX.append(self.radius * np.cos(np.radians(90. + self.xadj)))
-        self.towerY.append(self.radius * np.sin(np.radians(90. + self.xadj)))
+        self.towerX.append(self.radius * np.cos(np.radians(90.)))
+        self.towerY.append(self.radius * np.sin(np.radians(90.)))
         self.towerX.append(self.radius * np.cos(np.radians(210. + self.yadj)))
         self.towerY.append(self.radius * np.sin(np.radians(210. + self.yadj)))
-        self.towerX.append(self.radius * np.cos(np.radians(310. + self.zadj)))
-        self.towerY.append(self.radius * np.sin(np.radians(310. + self.zadj)))
+        self.towerX.append(self.radius * np.cos(np.radians(330. + self.zadj)))
+        self.towerY.append(self.radius * np.sin(np.radians(330. + self.zadj)))
 
         self.Xbc = self.towerX[2] - self.towerX[1]
         self.Xca = self.towerX[0] - self.towerX[2]
@@ -236,23 +251,37 @@ class AutoCalibrationDeltaParameters:
         self.Q2 = self.Q**2
         self.D2 = self.diagonal**2
 
-        # Calculate the base carriage height when the printer is homed.
-        temp_height = self.diagonal  # any sensible height will do here
-        _, _, _z_temp = self.inverse_transform(
-                temp_height, temp_height, temp_height)
-        self.homed_carriage_height = (
-            self.height + temp_height - _z_temp)
+    def update_height(self, base):
+        old_point = base.inverse_transform(0, 0, 0, True)
+        new_point = self.inverse_transform(0, 0, 0, True)
+        height_change = new_point[2] - old_point[2]
+        self.height += height_change
 
-    def transform(self, pos, axis):
+    def transform(self, pos, ignore_endstops = False):
         x, y, z = pos
-        return z + np.sqrt(self.D2 -
-                           (x - self.towerX[axis])**2 -
-                           (y - self.towerY[axis])**2)
+        Ha = z + np.sqrt(self.D2 -
+                           (x - self.towerX[0])**2 -
+                           (y - self.towerY[0])**2)
+        Hb = z + np.sqrt(self.D2 -
+                           (x - self.towerX[1])**2 -
+                           (y - self.towerY[1])**2)
+        Hc = z + np.sqrt(self.D2 -
+                           (x - self.towerX[2])**2 -
+                           (y - self.towerY[2])**2)
+        if ignore_endstops:
+            return [Ha, Hb, Hc]
+        else:
+            return [Ha - self.xstop, Hb - self.ystop, Hc - self.zstop]
 
-    def transform_all(self, pos):
-        return [self.transform(pos, ax) for ax in range(3)]
+    def inverse_transform(self, a, b, c, ignore_endstops = False):
+        Ha = a
+        Hb = b
+        Hc = c
+        if not ignore_endstops:
+            Ha += self.xstop
+            Hb += self.ystop
+            Hc += self.zstop
 
-    def inverse_transform(self, Ha, Hb, Hc):
         Fa = self.coreFa + Ha**2
         Fb = self.coreFb + Hb**2
         Fc = self.coreFc + Hc**2
@@ -280,99 +309,23 @@ class AutoCalibrationDeltaParameters:
 
         return x, y, z
 
-    def compute_derivative(self, deriv, ha, hb, hc, perturb=0.2):
-        hi_params = copy.deepcopy(self)
-        lo_params = copy.deepcopy(self)
 
-        ha_hi = ha_lo = ha
-        hb_hi = hb_lo = hb
-        hc_hi = hc_lo = hc
-
-        if deriv == 0:
-            ha_hi = ha + perturb
-            ha_lo = ha - perturb
-        elif deriv == 1:
-            hb_hi = hb + perturb
-            hb_lo = hb - perturb
-        elif deriv == 2:
-            hc_hi = hc + perturb
-            hc_lo = hc - perturb
-        elif deriv == 3:
-            hi_params.radius += perturb
-            lo_params.radius -= perturb
-        elif deriv == 4:
-            hi_params.xadj += perturb
-            lo_params.xadj -= perturb
-        elif deriv == 5:
-            hi_params.yadj += perturb
-            lo_params.yadj -= perturb
-        elif deriv == 6:
-            hi_params.diagonal += perturb
-            lo_params.diagonal -= perturb
-        else:
-            raise ValueError("invalid derivative index")
-
-        hi_params.recalculate()
-        lo_params.recalculate()
-
-        _, _, z_hi = hi_params.inverse_transform(ha_hi, hb_hi, hc_hi)
-        _, _, z_lo = lo_params.inverse_transform(ha_lo, hb_lo, hc_lo)
-
-        return (z_hi - z_lo) / (2 * perturb)
-
-    def build_derivative_matrix(self,
-                                num_points,
-                                num_factors,
-                                probe_motor_positions):
-        # Build a Nx7 matrix of derivatives with respect to
-        # xa, xb, yc, za, zb, zc, diagonal.
-        derivative_matrix = np.zeros((num_points, num_factors))
-        for i in range(num_points):
-            for j in range(num_factors):
-                derivative_matrix[i, j] = self.compute_derivative(
-                        j, *probe_motor_positions[i, :])
-        return derivative_matrix
-
-    def adjust(self, num_factors, v):
-        old_carriage_height_A = self.homed_carriage_height + self.xstop
-
-        # Update endstop adjustments
-        self.xstop += v[0]
-        self.ystop += v[1]
-        self.zstop += v[2]
-
-        if num_factors >= 4:
-            self.radius += v[3]
-
-            if num_factors >= 6:
-                self.xadj += v[4]
-                self.yadj += v[5]
-
-                if num_factors == 7:
-                    self.diagonal += v[6]
-
-            self.recalculate()
-
-        # Adjusting the diagonal and the tower positions affects the
-        # homed carriage height. We need to adjust homedHeight to allow for
-        # this, to get the change that was requested in the endstop corrections.
-
-        height_error = (self.homed_carriage_height +
-                        self.xstop -
-                        old_carriage_height_A -
-                        v[0])
-        self.height -= height_error
-        self.homed_carriage_height -= height_error
-
+def _expected_residuals(new_raw_delta_params, points, base_delta_params, probe_motor_positions):
+    new_delta_params = AutoCalibrationDeltaParameters.from_base_and_raw_params(base_delta_params, new_raw_delta_params)
+    new_points = map(lambda motor_position: new_delta_params.inverse_transform(motor_position[0], motor_position[1], motor_position[2]), probe_motor_positions)
+    new_residuals = []
+    for i in range(0, len(new_points)):
+        error = points[2][i] - new_points[i][2]
+        new_residuals.append(error)
+    return new_residuals
 
 def _calibrate_delta_parameters(pts, num_factors, delta_params):
-    xs, ys, zs = pts
-    num_points = len(zs)
+    num_points = len(pts[0])
 
     # validate the input
 
-    if num_factors < 3 or num_factors > 7:
-        raise ValueError("{} factors requested but only 3-7 supported"
+    if num_factors < 3 or num_factors > 7 or num_factors == 5:
+        raise ValueError("{} factors requested but only 3, 4, 6, 7 supported"
                          .format(num_factors))
     if num_factors > num_points:
         raise ValueError("Need at least as many points as factors")
@@ -384,72 +337,20 @@ def _calibrate_delta_parameters(pts, num_factors, delta_params):
     corrections = np.zeros(num_points)
 
     for i, (x, y, z) in enumerate(zip(*pts)):
-        probe_motor_positions[i, :] = delta_params.transform_all([x, y, 0.0])
+        probe_motor_positions[i, :] = delta_params.transform([x, y, 0.0])
 
     initial_sum_of_squares = np.sum(pts[2] ** 2)
 
     print("initial deviation: {}".format(initial_sum_of_squares))
 
-    # Do 1 or more Newton-Raphson iterations
+    raw_params = delta_params.to_raw_params(num_factors)
 
-    iteration = 0
-    expected_residuals = []
+    new_raw_params = least_squares(_expected_residuals, raw_params, args=(pts, delta_params, probe_motor_positions)).x
 
-    while True:
-        derivative_matrix = delta_params.build_derivative_matrix(
-                num_points, num_factors, probe_motor_positions)
-
-        # Now build the matrices for linear least squares fitting
-
-        gramian_matrix = np.dot(derivative_matrix.T, derivative_matrix)
-        xty = np.dot(derivative_matrix.T, -zs + corrections)
-        beta = np.dot(np.linalg.inv(gramian_matrix), xty)
-
-        delta_params.adjust(num_factors, beta)
-
-        probe_motor_positions = probe_motor_positions
-
-        # Calculate the expected probe heights using the new parameters
-        expected_residuals = np.zeros(num_points)
-        for i in range(num_points):
-            probe_motor_positions[i, :] += beta[0:3]
-            _, _, new_Z = delta_params.inverse_transform(
-                    *probe_motor_positions[i, :])
-            corrections[i] = -new_Z
-            expected_residuals[i] = zs[i] + new_Z
-
-        sum_of_squares = np.sum(expected_residuals ** 2)
-
-        expected_rms_error = np.sqrt(sum_of_squares/num_points)
-
-        print("expected deviation after iteration {}: {}".format(
-                iteration, expected_rms_error))
-
-        iteration += 1
-
-        # parameters will converge in two iterations
-        if iteration == 2:
-            break
-
-    return expected_residuals
-
-
-def _filter_outliers(pts, expected_residuals, max_std):
-
-    res_std = np.std(expected_residuals)
-    k = max_std * res_std
-
-    xs, ys, zs = pts
-    m = np.mean(expected_residuals)
-    pts2 = tuple(zip(*[(x, y, z) for x, y, z, r
-                       in zip(xs, ys, zs, expected_residuals)
-                       if np.abs(r-m) < k]))
-    pts2 = [np.array(x) for x in pts2]
-    return pts2
-
+    return AutoCalibrationDeltaParameters.from_base_and_raw_params(delta_params, new_raw_params)
 
 def delta_auto_calibration(delta, center_offsets,
-                           num_factors, max_std,
+                           num_factors,
                            simulate_only,
                            probe_points, print_head_zs):
 
@@ -471,39 +372,53 @@ def delta_auto_calibration(delta, center_offsets,
 
     xs = np.array(xs)
     ys = np.array(ys)
-    zs = np.array(zs)
+    zs = np.array(zs) * -1
 
     pts = xs, ys, zs
 
+    logging.debug("points for calibration: " + str(pts))
+
     # do the calibration
 
-    expected_residuals = _calibrate_delta_parameters(
+    new_delta_params = _calibrate_delta_parameters(
             pts, num_factors, delta_params)
-
-    res_mean = np.mean(expected_residuals)
-
-    # if max_std is set, remove outliers and do the second round
-
-    if max_std is not None:
-
-        # remove outliers
-        pts_f = _filter_outliers(pts, expected_residuals, max_std)
-        logging.info("delta_auto_calibration: removed %d outliers",
-                     len(pts[0])-len(pts_f[0]))
-
-        # re-do the calibration
-
-        expected_residuals_f = _calibrate_delta_parameters(
-                pts, num_factors, delta_params)
-
-        res_mean_f = np.mean(expected_residuals_f)
-
-        logging.info("delta_auto_calibration: outlier removal improved "
-                     "mean residuals by %f", res_mean - res_mean_f)
 
     # if not just simulating, adjust the bot parameters
 
     if not simulate_only:
-        delta_params.to_redeem_delta(delta, center_offsets)
-        
-    return delta_params.to_dict()
+        new_delta_params.to_redeem_delta(delta, center_offsets)
+
+    return new_delta_params.to_dict()
+
+if __name__ == '__main__':
+    real_printer_params = AutoCalibrationDeltaParameters(304.188, 160, 265, 0, 0, 0, 0, 0)
+    fake_printer_params = real_printer_params
+
+    angles = np.radians([90.0, 150.0, 210.0, 270.0, 330.0, 30.0])
+    radii = [25, 50, 75]
+    points = []
+    for radius in radii:
+        for angle in angles:
+            points.append([radius * np.cos(angle), radius * np.sin(angle)])
+
+    xs = [0., 0., -43.3, -43.3, 0., 43.3, 43.3, 0., -64.95, -64.95, 0., 64.95]
+    ys = [0., 50., 25., -25., -50., -25., 25., 75., 37.5, -37.5, -75., -37.5]
+#    zs = [-1.1, -2.75, -1.78, -1.23, -1.6, -2.49, -3.13, -4.34, -2.96, -2.1, -2.65, -3.92, -6.85]
+    zs = [-10., -10., -10., -10., -10., -10., -10., -10., -10., -10., -10., -10. ]
+#    xs = []
+#    ys = []
+#    zs = []
+#    for point in points:
+#        stripped_point = [point[0], point[1], 0]
+#        delta_point = fake_printer_params.transform(stripped_point)
+#        real_point = real_printer_params.inverse_transform(delta_point[0], delta_point[1], delta_point[2])
+#        xs.append(point[0])
+#        ys.append(point[1])
+#        zs.append(real_point[2])
+
+    calculated_printer_params = _calibrate_delta_parameters((np.array(xs), np.array(ys), np.array(zs) * -1), 3, fake_printer_params)
+
+    print("real: " + str(real_printer_params.to_dict()))
+    print("calculated: " + str(calculated_printer_params.to_dict()))
+    print(str([real_printer_params.xstop, real_printer_params.ystop, real_printer_params.zstop]))
+    print(str([calculated_printer_params.xstop, calculated_printer_params.ystop, calculated_printer_params.zstop]))

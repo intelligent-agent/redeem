@@ -39,11 +39,6 @@ class G33(GCodeCommand):
         if num_factors < 3 or num_factors > 4:
             logging.error("G33: Invalid number of calibration factors.")
 
-        if g.has_letter("E"):
-            max_std = g.get_float_by_letter("E", 2)
-        else:
-            max_std = None
-
         # we reuse the G29 macro for the autocalibration purposes
         gcodes = self.printer.config.get("Macros", "G29").split("\n")
         self.printer.path_planner.wait_until_done()
@@ -53,24 +48,20 @@ class G33(GCodeCommand):
             self.printer.path_planner.wait_until_done()
 
         # adjust probe heights
-
-        # probe heights are measured from the probing starting point
-        probe_start_zs = np.array([d["Z"] for d in self.printer.probe_points])
-
-        # this is where the probe head was when the probe was triggered
-        probe_z_coords = probe_start_zs + self.printer.probe_heights
+        probe_z_coords = np.array(self.printer.probe_heights[:len(self.printer.probe_points)])
         offset_z = self.printer.config.getfloat('Probe', 'offset_z')*1000.
+        logging.info("adjusting by " + str(offset_z))
         # this is where the print head was when the probe was triggered
         print_head_zs = probe_z_coords - offset_z
 
         # Log the found heights
-        logging.info("Found heights: "+str(print_head_zs))
+        logging.info("Found heights: "+str(np.round(print_head_zs, 2)))
 
         simulate_only = g.has_letter("S")
 
         # run the actual delta autocalibration
         params = self.printer.path_planner.autocalibrate_delta_printer(
-                    num_factors, max_std, simulate_only,
+                    num_factors, simulate_only,
                     self.printer.probe_points, print_head_zs)
         logging.info("Finished printer autocalibration\n")
 
@@ -108,9 +99,6 @@ Fn  Number of factors to optimize:
               angular position corrections)
     7 factors (endstop corrections, delta radius, two tower angular
               position corrections, and diagonal rod length)
-
-En  Maximum allowed point residual as a multiplier of residual
-    standard deviation. Try 2.0 for good results.
 
 S   Do NOT update the printer configuration.
 
