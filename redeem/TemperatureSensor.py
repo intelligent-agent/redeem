@@ -181,34 +181,13 @@ class PT100(TemperatureSensor):
         """ Convert the voltage to a resistance value """
         if voltage == 0 or (abs(voltage - 1.8) < 0.0001):
             return 10000000.0
-        return self.R0 / ((1.8 / voltage) - 1.0)
+        return self.pullup / ((1.8 / voltage) - 1.0)
 
 
     def get_temperature(self, voltage):
         """ Return the temperature in degrees celsius. """
-        r = self.voltage_to_resistance(voltage)
-        t = 0.0
-
-        if r > 0:
-            temp_low = 0
-            temp_high = 400
-
-            # Calculate resistances up until the measured resistance is found
-            #for T in range(temp_low, temp_high+1):
-            for T in np.arange(temp_low, temp_high, 0.1):
-                R = self.R0 * ( 1 + self.A*T + self.B * math.pow(T, 2) )
-                if (R >= r):
-                    t = T
-                    break;
-
-        else:
-            t = 0.0
-            logging.debug("Reading sensor {0} on {1}, but it seems to be out of bounds. R is {2}. Setting temp to {3}.".format(self.sensorIdentifier, self.pin,r,t))
-        
-        #logging.debug("Read {0} from sensor {1}. V: {2} Res: {3}".format(t,self.sensorIdentifier, voltage, r));
-        return max(t, 0.0) # Cap it at 0
-
-
+        r = self.voltage_to_resistance(voltage) 
+        return (-self.A + np.sqrt(self.A**2 - 4*self.B*(1-r/self.R0 )))/(2*self.B)
 
 """ Tboard returns a linear temp of 5mv/deg C"""
 class Tboard (TemperatureSensor):
