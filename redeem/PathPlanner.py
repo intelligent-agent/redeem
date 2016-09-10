@@ -402,7 +402,7 @@ class PathPlanner:
         
         return -z_dist+start_pos["Z"]
         
-    def autocalibrate_delta_printer(self, num_factors, max_std,
+    def autocalibrate_delta_printer(self, num_factors,
                                     simulate_only,
                                     probe_points, print_head_zs):
         if self.printer.axis_config != Printer.AXIS_CONFIG_DELTA:
@@ -412,7 +412,7 @@ class PathPlanner:
 
         params = delta_auto_calibration(Delta, 
                                          self.center_offset,
-                                         num_factors, max_std,
+                                         num_factors,
                                          simulate_only,
                                          probe_points, print_head_zs)
 
