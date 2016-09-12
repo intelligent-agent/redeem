@@ -32,7 +32,7 @@ import copy
 import logging
 
 import numpy as np
-from scipy.optimize import least_squares
+from scipy.optimize import leastsq as least_squares
 
 def calculate_probe_points(max_radius, radius_steps=2, angle_steps=6):
     """
