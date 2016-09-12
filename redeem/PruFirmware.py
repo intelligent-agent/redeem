@@ -127,7 +127,11 @@ class PruFirmware:
         # Copy the files to tmp, cos the pasm is really picky!
         tmp_name_0 = "/tmp/"+os.path.splitext(os.path.basename(self.firmware_source_file0))[0]
         tmp_name_1 = "/tmp/"+os.path.splitext(os.path.basename(self.firmware_source_file1))[0]
+
+        logging.debug('Copying firmware 0 from ' + self.firmware_source_file0 + ' to ' + tmp_name_0 + '.p')
         shutil.copyfile(self.firmware_source_file0, tmp_name_0+".p")
+
+        logging.debug('Copying firmware 1 from ' + self.firmware_source_file1 + ' to ' + tmp_name_1 + '.p')
         shutil.copyfile(self.firmware_source_file1, tmp_name_1+".p")
 
         cmd0.extend([tmp_name_0+".p", tmp_name_0])
