@@ -25,23 +25,21 @@ import logging
 
 spi = None
 
-# Load SPI module
-try:
-    from Adafruit_BBIO.SPI import SPI
-except ImportError:
-    pass
 
-if 'SPI' in globals():
-    # Init the SPI for the serial to parallel
+try:
+    import spidev as SPI
+    spi = SPI.SpiDev()
+    spi.open(2, 1)
+except ImportError:
+    # Load SPI module
     try:
+        from Adafruit_BBIO.SPI import SPI
         spi = SPI(1, 1)
-    except:
-        pass
-    spi.bpw = 8
-    spi.mode = 0
-else:
-    logging.warning("Unable to set up SPI")
-    spi = None
+        spi.bpw = 8
+        spi.mode = 0
+    except ImportError:
+        logging.warning("Unable to set up SPI")
+        spi = None
 
 class ShiftRegister(object):
 
