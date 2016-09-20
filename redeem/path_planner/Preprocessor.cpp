@@ -26,7 +26,7 @@
 
 #include "PathPlanner.h"
 
-int PathPlanner::softEndStopApply(std::vector<FLOAT_T> &startPos, std::vector<FLOAT_T> &endPos)
+int PathPlanner::softEndStopApply(const std::vector<FLOAT_T> &startPos, const std::vector<FLOAT_T> &endPos)
 {
   for (size_t i = 0; i<startPos.size(); ++i) {
     if (startPos[i] < soft_endstops_min[i]) {
@@ -69,7 +69,7 @@ void PathPlanner::applyBedCompensation(std::vector<FLOAT_T> &endPos)
   return;
 }
 
-int PathPlanner::splitInput(std::vector<FLOAT_T> startPos, std::vector<FLOAT_T> vec,
+int PathPlanner::splitInput(const std::vector<FLOAT_T>& startPos, const std::vector<FLOAT_T>& vec,
 			    FLOAT_T speed, FLOAT_T accel, bool cancelable, bool optimize,
 			    bool use_backlash_compensation, int tool_axis)
 {
@@ -132,7 +132,7 @@ int PathPlanner::splitInput(std::vector<FLOAT_T> startPos, std::vector<FLOAT_T> 
   return 0;
 }
 
-void PathPlanner::transformVector(std::vector<FLOAT_T> &vec, std::vector<FLOAT_T> &startPos)
+void PathPlanner::transformVector(std::vector<FLOAT_T> &vec, const std::vector<FLOAT_T> &startPos)
 {
   if (axis_config == AXIS_CONFIG_DELTA) {
 
