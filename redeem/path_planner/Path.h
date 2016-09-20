@@ -1,27 +1,27 @@
 /*
   This file is part of Redeem - 3D Printer control software
- 
+
   Author: Mathieu Monney
   Website: http://www.xwaves.net
   License: GNU GPLv3 http://www.gnu.org/copyleft/gpl.html
- 
- 
+
+
   This file is based on Repetier-Firmware licensed under GNU GPL v3 and
   available at https://github.com/repetier/Repetier-Firmware
- 
+
   Redeem is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
   the Free Software Foundation, either version 3 of the License, or
   (at your option) any later version.
- 
+
   Redeem is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
   GNU General Public License for more details.
- 
+
   You should have received a copy of the GNU General Public License
   along with Redeem.  If not, see <http://www.gnu.org/licenses/>.
- 
+
 */
 
 #ifndef __PathPlanner__Path__
@@ -81,10 +81,10 @@
 #endif
 
 class Path {
- private:
+private:
   unsigned int joinFlags;
   std::atomic_uint_fast32_t flags;
-	
+
   int primaryAxis;                /// < Axis with longest move. 
   unsigned long long timeInTicks; /// < Time for completing a move. 
   unsigned int dir;               /// < Direction of movement. 1 = X+, 2 = Y+, 4= Z+, values can be combined.
@@ -113,30 +113,30 @@ class Path {
   std::vector<SteppersCommand> commands;
 
 
-  inline bool areParameterUpToDate(){
+  inline bool areParameterUpToDate() {
     return joinFlags & FLAG_JOIN_STEPPARAMS_COMPUTED;
   }
 
-  inline void invalidateParameter(){
+  inline void invalidateParameter() {
     joinFlags &= ~FLAG_JOIN_STEPPARAMS_COMPUTED;
   }
 
-  inline void setParameterUpToDate(){
+  inline void setParameterUpToDate() {
     joinFlags |= FLAG_JOIN_STEPPARAMS_COMPUTED;
   }
-  inline bool isStartSpeedFixed(){
+  inline bool isStartSpeedFixed() {
     return joinFlags & FLAG_JOIN_START_FIXED;
   }
 
-  inline void setStartSpeedFixed(bool newState){
+  inline void setStartSpeedFixed(bool newState) {
     joinFlags = (newState ? joinFlags | FLAG_JOIN_START_FIXED : joinFlags & ~FLAG_JOIN_START_FIXED);
   }
 
-  inline void fixStartAndEndSpeed(){
+  inline void fixStartAndEndSpeed() {
     joinFlags |= FLAG_JOIN_END_FIXED | FLAG_JOIN_START_FIXED;
   }
 
-  inline bool isEndSpeedFixed(){
+  inline bool isEndSpeedFixed() {
     return joinFlags & FLAG_JOIN_END_FIXED;
   }
 
@@ -148,107 +148,115 @@ class Path {
     joinFlags = (newState ? joinFlags | FLAG_CANCELABLE : joinFlags & ~FLAG_CANCELABLE);
   }
 
-  inline void setEndSpeedFixed(bool newState){
+  inline void setEndSpeedFixed(bool newState) {
     joinFlags = (newState ? joinFlags | FLAG_JOIN_END_FIXED : joinFlags & ~FLAG_JOIN_END_FIXED);
   }
 
-  inline bool isWarmUp(){
+  inline bool isWarmUp() {
     return flags & FLAG_WARMUP;
   }
 
-  inline uint8_t getWaitForXLinesFilled(){
+  inline uint8_t getWaitForXLinesFilled() {
     return primaryAxis;
   }
 
-  inline void setWaitForXLinesFilled(uint8_t b){
+  inline void setWaitForXLinesFilled(uint8_t b) {
     primaryAxis = b;
   }
 
-  inline void block(){
+  inline void block() {
     flags |= FLAG_BLOCKED;
   }
 
-  inline void unblock(){
+  inline void unblock() {
     flags &= ~FLAG_BLOCKED;
   }
 
-  inline bool isBlocked(){
+  inline bool isBlocked() {
     return flags & FLAG_BLOCKED;
   }
 
-  inline bool isCheckEndstops(){
+  inline bool isCheckEndstops() {
     return flags & FLAG_CHECK_ENDSTOPS;
   }
 
-  inline bool isNominalMove(){
+  inline bool isNominalMove() {
     return flags & FLAG_NOMINAL;
   }
-  inline void setNominalMove()
-  {
+
+  inline void setNominalMove() {
     flags |= FLAG_NOMINAL;
   }
-  inline bool isSyncEvent()
-  {
+
+  inline bool isSyncEvent() {
     return flags & FLAG_SYNC;
   }
-  inline bool isSyncWaitEvent()
-  {
+
+  inline bool isSyncWaitEvent() {
     return flags & FLAG_SYNC_WAIT;
   }
-  inline void setSyncEvent(bool wait){
+
+  inline void setSyncEvent(bool wait) {
     flags |= wait ? FLAG_SYNC_WAIT : FLAG_SYNC;
   }
-  inline bool isNoMove()
-  {
-    return (dir & (255<<8)) == 0;
+
+  inline bool isNoMove() {
+    return (dir & (255 << 8)) == 0;
   }
-  inline void setMoveOfAxis(unsigned int axis){
-    dir |= (256<<axis);
+  inline void setMoveOfAxis(unsigned int axis) {
+    dir |= (256 << axis);
   }
-  inline bool isAxisMove(unsigned int axis){
-    return (dir & (256<<axis));
+
+  inline bool isAxisMove(unsigned int axis) {
+    return (dir & (256 << axis));
   }
-  inline void setPositiveDirectionForAxis(unsigned int axis){
-    dir |= (1<<axis);
+
+  inline void setPositiveDirectionForAxis(unsigned int axis) {
+    dir |= (1 << axis);
   }
-  inline bool isAxisNegativeMove(unsigned int axis){
-    return (dir & ((256<<axis) + (1<<axis))) == (unsigned int)(256<<axis);
+
+  inline bool isAxisNegativeMove(unsigned int axis) {
+    return (dir & ((256 << axis) + (1 << axis))) == (unsigned int)(256 << axis);
   }
-  inline bool isAxisPositiveMove(unsigned int axis){
-    return (dir & ((256<<axis) + (1<<axis))) == (unsigned int)((256<<axis) + (1<<axis));
+
+  inline bool isAxisPositiveMove(unsigned int axis) {
+    return (dir & ((256 << axis) + (1 << axis))) == (unsigned int)((256 << axis) + (1 << axis));
   }
-	
-  inline bool isAxisOnlyMove(unsigned int axis){
-    return ((dir & (255<<8)) == (unsigned int)(256 << axis));
+
+  inline bool isAxisOnlyMove(unsigned int axis) {
+    return ((dir & (255 << 8)) == (unsigned int)(256 << axis));
   }
-  inline unsigned long getWaitMS(){
+
+  inline unsigned long getWaitMS() {
     return timeInTicks;
   }
-  inline void setWaitMS(unsigned long wait){
+
+  inline void setWaitMS(unsigned long wait) {
     timeInTicks = wait;
   }
-  inline bool moveDecelerating(unsigned int stepNumber){
-    if(stepsRemaining - stepNumber <= decelSteps){
-      if (!(flags & FLAG_DECELERATING)){
+
+  inline bool moveDecelerating(unsigned int stepNumber) {
+    if (stepsRemaining - stepNumber <= decelSteps) {
+      if (!(flags & FLAG_DECELERATING)) {
 	flags |= FLAG_DECELERATING;
       }
       return true;
     }
-    else 
+    else
       return false;
   }
-	
-  inline bool moveAccelerating(unsigned int stepNumber){
+
+  inline bool moveAccelerating(unsigned int stepNumber) {
     return stepNumber <= accelSteps;
   }
-	
+
   void updateStepsParameter();
 
- public:
-	
+public:
+
   FLOAT_T speed; // Feedrate in m/s
   FLOAT_T accel; // Accleeration in m/s^2
-	
+
   std::vector<FLOAT_T> startPos;
   std::vector<FLOAT_T> endPos;
 
