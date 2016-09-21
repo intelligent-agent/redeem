@@ -30,13 +30,13 @@ from Gcode import Gcode
 class USB:
     def __init__(self, printer):
         self.printer = printer
+        self.send_response = False
         try:
             self.tty = open("/dev/ttyGS0", "r+")
         except IOError:
             logging.warning("USB gadget serial not available as /dev/ttyGS0")
             return
         self.running = True
-        self.send_response = False
         self.t = Thread(target=self.get_message, name="USB")
         self.t.start()		
 
