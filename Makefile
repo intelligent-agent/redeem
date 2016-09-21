@@ -19,6 +19,7 @@ source:
 
 install:
 	$(PYTHON) setup.py install --single-version-externally-managed --root=/
+	mkdir -p /etc/redeem
 	cp configs/*.cfg /etc/redeem/
 	cp data/*.cht /etc/redeem/
 
