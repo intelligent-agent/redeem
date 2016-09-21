@@ -19,6 +19,17 @@ os.environ['OPT'] = " ".join(
     flag for flag in opt.split() if flag != '-Wstrict-prototypes'
 )
 
+
+
+# Requirements for our application
+# Note: WIP, not a complete list
+INSTALL_REQUIRES = [
+	"spidev==3.2.0", 
+    "scipy", 
+    "numpy"
+]
+
+
 pathplanner = Extension(
     '_PathPlannerNative', sources = [
         'redeem/path_planner/PathPlannerNative.i',
@@ -76,7 +87,7 @@ setup(
     ],
     # metadata for upload to PyPI
     author = "Elias Bakken",
-    author_email = "elias.bakken@gmail.com",
+    author_email = "elias@iagent.no",
     description = "Replicape daemon",
     license = "GPLv3",
     keywords = "3d printer firmware",

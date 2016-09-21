@@ -5,7 +5,7 @@ PYTHON=`which python`
 DESTDIR=/
 BUILDIR=$(CURDIR)/debian/redeem
 PROJECT=Redeem
-VERSION=1.2.0
+COMPILE=build
 
 all:
 	@echo "make source - Create source package"
@@ -18,12 +18,9 @@ source:
 	$(PYTHON) setup.py sdist $(COMPILE)
 
 install:
-	$(PYTHON) setup.py install --root $(DESTDIR) $(COMPILE)
-
-install_py:
 	$(PYTHON) setup.py install --single-version-externally-managed --root=/
 	cp configs/*.cfg /etc/redeem/
-
+	cp data/*.cht /etc/redeem/
 
 buildrpm:
 	$(PYTHON) setup.py bdist_rpm --post-install=rpm/postinstall --pre-uninstall=rpm/preuninstall
