@@ -21,8 +21,7 @@ class M114(GCodeCommand):
 
     def get_long_description(self):
         return ("Get current printer head position. "
-            "The returned value is in meters."
-
+            "The returned value is in meters.")
 
     def get_test_gcodes(self):
         return ["M114"]
