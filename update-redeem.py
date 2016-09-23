@@ -122,7 +122,7 @@ def install_source(python_executable, folder, user=False, sudo=False):
 	print(stdout)
 
 	print(">>> Running: python setup.py install")
-	args = ["setup.py", "install"]
+	args = ["setup.py", "install", "--single-version-externally-managed", "--root=/"]
 	if user:
 		args.append("--user")
 	returncode, stdout = _python(args, folder, python_executable, sudo=sudo)
@@ -131,10 +131,27 @@ def install_source(python_executable, folder, user=False, sudo=False):
 	print(stdout)
 
 
+def restart(service):
+	print(">>> Running: sudo systemctl restart "+service)
+	command = ["sudo", "systemctl", "restart", service]
+	try:
+		p = subprocess.Popen(command, stdout=subprocess.PIPE,
+		                     stderr=subprocess.PIPE)
+	except:
+		print("Error restarting")
+
+	stdout = p.communicate()[0].strip()
+	if sys.version >= "3":
+		stdout = stdout.decode()
+        if p.returncode != 0:
+		print("\"systemctl restart redeem\" failed with returncode %d: %s" % (p.returncode, stdout))
+	print(stdout)
+	print("Restart OK")
+
 def parse_arguments():
 	import argparse
 
-	parser = argparse.ArgumentParser(prog="update-octoprint.py")
+	parser = argparse.ArgumentParser(prog="update-redeem.py")
 
 	parser.add_argument("--git", action="store", type=str, dest="git_executable",
 	                    help="Specify git executable to use")
@@ -175,6 +192,7 @@ def main():
 
 	update_source(git_executable, folder, target, force=args.force)
 	install_source(python_executable, folder, user=args.user, sudo=args.sudo)
+	restart("redeem.service")
 
 if __name__ == "__main__":
 	main()
