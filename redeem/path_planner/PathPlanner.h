@@ -60,8 +60,6 @@
 
 class PathPlanner {
  private:
-  void calculateMove(Path* p, std::vector<FLOAT_T> &axis_diff);
-  FLOAT_T safeSpeed(Path *p);
   void updateTrapezoids();
   void computeMaxJunctionSpeed(Path *previous,Path *current);
   void backwardPlanner(unsigned int start,unsigned int last);
@@ -100,7 +98,7 @@ class PathPlanner {
   }
 
   inline void removeCurrentLine(){
-    linesTicksCount -= lines[linesPos].timeInTicks;
+    linesTicksCount -= lines[linesPos].getTimeInTicks();
     linesPos++;
     if(linesPos>=moveCacheSize) 
       linesPos=0;
@@ -122,13 +120,13 @@ class PathPlanner {
   void run();
 	
   // pre-processor functions
-  int softEndStopApply(std::vector<FLOAT_T> &startPos, std::vector<FLOAT_T> &endPos);
+  int softEndStopApply(const std::vector<FLOAT_T> &startPos, const std::vector<FLOAT_T> &endPos);
   void applyBedCompensation(std::vector<FLOAT_T> &endPos);
-  int splitInput(std::vector<FLOAT_T> startPos, std::vector<FLOAT_T> vec, 
+  int splitInput(const std::vector<FLOAT_T>& startPos, const std::vector<FLOAT_T>& vec, 
 		 FLOAT_T speed, FLOAT_T accel, bool cancelable, 
 		 bool optimize, bool use_backlash_compensation, 
 		 int tool_axis);
-  void transformVector(std::vector<FLOAT_T> &vec, std::vector<FLOAT_T> &startPos);
+  void transformVector(std::vector<FLOAT_T> &vec, const std::vector<FLOAT_T> &startPos);
   void reverseTransformVector(std::vector<FLOAT_T> &vec);
   void backlashCompensation(std::vector<FLOAT_T> &delta);
   void handleSlaves(std::vector<FLOAT_T> &startPos, std::vector<FLOAT_T> &endPos);
