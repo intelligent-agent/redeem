@@ -21,10 +21,10 @@ class M92(GCodeCommand):
         for i in range(g.num_tokens()):    # Run through all tokens
             axis = g.token_letter(i)        # Get the axis, X, Y, Z or E
             value = float(g.token_value(i))
-	    if value > 0:
- 	        self.printer.steppers[axis].set_steps_pr_mm(value)
+            if value > 0:
+                self.printer.steppers[axis].set_steps_pr_mm(value)
             else: 
-                logging.error('Steps per milimeter must be grater than zero.') 
+                logging.error('Steps per milimeter must be grater than zero.')
 
         Stepper.commit()
 
