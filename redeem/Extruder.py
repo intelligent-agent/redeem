@@ -180,7 +180,7 @@ class Heater(object):
                     self.check_temperature_error()
 
                 # Set temp if temperature is OK
-                if not self.extruder_error:
+                if not self.extruder_error and self.current_temp > 0:
                     self.mosfet.set_power(power)
                 else:
                     self.mosfet.set_power(0)        
