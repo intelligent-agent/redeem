@@ -30,6 +30,11 @@ class G4(GCodeCommand):
     def get_description(self):
         return "Dwell for P (milliseconds) or S (seconds)"
 
+    def get_long_description(self):
+        return ("Dwell/sleep for a given time. "
+                "Use either P = milliseconds or " 
+                "S = seconds. ")
+
     def is_buffered(self):
         return True
 
