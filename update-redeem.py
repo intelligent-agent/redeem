@@ -135,7 +135,7 @@ def install_source(python_executable, folder, user=False, sudo=False):
 		print("Continuing anyways")
 	print(stdout)
 
-	print(">>> Running: make install")
+	print(">>> Running: make -C /usr/src/redeem install")
 	returncode, stdout = _make()
 	if returncode != 0:
 		raise RuntimeError("Could not update, \"make install\" failed with returncode %d: %s" % (returncode, stdout))

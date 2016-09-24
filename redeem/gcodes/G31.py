@@ -28,6 +28,14 @@ class G31(GCodeCommand):
     def get_description(self):
         return "Dock sled"
 
+    def get_long_description(self):
+        return ("Dock sled. This is a macro G-code, so it will read all "
+                "gcodes that has been defined for it. "
+                "It is intended to remove or disable the Z-probing "
+                "mechanism, either by physically removing it as is "
+                "the case of a servo controlled device, or by disabling "
+                "power to a probe or simply disabling the switch as an end stop")
+
     def is_buffered(self):
         return True
 
