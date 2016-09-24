@@ -116,6 +116,7 @@ private:
 public:
   Path();
   Path(const Path& path);
+  Path& operator=(const Path&);
 
   void initialize(const std::vector<FLOAT_T>& start,
 		  const std::vector<FLOAT_T>& end,

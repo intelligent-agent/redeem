@@ -66,6 +66,10 @@ Path::Path() {
 }
 
 Path::Path(const Path& path) {
+  operator=(path);
+}
+
+Path& Path::operator=(const Path& path) {
   // copy constructor
   joinFlags = path.joinFlags;
   flags = path.flags.load();
@@ -96,6 +100,8 @@ Path::Path(const Path& path) {
   endPos = path.endPos;
 
   stepperPath = path.stepperPath;
+
+  return *this;
 }
 
 void Path::initialize(const std::vector<FLOAT_T>& startPos,

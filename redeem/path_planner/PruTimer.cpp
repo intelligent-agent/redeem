@@ -302,7 +302,7 @@ unit - stepSize in bytes.
 pathID - linespos. 
 totalTime - time it takes to complete the current block, in ticks. 
 */
-void PruTimer::push_block(uint8_t* blockMemory, size_t blockLen, unsigned int unit, unsigned int pathID, unsigned long totalTime) {
+void PruTimer::push_block(uint8_t* blockMemory, size_t blockLen, unsigned int unit, unsigned int pathID, unsigned long totalTime, const Path&) {
 	
 	if(!ddr_write_location) 
         return;

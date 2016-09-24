@@ -20,6 +20,8 @@
 
 //#define DEMO_PRU
 
+class Path;
+
 class PruTimer {
 	
 	class BlockDef{
@@ -92,7 +94,7 @@ public:
 	
 	void reset();
 	
-	void push_block(uint8_t* blockMemory, size_t blockLen, unsigned int unit, unsigned int pathID, unsigned long totalTime);
+	void push_block(uint8_t* blockMemory, size_t blockLen, unsigned int unit, unsigned int pathID, unsigned long totalTime, const Path& path);
 };
 
 #endif /* defined(__PathPlanner__PruTimer__) */
