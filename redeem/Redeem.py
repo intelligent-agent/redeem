@@ -90,6 +90,11 @@ class Redeem:
 
         printer.config_location = config_location
 
+        # Set up and Test the alarm framework
+        Alarm.printer = self.printer
+        Alarm.executor = AlarmExecutor()
+        alarm = Alarm(Alarm.ALARM_TEST, "Alarm framework operational")
+
         # check for config files
         file_path = os.path.join(config_location,"default.cfg")
         if not os.path.exists(file_path):
@@ -151,11 +156,6 @@ class Redeem:
             PWM.set_frequency(100)
         elif self.revision in ["00B1", "00B2", "00B3", "0B3A"]:
             PWM.set_frequency(1000)
-
-        # Test the alarm framework
-        Alarm.printer = self.printer
-        Alarm.executor = AlarmExecutor()
-        alarm = Alarm(Alarm.ALARM_TEST, "Alarm framework operational")
 
         # Init the Watchdog timer
         printer.watchdog = Watchdog()
