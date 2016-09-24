@@ -71,6 +71,20 @@ def _python(args, cwd, python_executable, sudo=False):
 	return p.returncode, stdout
 
 
+def _make():
+	command = ["sudo", "make", "-C", "/usr/src/redeem", "install"]
+	try:
+		p = subprocess.Popen(command, stdout=subprocess.PIPE,
+		                     stderr=subprocess.PIPE)
+	except:
+		return None, None
+
+	stdout = p.communicate()[0].strip()
+	if sys.version >= "3":
+		stdout = stdout.decode()
+
+	return p.returncode, stdout
+
 def update_source(git_executable, folder, target, force=False):
 	print(">>> Running: git diff --shortstat")
 	returncode, stdout = _git(["diff", "--shortstat"], folder, git_executable=git_executable)
@@ -121,13 +135,10 @@ def install_source(python_executable, folder, user=False, sudo=False):
 		print("Continuing anyways")
 	print(stdout)
 
-	print(">>> Running: python setup.py install")
-	args = ["setup.py", "install", "--single-version-externally-managed", "--root=/"]
-	if user:
-		args.append("--user")
-	returncode, stdout = _python(args, folder, python_executable, sudo=sudo)
+	print(">>> Running: make install")
+	returncode, stdout = _make()
 	if returncode != 0:
-		raise RuntimeError("Could not update, \"python setup.py install\" failed with returncode %d: %s" % (returncode, stdout))
+		raise RuntimeError("Could not update, \"make install\" failed with returncode %d: %s" % (returncode, stdout))
 	print(stdout)
 
 

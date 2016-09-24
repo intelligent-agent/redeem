@@ -36,6 +36,14 @@ class G28(GCodeCommand):
         return "Move the steppers to their homing position (and find it as " \
                "well)"
 
+    def get_long_description(self):
+        return ("Move the steppers to their homing position. "
+                "The printer will travel a maximum length and direction"
+                "defined by travel_*. Delta printers will home both X, Y and Z "
+                "regardless of whicho of those axes were specified to home."
+                "For other printers, one or more axes can be specified. An axis will "
+                "only be homed if homing of that axis is enabled.")
+
     def is_buffered(self):
         return True
 
