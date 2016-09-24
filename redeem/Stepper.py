@@ -101,7 +101,7 @@ class Stepper(object):
         pass
 
     def fault_callback(self, key, event):
-        Alarm(Alarm.STEPPER_FAULT, "Stepper {}".format(self.name))
+        Alarm(Alarm.STEPPER_FAULT, "Stepper {}<br>Most likely the stepper is over heated.".format(self.name))
             
 
 
