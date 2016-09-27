@@ -122,7 +122,7 @@ class PathPlanner {
   // pre-processor functions
   int softEndStopApply(const std::vector<FLOAT_T> &startPos, const std::vector<FLOAT_T> &endPos);
   void applyBedCompensation(std::vector<FLOAT_T> &endPos);
-  int splitInput(const std::vector<FLOAT_T>& startPos, const std::vector<FLOAT_T>& vec, 
+  int splitInput(const std::vector<FLOAT_T> startPos, const std::vector<FLOAT_T> vec, 
 		 FLOAT_T speed, FLOAT_T accel, bool cancelable, 
 		 bool optimize, bool use_backlash_compensation, 
 		 int tool_axis);
