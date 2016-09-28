@@ -105,6 +105,7 @@ void Path::initialize(const std::vector<FLOAT_T>& startPos,
 		      FLOAT_T accel,
 		      bool cancelable) {
 
+  LOG("Path: Initialize()"<< std::endl);
   this->zero();
 
   primaryAxis = X_AXIS;
@@ -126,7 +127,7 @@ void Path::initialize(const std::vector<FLOAT_T>& startPos,
     // set bits for axes that move at all
     if (deltas[axis] != 0) {
       dir |= (256 << axis);
-      LOG("Axis " << axis << " is move since p->delta is " << deltas[axis] << std::endl);
+      LOG("Path: Axis " << axis << " is move since p->delta is " << deltas[axis] << std::endl);
     }
 
     // determine primary axis for the move
@@ -134,35 +135,34 @@ void Path::initialize(const std::vector<FLOAT_T>& startPos,
       primaryAxis = axis;
   }
 
-  LOG("Primary axis is " << primaryAxis << std::endl);
+  LOG("Path: Primary axis is " << primaryAxis << std::endl);
 
   joinFlags = (cancelable ? FLAG_CANCELABLE : 0);
   flags = 0;
   primaryAxisSteps = deltas[primaryAxis];
   timeInTicks = F_CPU * distance / speed;
 
-  LOG("Distance in m:     " << distance << std::endl);
-  LOG("Speed in m/s:      " << speed << std::endl);
-  LOG("Accel in m/s²:     " << accel << std::endl);
-  LOG("Ticks :            " << timeInTicks << std::endl);
-  //LOG("StartSpeed in m/s: " << p->startSpeed << std::endl);
-  //LOG("EndSpeed in m/s:   " << p->endSpeed << std::endl);
+  LOG("Path: Distance in m:     " << distance << std::endl);
+  LOG("Path: Speed in m/s:      " << speed << std::endl);
+  LOG("Path: Accel in m/s^2:    " << accel << std::endl);
+  LOG("Path: Ticks :            " << timeInTicks << std::endl);
+  LOG("Path: StartSpeed in m/s: " << startSpeed << std::endl);
+  LOG("Path: EndSpeed in m/s:   " << endSpeed << std::endl);
 }
 
 void Path::calculate(const std::vector<FLOAT_T>& axis_diff,
 		     const std::vector<FLOAT_T>& minSpeeds,
 		     const std::vector<FLOAT_T>& maxSpeeds,
 		     const std::vector<FLOAT_T>& maxAccelStepsPerSquareSecond) {
+
   std::vector<unsigned int> axisInterval(NUM_AXES, 0);
 
-  //LOG( "CalculateMove: Time for move is: " << timeForMove << " s" << std::endl);
-  //LOG( "CalculateMove: Time in ticks:    " << p->timeInTicks << " ticks" << std::endl);
+  LOG( "Path: CalculateMove: Time in ticks:    " << timeInTicks << " ticks" << std::endl);
 
   // Compute the slowest allowed interval (ticks/step), so maximum feedrate is not violated
   unsigned int limitInterval = (float)timeInTicks / (float)primaryAxisSteps;
   // until not violated by other constraints, this is the target interval
-  //LOG( "CalculateMove: StepsRemaining " << p->stepsRemaining << " steps" << std::endl);
-  //LOG( "CalculateMove: limitInterval is " << limitInterval << " steps/s" << std::endl);
+  LOG( "Path: CalculateMove: limitInterval is " << limitInterval << " steps/s" << std::endl);
 
   for (int i = 0; i < NUM_AXES; i++) {
     if (isAxisMove(i)) {
@@ -171,11 +171,11 @@ void Path::calculate(const std::vector<FLOAT_T>& axis_diff,
     }
     else
       axisInterval[i] = 0;
-    //LOG( "CalculateMove: AxisInterval " << i << ": " << axisInterval[i] << std::endl);
-    //LOG( "CalculateMove: AxisAccel   " << i << ": " << maxAccelerationMMPerSquareSecond[i] << std::endl);
+    //LOG( "Path: CalculateMove: AxisInterval " << i << ": " << axisInterval[i] << std::endl);
+    //LOG( "Path: CalculateMove: AxisAccel   " << i << ": " << maxAccelStepsPerSquareSecond[i] << std::endl);
   }
 
-  LOG("CalculateMove: limitInterval is " << limitInterval << " steps/s" << std::endl);
+  LOG("Path: CalculateMove: limitInterval is " << limitInterval << " steps/s" << std::endl);
   fullInterval = limitInterval; // This is our target interval
 
   // this is the time if we move at full speed for the entire move
@@ -254,19 +254,19 @@ void Path::updateStepperPathParameters() {
   stepperPath.vMax = F_CPU / fullInterval; // maximum steps per second, we can reach   
   //LOG("vMax for path is : " << p->vMax << " steps/s "<< std::endl);	
 
-  //LOG( "Path::updateStepperPathParameters()"<<std::endl);
+  LOG( "Path::updateStepperPathParameters()"<<std::endl);
   FLOAT_T startFactor = startSpeed * invFullSpeed;
   FLOAT_T endFactor = endSpeed   * invFullSpeed;
   stepperPath.vStart = stepperPath.vMax * startFactor; //starting speed
   stepperPath.vEnd = stepperPath.vMax * endFactor;
-  //LOG("vStart is " << vStart << " steps/s" <<std::endl);
+  LOG("Path::vStart is " << stepperPath.vStart << " steps/s" <<std::endl);
   FLOAT_T vmax2 = stepperPath.vMax*stepperPath.vMax;
   stepperPath.accelSteps = (((vmax2 - (stepperPath.vStart * stepperPath.vStart))
     / (primaryAxisAcceleration * 2)) + 1); // Always add 1 for missing precision
   stepperPath.decelSteps = (((vmax2 - (stepperPath.vEnd   * stepperPath.vEnd))
     / (primaryAxisAcceleration * 2)) + 1);
 
-  //LOG("accelSteps before cap: " << accelSteps << " steps" <<std::endl);
+  LOG("Path::accelSteps before cap: " << stepperPath.accelSteps << " steps" <<std::endl);
   if (stepperPath.accelSteps + stepperPath.decelSteps >= primaryAxisSteps) {   // can't reach limit speed
     unsigned int red = (stepperPath.accelSteps + stepperPath.decelSteps + 2 - primaryAxisSteps) >> 1;
     stepperPath.accelSteps = stepperPath.accelSteps - std::min(stepperPath.accelSteps, red);
@@ -274,7 +274,7 @@ void Path::updateStepperPathParameters() {
 
     assert(!willMoveReachFullSpeed());
   }
-  //LOG("accelSteps: " << accelSteps << " steps" <<std::endl);
+  LOG("accelSteps: " << stepperPath.accelSteps << " steps" <<std::endl);
 
   joinFlags |= FLAG_JOIN_STEPPARAMS_COMPUTED;
 }

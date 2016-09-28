@@ -34,7 +34,7 @@
 PathPlanner::PathPlanner(unsigned int cacheSize) {
   linesPos = 0;
   linesWritePos = 0;
-  LOG( "PathPlanner " << std::endl);
+  LOG( "PathPlanner " << PATH_PLANNER_VERSION << std::endl);
   moveCacheSize = cacheSize;
   lines.resize(moveCacheSize);
   printMoveBufferWait = 250;
@@ -139,7 +139,7 @@ void PathPlanner::queueMove(std::vector<FLOAT_T> startPos, std::vector<FLOAT_T> 
   // PRE-PROCESSING
   ////////////////////////////////////////////////////////////////////
 	
-  LOG("NEW MOVE:\n");
+  LOG("PP: queueMove()\n");
   // for (int i = 0; i<NUM_AXES; ++i) {
   //   LOG("AXIS " << i << ": start = " << startPos[i] << "(" << state[i] << "), end = " << endPos[i] << "\n");
   // }
@@ -259,7 +259,7 @@ void PathPlanner::queueMove(std::vector<FLOAT_T> startPos, std::vector<FLOAT_T> 
     stepperStartPos[axis] = round(startPos[axis] * axisStepsPerM[axis]);
     stepperEndPos[axis] = round(endPos[axis] * axisStepsPerM[axis]);
     axis_diff[axis] = (stepperEndPos[axis] - stepperStartPos[axis]) / axisStepsPerM[axis];
-    LOG("Axis " << axis << " length is " << axis_diff[axis] << std::endl);
+    //LOG("Axis " << axis << " length is " << axis_diff[axis] << std::endl);
 
     distance += axis_diff[axis] * axis_diff[axis];
   }
@@ -269,7 +269,7 @@ void PathPlanner::queueMove(std::vector<FLOAT_T> startPos, std::vector<FLOAT_T> 
   p->initialize(stepperStartPos, stepperEndPos, distance, speed, accel, cancelable);
 
   if(p->isNoMove()){
-    LOG( "Warning: no move path" << std::endl);
+    LOG( "PathPlanner::queueMove: Warning: no move path" << std::endl);
     PyEval_RestoreThread(_save);
     return; // No steps included
   }
@@ -286,7 +286,7 @@ void PathPlanner::queueMove(std::vector<FLOAT_T> startPos, std::vector<FLOAT_T> 
   linesTicksQueued += p->getTimeInTicks();
   linesTicksRemaining -= p->getTimeInTicks();
 
-  LOG("Move queued for the worker" << std::endl);
+  LOG("PathPlanner::queueMove: Move queued for the worker" << std::endl);
 
   if(linesWritePos>=moveCacheSize)
     linesWritePos = 0;
@@ -301,7 +301,7 @@ void PathPlanner::queueMove(std::vector<FLOAT_T> startPos, std::vector<FLOAT_T> 
     linesQueued = 0;
     linesTicksQueued = 0;
     lineAvailable.notify_all();
-    LOG("Poked the worker" << std::endl);
+    LOG("PathPlanner::queueMove: Poked the worker" << std::endl);
   }
 
   PyEval_RestoreThread(_save);
@@ -383,10 +383,10 @@ void PathPlanner::updateTrapezoids(){
 }
 
 // TODO: Remove dependency on Extruder. 
-void PathPlanner::computeMaxJunctionSpeed(Path *previous, Path *current){
+/*void PathPlanner::computeMaxJunctionSpeed(Path *previous, Path *current){
   FLOAT_T factor = 1;
     
-  LOG("Computing Max junction speed"<<std::endl);
+  LOG("PathPlanner::computeMaxJunctionSpeed()"<<std::endl);
 
   for(int i=0; i<NUM_AXES; i++){
     FLOAT_T jerk = std::fabs(current->getSpeeds()[i] - previous->getSpeeds()[i]);
@@ -397,7 +397,29 @@ void PathPlanner::computeMaxJunctionSpeed(Path *previous, Path *current){
   }
 
   previous->setMaxJunctionSpeed(std::min(previous->getFullSpeed() * factor, current->getFullSpeed()));
-  LOG("Max junction speed = "<<previous->getMaxJunctionSpeed()<<std::endl);
+  LOG("PathPlanner::computeMaxJunctionSpeed: Max junction speed = "<<previous->getMaxJunctionSpeed()<<std::endl);
+}*/
+
+
+// TODO: Remove dependency on Extruder. 
+void PathPlanner::computeMaxJunctionSpeed(Path *previous, Path *current){
+  std::vector<FLOAT_T> d(NUM_AXES);
+  FLOAT_T jerk = 0; 
+  FLOAT_T factor = 1;
+    
+  LOG("PathPlanner::computeMaxJunctionSpeed()"<<std::endl);
+    
+  for(int i=0; i<NUM_AXES; i++){
+    d[i] = std::fabs(current->getSpeeds()[i] - previous->getSpeeds()[i])*F_CPU;
+    jerk += d[i]*d[i];
+  }
+
+  jerk = sqrt(jerk);
+  if(jerk>maxJerks[0])
+    factor = maxJerks[0] / jerk;
+
+  previous->setMaxJunctionSpeed(std::min(previous->getFullSpeed() * factor, current->getFullSpeed()));
+  LOG("PathPlanner::computeMaxJunctionSpeed: Max junction speed = "<<previous->getMaxJunctionSpeed()<<std::endl);
 }
 
 /**
@@ -536,7 +558,7 @@ void PathPlanner::reset() {
 
 void PathPlanner::run() {
   bool waitUntilFilledUp = true;
-  LOG("PathPlanner loop starting" << std::endl);
+  LOG("PathPLanner::run(): loop starting" << std::endl);
 	
   while(!stop) {		
     std::unique_lock<std::mutex> lk(line_mutex);		
@@ -551,21 +573,21 @@ void PathPlanner::run() {
     // and we do that until the buffer is not anymore half empty.
     if(!isLinesBufferFilled() && cur->getTimeInTicks() > 0 && waitUntilFilledUp) {
       unsigned lastCount = 0;
-      LOG("Waiting for buffer to fill up. " << linesCount  << " lines pending, lastCount is " << lastCount << std::endl);
+      LOG("PathPLanner::run(): Waiting for buffer to fill up. " << linesCount  << " lines pending, lastCount is " << lastCount << std::endl);
       do {
 	lastCount = linesCount;				
 	lineAvailable.wait_for(lk,  std::chrono::milliseconds(printMoveBufferWait), [this,lastCount]{
 	    return linesCount>lastCount || stop;
 	  });				
       } while(lastCount<linesCount && linesCount<moveCacheSize && !stop);
-      LOG("Done waiting for buffer to fill up... " << linesCount  << " lines ready. " << lastCount << std::endl);			
+      LOG("PathPLanner::run(): Done waiting for buffer to fill up... " << linesCount  << " lines ready. " << lastCount << std::endl);			
       waitUntilFilledUp = false;
     }
 		
     //The buffer is empty, we enable again the "wait until buffer is enough full" timing procedure.
     if(linesCount<=1) {
       waitUntilFilledUp = true;
-      LOG("### Move Command Buffer Empty ###" << std::endl);
+      LOG("PathPLanner::run(): ### Move Command Buffer Empty ###" << std::endl);
     }
 		
     lk.unlock();
@@ -584,7 +606,7 @@ void PathPlanner::run() {
 		
     if(cur->isBlocked()){   // This step is in computation - shouldn't happen
       cur = NULL;
-      LOG( "Path planner thread: path " <<  std::dec << linesPos<< " is blocked, waiting... " << std::endl);
+      LOG( "PathPLanner::run():  thread: path " <<  std::dec << linesPos<< " is blocked, waiting... " << std::endl);
       std::this_thread::sleep_for( std::chrono::milliseconds(100) );
       continue;
     }
@@ -593,7 +615,7 @@ void PathPlanner::run() {
     cur->fixStartAndEndSpeed();
     cur_errupd = cur->getDeltas()[cur->getPrimaryAxis()];
     if(!cur->areParameterUpToDate()){  // should never happen, but with bad timings???
-      LOG( "Path planner thread: Need to update paramters! This should not happen!" << std::endl);
+      LOG("PathPLanner::run(): Path planner thread: Need to update paramters! This should not happen!" << std::endl);
       cur->updateStepperPathParameters();
     }
 
@@ -612,13 +634,13 @@ void PathPlanner::run() {
       for(int i=0; i<NUM_AXES; i++)
 	cancellableMask |= (cur->isAxisMove(i) << i);
     }		
-    LOG("Direction mask: " << directionMask << std::endl);
-    LOG("Cancel    mask: " << cancellableMask << std::endl);
-
-    LOG("startSpeed:   " << cur->getStartSpeed() << std::endl);
-    LOG("fullSpeed:    " << cur->getFullSpeed() << std::endl);
-    LOG("acceleration: " << cur->getAcceleration() << std::endl);
-    LOG("accelTime:    " << ((cur->getFullSpeed() - cur->getStartSpeed())/cur->getAcceleration()) << std::endl);
+    LOG("PathPLanner::run(): Direction mask: " << directionMask << std::endl);
+    LOG("PathPLanner::run(): Cancel    mask: " << cancellableMask << std::endl);
+    LOG("PathPLanner::run(): startSpeed:   " << cur->getStartSpeed() << std::endl);
+    LOG("PathPLanner::run(): fullSpeed:    " << cur->getFullSpeed() << std::endl);
+    LOG("PathPLanner::run(): endSpeed:     " << cur->getEndSpeed() << std::endl);
+    LOG("PathPLanner::run(): acceleration: " << cur->getAcceleration() << std::endl);
+    LOG("PathPLanner::run(): accelTime:    " << ((cur->getFullSpeed() - cur->getStartSpeed())/cur->getAcceleration()) << std::endl);
         
         
 
@@ -689,10 +711,10 @@ void PathPlanner::run() {
     //Wait until we need to push some lines so that the path planner can fill up
     pru.waitUntilLowMoveTime((F_CPU/1000)*minBufferedMoveTime); //in seconds
 		
-    LOG( "Sending " << std::dec << linesPos << ", Start speed=" << cur->getStartSpeed() << ", end speed="<<cur->getEndSpeed() << ", nb steps = " << cur->getPrimaryAxisSteps() << std::endl);
+    LOG( "PathPLanner::run(): Sending " << std::dec << linesPos << ", Start speed=" << cur->getStartSpeed() << ", end speed="<<cur->getEndSpeed() << ", nb steps = " << cur->getPrimaryAxisSteps() << std::endl);
 		
     pru.push_block((uint8_t*)commands.data(), sizeof(SteppersCommand)*cur->getPrimaryAxisSteps(), sizeof(SteppersCommand), linesPos, cur->getTimeInTicks());
-    LOG( "Done sending with " << std::dec << linesPos << std::endl);
+    LOG( "PathPLanner::run(): Done sending with " << std::dec << linesPos << std::endl);
 		
     removeCurrentLine();
     lineAvailable.notify_all();

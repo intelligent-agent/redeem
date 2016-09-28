@@ -22,6 +22,8 @@
 
 #define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
 
+#define PATH_PLANNER_VERSION "v1.0.0"
+
 #ifndef PathPlanner_config_h
 #define PathPlanner_config_h
 
