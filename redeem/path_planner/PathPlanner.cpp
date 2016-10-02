@@ -174,6 +174,16 @@ void PathPlanner::queueMove(std::vector<FLOAT_T> startPos, std::vector<FLOAT_T> 
     return;
   }
 
+  // Calculate the distance in world space and use it to convert the user's world-speed into a desired move time
+  FLOAT_T worldDistance = 0;
+  for (int i = 0; i < NUM_AXES; i++) {
+    worldDistance += vec[i] * vec[i];
+  }
+
+  worldDistance = std::sqrt(worldDistance);
+
+  FLOAT_T desiredTime = worldDistance / speed; // m / (m/s) = s
+
   // Transform the vector according to the movement style of the robot.
   transformVector(vec, state);
     
@@ -266,7 +276,10 @@ void PathPlanner::queueMove(std::vector<FLOAT_T> startPos, std::vector<FLOAT_T> 
 
   distance = sqrt(distance);
 
-  p->initialize(stepperStartPos, stepperEndPos, distance, speed, accel, cancelable);
+  // Use the desired move time to calculate the machine-speed that matches the user's world-speed
+  FLOAT_T machineSpeed = distance / desiredTime;
+
+  p->initialize(stepperStartPos, stepperEndPos, distance, machineSpeed, accel, cancelable);
 
   if(p->isNoMove()){
     LOG( "PathPlanner::queueMove: Warning: no move path" << std::endl);
