@@ -88,7 +88,7 @@ private:
   unsigned int dir;               /// Direction of movement (1 = X+, 2 = Y+, 4= Z+) and whether an axis moves at all (256 = X+, 512 = Y+, 1024 = Z+)
   std::vector<int> deltas;         /// Steps we want to move (absolute)
   std::vector<int> errors;         /// Error calculation for Bresenham algorithm
-  std::vector<FLOAT_T> speeds;    /// Speeds for each axis
+  std::vector<FLOAT_T> speeds;    /// Speeds for each axis in m/tick
   FLOAT_T fullSpeed;              /// Desired speed m/s
   FLOAT_T invFullSpeed;           /// 1.0/fullSpeed for fatser computation
   FLOAT_T accelerationDistance2;  /// Real 2.0*distanceÜacceleration mm²/s²
