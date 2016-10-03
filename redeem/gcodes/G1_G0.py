@@ -10,9 +10,9 @@ License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 
 from GCodeCommand import GCodeCommand
 try:
-    from Path import Path, RelativePath, AbsolutePath
+    from Path import Path, RelativePath, AbsolutePath, MixedPath
 except ImportError:
-    from redeem.Path import Path, RelativePath, AbsolutePath
+    from redeem.Path import Path, RelativePath, AbsolutePath, MixedPath
 
 import logging
 
@@ -39,15 +39,17 @@ class G0(GCodeCommand):
             if axis in ('E', 'H', 'A', 'B', 'C') and self.printer.extrude_factor != 1.0:
                 value *= self.printer.extrude_factor
             smds[axis] = value
-
+    
         if self.printer.movement == Path.ABSOLUTE:
             path = AbsolutePath(smds, self.printer.feed_rate * self.printer.factor, self.printer.accel)
         elif self.printer.movement == Path.RELATIVE:
             path = RelativePath(smds, self.printer.feed_rate * self.printer.factor, self.printer.accel)
+        elif self.printer.movement == Path.MIXED:
+            path = MixedPath(smds, self.printer.feed_rate * self.printer.factor, self.printer.accel)
         else:
             logging.error("invalid movement: " + str(self.printer.movement))
             return
-    
+        
         # Add the path. This blocks until the path planner has capacity
         self.printer.path_planner.add_path(path)
 

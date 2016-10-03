@@ -50,14 +50,14 @@ class Printer:
         self.cold_ends   = []
         self.coolers     = []
         self.comms       = {}  # Communication channels
-        self.path_planner   = None
-        self.factor         = 1.0
-        self.extrude_factor = 1.0
-        self.movement       = Path.ABSOLUTE
-        self.axis_config    = self.AXIS_CONFIG_XY
-        self.feed_rate      = 0.5
-        self.accel          = 0.5
-        self.current_tool   = "E"
+        self.path_planner       = None
+        self.factor             = 1.0
+        self.extrude_factor     = 1.0
+        self.movement           = Path.ABSOLUTE
+        self.axis_config        = self.AXIS_CONFIG_XY
+        self.feed_rate          = 0.5
+        self.accel              = 0.5
+        self.current_tool       = "E"
         # For movement commands, whether the E axis refers to the active
         # tool (more common with other firmwares), or only the actual E axis
         self.e_axis_active = True
@@ -95,14 +95,14 @@ class Printer:
         # By default, do not check for slaves
         self.has_slaves = False
 
-        return
+        self.axes_absolute = ["X", "Y", "Z", "E", "H", "A", "B", "C"]
+        self.axes_relative = []
 
     def add_slave(self, master, slave):
         ''' Make an axis copy the movement of another.
         the slave will get the same position as the axis'''
         self.slaves[master] = slave
         self.has_slaves = True
-        return
 
     def check_values(self):
         """
