@@ -179,12 +179,12 @@ void Path::calculate(const std::vector<FLOAT_T>& axis_diff,
   fullInterval = limitInterval; // This is our target interval
 
   // this is the time if we move at full speed for the entire move
-  FLOAT_T timeAtFullSpeed = (limitInterval * primaryAxisSteps);
+  FLOAT_T timeAtFullSpeed = (limitInterval * primaryAxisSteps); // ticks/step * steps = ticks
 
   for (int i = 0; i < NUM_AXES; i++) {
     if (isAxisMove(i)) {
       axisInterval[i] = timeAtFullSpeed / deltas[i];
-      speeds[i] = -std::fabs(axis_diff[i] / timeAtFullSpeed);
+      speeds[i] = -std::fabs(axis_diff[i] / timeAtFullSpeed); // m/tick
       if (isAxisNegativeMove(i))
 	speeds[i] *= -1;
       //p->accels[i] = maxAccelerationMPerSquareSecond[i];
