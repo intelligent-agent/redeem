@@ -1,5 +1,5 @@
 """
-GCode M18 and M84
+GCode M18
 Disable all steppers
 
 Author: Mathieu Monney
@@ -42,7 +42,3 @@ class M18(GCodeCommand):
 
     def is_buffered(self):
         return True
-
-
-class M84(M18):
-    pass

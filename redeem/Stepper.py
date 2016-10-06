@@ -50,6 +50,7 @@ class Stepper(object):
         self.microsteps      = 1.0     
         self.microstepping   = 0
         self.direction       = 1
+        self.current_disabled= False
 
         # Set up the Shift register
         ShiftRegister.make(8)
@@ -176,9 +177,6 @@ class Stepper_00B1(Stepper):
     def set_current_value(self, i_rms):
         """ Current chopping limit (This is the value you can change) """
         self.current_value = i_rms
-        
-        r_sense = 0.1020              # External resistors + internal
-        sqrt_2 = 1.41421356237
 
         v_iref = 2.5*(i_rms/1.92)
         if(v_iref > 2.5):
@@ -273,6 +271,7 @@ class Stepper_00B3(Stepper_00B2):
         else:
             self.state  = 0x0
         self.shift_reg.set_state(self.state)
+        self.current_enabled = True
    
     def set_disabled(self, force_update=False):
         if not self.enabled:
@@ -294,8 +293,8 @@ class Stepper_00B3(Stepper_00B2):
             ShiftRegister.registers[0].remove_state(0x1) # First bit low. 
         elif self.name in ["E", "H"]:
             ShiftRegister.registers[3].remove_state(0x1)
-        self.enabled = True
 
+        self.enabled = True
 
     def set_stepper_power_down(self, pd):
         ''' Enables stepper low current mode on all steppers '''
@@ -305,7 +304,22 @@ class Stepper_00B3(Stepper_00B2):
         else:
             ShiftRegister.registers[4].remove_state(0x1)
                     
+    def set_current_disabled(self):
+        ''' Set the stepper in lowest current mode '''
+        if not self.current_enabled:
+            return
 
+        self.current_enable_value = self.current_value
+        self.current_enabled = False
+        self.set_current_value(0)
+
+
+    def set_current_enabled(self):
+        if self.current_enabled:
+            return
+        self.set_current_value(self.current_enable_value)
+        self.current_enabled = True
+        
 
 """
 The bits in the shift register are as follows (Rev A4) :
