@@ -214,8 +214,11 @@ class Printer:
         # Offsets
         logging.debug("save_settings: setting offsets")
         for axis, offset in self.path_planner.center_offset.iteritems():
-            if self.config.has_option("Geometry", "offset_{}".format(axis)):
-                self.config.set('Geometry', "offset_{}".format(axis), str(offset))
+            self.config.set('Geometry', "offset_{}".format(axis), str(offset))
+        # Travel length
+        logging.debug("save_settings: travel length")
+        for axis, offset in self.path_planner.travel_length.iteritems():
+            self.config.set('Geometry', "travel_{}".format(axis), str(offset))
 
         # Save Delta shit
         logging.debug("save_settings: setting delta shit")

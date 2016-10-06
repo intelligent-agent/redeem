@@ -130,6 +130,11 @@ class Gcode:
     def num_tokens(self):
         return len(self.tokens)
 
+    def get_tokens_as_dict(self):
+        """ Return the remaining tokans as a dict"""
+        return {t[0]: t[1:] for t in self.get_tokens()}
+
+
     def _getCS(self, cmd):
         """ Compute a Checksum of the letters in the command """
         cs = 0
