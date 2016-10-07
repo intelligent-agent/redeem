@@ -25,7 +25,7 @@ class M(GCodeCommand):
                 for gcode, desc in sorted(gcodes.items()):
                     if gcode[0] == "M":
                         self.printer.send_message(g.prot, "===="+gcode+": "+desc+"====")
-                        l_desc = self.printer.processor.gcodes[gcode].get_long_description()
+                        l_desc = self.printer.processor.gcodes[gcode].get_long_description().replace("\n", "<br>\n")
                         self.printer.send_message(g.prot, l_desc)
                         
             else:
