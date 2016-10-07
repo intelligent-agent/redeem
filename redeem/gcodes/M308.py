@@ -33,11 +33,12 @@ class M308(GCodeCommand):
                 
         
     def get_description(self):
-        return "Set or get the direction and length to search for end stops"
+        return "Set or get direction and search length for end stops"
 
     def get_long_description(self):
-        return ("Set P, I and D values, Format (M301 E0 P0.1 I100.0 D5.0)"
-                "P = Kp, default = 0.0"
-                "I = Ti, default = 0.0"
-                "D = Td, default = 0.0"
-                "E = Extruder, -1=Bed, 0=E, 1=H, 2=A, 3=B, 4=C, default = 0")
+        return ("Set or get direction and search length for end stops\n"
+                "If not tokens are given, return the end stop travel search length in mm.\n"
+                "If tokens are given, they must be a space separated list of <axis><value> pairs.\n"
+                "Example: 'M308 X250 Y220'. This will set the travel search length for the \n"
+                "X nd Y axis to 250 and 220 mm. Th values will appear in the config file in meters, "
+                "thus 0.25 and 0.22")
