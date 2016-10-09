@@ -158,7 +158,7 @@ public:
   }
 
   inline bool isCancelable() {
-    return joinFlags & FLAG_CANCELABLE;
+    return flags & FLAG_CANCELABLE;
   }
 
   inline void setEndSpeedFixed(bool newState) {

@@ -137,8 +137,8 @@ void Path::initialize(const std::vector<FLOAT_T>& startPos,
 
   LOG("Path: Primary axis is " << primaryAxis << std::endl);
 
-  joinFlags = (cancelable ? FLAG_CANCELABLE : 0);
-  flags = 0;
+  joinFlags = 0;
+  flags = (cancelable ? FLAG_CANCELABLE : 0);
   primaryAxisSteps = deltas[primaryAxis];
   timeInTicks = F_CPU * distance / speed;
 
