@@ -34,7 +34,7 @@
 PathPlanner::PathPlanner(unsigned int cacheSize) {
   linesPos = 0;
   linesWritePos = 0;
-  LOG( "PathPlanner " << PATH_PLANNER_VERSION << std::endl);
+  LOG( "PathPlanner " << std::endl);
   moveCacheSize = cacheSize;
   lines.resize(moveCacheSize);
   printMoveBufferWait = 250;
@@ -139,7 +139,7 @@ void PathPlanner::queueMove(std::vector<FLOAT_T> startPos, std::vector<FLOAT_T> 
   // PRE-PROCESSING
   ////////////////////////////////////////////////////////////////////
 	
-  LOG("PP: queueMove()\n");
+  LOG("NEW MOVE:\n");
   // for (int i = 0; i<NUM_AXES; ++i) {
   //   LOG("AXIS " << i << ": start = " << startPos[i] << "(" << state[i] << "), end = " << endPos[i] << "\n");
   // }
@@ -164,13 +164,20 @@ void PathPlanner::queueMove(std::vector<FLOAT_T> startPos, std::vector<FLOAT_T> 
   // Get the vector to move us from where we are, to where we ideally want to be. 
     
   std::vector<FLOAT_T> vec(NUM_AXES, 0);
-    
+  
   for (size_t i = 0; i<vec.size(); ++i) {
     vec[i] = endPos[i] - state[i];
+    assert(!std::isnan(vec[i]));
+    assert(!std::isnan(endPos[i]));
+    assert(!std::isnan(state[i]));
   }
+
+  LOG("startPos: " << startPos[0] << " " << startPos[1] << " " << startPos[2] << std::endl);
+  LOG("state: " << state[0] << " " << state[1] << " " << state[2] << std::endl);
+  LOG("vec before: " << vec[0] << " " << vec[1] << " " << vec[2] << std::endl);
 	
   // Check if the path needs to be split
-  if( splitInput(state, vec, speed, accel, cancelable, optimize, use_backlash_compensation, tool_axis) ) {
+  if( splitInput(state, vec, speed, accel, cancelable, optimize, use_backlash_compensation, tool_axis, virgin) ) {
     return;
   }
 
@@ -192,6 +199,7 @@ void PathPlanner::queueMove(std::vector<FLOAT_T> startPos, std::vector<FLOAT_T> 
   std::vector<FLOAT_T> delta(NUM_AXES, 0);
   FLOAT_T sum_delta = 0.0;
   for (int i = 0; i<NUM_AXES; ++i) {
+    assert(!std::isnan(vec[i]));
     num_steps = round(fabs(vec[i])*axisStepsPerM[i]);
     delta[i] = sgn(vec[i])*num_steps/axisStepsPerM[i];
     vec[i] = delta[i];
@@ -201,6 +209,7 @@ void PathPlanner::queueMove(std::vector<FLOAT_T> startPos, std::vector<FLOAT_T> 
 
   // check for a no-move
   if (sum_delta == 0.0) {
+    LOG("no move" << std::endl);
     return;
   }
 	
@@ -210,6 +219,7 @@ void PathPlanner::queueMove(std::vector<FLOAT_T> startPos, std::vector<FLOAT_T> 
   reverseTransformVector(vec);
 	
   // and now vec is back in physical space
+  LOG("vec after: " << vec[0] << " " << vec[1] << " " << vec[2] << std::endl);
 	
   // backlash compensation
   if (use_backlash_compensation) {
@@ -223,6 +233,7 @@ void PathPlanner::queueMove(std::vector<FLOAT_T> startPos, std::vector<FLOAT_T> 
     endPos[i] =   state[i] + delta[i]; // the real ending position
     state[i] += vec[i]; // update the new state of the machine
   }
+  LOG("new state: " << state[0] << " " << state[1] << " " << state[2] << std::endl);
     
   // handle any slaving activity
   handleSlaves(startPos, endPos);
@@ -269,7 +280,7 @@ void PathPlanner::queueMove(std::vector<FLOAT_T> startPos, std::vector<FLOAT_T> 
     stepperStartPos[axis] = round(startPos[axis] * axisStepsPerM[axis]);
     stepperEndPos[axis] = round(endPos[axis] * axisStepsPerM[axis]);
     axis_diff[axis] = (stepperEndPos[axis] - stepperStartPos[axis]) / axisStepsPerM[axis];
-    //LOG("Axis " << axis << " length is " << axis_diff[axis] << std::endl);
+    LOG("Axis " << axis << " length is " << axis_diff[axis] << " from " << stepperStartPos[axis] << " to " << stepperEndPos[axis] << std::endl);
 
     distance += axis_diff[axis] * axis_diff[axis];
   }
@@ -279,10 +290,10 @@ void PathPlanner::queueMove(std::vector<FLOAT_T> startPos, std::vector<FLOAT_T> 
   // Use the desired move time to calculate the machine-speed that matches the user's world-speed
   FLOAT_T machineSpeed = distance / desiredTime;
 
-  p->initialize(stepperStartPos, stepperEndPos, distance, machineSpeed, accel, cancelable);
+  p->initialize(stepperStartPos, stepperEndPos, distance, cancelable);
 
   if(p->isNoMove()){
-    LOG( "PathPlanner::queueMove: Warning: no move path" << std::endl);
+    LOG( "Warning: no move path" << std::endl);
     PyEval_RestoreThread(_save);
     return; // No steps included
   }
@@ -291,7 +302,7 @@ void PathPlanner::queueMove(std::vector<FLOAT_T> startPos, std::vector<FLOAT_T> 
   // PERFORM PLANNING
   ////////////////////////////////////////////////////////////////////
 
-  p->calculate(axis_diff, minSpeeds, maxSpeeds, maxAccelerationStepsPerSquareSecond);
+  p->calculate(axis_diff, minSpeeds, maxSpeeds, maxAccelerationStepsPerSquareSecond, machineSpeed, accel);
   updateTrapezoids();
   linesWritePos++;
   linesQueued++;
@@ -299,7 +310,7 @@ void PathPlanner::queueMove(std::vector<FLOAT_T> startPos, std::vector<FLOAT_T> 
   linesTicksQueued += p->getTimeInTicks();
   linesTicksRemaining -= p->getTimeInTicks();
 
-  LOG("PathPlanner::queueMove: Move queued for the worker" << std::endl);
+  LOG("Move queued for the worker" << std::endl);
 
   if(linesWritePos>=moveCacheSize)
     linesWritePos = 0;
@@ -314,7 +325,7 @@ void PathPlanner::queueMove(std::vector<FLOAT_T> startPos, std::vector<FLOAT_T> 
     linesQueued = 0;
     linesTicksQueued = 0;
     lineAvailable.notify_all();
-    LOG("PathPlanner::queueMove: Poked the worker" << std::endl);
+    LOG("Poked the worker" << std::endl);
   }
 
   PyEval_RestoreThread(_save);
@@ -352,7 +363,6 @@ void PathPlanner::updateTrapezoids(){
     //LOG("Nothing to plan"<<std::endl);
     act->block();
     act->setStartSpeedFixed(true);
-    act->updateStepperPathParameters();
     act->unblock();
     return;
   }
@@ -383,13 +393,11 @@ void PathPlanner::updateTrapezoids(){
 	
   // Update precomputed data
   do{
-    lines[first].updateStepperPathParameters();
     lines[first].unblock();  // Flying block to release next used segment as early as possible
     nextPlannerIndex(first);
     lines[first].block();
   }
   while(first!=linesWritePos);
-  act->updateStepperPathParameters();
   act->unblock();
 
   //LOG("UpdateTRapezoids:: done"<<std::endl);
@@ -398,10 +406,10 @@ void PathPlanner::updateTrapezoids(){
 void PathPlanner::computeMaxJunctionSpeed(Path *previous, Path *current){
   FLOAT_T factor = 1;
     
-  LOG("PathPlanner::computeMaxJunctionSpeed()"<<std::endl);
+  LOG("Computing Max junction speed"<<std::endl);
 
   for(int i=0; i<NUM_AXES; i++){
-    FLOAT_T jerk = std::fabs(current->getSpeeds()[i] - previous->getSpeeds()[i]) * F_CPU; // m/tick * ticks/s = m/s
+    FLOAT_T jerk = std::fabs(current->getSpeeds()[i] - previous->getSpeeds()[i]) / axisStepsPerM[i]; // steps/s / steps/m = m/s
 
     if (jerk > maxJerks[i]){
       factor = std::min(factor, maxJerks[i] / jerk);
@@ -548,166 +556,261 @@ void PathPlanner::reset() {
 
 void PathPlanner::run() {
   bool waitUntilFilledUp = true;
-  LOG("PathPlanner::run(): loop starting" << std::endl);
+  LOG("PathPlanner loop starting" << std::endl);
 	
   while(!stop) {		
     std::unique_lock<std::mutex> lk(line_mutex);		
     lineAvailable.wait(lk, [this]{return linesCount>0 || stop;});		
     Path* cur = &lines[linesPos];
-    assert(cur);
-    std::vector<SteppersCommand> commands(cur->getPrimaryAxisSteps());
-    std::vector<int> error = cur->getInitialErrors();
 
     // If the buffer is half or more empty and the line to print is an optimized one, 
     // wait for 500 ms again so that we can get some other path in the path planner buffer, 
     // and we do that until the buffer is not anymore half empty.
     if(!isLinesBufferFilled() && cur->getTimeInTicks() > 0 && waitUntilFilledUp) {
       unsigned lastCount = 0;
-      LOG("PathPlanner::run(): Waiting for buffer to fill up. " << linesCount  << " lines pending, lastCount is " << lastCount << std::endl);
+      LOG("Waiting for buffer to fill up. " << linesCount  << " lines pending, lastCount is " << lastCount << std::endl);
       do {
 	lastCount = linesCount;				
 	lineAvailable.wait_for(lk,  std::chrono::milliseconds(printMoveBufferWait), [this,lastCount]{
 	    return linesCount>lastCount || stop;
 	  });				
       } while(lastCount<linesCount && linesCount<moveCacheSize && !stop);
-      LOG("PathPlanner::run(): Done waiting for buffer to fill up... " << linesCount  << " lines ready. " << lastCount << std::endl);			
+      LOG("Done waiting for buffer to fill up... " << linesCount  << " lines ready. " << lastCount << std::endl);			
       waitUntilFilledUp = false;
     }
 		
     //The buffer is empty, we enable again the "wait until buffer is enough full" timing procedure.
     if(linesCount<=1) {
       waitUntilFilledUp = true;
-      LOG("PathPlanner::run(): ### Move Command Buffer Empty ###" << std::endl);
+      LOG("### Move Command Buffer Empty ###" << std::endl);
     }
-		
+
     lk.unlock();
-		
+
     if(!linesCount || stop){
       continue;
     }
-		
-    long cur_errupd = 0;
-    int directionMask = 0;      //0bCBAHEZYX
-    int cancellableMask = 0;
-    unsigned int vMaxReached;
-    unsigned int timer_accel = 0;
-    unsigned int timer_decel = 0;
-    unsigned int interval = 0;
-		
+
     if(cur->isBlocked()){   // This step is in computation - shouldn't happen
       cur = NULL;
-      LOG( "PathPlanner::run():  thread: path " <<  std::dec << linesPos<< " is blocked, waiting... " << std::endl);
+      LOG( "Path planner thread: path " <<  std::dec << linesPos<< " is blocked, waiting... " << std::endl);
       std::this_thread::sleep_for( std::chrono::milliseconds(100) );
       continue;
     }
 		
     // Only enable axes that are moving. If the axis doesn't need to move then it can stay disabled depending on configuration.
     cur->fixStartAndEndSpeed();
-    cur_errupd = cur->getDeltas()[cur->getPrimaryAxis()];
     if(!cur->areParameterUpToDate()){  // should never happen, but with bad timings???
-      LOG("PathPlanner::run(): Path planner thread: Need to update paramters! This should not happen!" << std::endl);
+      LOG( "Path planner thread: Need to update paramters! This should not happen!" << std::endl);
       cur->updateStepperPathParameters();
     }
 
     StepperPathParameters stepperPath = cur->getStepperPathParameters();
-    unsigned long long fPrimaryAxisAcceleration = 262144.0 * cur->getPrimaryAxisAcceleration() / F_CPU; // (2^18)
-		
-    vMaxReached = stepperPath.vStart;
+    std::vector<unsigned long long> initialStepTimes(NUM_AXES, 0);
 
-    directionMask = 0;
-    cancellableMask = 0;
+    int moveMask = 0;
+    int directionMask = 0;
+    int cancellableMask = 0;
+    std::vector<SteppersCommand> commands;
+    unsigned long commandsLength = 0;
     for(int i=0; i<NUM_AXES; i++){
-      //LOG("Direction for axis " << i << " is " << cur->isAxisPositiveMove(i) << std::endl);
+      LOG("Direction for axis " << i << " is " << cur->isAxisPositiveMove(i) << std::endl);
+      moveMask |= (cur->isAxisMove(i) << i);
       directionMask |= (cur->isAxisPositiveMove(i) << i);
     }
+
     if(cur->isCancelable()) {
       for(int i=0; i<NUM_AXES; i++)
 	cancellableMask |= (cur->isAxisMove(i) << i);
-    }		
-
-    LOG("PathPlanner::run(): Direction mask: " << directionMask << std::endl);
-    LOG("PathPlanner::run(): Cancel    mask: " << cancellableMask << std::endl);
-    LOG("PathPlanner::run(): startSpeed:   " << cur->getStartSpeed() << std::endl);
-    LOG("PathPlanner::run(): fullSpeed:    " << cur->getFullSpeed() << std::endl);
-    LOG("PathPlanner::run(): endSpeed:     " << cur->getEndSpeed() << std::endl);
-    LOG("PathPlanner::run(): acceleration: " << cur->getAcceleration() << std::endl);
-    LOG("PathPlanner::run(): accelTime:    " << ((cur->getFullSpeed() - cur->getStartSpeed())/cur->getAcceleration()) << std::endl);
-
-    for(unsigned int stepNumber=0; stepNumber<cur->getPrimaryAxisSteps(); stepNumber++){
-      SteppersCommand& cmd = commands.at(stepNumber);
-      cmd.direction = (uint8_t) directionMask;
-      cmd.cancellableMask = (uint8_t) cancellableMask;
-			
-      if((stepNumber == cur->getPrimaryAxisSteps() - 1) && cur->isSyncEvent()){
-	if(cur->isSyncWaitEvent())
-	  cmd.options = STEPPER_COMMAND_OPTION_SYNCWAIT_EVENT;
-	else
-	  cmd.options = STEPPER_COMMAND_OPTION_SYNC_EVENT;
-      }
-      else 
-	cmd.options = 0;
-
-      //LOG( "Doing step " << stepNumber << " of "<<cur->getPrimaryAxisSteps() <<std::endl);
-
-      cmd.step = 0;
-      for(int i=0; i<NUM_AXES; i++){
-	if(cur->isAxisMove(i)){
-	  if((error[i] -= cur->getDeltas()[i]) < 0){
-	    cmd.step |= (1 << i);
-	    error[i] += cur_errupd;
-	  }
-	}
-      }
-
-      //If acceleration is enabled on this move and we are in the acceleration segment, calculate the current interval
-      if (stepNumber <= stepperPath.accelSteps){   // we are accelerating
-	//LOG( "Acceleration" << std::endl);
-	vMaxReached = ComputeV(timer_accel, fPrimaryAxisAcceleration) + stepperPath.vStart;
-	if(vMaxReached>stepperPath.vMax)
-	  vMaxReached = stepperPath.vMax;
-	unsigned long v = vMaxReached;
-	if (v > 0)
-	  interval = F_CPU/(v);
-	timer_accel+=interval;
-      }
-      else if (cur->getPrimaryAxisSteps() - stepNumber <= stepperPath.decelSteps){     // time to slow down
-	//LOG( "Decelleration "<<std::endl);
-	unsigned long v = ComputeV(timer_decel, fPrimaryAxisAcceleration);
-	if (v > vMaxReached)   // if deceleration goes too far it can become too large
-	  v = stepperPath.vEnd;
-	else{
-	  v=vMaxReached - v;
-	  if (v < stepperPath.vEnd)
-	    v = stepperPath.vEnd; // extra steps at the end of desceleration due to rounding erros
-	}
-	if (v > 0)
-	  interval = F_CPU/(v);
-	timer_decel += interval;
-      }
-      else{ // full speed reached
-	//LOG( "Cruising "<<std::endl);
-	interval = cur->getFullInterval();
-      }
-
-      //LOG("Interval: " << interval << std::endl);
-      assert(interval < F_CPU*4);
-      cmd.delay = (uint32_t)interval;
     }
-		
+
+    LOG("Direction mask: " << directionMask << std::endl);
+    LOG("Cancel    mask: " << cancellableMask << std::endl);
+
+    LOG("startSpeed:   " << cur->getStartSpeed() << std::endl);
+    LOG("fullSpeed:    " << cur->getFullSpeed() << std::endl);
+    LOG("acceleration: " << cur->getAcceleration() << std::endl);
+    LOG("accelTime:    " << stepperPath.accelTime << std::endl);
+    LOG("cruiseTime:    " << stepperPath.cruiseTime << std::endl);
+    LOG("decelTime:    " << stepperPath.decelTime << std::endl);
+
+    //Wait until we need to push some lines so that the path planner can fill up
+    pru.waitUntilLowMoveTime((F_CPU / 1000)*minBufferedMoveTime); //in seconds
+
+    LOG("Sending " << std::dec << linesPos << ", Start speed=" << cur->getStartSpeed() << ", end speed=" << cur->getEndSpeed() << std::endl);
+
+    runMove(moveMask, cancellableMask, cur->isSyncEvent(), cur->isSyncWaitEvent(), stepperPath, commands, commandsLength);
 
     //LOG("Current move time " << pru.getTotalQueuedMovesTime() / (double) F_CPU << std::endl);
-		
-    //Wait until we need to push some lines so that the path planner can fill up
-    pru.waitUntilLowMoveTime((F_CPU/1000)*minBufferedMoveTime); //in seconds
-		
-    LOG( "PathPlanner::run(): Sending " << std::dec << linesPos << ", Start speed=" << cur->getStartSpeed() << ", end speed="<<cur->getEndSpeed() << ", nb steps = " << cur->getPrimaryAxisSteps() << std::endl);
-		
-    pru.push_block((uint8_t*)commands.data(), sizeof(SteppersCommand)*cur->getPrimaryAxisSteps(), sizeof(SteppersCommand), linesPos, cur->getTimeInTicks(), *cur);
-    LOG("PathPlanner::run(): Done sending with " << std::dec << linesPos << std::endl);
+
+    LOG("fractional steps (should be very close to 0.5): " << initialStepTimes[0] << " " << initialStepTimes[1] << " " << initialStepTimes[2] << std::endl);
+
+    pru.push_block((uint8_t*)commands.data(), sizeof(SteppersCommand)*commands.size(), sizeof(SteppersCommand), linesPos, commandsLength, *cur);
+    LOG( "Done sending with " << std::dec << linesPos << std::endl);
 		
     removeCurrentLine();
     lineAvailable.notify_all();
   }
+}
+
+void PathPlanner::runMove(
+  int moveMask,
+  int cancellableMask,
+  bool sync,
+  bool wait,
+  const StepperPathParameters& params,
+  std::vector<SteppersCommand>& commands,
+  unsigned long& commandsLength) {
+
+
+  struct Step {
+    int axis;
+    int number;
+    FLOAT_T time;
+    unsigned long long roundedTime;
+
+    Step(int axis, int number, FLOAT_T time)
+      : axis(axis),
+      number(number),
+      time(time),
+      roundedTime(std::lround(time / 2000.0) * 2000)
+    {}
+
+    bool operator >(Step const& o) const {
+      return roundedTime > o.roundedTime;
+    }
+  };
+
+  std::priority_queue < Step, std::vector<Step>, std::greater<Step>> steps;
+  std::vector<StepperPath> stepperPaths(NUM_AXES);
+  std::vector<StepperPathState> stepperPathStates(NUM_AXES);
+  std::vector<unsigned long long> finalStepTimes(NUM_AXES, 0);
+  unsigned long long finalTime = 0;
+
+  for (int i = 0; i < NUM_AXES; i++) {
+    if (moveMask & (1 << i)) {
+      stepperPaths[i] = StepperPath(params, i);
+      assert(stepperPaths[i].getNumSteps() != 0);
+      stepperPathStates[i] = stepperPaths[i].calculateNextStep(stepperPathStates[i], 0, 0.5);
+      LOG("axis " << i << " " << stepperPaths[i].toString() << std::endl);
+      steps.push(Step(i, 0, stepperPathStates[i].lastStepTime * F_CPU_FLOAT));
+    }
+  }
+
+  LOG("accel time: " << params.accelTime << " cruise time: " << params.cruiseTime << " decel time: " << params.decelTime << std::endl);
+
+  while (!steps.empty()) {
+    SteppersCommand cmd = {};
+    
+    cmd.cancellableMask = cancellableMask;
+
+    //LOG("time: " << time << std::endl;)
+    const unsigned long long time = steps.top().roundedTime;
+
+    // Step what needs to be stepped
+    while (!steps.empty() && steps.top().roundedTime <= time) {
+      const Step step = steps.top();
+
+      assert(!(cmd.step & (1 << step.axis))); // we should never double-step in a single command
+
+      steps.pop();
+
+      auto direction = stepperPaths[step.axis].stepDirection(stepperPathStates[step.axis]);
+      if (direction != StepDirection::None) {
+	cmd.step |= 1 << step.axis;
+
+	if (direction == StepDirection::Forward) {
+	  cmd.direction |= 1 << step.axis;
+	}
+      }
+
+      if (step.number + 1 != stepperPaths[step.axis].getNumSteps()) {
+	stepperPathStates[step.axis] = stepperPaths[step.axis].calculateNextStep(stepperPathStates[step.axis], step.number + 0.5, 1.0);
+
+	Step nextStep(step.axis, step.number + 1, stepperPathStates[step.axis].lastStepTime * F_CPU_FLOAT);
+	if (nextStep.roundedTime <= time) {
+	  LOG("needed a double step for axis " << nextStep.axis << " at times " << step.time << " and " << nextStep.time << std::endl);
+	  LOG("time is " << time << std::endl);
+	  assert(0);
+	}
+
+	assert(nextStep.time - step.time < F_CPU_FLOAT);
+	assert(nextStep.time - step.time >= 4000);
+
+	steps.push(nextStep);
+      }
+      else {
+	stepperPathStates[step.axis] = stepperPaths[step.axis].calculateNextStep(stepperPathStates[step.axis], step.number + 0.5, 0.5);
+
+	assert(stepperPaths[step.axis].isInFinalPhase(stepperPathStates[step.axis], step.number + 1.0));
+	FLOAT_T finalAxisStepTime = stepperPathStates[step.axis].lastStepTime;
+
+	stepperPathStates[step.axis] = stepperPaths[step.axis].calculateNextStep(stepperPathStates[step.axis], step.number + 1.0, 0.50);
+
+	assert(std::isfinite(finalAxisStepTime));
+	finalStepTimes[step.axis] = std::lround(finalAxisStepTime * F_CPU_FLOAT);
+	finalTime = std::max(finalTime, finalStepTimes[step.axis]);
+	assert(finalStepTimes[step.axis] > time);
+
+	LOG("lastStepTime: " << finalAxisStepTime << " move time: " << params.accelTime + params.cruiseTime + params.decelTime
+	  << " accelTime: " << params.accelTime << " cruiseTime: " << params.cruiseTime << " decelTime " << params.decelTime
+	  << " error: " << finalAxisStepTime - (params.accelTime + params.cruiseTime + params.decelTime) << std::endl);
+
+	LOG("error after jumping to end: " << stepperPathStates[step.axis].lastStepTime - (params.accelTime + params.cruiseTime + params.decelTime) << std::endl);
+
+	assert(std::abs(finalAxisStepTime - (params.accelTime + params.cruiseTime + params.decelTime)) < 10 * CPU_CYCLE_LENGTH);
+      }
+    }
+
+    if (!steps.empty()) {
+      assert(steps.top().roundedTime > time);
+      cmd.delay = steps.top().roundedTime - time;
+    }
+    else {
+      assert(finalTime > time);
+      cmd.delay = finalTime - time;
+      cmd.delay += 2000 - cmd.delay % 2000;
+    }
+
+    assert(cmd.delay >= 2000);
+    assert(cmd.delay < F_CPU);
+
+    commands.push_back(cmd);
+  }
+
+  if (sync) {
+    if (commands.empty()) {
+      SteppersCommand cmd = {};
+      commands.push_back(cmd);
+    }
+
+    SteppersCommand& cmd = commands[commands.size() - 1];
+    if (wait) cmd.options = STEPPER_COMMAND_OPTION_SYNCWAIT_EVENT;
+    else cmd.options = STEPPER_COMMAND_OPTION_SYNC_EVENT;
+  }
+
+  {
+    unsigned long long earliestFinishTime = ULLONG_MAX;
+    unsigned long long latestFinishTime = 0;
+    for (int i = 0; i < NUM_AXES; i++) {
+
+      if (moveMask & (1 << i)) {
+	LOG("axis " << i << " finished at " << finalStepTimes[i] << std::endl);
+	if (finalStepTimes[i] != 0) {
+	  earliestFinishTime = std::min(earliestFinishTime, finalStepTimes[i]);
+	  latestFinishTime = std::max(latestFinishTime, finalStepTimes[i]);
+	}
+      }
+    }
+    LOG("finish times ranged from " << earliestFinishTime << " to " << latestFinishTime << ", which is "
+      << latestFinishTime - earliestFinishTime << " ticks or " << (latestFinishTime - earliestFinishTime) / F_CPU_FLOAT << " seconds"
+      << std::endl);
+    assert((latestFinishTime - earliestFinishTime) / F_CPU_FLOAT < 10 * CPU_CYCLE_LENGTH); // all axes should finish within 10 PRU cycles
+  }
+
+  assert(steps.empty());
+
+  commandsLength += finalTime;
 }
 
 std::vector<FLOAT_T> PathPlanner::getState()

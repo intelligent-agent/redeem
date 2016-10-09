@@ -79,7 +79,7 @@ void PruTimer::push_block(uint8_t* blockMemory, size_t blockLen, unsigned int un
   renderedPath.path = path;
 
   renderedPath.stepperCommands.reserve(blockLen / sizeof(SteppersCommand));
-  for (int i = 0; i < blockLen / sizeof(SteppersCommand); i++) {
+  for (size_t i = 0; i < blockLen / sizeof(SteppersCommand); i++) {
     renderedPath.stepperCommands.push_back(commands[i]);
   }
 

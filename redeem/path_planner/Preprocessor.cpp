@@ -24,6 +24,7 @@
  
 */
 
+#include <cmath>
 #include "PathPlanner.h"
 
 int PathPlanner::softEndStopApply(const std::vector<FLOAT_T> &startPos, const std::vector<FLOAT_T> &endPos)
@@ -71,7 +72,7 @@ void PathPlanner::applyBedCompensation(std::vector<FLOAT_T> &endPos)
 
 int PathPlanner::splitInput(const std::vector<FLOAT_T> startPos, const std::vector<FLOAT_T> vec,
 			    FLOAT_T speed, FLOAT_T accel, bool cancelable, bool optimize,
-			    bool use_backlash_compensation, int tool_axis)
+			    bool use_backlash_compensation, int tool_axis, bool virgin)
 {
 
   // check if the path needs to be split
@@ -94,21 +95,36 @@ int PathPlanner::splitInput(const std::vector<FLOAT_T> startPos, const std::vect
   mag = sqrt(xy2 + z2);
 	
   if (mag > max_path_length) {
+    if (!virgin) {
+      LOG("tried to double-split path: XY length: " << mag << " max length: " << max_path_length << std::endl);
+      //assert(virgin);
+    }
         
     // how many segments are needed
-    FLOAT_T N = ceil(mag/max_path_length);
+    long N = std::lround(std::ceil(mag / max_path_length));
         
-    // LOG("move split into " << N << " pieces\n");
+    LOG("move split into " << N << " pieces\n");
 		
     // the sub segments
     std::vector<FLOAT_T> sub_start(startPos);
     std::vector<FLOAT_T> sub_stop(NUM_AXES);
 		
-    for (int i=0; i<(int)N; ++i) {
+    for (long i=0; i < N; ++i) {
+      std::vector<FLOAT_T> sub_vec(NUM_AXES);
 			
       // calculate the end point of the segment
       for (size_t j=0; j<startPos.size(); ++j) {
 	sub_stop[j] = startPos[j] + vec[j]*(i+1)/N;
+	sub_vec[j] = sub_stop[j] - sub_start[j];
+      }
+
+      FLOAT_T mag = std::sqrt(sub_vec[0] * sub_vec[0] + sub_vec[1] * sub_vec[1] + sub_vec[2] * sub_vec[2]);
+      if (mag > max_path_length) {
+	LOG("split didn't actually get us below the max length: " << mag << std::endl);
+	assert(mag <= max_path_length);
+      }
+      else {
+	LOG("segment length: " << mag << std::endl);
       }
 			
       // queue the segment
@@ -145,14 +161,19 @@ void PathPlanner::transformVector(std::vector<FLOAT_T> &vec, const std::vector<F
     } else {
       delta_bot.inverse_kinematics(startPos[0], startPos[1], startPos[2], &start_x, &start_y, &start_z);
     }
+
+    assert(!(std::isnan(endABC[0]) || std::isnan(endABC[1]) || std::isnan(endABC[2])));
         
     startABC[0] = start_x;
     startABC[1] = start_y;
     startABC[2] = start_z;
+
+    assert(!(std::isnan(startABC[0]) || std::isnan(startABC[1]) || std::isnan(startABC[2])));
 		
     FLOAT_T end_x, end_y, end_z;
     delta_bot.inverse_kinematics(startPos[0] + vec[0], startPos[1] + vec[1], startPos[2] + vec[2], &end_x, &end_y, &end_z);
         
+    assert(!(std::isnan(end_x) || std::isnan(end_y) || std::isnan(end_z)));
     vec[0] = end_x - start_x;
     vec[1] = end_y - start_y;
     vec[2] = end_z - start_z;

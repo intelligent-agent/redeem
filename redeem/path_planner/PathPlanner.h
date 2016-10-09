@@ -118,6 +118,14 @@ class PathPlanner {
   PruTimer pru;
   void recomputeParameters();
   void run();
+  void runMove(
+    int moveMask,
+    int cancellableMask,
+    bool sync,
+    bool wait,
+    const StepperPathParameters& params,
+    std::vector<SteppersCommand>& commands,
+    unsigned long& commandsLength);
 	
   // pre-processor functions
   int softEndStopApply(const std::vector<FLOAT_T> &startPos, const std::vector<FLOAT_T> &endPos);
@@ -125,7 +133,7 @@ class PathPlanner {
   int splitInput(const std::vector<FLOAT_T> startPos, const std::vector<FLOAT_T> vec, 
 		 FLOAT_T speed, FLOAT_T accel, bool cancelable, 
 		 bool optimize, bool use_backlash_compensation, 
-		 int tool_axis);
+		 int tool_axis, bool virgin);
   void transformVector(std::vector<FLOAT_T> &vec, const std::vector<FLOAT_T> &startPos);
   void reverseTransformVector(std::vector<FLOAT_T> &vec);
   void backlashCompensation(std::vector<FLOAT_T> &delta);
