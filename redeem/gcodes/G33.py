@@ -94,7 +94,7 @@ Parameters:
 
 Fn  Number of factors to optimize:
     3 factors (endstop corrections only)
-    4 factors (endstop corrections and delta radius) Default
+    4 factors (endstop corrections and delta radius) (Default)
     6 factors (endstop corrections, delta radius, and two tower
                 angular position corrections)
     7 factors (endstop corrections, delta radius, two tower angular

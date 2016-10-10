@@ -233,7 +233,7 @@ class Heater(object):
             a = Alarm(Alarm.HEATER_TOO_HOT, 
                 "Temperature beyond max ({} degrees) for {}".format(self.max_temp, self.name))                
         # Check the time diff, only warn if something is off.     
-        if self.time_diff > 2:
+        if self.time_diff > 4:
             logging.warning("Heater time update large: " +
                             self.name + " temp: " +
                             str(self.current_temp) + " time delta: " +
