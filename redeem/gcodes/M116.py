@@ -19,6 +19,7 @@ import logging
 
 class M116(GCodeCommand):
     def execute(self, g):
+        self.printer.running_M116 = True
         all_ok = [False, False, False]
         while True:
             all_ok[0] |= self.printer.heaters['E'].is_target_temperature_reached()
@@ -30,6 +31,7 @@ class M116(GCodeCommand):
                 logging.info("Heating done.")
                 self.printer.send_message(g.prot, "Heating done.")
                 self.printer.reply(m105)
+                self.printer.running_M116 = False
                 return
             else:
                 answer = m105.get_answer()

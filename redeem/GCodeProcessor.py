@@ -117,13 +117,13 @@ class GCodeProcessor:
         
         try:
 
-            if self.gcodes[val].is_sync():
-                self.gcodes[val].readyEvent = Event()
+            #if self.gcodes[val].is_sync():
+            #    self.gcodes[val].readyEvent = Event()
 
             self.gcodes[val].execute(gcode)
 
-            if self.gcodes[val].is_sync():
-                self.gcodes[val].readyEvent.wait()  # Block until the event has occurred.
+            #if self.gcodes[val].is_sync():
+            #    self.gcodes[val].readyEvent.wait()  # Block until the event has occurred.
 
         except Exception, e:
             logging.error("Error while executing "+gcode.code()+": "+str(e))
@@ -131,6 +131,9 @@ class GCodeProcessor:
         return gcode
 
     def enqueue(self, gcode):
+        # If an M116 is running, peek at the incoming Gcode
+        if self.peek(gcode):
+            return
         if self.printer.processor.is_buffered(gcode):     
             self.printer.commands.put(gcode)              
             if self.printer.processor.is_sync(gcode):     
@@ -138,6 +141,12 @@ class GCodeProcessor:
         else:                                         
             self.printer.unbuffered_commands.put(gcode)  
         
+
+    def peek(self, gcode):
+        if self.printer.running_M116 and gcode.code() in ["M108", "M104", "140"]:
+            self.execute(gcode)
+            return True
+        return False
 
     def get_long_description(self, gcode):
         val = gcode.code()[:-1]        

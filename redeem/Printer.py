@@ -58,6 +58,7 @@ class Printer:
         self.feed_rate          = 0.5
         self.accel              = 0.5
         self.current_tool       = "E"
+        self.running_M116       = False
         # For movement commands, whether the E axis refers to the active
         # tool (more common with other firmwares), or only the actual E axis
         self.e_axis_active = True
