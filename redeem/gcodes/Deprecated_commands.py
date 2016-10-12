@@ -23,11 +23,6 @@ class M101(GCodeCommand):
 class M103(M101):
     pass
 
-
-class M108(M101):
-
-    def get_long_description(self):
-        return "Deprecated; Use M104 and M140 instead"
     
 class M21(M101):
     def get_long_description(self):

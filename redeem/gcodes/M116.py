@@ -27,7 +27,7 @@ class M116(GCodeCommand):
             all_ok[2] |= self.printer.heaters['HBP'].is_target_temperature_reached()
             m105 = Gcode({"message": "M105", "prot": g.prot})
             self.printer.processor.execute(m105)
-            if not False in all_ok:
+            if (not False in all_ok) or (self.printer.running_M116 == False):
                 logging.info("Heating done.")
                 self.printer.send_message(g.prot, "Heating done.")
                 self.printer.reply(m105)
