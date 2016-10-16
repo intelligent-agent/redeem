@@ -150,7 +150,7 @@ class Servo:
                 pass
 
             self.current_pulse_width = ev[0]
-            logging.debug("setting pulse width to "+str(self.current_pulse_width))
+            #logging.debug("setting pulse width to "+str(self.current_pulse_width))
             self.pwm.set_value(self.current_pulse_width/self.pulse_length)
             self.lastCommandTime = time.time()
             time.sleep(ev[1])

@@ -73,7 +73,7 @@ class PWM_pin:
         """ Set the amount of on-time from 0..1 """
         duty_cycle = int(self.period*float(value))
         path = self.base+"/duty_cycle"
-        logging.debug("Setting duty_cycle to "+str(duty_cycle))
+        #logging.debug("Setting duty_cycle to "+str(duty_cycle))
         with open(path, "w") as f:
             f.write(str(duty_cycle))
 
