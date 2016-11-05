@@ -28,7 +28,7 @@ class G0(GCodeCommand):
         if  g.has_letter("Q"):  # Get the Accel
             # Convert from mm/min^2 to SI unit m/s^2
             self.printer.accel = float(g.get_value_by_letter("Q"))
-            self.printer.feed_rate /= 3600000.0
+            self.printer.accel /= 3600000.0
             g.remove_token_by_letter("Q")
         smds = {}
         for i in range(g.num_tokens()):
