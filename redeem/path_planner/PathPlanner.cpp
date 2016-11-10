@@ -252,10 +252,8 @@ void PathPlanner::queueMove(std::vector<FLOAT_T> startPos, std::vector<FLOAT_T> 
   PyThreadState *_save; 
   _save = PyEval_SaveThread();
 
-  unsigned int linesQueued = 0;
-  unsigned int linesCacheRemaining = 0;
-  long long linesTicksRemaining = 0;
-  long long linesTicksQueued = 0;
+  unsigned int linesCacheRemaining = moveCacheSize - linesCount;
+  long long linesTicksRemaining = maxBufferedMoveTime - linesTicksCount;
 
   // wait for the worker
   if(linesCacheRemaining == 0 || linesTicksRemaining == 0){
@@ -305,9 +303,7 @@ void PathPlanner::queueMove(std::vector<FLOAT_T> startPos, std::vector<FLOAT_T> 
   p->calculate(axis_diff, minSpeeds, maxSpeeds, maxAccelerationStepsPerSquareSecond, machineSpeed, accel);
   updateTrapezoids();
   linesWritePos++;
-  linesQueued++;
   linesCacheRemaining--;
-  linesTicksQueued += p->getTimeInTicks();
   linesTicksRemaining -= p->getTimeInTicks();
 
   QUEUELOG("Move queued for the worker" << std::endl);
@@ -319,11 +315,9 @@ void PathPlanner::queueMove(std::vector<FLOAT_T> startPos, std::vector<FLOAT_T> 
   if((linesCacheRemaining == 0) || linesTicksRemaining <= 0){
     {
       std::lock_guard<std::mutex> lk(line_mutex);
-      linesCount += linesQueued;
-      linesTicksCount += linesTicksQueued;
+      linesCount++;
+      linesTicksCount += p->getTimeInTicks();
     }
-    linesQueued = 0;
-    linesTicksQueued = 0;
     lineAvailable.notify_all();
     QUEUELOG("Poked the worker" << std::endl);
   }

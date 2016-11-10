@@ -99,6 +99,8 @@ class PathPlanner {
 
   inline void removeCurrentLine(){
     linesTicksCount -= lines[linesPos].getTimeInTicks();
+    lines[linesPos].zero();
+    assert(linesTicksCount >= 0);
     linesPos++;
     if(linesPos>=moveCacheSize) 
       linesPos=0;

@@ -187,7 +187,6 @@ private:
 
   StepperPathParameters stepperPath;
 
-  void zero();
   FLOAT_T calculateSafeSpeed(const std::vector<FLOAT_T>& minSpeeds);
   int findPrimaryAxis(const std::vector<int>& moves);
   FLOAT_T calculateStepsForMixedPath(FLOAT_T startSpeed, FLOAT_T endSpeed, FLOAT_T time);
@@ -208,6 +207,8 @@ public:
 		 const std::vector<FLOAT_T>& maxAccelStepsPerSquareSecond,
 		 FLOAT_T requestedTime,
                  FLOAT_T requestedAccel);
+
+  void zero();
 
   inline void clearJoinFlags() {
     joinFlags = 0;
