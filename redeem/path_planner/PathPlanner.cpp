@@ -260,7 +260,7 @@ void PathPlanner::queueMove(std::vector<FLOAT_T> startPos, std::vector<FLOAT_T> 
   // wait for the worker
   if(linesCacheRemaining == 0 || linesTicksRemaining == 0){
     std::unique_lock<std::mutex> lk(line_mutex);
-    //LOG( "Waiting for free move command space... Current: " << moveCacheSize - linesCount << std::endl);
+    QUEUELOG( "Waiting for free move command space... Current: " << moveCacheSize - linesCount << " lines that take " << linesTicksCount << " ticks"  << std::endl);
     lineAvailable.wait(lk, [this]{return stop || (linesCount < moveCacheSize && !isLinesBufferFilled());});
     linesCacheRemaining = moveCacheSize - linesCount;
     linesTicksRemaining = maxBufferedMoveTime - linesTicksCount;
@@ -310,7 +310,7 @@ void PathPlanner::queueMove(std::vector<FLOAT_T> startPos, std::vector<FLOAT_T> 
   linesTicksQueued += p->getTimeInTicks();
   linesTicksRemaining -= p->getTimeInTicks();
 
-  LOG("Move queued for the worker" << std::endl);
+  QUEUELOG("Move queued for the worker" << std::endl);
 
   if(linesWritePos>=moveCacheSize)
     linesWritePos = 0;
@@ -325,7 +325,7 @@ void PathPlanner::queueMove(std::vector<FLOAT_T> startPos, std::vector<FLOAT_T> 
     linesQueued = 0;
     linesTicksQueued = 0;
     lineAvailable.notify_all();
-    LOG("Poked the worker" << std::endl);
+    QUEUELOG("Poked the worker" << std::endl);
   }
 
   PyEval_RestoreThread(_save);
@@ -568,21 +568,21 @@ void PathPlanner::run() {
     // and we do that until the buffer is not anymore half empty.
     if(!isLinesBufferFilled() && cur->getTimeInTicks() > 0 && waitUntilFilledUp) {
       unsigned lastCount = 0;
-      LOG("Waiting for buffer to fill up. " << linesCount  << " lines pending, lastCount is " << lastCount << std::endl);
+      QUEUELOG("Waiting for buffer to fill up. " << linesCount  << " lines pending, lastCount is " << lastCount << std::endl);
       do {
 	lastCount = linesCount;				
 	lineAvailable.wait_for(lk,  std::chrono::milliseconds(printMoveBufferWait), [this,lastCount]{
 	    return linesCount>lastCount || stop;
 	  });				
       } while(lastCount<linesCount && linesCount<moveCacheSize && !stop);
-      LOG("Done waiting for buffer to fill up... " << linesCount  << " lines ready. " << lastCount << std::endl);			
+      QUEUELOG("Done waiting for buffer to fill up... " << linesCount  << " lines ready. " << lastCount << std::endl);			
       waitUntilFilledUp = false;
     }
 		
     //The buffer is empty, we enable again the "wait until buffer is enough full" timing procedure.
     if(linesCount<=1) {
       waitUntilFilledUp = true;
-      LOG("### Move Command Buffer Empty ###" << std::endl);
+      QUEUELOG("### Move Command Buffer Empty ###" << std::endl);
     }
 
     lk.unlock();
@@ -593,7 +593,7 @@ void PathPlanner::run() {
 
     if(cur->isBlocked()){   // This step is in computation - shouldn't happen
       cur = NULL;
-      LOG( "Path planner thread: path " <<  std::dec << linesPos<< " is blocked, waiting... " << std::endl);
+      QUEUELOG( "Path planner thread: path " <<  std::dec << linesPos<< " is blocked, waiting... " << std::endl);
       std::this_thread::sleep_for( std::chrono::milliseconds(100) );
       continue;
     }
