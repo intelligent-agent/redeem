@@ -600,7 +600,6 @@ void PathPlanner::run() {
     }
 
     StepperPathParameters stepperPath = cur->getStepperPathParameters();
-    std::vector<unsigned long long> initialStepTimes(NUM_AXES, 0);
 
     int moveMask = 0;
     int directionMask = 0;
@@ -637,8 +636,6 @@ void PathPlanner::run() {
 
     //LOG("Current move time " << pru.getTotalQueuedMovesTime() / (double) F_CPU << std::endl);
 
-    LOG("fractional steps (should be very close to 0.5): " << initialStepTimes[0] << " " << initialStepTimes[1] << " " << initialStepTimes[2] << std::endl);
-
     pru.push_block((uint8_t*)commands.data(), sizeof(SteppersCommand)*commands.size(), sizeof(SteppersCommand), linesPos, commandsLength, *cur);
     LOG( "Done sending with " << std::dec << linesPos << std::endl);
 		
@@ -667,7 +664,7 @@ void PathPlanner::runMove(
       : axis(axis),
       number(number),
       time(time),
-      roundedTime(std::lround(time / 2000.0) * 2000)
+      roundedTime(std::llround(time / 2000.0) * 2000)
     {}
 
     bool operator >(Step const& o) const {
@@ -723,7 +720,9 @@ void PathPlanner::runMove(
 
 	Step nextStep(step.axis, step.number + 1, stepperPathStates[step.axis].lastStepTime * F_CPU_FLOAT);
 	if (nextStep.roundedTime <= time) {
-	  LOG("needed a double step for axis " << nextStep.axis << " at times " << step.time << " and " << nextStep.time << std::endl);
+	  LOG("needed a double step for axis " << nextStep.axis << " at times "
+	    << (unsigned long long)step.time << " and " << (unsigned long long)nextStep.time
+	    << " and step number " << nextStep.number << std::endl);
 	  LOG("time is " << time << std::endl);
 	  assert(0);
 	}
@@ -742,7 +741,7 @@ void PathPlanner::runMove(
 	stepperPathStates[step.axis] = stepperPaths[step.axis].calculateNextStep(stepperPathStates[step.axis], step.number + 1.0, 0.50);
 
 	assert(std::isfinite(finalAxisStepTime));
-	finalStepTimes[step.axis] = std::lround(finalAxisStepTime * F_CPU_FLOAT);
+	finalStepTimes[step.axis] = std::llround(finalAxisStepTime * F_CPU_FLOAT);
 	finalTime = std::max(finalTime, finalStepTimes[step.axis]);
 	assert(finalStepTimes[step.axis] > time);
 
