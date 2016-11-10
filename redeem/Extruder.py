@@ -84,6 +84,8 @@ class Heater(object):
         """ Returns true if the target temperature is reached """
         if self.target_temp == 0:
             return True
+        if self.current_temp == 0:
+            self.target_temp = 0
         err = abs(self.current_temp - self.target_temp)
         reached = err < self.ok_range
         return reached

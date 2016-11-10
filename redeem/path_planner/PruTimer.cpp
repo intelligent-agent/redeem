@@ -308,7 +308,7 @@ void PruTimer::push_block(uint8_t* blockMemory, size_t blockLen, unsigned int un
         return;
 	
 	//Split the block in smaller blocks if needed
-	size_t nbBlocks = ceil((blockLen+12)/(FLOAT_T)(ddr_size-12));
+	size_t nbBlocks = ceil((blockLen+12)/((ddr_size/4.0)-12.0));
 
 	LOG("nbBlocks: "<<nbBlocks<<std::endl);
 

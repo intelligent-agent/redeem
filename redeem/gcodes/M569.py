@@ -32,6 +32,7 @@ class M569(GCodeCommand):
 
             # Update the config.
             self.printer.config.set('Steppers', 'direction_'+axis, str(value))
+            self.printer.steppers[axis].direction = int(value)
 
 
         # Save the config file. 

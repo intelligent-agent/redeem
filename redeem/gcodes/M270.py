@@ -23,6 +23,9 @@ class M270(GCodeCommand):
             if axis_config in [0, 1, 2, 3]:
                 self.printer.axis_config = axis_config
                 logging.info("Coordinate system set to " + str(self.printer.axis_config))
+        else:
+            g.set_answer("ok "+"Current axis config is: {}".format(self.printer.axis_config))
+
 
     def get_long_description(self):
         return ("Set coordinate system. Parameter S set the type, which is "
