@@ -112,7 +112,29 @@ class PathPlanner {
   }
 	
   std::mutex line_mutex;
-  std::condition_variable lineAvailable;
+  std::condition_variable pathQueueHasSpace;
+
+  inline bool doesPathQueueHaveSpace() {
+    return stop || (linesCount < moveCacheSize && !isLinesBufferFilled());
+  }
+
+  inline void notifyIfPathQueueHasSpace() {
+    if (doesPathQueueHaveSpace()) {
+      pathQueueHasSpace.notify_all();
+    }
+  }
+
+  std::condition_variable pathQueueReadyToPrint;
+
+  inline bool isPathQueueReadyToPrint() {
+    return stop || linesCount > 0;
+  }
+
+  inline void notifyIfPathQueueIsReadyToPrint() {
+    if (isPathQueueReadyToPrint()) {
+      pathQueueReadyToPrint.notify_all();
+    }
+  }
 	
   std::thread runningThread;
   bool stop;

@@ -89,9 +89,6 @@ void PruTimer::push_block(uint8_t* blockMemory, size_t blockLen, unsigned int un
 void PruTimer::waitUntilFinished() {
 }
 
-void PruTimer::waitUntilLowMoveTime(unsigned long lowMoveTimeTicks) {
-}
-
 void PruTimer::run() {
 }
 

@@ -256,10 +256,10 @@ void PathPlanner::queueMove(std::vector<FLOAT_T> startPos, std::vector<FLOAT_T> 
   long long linesTicksRemaining = maxBufferedMoveTime - linesTicksCount;
 
   // wait for the worker
-  if(linesCacheRemaining == 0 || linesTicksRemaining == 0){
+  if(!doesPathQueueHaveSpace()){
     std::unique_lock<std::mutex> lk(line_mutex);
     QUEUELOG( "Waiting for free move command space... Current: " << moveCacheSize - linesCount << " lines that take " << linesTicksCount << " ticks"  << std::endl);
-    lineAvailable.wait(lk, [this]{return stop || (linesCount < moveCacheSize && !isLinesBufferFilled());});
+    pathQueueHasSpace.wait(lk, [this] { return this->doesPathQueueHaveSpace(); });
     linesCacheRemaining = moveCacheSize - linesCount;
     linesTicksRemaining = maxBufferedMoveTime - linesTicksCount;
   }	
@@ -318,7 +318,7 @@ void PathPlanner::queueMove(std::vector<FLOAT_T> startPos, std::vector<FLOAT_T> 
       linesCount++;
       linesTicksCount += p->getTimeInTicks();
     }
-    lineAvailable.notify_all();
+    notifyIfPathQueueIsReadyToPrint();
     QUEUELOG("Poked the worker" << std::endl);
   }
 
@@ -351,7 +351,7 @@ void PathPlanner::updateTrapezoids(){
   }
   if(first != linesWritePos && lines[first].isEndSpeedFixed()){
     //LOG("caling nextPlannerIndex"<<std::endl);
-    nextPlannerIndex(first);
+    first = nextPlannerIndex(first);
   }
   if(first == linesWritePos){   // Nothing to plan
     //LOG("Nothing to plan"<<std::endl);
@@ -387,7 +387,7 @@ void PathPlanner::updateTrapezoids(){
   // Update precomputed data
   do{
     lines[first].unblock();  // Flying block to release next used segment as early as possible
-    nextPlannerIndex(first);
+    first = nextPlannerIndex(first);
     lines[first].block();
   }
   while(first!=linesWritePos);
@@ -426,7 +426,7 @@ void PathPlanner::backwardPlanner(unsigned int start, unsigned int last){
 	
   // Last element is already fixed in start speed
   while(start != last){
-    previousPlannerIndex(start);
+    start = previousPlannerIndex(start);
     previous = &lines[start];
 		
     // Avoid speed calcs if we know we can accelerate within the line
@@ -465,7 +465,7 @@ void PathPlanner::forwardPlanner(unsigned int first){
   FLOAT_T leftSpeed = next->getStartSpeed();
   while(first != linesWritePos){   // All except last segment, which has fixed end speed
     act = next;
-    nextPlannerIndex(first);
+    first = nextPlannerIndex(first);
     next = &lines[first];
 		
     // Avoid speed calcs if we know we can accelerate within the line.
@@ -515,8 +515,9 @@ void PathPlanner::runThread() {
 void PathPlanner::stopThread(bool join) {
   Py_BEGIN_ALLOW_THREADS
     pru.stopThread(join);	
-  stop=true;
-  lineAvailable.notify_all();
+  stop = true;
+  notifyIfPathQueueIsReadyToPrint();
+
   if(join && runningThread.joinable()) {
     runningThread.join();
   }
@@ -532,9 +533,7 @@ PathPlanner::~PathPlanner() {
 void PathPlanner::waitUntilFinished() {
   Py_BEGIN_ALLOW_THREADS    
     std::unique_lock<std::mutex> lk(line_mutex);
-  lineAvailable.wait(lk, [this]{
-      return linesCount==0 || stop;
-    });
+  pathQueueHasSpace.wait(lk, [this] { return linesCount==0 || stop; });
 	
   //Wait for PruTimer then
   if(!stop) {
@@ -552,19 +551,21 @@ void PathPlanner::run() {
   LOG("PathPlanner loop starting" << std::endl);
 	
   while(!stop) {		
-    std::unique_lock<std::mutex> lk(line_mutex);		
-    lineAvailable.wait(lk, [this]{return linesCount>0 || stop;});		
+    std::unique_lock<std::mutex> lk(line_mutex);
+    if (!isPathQueueReadyToPrint()) {
+      pathQueueReadyToPrint.wait(lk, [this] { return this->isPathQueueReadyToPrint(); });
+    }
     Path* cur = &lines[linesPos];
 
     // If the buffer is half or more empty and the line to print is an optimized one, 
     // wait for 500 ms again so that we can get some other path in the path planner buffer, 
     // and we do that until the buffer is not anymore half empty.
-    if(!isLinesBufferFilled() && cur->getTimeInTicks() > 0 && waitUntilFilledUp) {
+    if(waitUntilFilledUp && !isLinesBufferFilled() && cur->getTimeInTicks() > 0) {
       unsigned lastCount = 0;
       QUEUELOG("Waiting for buffer to fill up. " << linesCount  << " lines pending, lastCount is " << lastCount << std::endl);
       do {
 	lastCount = linesCount;				
-	lineAvailable.wait_for(lk,  std::chrono::milliseconds(printMoveBufferWait), [this,lastCount]{
+	pathQueueReadyToPrint.wait_for(lk,  std::chrono::milliseconds(printMoveBufferWait), [this,lastCount]{
 	    return linesCount>lastCount || stop;
 	  });				
       } while(lastCount<linesCount && linesCount<moveCacheSize && !stop);
@@ -626,9 +627,6 @@ void PathPlanner::run() {
     LOG("cruiseTime:    " << stepperPath.cruiseTime << std::endl);
     LOG("decelTime:    " << stepperPath.decelTime << std::endl);
 
-    //Wait until we need to push some lines so that the path planner can fill up
-    pru.waitUntilLowMoveTime((F_CPU / 1000)*minBufferedMoveTime); //in seconds
-
     LOG("Sending " << std::dec << linesPos << ", Start speed=" << cur->getStartSpeed() << ", end speed=" << cur->getEndSpeed() << std::endl);
 
     runMove(moveMask, cancellableMask, cur->isSyncEvent(), cur->isSyncWaitEvent(), stepperPath, commands, commandsLength);
@@ -639,7 +637,7 @@ void PathPlanner::run() {
     LOG( "Done sending with " << std::dec << linesPos << std::endl);
 		
     removeCurrentLine();
-    lineAvailable.notify_all();
+    notifyIfPathQueueHasSpace();
   }
 }
 
