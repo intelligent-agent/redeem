@@ -89,12 +89,12 @@ class PathPlanner {
 
   std::vector<Path> lines;
 
-  inline void previousPlannerIndex(unsigned int &p){
-    p = (p ? p-1 : moveCacheSize-1);
+  inline unsigned int previousPlannerIndex(unsigned int p){
+    return (p + moveCacheSize - 1) % moveCacheSize;
   }
 
-  inline void nextPlannerIndex(unsigned int& p){
-    p = (p == moveCacheSize - 1 ? 0 : p + 1);
+  inline unsigned int nextPlannerIndex(unsigned int p){
+    return (p + 1) % moveCacheSize;
   }
 
   inline void removeCurrentLine(){

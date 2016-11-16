@@ -347,7 +347,7 @@ void PathPlanner::updateTrapezoids(){
   // Search last fixed element
   while(first != maxfirst && !lines[first].isEndSpeedFixed()){
     //LOG("caling previousPlannerIndex"<<std::endl);
-    previousPlannerIndex(first);
+    first = previousPlannerIndex(first);
   }
   if(first != linesWritePos && lines[first].isEndSpeedFixed()){
     //LOG("caling nextPlannerIndex"<<std::endl);
@@ -366,8 +366,7 @@ void PathPlanner::updateTrapezoids(){
   // anyhow, the start speed of first is fixed
   firstLine = &lines[first];
   firstLine->block(); // don't let printer touch this or following segments during update
-  unsigned int previousIndex = linesWritePos;
-  previousPlannerIndex(previousIndex);
+  unsigned int previousIndex = previousPlannerIndex(linesWritePos);
   Path *previous = &lines[previousIndex];
 
   //LOG("UpdateTRapezoids:: computeMAxJunctionSpeed"<<std::endl);
