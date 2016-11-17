@@ -307,6 +307,10 @@ public:
     return ((dir & (255 << 8)) == (unsigned int)(256 << axis));
   }
 
+  inline unsigned char getAxisMoveMask() {
+    return (dir >> 8) & 255;
+  }
+
   inline unsigned long getTimeInTicks() {
     return timeInTicks;
   }

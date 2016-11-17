@@ -373,7 +373,7 @@ void PathPlanner::updateTrapezoids(){
 
 
   computeMaxJunctionSpeed(previous,act); // Set maximum junction speed if we have a real move before
-  if(previous->isAxisOnlyMove(E_AXIS) != act->isAxisOnlyMove(E_AXIS)){
+  if((previous->getAxisMoveMask() & act->getAxisMoveMask()) == 0){ // if no axes move in both moves, there's nothing to optimize
     previous->setEndSpeedFixed(true);
     act->setStartSpeedFixed(true);
     act->updateStepperPathParameters();
