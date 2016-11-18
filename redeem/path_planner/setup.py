@@ -27,14 +27,15 @@ pathplanner = Extension('_PathPlannerNative',
     extra_compile_args = [
         '-std=c++0x',
         '-g',
-        '-Ofast',
+        '-O2',
         '-fpermissive',
         '-D_GLIBCXX_USE_NANOSLEEP',
         '-DBUILD_PYTHON_EXT=1', 
         '-Wno-write-strings', 
         '-Wno-maybe-uninitialized', 
-    	'-Wno-format', 
-	'-DDEBUG=1'])
+        '-Wno-format',
+        '-DDEBUG=1',
+        '-UNDEBUG'])
 
 setup(name='PathPlannerNative',
       version='1.0',
