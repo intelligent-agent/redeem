@@ -107,6 +107,10 @@ public:
 		return totalQueuedMovesTime;
 	}
 
+	unsigned int getMaxBytesPerBlock() {
+		return (ddr_size / 4) - 12;
+	}
+
 	int waitUntilSync();
 	
 	void suspend();
@@ -115,7 +119,7 @@ public:
 	
 	void reset();
 	
-	void push_block(uint8_t* blockMemory, size_t blockLen, unsigned int unit, unsigned int pathID, unsigned long totalTime, const Path& path);
+	void push_block(uint8_t* blockMemory, size_t blockLen, unsigned int unit, unsigned long totalTime);
 };
 
 #endif /* defined(__PathPlanner__PruTimer__) */

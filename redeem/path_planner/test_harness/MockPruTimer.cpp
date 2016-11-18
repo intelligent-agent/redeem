@@ -68,15 +68,13 @@ unit - stepSize in bytes.
 pathID - linespos. 
 totalTime - time it takes to complete the current block, in ticks. 
 */
-void PruTimer::push_block(uint8_t* blockMemory, size_t blockLen, unsigned int unit, unsigned int pathID, unsigned long totalTime, const Path& path) {
+void PruTimer::push_block(uint8_t* blockMemory, size_t blockLen, unsigned int unit, unsigned long totalTime) {
   // reverse the block back into an array of StepperCmds
 
   SteppersCommand* commands = (SteppersCommand*)blockMemory;
   assert(blockLen % sizeof(SteppersCommand) == 0);
 
   RenderedPath renderedPath;
-
-  renderedPath.path = path;
 
   renderedPath.stepperCommands.reserve(blockLen / sizeof(SteppersCommand));
   for (size_t i = 0; i < blockLen / sizeof(SteppersCommand); i++) {

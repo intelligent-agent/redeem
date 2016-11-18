@@ -549,6 +549,9 @@ void PathPlanner::reset() {
 void PathPlanner::run() {
   bool waitUntilFilledUp = true;
   LOG("PathPlanner loop starting" << std::endl);
+
+  const unsigned int maxCommandsPerBlock = pru.getMaxBytesPerBlock() / sizeof(SteppersCommand);
+  std::unique_ptr<SteppersCommand[]> commandBlock(new SteppersCommand[maxCommandsPerBlock]);
 	
   while(!stop) {		
     std::unique_lock<std::mutex> lk(line_mutex);
@@ -604,8 +607,6 @@ void PathPlanner::run() {
     int moveMask = 0;
     int directionMask = 0;
     int cancellableMask = 0;
-    std::vector<SteppersCommand> commands;
-    unsigned long commandsLength = 0;
     for(int i=0; i<NUM_AXES; i++){
       LOG("Direction for axis " << i << " is " << cur->isAxisPositiveMove(i) << std::endl);
       moveMask |= (cur->isAxisMove(i) << i);
@@ -629,11 +630,10 @@ void PathPlanner::run() {
 
     LOG("Sending " << std::dec << linesPos << ", Start speed=" << cur->getStartSpeed() << ", end speed=" << cur->getEndSpeed() << std::endl);
 
-    runMove(moveMask, cancellableMask, cur->isSyncEvent(), cur->isSyncWaitEvent(), stepperPath, commands, commandsLength);
+    runMove(moveMask, cancellableMask, cur->isSyncEvent(), cur->isSyncWaitEvent(), stepperPath, commandBlock, maxCommandsPerBlock);
 
     //LOG("Current move time " << pru.getTotalQueuedMovesTime() / (double) F_CPU << std::endl);
 
-    pru.push_block((uint8_t*)commands.data(), sizeof(SteppersCommand)*commands.size(), sizeof(SteppersCommand), linesPos, commandsLength, *cur);
     LOG( "Done sending with " << std::dec << linesPos << std::endl);
 		
     removeCurrentLine();
@@ -642,13 +642,13 @@ void PathPlanner::run() {
 }
 
 void PathPlanner::runMove(
-  int moveMask,
-  int cancellableMask,
-  bool sync,
-  bool wait,
+  const int moveMask,
+  const int cancellableMask,
+  const bool sync,
+  const bool wait,
   const StepperPathParameters& params,
-  std::vector<SteppersCommand>& commands,
-  unsigned long& commandsLength) {
+  std::unique_ptr<SteppersCommand[]> const &commands,
+  const size_t commandsLength) {
 
 
   struct Step {
@@ -674,6 +674,7 @@ void PathPlanner::runMove(
   std::vector<StepperPathState> stepperPathStates(NUM_AXES);
   std::vector<unsigned long long> finalStepTimes(NUM_AXES, 0);
   unsigned long long finalTime = 0;
+  size_t commandsIndex = 0;
 
   for (int i = 0; i < NUM_AXES; i++) {
     if (moveMask & (1 << i)) {
@@ -685,10 +686,14 @@ void PathPlanner::runMove(
     }
   }
 
+  for (size_t i = 0; i < commandsLength; i++) {
+    commands[i] = {};
+  }
+
   LOG("accel time: " << params.accelTime << " cruise time: " << params.cruiseTime << " decel time: " << params.decelTime << std::endl);
 
   while (!steps.empty()) {
-    SteppersCommand cmd = {};
+    SteppersCommand& cmd = commands[commandsIndex];
     
     cmd.cancellableMask = cancellableMask;
 
@@ -765,18 +770,34 @@ void PathPlanner::runMove(
     assert(cmd.delay >= 2000);
     assert(cmd.delay < F_CPU);
 
-    commands.push_back(cmd);
+    commandsIndex++;
+
+    if (commandsIndex == commandsLength) {
+      pru.push_block((uint8_t*)&commands[0], sizeof(SteppersCommand)*commandsIndex, sizeof(SteppersCommand), commandsIndex);
+      commandsIndex = 0;
+
+      for (size_t i = 0; i < commandsLength; i++) {
+	commands[i] = {};
+      }
+    }
   }
 
   if (sync) {
-    if (commands.empty()) {
-      SteppersCommand cmd = {};
-      commands.push_back(cmd);
+    if (commandsIndex == 0) {
+      commandsIndex = 1;
+      assert(commandsIndex < commandsLength);
+      assert(commands[commandsIndex].step == 0 && commands[commandsIndex].delay == 0);
     }
 
-    SteppersCommand& cmd = commands[commands.size() - 1];
+    assert(commandsIndex > 0 && commandsIndex <= commandsLength);
+
+    SteppersCommand& cmd = commands[commandsIndex - 1];
     if (wait) cmd.options = STEPPER_COMMAND_OPTION_SYNCWAIT_EVENT;
     else cmd.options = STEPPER_COMMAND_OPTION_SYNC_EVENT;
+  }
+
+  if (commandsIndex != 0) {
+    pru.push_block((uint8_t*)&commands[0], sizeof(SteppersCommand)*commandsIndex, sizeof(SteppersCommand), commandsIndex);
   }
 
   {
@@ -799,8 +820,6 @@ void PathPlanner::runMove(
   }
 
   assert(steps.empty());
-
-  commandsLength += finalTime;
 }
 
 std::vector<FLOAT_T> PathPlanner::getState()

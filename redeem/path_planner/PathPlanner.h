@@ -143,13 +143,13 @@ class PathPlanner {
   void recomputeParameters();
   void run();
   void runMove(
-    int moveMask,
-    int cancellableMask,
-    bool sync,
-    bool wait,
+    const int moveMask,
+    const int cancellableMask,
+    const bool sync,
+    const bool wait,
     const StepperPathParameters& params,
-    std::vector<SteppersCommand>& commands,
-    unsigned long& commandsLength);
+    std::unique_ptr<SteppersCommand[]> const &commands,
+    const size_t commandsLength);
 	
   // pre-processor functions
   int softEndStopApply(const std::vector<FLOAT_T> &startPos, const std::vector<FLOAT_T> &endPos);
