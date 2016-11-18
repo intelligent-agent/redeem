@@ -319,7 +319,6 @@ void PathPlanner::queueMove(std::vector<FLOAT_T> startPos, std::vector<FLOAT_T> 
       linesTicksCount += p->getTimeInTicks();
     }
     notifyIfPathQueueIsReadyToPrint();
-    QUEUELOG("Poked the worker" << std::endl);
   }
 
   PyEval_RestoreThread(_save);

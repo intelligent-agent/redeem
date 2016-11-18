@@ -349,6 +349,10 @@ void PruTimer::push_block(uint8_t* blockMemory, size_t blockLen, unsigned int un
 			pruMemoryAvailable.wait(lk, [this,currentBlockSize]{ return isPruMemoryAvailable(); });
 			
 			if(!ddr_mem || stop) return;
+
+			if (ddr_mem_used == 0) {
+				QUEUELOG("PRU DDR was empty" << std::endl);
+			}
 			
 			
 			//Copy at the right location
