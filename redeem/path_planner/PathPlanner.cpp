@@ -734,7 +734,6 @@ void PathPlanner::runMove(
 	}
 
 	assert(nextStep.time - step.time < F_CPU_FLOAT);
-	assert(nextStep.time - step.time >= 4000);
 
 	steps.push(nextStep);
       }
