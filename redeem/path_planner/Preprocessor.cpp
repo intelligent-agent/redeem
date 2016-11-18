@@ -118,13 +118,14 @@ int PathPlanner::splitInput(const std::vector<FLOAT_T> startPos, const std::vect
 	sub_vec[j] = sub_stop[j] - sub_start[j];
       }
 
-      FLOAT_T mag = std::sqrt(sub_vec[0] * sub_vec[0] + sub_vec[1] * sub_vec[1] + sub_vec[2] * sub_vec[2]);
-      if (mag > max_path_length) {
-	LOG("split didn't actually get us below the max length: " << mag << std::endl);
-	assert(mag <= max_path_length);
+      FLOAT_T sub_mag = std::sqrt(sub_vec[0] * sub_vec[0] + sub_vec[1] * sub_vec[1] + sub_vec[2] * sub_vec[2]);
+      if (sub_mag > max_path_length && sub_mag - max_path_length > NEGLIGIBLE_ERROR) {
+	LOGERROR("split didn't actually get us below the max length: " << sub_mag << " vs " << max_path_length << std::endl);
+	LOGERROR("splitting " << mag << " into " << N << " pieces." << std::endl);
+	assert(sub_mag <= max_path_length);
       }
       else {
-	LOG("segment length: " << mag << std::endl);
+	LOG("segment length: " << sub_mag << std::endl);
       }
 			
       // queue the segment
