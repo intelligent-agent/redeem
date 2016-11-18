@@ -566,10 +566,15 @@ void PathPlanner::run() {
       unsigned lastCount = 0;
       QUEUELOG("Waiting for buffer to fill up. " << linesCount  << " lines pending, lastCount is " << lastCount << std::endl);
       do {
-	lastCount = linesCount;				
-	pathQueueReadyToPrint.wait_for(lk,  std::chrono::milliseconds(printMoveBufferWait), [this,lastCount]{
-	    return linesCount>lastCount || stop;
-	  });				
+	lastCount = linesCount;
+	if (lastCount == 0) { // if there are no lines in the queue, we can wait indefinitely
+	  pathQueueReadyToPrint.wait(lk, [this, lastCount] { return linesCount > lastCount || stop; });
+	}
+	else { // if there are lines in the queue, we need to cap the wait at printMoveBufferWait
+	  pathQueueReadyToPrint.wait_for(lk, std::chrono::milliseconds(printMoveBufferWait), [this, lastCount] {
+	    return linesCount > lastCount || stop;
+	  });
+	}
       } while(lastCount<linesCount && linesCount<moveCacheSize && !stop);
       QUEUELOG("Done waiting for buffer to fill up... " << linesCount  << " lines ready. " << lastCount << std::endl);			
       waitUntilFilledUp = false;
