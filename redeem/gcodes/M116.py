@@ -36,15 +36,15 @@ class M116(GCodeCommand):
                 return
 
         all_ok = [
-            has_parameter and heater_index == 0,
-            has_parameter and heater_index == 1,
-            has_parameter and heater_index == -1
+            has_parameter and heater_index != 0,
+            has_parameter and heater_index != 1,
+            has_parameter and heater_index != -1
         ]
         if self.printer.config.reach_revision:
             all_ok.extend([
-                has_parameter and heater_index == 2,
-                has_parameter and heater_index == 3,
-                has_parameter and heater_index == 4
+                has_parameter and heater_index != 2,
+                has_parameter and heater_index != 3,
+                has_parameter and heater_index != 4
             ])
 
         while True:
@@ -58,7 +58,7 @@ class M116(GCodeCommand):
 
             m105 = Gcode({"message": "M105", "prot": g.prot})
             self.printer.processor.execute(m105)
-            if (not False in all_ok) or (self.printer.running_M116 == False):
+            if False not in all_ok or not self.printer.running_M116:
                 logging.info("Heating done.")
                 self.printer.send_message(g.prot, "Heating done.")
                 self.printer.reply(m105)
