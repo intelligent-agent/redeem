@@ -53,8 +53,7 @@ pathplanner = Extension(
         '-D_GLIBCXX_USE_NANOSLEEP',
         '-DBUILD_PYTHON_EXT=1',
         '-Wno-write-strings',
-        '-Wno-maybe-uninitialized',
-        '-UNDEBUG']
+        '-Wno-maybe-uninitialized']
 )
 
 setup(
