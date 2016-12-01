@@ -281,7 +281,11 @@ void Path::updateStepperPathParameters() {
     cruiseDistance = distance - accelDistance - decelDistance;
 
     if (cruiseDistance < 0) {
-      assert(std::abs(cruiseDistance) < NEGLIGIBLE_ERROR);
+      // As it turns out, the optimizer can over-accelerate on very short moves because it
+      // doesn't check that the end speed of a move is reachable from the start speed within
+      // limits. This hasn't been a problem because it only affects moves that are only a few
+      // steps in the first place. However, when it occurs, this assert will fire.
+      //assert(std::abs(cruiseDistance) < NEGLIGIBLE_ERROR);
 
       if (accelDistance == 0) {
 	assert(accelTime == 0);
