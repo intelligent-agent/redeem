@@ -167,7 +167,7 @@ class Heater(object):
                     integral = self.get_error_integral()
                     # The standard formula for the PID
                     power = self.Kp*(self.error + (1.0/self.Ti)*integral + self.Td*derivative)  
-                    power = max(min(power, self.max_power), 0.0)                         # Normalize to 0, max
+                    power = max(min(power, self.max_power, 1.0), 0.0)                         # Normalize to 0, max
                     #if self.name =="E":
                     #    logging.debug("Err: {0:.3f}, der: {1:.4f} int: {2:.2f}".format(self.error, derivative, integral))
 
