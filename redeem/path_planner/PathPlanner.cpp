@@ -279,7 +279,7 @@ void PathPlanner::queueMove(std::vector<FLOAT_T> startPos, std::vector<FLOAT_T> 
   // Use the desired move time to calculate the machine-speed that matches the user's world-speed
   FLOAT_T machineSpeed = distance / desiredTime;
 
-  p->initialize(stepperStartPos, stepperEndPos, distance, machineSpeed, accel, cancelable);
+  p->initialize(stepperStartPos, stepperEndPos, distance, speed, accel, cancelable);
 
   if(p->isNoMove()){
     LOG( "PathPlanner::queueMove: Warning: no move path" << std::endl);
