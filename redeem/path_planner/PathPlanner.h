@@ -85,7 +85,7 @@ class PathPlanner {
 
   int printMoveBufferWait;
   int minBufferedMoveTime;
-  int maxBufferedMoveTime;
+  long long maxBufferedMoveTime;
 
   std::vector<Path> lines;
 
@@ -316,7 +316,7 @@ class PathPlanner {
    * but it will increase the startup time of the print.
    * @param dt maximum buffered move time
    */
-  void setMaxBufferedMoveTime(int dt);
+  void setMaxBufferedMoveTime(long long dt);
 
   /**
    * @brief Set the maximum feedrates of the different axis X,Y,Z

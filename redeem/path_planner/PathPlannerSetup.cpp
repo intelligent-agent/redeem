@@ -34,7 +34,7 @@ void PathPlanner::setMinBufferedMoveTime(int dt) {
   minBufferedMoveTime = dt;
 }
 
-void PathPlanner::setMaxBufferedMoveTime(int dt) {
+void PathPlanner::setMaxBufferedMoveTime(long long dt) {
   maxBufferedMoveTime = dt;
 }
 

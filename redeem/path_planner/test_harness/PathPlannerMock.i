@@ -71,7 +71,7 @@ class PathPlanner {
   void waitUntilFinished();
   void setPrintMoveBufferWait(int dt);
   void setMinBufferedMoveTime(int dt);
-  void setMaxBufferedMoveTime(int dt);
+  void setMaxBufferedMoveTime(long long dt);
   void setMaxSpeeds(std::vector<FLOAT_T> speeds);
   void setMinSpeeds(std::vector<FLOAT_T> speeds);
   void setAxisStepsPerMeter(std::vector<FLOAT_T> stepPerM);
