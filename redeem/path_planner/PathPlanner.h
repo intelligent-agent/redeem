@@ -84,7 +84,6 @@ class PathPlanner {
   unsigned int moveCacheSize; // set on init
 
   int printMoveBufferWait;
-  int minBufferedMoveTime;
   long long maxBufferedMoveTime;
 
   std::vector<Path> lines;
@@ -299,15 +298,6 @@ class PathPlanner {
    * @param dt time to wait before processing commands
    */
   void setPrintMoveBufferWait(int dt);
-
-
-  /**
-   * @brief Set the minimum buffered move time
-   * @details Minimum of move buffered in the PRU (in term of move time in milliseconds) before we stop sending moves to the PRU.
-   * Should be as low as possible so that we can keep some moves in the PathPlanner buffer for proper speed computations
-   * @param dt minimum buffered move time
-   */
-  void setMinBufferedMoveTime(int dt);
 
   /**
    * @brief Set the maximum buffered move time

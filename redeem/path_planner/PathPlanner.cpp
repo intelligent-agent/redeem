@@ -38,7 +38,6 @@ PathPlanner::PathPlanner(unsigned int cacheSize) {
   moveCacheSize = cacheSize;
   lines.resize(moveCacheSize);
   printMoveBufferWait = 250;
-  minBufferedMoveTime = 100;
   maxBufferedMoveTime = 6 * printMoveBufferWait;
   linesCount = 0;
   linesTicksCount = 0;
