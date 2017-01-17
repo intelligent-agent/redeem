@@ -19,10 +19,8 @@ class M106(GCodeCommand):
             fan_no = gcode.get_int_by_letter("P", 0)
             if fan_no < len(self.printer.fans):
                 fans.append(self.printer.fans[fan_no])
-        elif len(self.printer.controlled_fans) > 0 : # No P in gcode, use fans from settings file
+        else: # No P in gcode, use fans from settings file
             fans = self.printer.controlled_fans
-        else: # Uee fan 0
-            fans.append(self.printer.fans[0])
 
         # Get the value, 255 if not present
         value = float(gcode.get_float_by_letter("S", 255)) / 255.0
@@ -55,10 +53,8 @@ class M107(GCodeCommand):
             fan_no = gcode.get_int_by_letter("P", 0)
             if fan_no < len(self.printer.fans):
                 fans.append(self.printer.fans[fan_no])
-        elif len(self.printer.controlled_fans) > 0 : # No P in gcode, use fans from settings file
+        else: # No P in gcode, use fans from settings file
             fans = self.printer.controlled_fans
-        else: # Uee fan 0
-            fans.append(self.printer.fans[0])
 
         for fan in fans:
             fan.set_value(0)
