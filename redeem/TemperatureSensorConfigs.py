@@ -38,7 +38,8 @@ thermistors_shh = [
     ["135-104LAG-J01",      4700, 0.000596153185928425,  0.000231333192738335,  6.19534004306738e-08],  # Honeywell100K
     ["SEMITEC-104GT-2",     4700, 0.000811290160145459,  0.000211355789144265,  7.17614730463848e-08],  # Semitec (E3D V6)
     ["DYZE",                4700, 0.004628116888,        0.0001812508833,       3.185110657e-06],       # DYZE hightemp thermistor, these values might be incorrect.
-    ["HT100K3950",          4700, 0.7413760971e-3,       2.117947876e-4,        1.141950936e-7]         # RobotDigg.com's 3950-100K thermistor (part number HT100K3950-1)
+    ["HT100K3950",          4700, 0.7413760971e-3,       2.117947876e-4,        1.141950936e-7],        # RobotDigg.com's 3950-100K thermistor (part number HT100K3950-1)
+    ["Semitec-104NT4",      4700, 0.797110609710217e-3,  2.13433144381270e-4,   0.65338987554e-7],       # Semitec 104NT-4-R025H42G Thermistor
 ]
 
 
