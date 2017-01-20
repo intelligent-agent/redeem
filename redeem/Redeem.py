@@ -251,7 +251,7 @@ class Redeem:
 
         # Delta printer setup
         if printer.axis_config == Printer.AXIS_CONFIG_DELTA:
-            opts = ["Hez", "L", "r", "Ae", "Be", "Ce", "A_radial", "B_radial", "C_radial", "A_tangential", "B_tangential", "C_tangential" ]
+            opts = ["Hez", "L", "r", "Ae", "Be", "Ce", "A_radial", "B_radial", "C_radial", "A_angular", "B_angular", "C_angular" ]
             for opt in opts:
                 Delta.__dict__[opt] = printer.config.getfloat('Delta', opt)
 
@@ -509,8 +509,8 @@ class Redeem:
 
                 delta_bot = self.printer.path_planner.native_planner.delta_bot
 
-                z_offset = delta_bot.vertical_offset(Az,Bz,Cz) # vertical offset
-                xyz = delta_bot.forward_kinematics(Az, Bz, Cz) # effector position
+                z_offset = delta_bot.verticalOffset(Az,Bz,Cz) # vertical offset
+                xyz = delta_bot.deltaToWorld(Az, Bz, Cz) # effector position
 
                 # The default home_pos, provided above, is based on effector space
                 # coordinates for carriage positions. We need to transform these to

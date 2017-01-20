@@ -23,23 +23,24 @@
 
 #include "Delta.h"
 
+#define _USE_MATH_DEFINES
+#include <math.h>
+
 Delta::Delta()
 {
   Hez = 0.0;
   L = 0.0;
   r = 0.0;
 	
-  Ae = 0.0;
-  Be = 0.0;
-  Ce = 0.0;
-	
   A_radial = 0.0;                   
   B_radial = 0.0;                                                                      
   C_radial = 0.0;  
                                                                      
-  A_tangential = 0.0;                                                                 
-  B_tangential = 0.0;                                                                
-  C_tangential = 0.0;
+  A_angular = 0.0;                                                                 
+  B_angular = 0.0;                                                                
+  C_angular = 0.0;
+
+  recalculate();
 }
 
 Delta::~Delta() {}
@@ -49,13 +50,8 @@ void Delta::setMainDimensions(FLOAT_T Hez_in, FLOAT_T L_in, FLOAT_T r_in)
   Hez = Hez_in;
   L = L_in;
   r = r_in;
-}
 
-void Delta::setEffectorOffset(FLOAT_T Ae_in, FLOAT_T Be_in, FLOAT_T Ce_in)
-{
-  Ae = Ae_in;
-  Be = Be_in;
-  Ce = Ce_in;
+  recalculate();
 }
   
 void Delta::setRadialError(FLOAT_T A_radial_in, FLOAT_T B_radial_in, FLOAT_T C_radial_in)
@@ -63,56 +59,37 @@ void Delta::setRadialError(FLOAT_T A_radial_in, FLOAT_T B_radial_in, FLOAT_T C_r
   A_radial = A_radial_in;                   
   B_radial = B_radial_in;                                                                      
   C_radial = C_radial_in; 
+
+  recalculate();
 }
-void Delta::setTangentError(FLOAT_T A_tangential_in, FLOAT_T B_tangential_in, FLOAT_T C_tangential_in)
+void Delta::setAngularError(FLOAT_T A_angular_in, FLOAT_T B_angular_in, FLOAT_T C_angular_in)
 {
-  A_tangential = A_tangential_in;                                                                 
-  B_tangential = B_tangential_in;                                                                
-  C_tangential = C_tangential_in;
+  A_angular = A_angular_in;
+  B_angular = B_angular_in;
+  C_angular = C_angular_in;
+
+  recalculate();
+}
+
+FLOAT_T degreesToRadians(FLOAT_T degrees)
+{
+  return degrees * M_PI / 180.0;
 }
 
 void Delta::recalculate(void)
 {
   // Column theta
-  const FLOAT_T At = PI / 2.0;
-  const FLOAT_T Bt = 7.0 * PI / 6.0;
-  const FLOAT_T Ct = 11.0 * PI / 6.0;
-
-  // Calculate the column tangential offsets
-  FLOAT_T Apxe = A_tangential;   // Tower A doesn't require a separate y component
-  FLOAT_T Apye = 0.00;
-  FLOAT_T Bpxe = B_tangential/2.0;
-  FLOAT_T Bpye = sqrt(3.0)*(-B_tangential/2.0);
-  FLOAT_T Cpxe = sqrt(3.0)*(C_tangential/2.0);
-  FLOAT_T Cpye = C_tangential/2.0;
+  const FLOAT_T At = degreesToRadians(90.0 + A_angular);
+  const FLOAT_T Bt = degreesToRadians(210.0 + B_angular);
+  const FLOAT_T Ct = degreesToRadians(330.0 + C_angular);
 
   // Calculate the column positions 
-  FLOAT_T Apx = (A_radial + r)*cos(At) + Apxe;
-  FLOAT_T Apy = (A_radial + r)*sin(At) + Apye;
-  FLOAT_T Bpx = (B_radial + r)*cos(Bt) + Bpxe;
-  FLOAT_T Bpy = (B_radial + r)*sin(Bt) + Bpye;
-  FLOAT_T Cpx = (C_radial + r)*cos(Ct) + Cpxe;
-  FLOAT_T Cpy = (C_radial + r)*sin(Ct) + Cpye;
-
-  // Calculate the effector positions
-  FLOAT_T Aex = Ae*cos(At);
-  FLOAT_T Aey = Ae*sin(At);
-  FLOAT_T Bex = Be*cos(Bt);
-  FLOAT_T Bey = Be*sin(Bt);
-  FLOAT_T Cex = Ce*cos(Ct);
-  FLOAT_T Cey = Ce*sin(Ct);
-
-  // Calculate the virtual column positions
-  Avx = Apx - Aex;
-  Avy = Apy - Aey;
-  Bvx = Bpx - Bex;
-  Bvy = Bpy - Bey;
-  Cvx = Cpx - Cex;
-  Cvy = Cpy - Cey;
-
-  p1 = Vector3(Avx, Avy, 0);
-  p2 = Vector3(Bvx, Bvy, 0);
-  p3 = Vector3(Cvx, Cvy, 0);
+  Avx = (A_radial + r)*cos(At);
+  Avy = (A_radial + r)*sin(At);
+  Bvx = (B_radial + r)*cos(Bt);
+  Bvy = (B_radial + r)*sin(Bt);
+  Cvx = (C_radial + r)*cos(Ct);
+  Cvy = (C_radial + r)*sin(Ct);
   
   //~ LOG("Delta: Avx = " << Avx << ", Avy = " << Avy << "\n");
   //~ LOG("Delta: Bvx = " << Bvx << ", Bvy = " << Bvy << "\n");
@@ -120,7 +97,7 @@ void Delta::recalculate(void)
 
 }
 
-void Delta::inverse_kinematics(FLOAT_T X, FLOAT_T Y, FLOAT_T Z, FLOAT_T* Az, FLOAT_T* Bz, FLOAT_T* Cz)
+void Delta::worldToDelta(FLOAT_T X, FLOAT_T Y, FLOAT_T Z, FLOAT_T* Az, FLOAT_T* Bz, FLOAT_T* Cz)
 {
   /*
     Inverse kinematics for Delta bot. Returns position for column
@@ -154,16 +131,16 @@ void Delta::inverse_kinematics(FLOAT_T X, FLOAT_T Y, FLOAT_T Z, FLOAT_T* Az, FLO
   return;
 }
 
-void Delta::forward_kinematics(FLOAT_T Az, FLOAT_T Bz, FLOAT_T Cz, FLOAT_T* X, FLOAT_T* Y, FLOAT_T* Z)
+void Delta::deltaToWorld(FLOAT_T Az, FLOAT_T Bz, FLOAT_T Cz, FLOAT_T* X, FLOAT_T* Y, FLOAT_T* Z)
 {
   /* Forward kinematics for Delta Bot. Calculates the X, Y, Z point given
      column translations
   */
-    
-  p1.z = Az;
-  p2.z = Bz;
-  p3.z = Cz;
-    
+
+  Vector3 p1 = Vector3(Avx, Avy, Az);
+  Vector3 p2 = Vector3(Bvx, Bvy, Bz);
+  Vector3 p3 = Vector3(Cvx, Cvy, Cz);
+
   Vector3 p12 = p2 - p1;
   Vector3 p13 = p3 - p1;
     
@@ -197,24 +174,25 @@ void Delta::forward_kinematics(FLOAT_T Az, FLOAT_T Bz, FLOAT_T Cz, FLOAT_T* X, F
   return;
 }
 
-void Delta::vertical_offset(FLOAT_T Az, FLOAT_T Bz, FLOAT_T Cz, FLOAT_T* offset)
+
+void Delta::verticalOffset(FLOAT_T Az, FLOAT_T Bz, FLOAT_T Cz, FLOAT_T* offset)
 {
   // vertical offset between circumcenter of carriages and the effector
-	
-  p1.z = Az;
-  p2.z = Bz;
-  p3.z = Cz;
-    
+
+  Vector3 p1 = Vector3(Avx, Avy, Az);
+  Vector3 p2 = Vector3(Bvx, Bvy, Bz);
+  Vector3 p3 = Vector3(Cvx, Cvy, Cz);
+  
   // normal to the plane
-  Vector3 plane_normal = cross(p1-p2,p2-p3);
+  Vector3 plane_normal = cross(p1 - p2, p2 - p3);
   FLOAT_T plane_normal_length = vabs(plane_normal);
   plane_normal /= plane_normal_length;
-    
+  
   // radius of circle
-  FLOAT_T r = (vabs(p1-p2)*vabs(p2-p3)*vabs(p3-p1))/(2*plane_normal_length);
-
+  FLOAT_T r = (vabs(p1 - p2)*vabs(p2 - p3)*vabs(p3 - p1)) / (2 * plane_normal_length);
+  
   // distance below the plane
   *offset = plane_normal.z*sqrt(L*L - r*r);
-	
+  
   return;
 }
