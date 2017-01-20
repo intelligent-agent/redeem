@@ -143,7 +143,7 @@ class GCodeProcessor:
         
 
     def peek(self, gcode):
-        if self.printer.running_M116 and gcode.code() in ["M108", "M104", "140"]:
+        if self.printer.running_M116 and gcode.code() in ["M108", "M104", "M140"]:
             self.execute(gcode)
             return True
         return False
