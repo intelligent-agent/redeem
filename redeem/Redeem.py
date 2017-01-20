@@ -449,7 +449,6 @@ class Redeem:
 
         printer.move_cache_size = printer.config.getfloat('Planner', 'move_cache_size')
         printer.print_move_buffer_wait = printer.config.getfloat('Planner', 'print_move_buffer_wait')
-        printer.min_buffered_move_time = printer.config.getfloat('Planner', 'min_buffered_move_time')
         printer.max_buffered_move_time = printer.config.getfloat('Planner', 'max_buffered_move_time')
 
         printer.max_length = printer.config.getfloat('Planner', 'max_length')

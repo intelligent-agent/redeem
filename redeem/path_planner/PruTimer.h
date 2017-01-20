@@ -20,6 +20,8 @@
 
 //#define DEMO_PRU
 
+class Path;
+
 class PruTimer {
 	
 	class BlockDef{
@@ -50,7 +52,30 @@ class PruTimer {
 	
 	std::mutex mutex_memory;
 	
-	std::condition_variable blockAvailable;
+	std::condition_variable pruMemoryAvailable;
+	size_t blockSizeToWaitFor;
+
+	inline bool isPruMemoryAvailable() {
+	  return stop || ddr_size - ddr_mem_used - 8 >= blockSizeToWaitFor + 12;
+	}
+
+	inline void notifyIfPruMemoryIsAvailable() {
+	  if (isPruMemoryAvailable()) {
+	    pruMemoryAvailable.notify_all();
+	  }
+	}
+
+	std::condition_variable pruMemoryEmpty;
+
+	inline bool isPruMemoryEmpty() {
+	  return ddr_mem_used == 0;
+	}
+
+	inline void notifyIfPruMemoryIsEmpty() {
+	  if (isPruMemoryEmpty()) {
+	    pruMemoryEmpty.notify_all();
+	  }
+	}
 	
 	std::thread runningThread;
 	bool stop;
@@ -81,8 +106,10 @@ public:
 		std::lock_guard<std::mutex> lk(mutex_memory);
 		return totalQueuedMovesTime;
 	}
-	
-	void waitUntilLowMoveTime(unsigned long lowMoveTimeTicks);
+
+	unsigned int getMaxBytesPerBlock() {
+		return (ddr_size / 4) - 12;
+	}
 
 	int waitUntilSync();
 	
@@ -92,7 +119,7 @@ public:
 	
 	void reset();
 	
-	void push_block(uint8_t* blockMemory, size_t blockLen, unsigned int unit, unsigned int pathID, unsigned long totalTime);
+	void push_block(uint8_t* blockMemory, size_t blockLen, unsigned int unit, unsigned long totalTime);
 };
 
 #endif /* defined(__PathPlanner__PruTimer__) */

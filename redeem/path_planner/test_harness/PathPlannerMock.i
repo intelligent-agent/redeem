@@ -1,4 +1,4 @@
-%module PathPlannerNative
+%module PathPlannerMock
 
 %include "typemaps.i"
 %include "std_string.i"
@@ -9,13 +9,14 @@
 
 
 %{
-#include "PathPlanner.h"
-#include "Delta.h"
+#include "../PathPlanner.h"
+#include "../Delta.h"
+#include "PruDump.h"
 %}
 
-%include "config.h"
+%include "../config.h"
 
-%rename(PathPlannerNative) PathPlanner;
+%rename(PathPlannerMock) PathPlanner;
 
 // exception handler
 %exception {
@@ -91,4 +92,10 @@ class PathPlanner {
   void reset();
   virtual ~PathPlanner();
 
+};
+
+class PruDump {
+ public:
+  static PruDump* get();
+  void test(PathPlanner& pathPlanner);
 };
