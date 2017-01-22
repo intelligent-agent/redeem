@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 """
-The watchdog on BBB simply opens a file and holds the FD until it shuts down. 
-If something goes wrong with the BBB or redeem, the watchdog will kick in in one minute. 
+The watchdog on BBB simply opens a file and holds the FD until it shuts down.
+If something goes wrong with the BBB or redeem, the watchdog will kick in in
+one minute.
 
 
 Author: Elias Bakken
@@ -23,6 +24,7 @@ from threading import Thread, Lock
 import time
 import logging
 
+
 class Watchdog:
 
     def __init__(self, path="/dev/watchdog", refresh=30):
@@ -37,18 +39,18 @@ class Watchdog:
             cmdline = f.readline()
             if "omap_wdt.nowayout=0" in cmdline:
                 self.nowayout = 0
-                
+
     def start(self):
         if self.nowayout:
-            logging.warning( ("Watchdog has 'nowayout' enabled. "
-                "Stopping redeem would cause a reset of the system."
-                "Please add 'omap_wdt.nowayout=0' to the kernel "
-                "command line in order to enable the watchdog."
-                "Watchdog is not enabled.") ) 
+            logging.warning(("Watchdog has 'nowayout' enabled. "
+                             "Stopping redeem would cause a system reset."
+                             "Please add 'omap_wdt.nowayout=0' to the kernel "
+                             "command line in order to enable the watchdog."
+                             "Watchdog is not enabled."))
             return
         self.time_left = self.refresh
         self.running = True
-        self.fd = open(self.path, "w")        
+        self.fd = open(self.path, "w")
         self.t.start()
         logging.info("Watchdog started, refresh {} s".format(
             self.refresh))
@@ -60,12 +62,12 @@ class Watchdog:
         self.running = False
         self.t.join()
         self.fd.write("V")
-        self.fd.close()        
+        self.fd.close()
         logging.debug("Watchdog stopped")
 
     def _run(self):
-        """ While more time on the clock, 
-        stay in the inner loop. If not, carry out the 
+        """ While more time on the clock,
+        stay in the inner loop. If not, carry out the
         timeout function """
         while self.running:
             while self.time_left and self.running:
@@ -80,12 +82,15 @@ class Watchdog:
         self.fd.write("\n")
         self.fd.flush()
 
+
 if __name__ == '__main__':
+    logformat = '%(asctime)s %(name)-12s %(levelname)-8s %(message)s'
+    logdateformat = '%m-%d %H:%M'
+
     logging.basicConfig(level=logging.DEBUG,
-                    format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
-                    datefmt='%m-%d %H:%M')
+                        format=logformat,
+                        datefmt=logdateformat)
     wd = Watchdog(refresh=1)
     wd.start()
     time.sleep(10)
     wd.stop()
-
