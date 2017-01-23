@@ -36,7 +36,7 @@ class G33(GCodeCommand):
 
     def execute(self, g):
         num_factors = g.get_int_by_letter("F", 4)
-        if num_factors < 3 or num_factors > 4:
+        if num_factors < 3 or num_factors > 9 or num_factors == 5 or num_factors == 7:
             logging.error("G33: Invalid number of calibration factors.")
 
         # we reuse the G29 macro for the autocalibration purposes
@@ -72,9 +72,12 @@ class G33(GCodeCommand):
             #pretty print to printer output
             self.printer.send_message(g.prot, "delta calibration : L = %g"%params["L"])
             self.printer.send_message(g.prot, "delta calibration : r = %g"%params["r"])
-            self.printer.send_message(g.prot, "delta calibration : A_tangential = %g"%params["A_tangential"])
-            self.printer.send_message(g.prot, "delta calibration : B_tangential = %g"%params["B_tangential"])
-            self.printer.send_message(g.prot, "delta calibration : C_tangential = %g"%params["C_tangential"])
+            self.printer.send_message(g.prot, "delta calibration : A_angular = %g"%params["A_angular"])
+            self.printer.send_message(g.prot, "delta calibration : B_angular = %g"%params["B_angular"])
+            self.printer.send_message(g.prot, "delta calibration : C_angular = %g"%params["C_angular"])
+            self.printer.send_message(g.prot, "delta calibration : A_radial = %g"%params["A_radial"])
+            self.printer.send_message(g.prot, "delta calibration : B_radial = %g"%params["B_radial"])
+            self.printer.send_message(g.prot, "delta calibration : C_radial = %g"%params["C_radial"])
             self.printer.send_message(g.prot, "delta calibration : offset_x = %g"%params["offset_x"])
             self.printer.send_message(g.prot, "delta calibration : offset_y = %g"%params["offset_y"])
             self.printer.send_message(g.prot, "delta calibration : offset_z = %g"%params["offset_z"])
@@ -94,11 +97,15 @@ Parameters:
 
 Fn  Number of factors to optimize:
     3 factors (endstop corrections only)
-    4 factors (endstop corrections and delta radius) (Default)
+    4 factors (endstop corrections and delta radius) (Default and recommended)
     6 factors (endstop corrections, delta radius, and two tower
-                angular position corrections)
-    7 factors (endstop corrections, delta radius, two tower angular
-                position corrections, and diagonal rod length)
+               angular position corrections)
+    8 factors (endstop corrections, delta radius, two tower angular
+               position corrections, and two tower radial position
+               corrections)
+    9 factors (endstop corrections, delta radius, two tower angular
+               position corrections, two tower radial position
+               corrections, and diagonal arm length)
 
 S   Do NOT update the printer configuration.
 

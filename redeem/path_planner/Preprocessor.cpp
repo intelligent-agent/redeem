@@ -160,7 +160,7 @@ void PathPlanner::transformVector(std::vector<FLOAT_T> &vec, const std::vector<F
       start_y = endABC[1];
       start_z = endABC[2];
     } else {
-      delta_bot.inverse_kinematics(startPos[0], startPos[1], startPos[2], &start_x, &start_y, &start_z);
+      delta_bot.worldToDelta(startPos[0], startPos[1], startPos[2], &start_x, &start_y, &start_z);
     }
 
     assert(!(std::isnan(endABC[0]) || std::isnan(endABC[1]) || std::isnan(endABC[2])));
@@ -172,7 +172,7 @@ void PathPlanner::transformVector(std::vector<FLOAT_T> &vec, const std::vector<F
     assert(!(std::isnan(startABC[0]) || std::isnan(startABC[1]) || std::isnan(startABC[2])));
 		
     FLOAT_T end_x, end_y, end_z;
-    delta_bot.inverse_kinematics(startPos[0] + vec[0], startPos[1] + vec[1], startPos[2] + vec[2], &end_x, &end_y, &end_z);
+    delta_bot.worldToDelta(startPos[0] + vec[0], startPos[1] + vec[1], startPos[2] + vec[2], &end_x, &end_y, &end_z);
         
     assert(!(std::isnan(end_x) || std::isnan(end_y) || std::isnan(end_z)));
     vec[0] = end_x - start_x;
@@ -211,9 +211,9 @@ void PathPlanner::reverseTransformVector(std::vector<FLOAT_T> &vec)
     endABC[2] = end_z;
 
     FLOAT_T start_x, start_y, start_z;
-    delta_bot.forward_kinematics(startABC[0], startABC[1], startABC[2], &start_x, &start_y, &start_z);
+    delta_bot.deltaToWorld(startABC[0], startABC[1], startABC[2], &start_x, &start_y, &start_z);
 		
-    delta_bot.forward_kinematics(endABC[0], endABC[1], endABC[2], &end_x, &end_y, &end_z);
+    delta_bot.deltaToWorld(endABC[0], endABC[1], endABC[2], &end_x, &end_y, &end_z);
 		
     vec[0] = end_x - start_x;
     vec[1] = end_y - start_y;
