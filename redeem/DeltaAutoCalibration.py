@@ -170,8 +170,8 @@ class AutoCalibrationDeltaParameters:
         delta.L = self.diagonal / 1000.
         delta.r = self.radius / 1000.
         delta.A_radial = 0.
-        delta.B_radial = self.yradial
-        delta.C_radial = self.zradial
+        delta.B_radial = self.yradial / 1000.
+        delta.C_radial = self.zradial / 1000.
         delta.A_angular = 0.
         delta.B_angular = self.yangular
         delta.C_angular = self.zangular
