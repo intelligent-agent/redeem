@@ -220,9 +220,9 @@ class Printer:
         for axis, offset in self.path_planner.travel_length.iteritems():
             self.config.set('Geometry', "travel_{}".format(axis), str(offset))
 
-        # Save Delta shit
-        logging.debug("save_settings: setting delta shit")
-        opts = ["Hez", "L", "r", "Ae", "Be", "Ce", "A_radial", "B_radial", "C_radial", "A_angular", "B_angular", "C_angular" ]
+        # Save Delta config
+        logging.debug("save_settings: setting delta config")
+        opts = ["Hez", "L", "r", "A_radial", "B_radial", "C_radial", "A_angular", "B_angular", "C_angular" ]
         for opt in opts:
             self.config.set('Delta', opt, str(Delta.__dict__[opt]))
 
