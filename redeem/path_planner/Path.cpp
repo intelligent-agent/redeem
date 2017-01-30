@@ -40,8 +40,8 @@ void Path::zero() {
   deltas.assign(NUM_AXES, 0);
 
   timeInTicks = 0;
-  speeds.assign(NUM_AXES, 0);
-  accels.assign(NUM_AXES, 0);
+  speeds.zero();
+  accels.zero();
   fullSpeed = 0;
   maxJunctionSpeed = 0;
   startSpeed = 0;
@@ -84,8 +84,8 @@ Path& Path::operator=(const Path& path) {
   return *this;
 }
 
-void Path::initialize(const std::vector<FLOAT_T>& startPos,
-		      const std::vector<FLOAT_T>& endPos,
+void Path::initialize(const VectorN& startPos,
+		      const VectorN& endPos,
 		      FLOAT_T distance,
 		      bool cancelable) {
   this->zero();
@@ -126,10 +126,10 @@ void Path::initialize(const std::vector<FLOAT_T>& startPos,
   //LOG("EndSpeed in m/s:   " << p->endSpeed << std::endl);
 }
 
-void Path::calculate(const std::vector<FLOAT_T>& axis_diff, /// Axis movements expressed in meters
-		     const std::vector<FLOAT_T>& minSpeeds, /// Minimum allowable speeds in m/s
-		     const std::vector<FLOAT_T>& maxSpeeds, /// Maximum allowable speeds in m/s
-		     const std::vector<FLOAT_T>& maxAccelStepsPerSquareSecond,
+void Path::calculate(const VectorN& axis_diff, /// Axis movements expressed in meters
+		     const VectorN& minSpeeds, /// Minimum allowable speeds in m/s
+		     const VectorN& maxSpeeds, /// Maximum allowable speeds in m/s
+		     const VectorN& maxAccelStepsPerSquareSecond,
 		     FLOAT_T requestedSpeed,
 		     FLOAT_T requestedAccel) {
   // First we need to figure out the minimum time for the move.
@@ -212,7 +212,7 @@ void Path::calculate(const std::vector<FLOAT_T>& axis_diff, /// Axis movements e
   invalidateStepperPathParameters();
 }
 
-FLOAT_T Path::calculateSafeSpeed(const std::vector<FLOAT_T>& minSpeeds) {
+FLOAT_T Path::calculateSafeSpeed(const VectorN& minSpeeds) {
   FLOAT_T safe = 1e15;
 
   // Cap the speed based on axis. 

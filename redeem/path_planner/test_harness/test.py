@@ -4,12 +4,11 @@ import math
 
 delta = Delta()
 delta.setMainDimensions(0.0, 0.304188, 0.146)
-delta.recalculate()
 
 t = PathPlannerMock(1024)
 
-t.delta_bot = delta
-t.setAxisConfig(3)
+#t.delta_bot = delta
+t.setAxisConfig(0)
 t.setMaxPathLength(0.0001)
 
 t.initPRU("/root/redeem/firmware/firmware_runtime.bin","/root/redeem/firmware/firmware_endstops.bin")
@@ -99,7 +98,7 @@ t.waitUntilFinished()
 
 # Move that's uneven across the axes
 start       = (0, 0, 0, 0, 0, 0, 0, 0)
-end         = (-0.100, 0.100, 0.00, 0.01, 0, 0, 0, 0)
+end         = (0.100, 0.0, 0.0, 0.0, 0, 0, 0, 0)
 speed       = 1.0
 accel       = 1.0
 cancelable  = False
@@ -119,4 +118,6 @@ t.waitUntilFinished()
 t.stopThread(True)
 pruDump = PruDump.get()
 pruDump.test(t)
+
+print(t.getState())
 

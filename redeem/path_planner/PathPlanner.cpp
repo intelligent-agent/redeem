@@ -48,19 +48,6 @@ PathPlanner::PathPlanner(unsigned int cacheSize) {
   axis_config = AXIS_CONFIG_XY;
   has_slaves = false;
 
-  maxSpeeds.resize(NUM_AXES, 0);
-  minSpeeds.resize(NUM_AXES, 0);
-  maxJerks.resize(NUM_AXES, 0);
-  maxAccelerationStepsPerSquareSecond.resize(NUM_AXES, 0);
-  maxAccelerationMPerSquareSecond.resize(NUM_AXES, 0);
-  axisStepsPerM.resize(NUM_AXES, 0);
-	
-  soft_endstops_min.resize(NUM_AXES, 0);
-  soft_endstops_max.resize(NUM_AXES, 0);
-  state.resize(NUM_AXES, 0);
-  backlash_compensation.resize(NUM_AXES, 0);
-  backlash_state.resize(NUM_AXES, 0);
-	
   // set bed compensation matrix to identity
   matrix_bed_comp.resize(9, 0);
   matrix_bed_comp[0] = 1.0;
@@ -122,18 +109,13 @@ void PathPlanner::clearSyncEvent(){
   PyEval_RestoreThread(_save);
 }
 
-void PathPlanner::queueMove(std::vector<FLOAT_T> startPos, std::vector<FLOAT_T> endPos, 
+void PathPlanner::queueMove(VectorN startPos, VectorN endPos,
 			    FLOAT_T speed, FLOAT_T accel, 
 			    bool cancelable, bool optimize, 
 			    bool enable_soft_endstops, bool use_bed_matrix, 
 			    bool use_backlash_compensation, int tool_axis,
 			    bool virgin) 
 {
-
-  
-  if ( startPos.size() != NUM_AXES ) {throw InputSizeError();}
-  if ( endPos.size() != NUM_AXES ) {throw InputSizeError();}
-
   ////////////////////////////////////////////////////////////////////
   // PRE-PROCESSING
   ////////////////////////////////////////////////////////////////////
@@ -162,10 +144,9 @@ void PathPlanner::queueMove(std::vector<FLOAT_T> startPos, std::vector<FLOAT_T> 
 	
   // Get the vector to move us from where we are, to where we ideally want to be. 
     
-  std::vector<FLOAT_T> vec(NUM_AXES, 0);
+  VectorN vec = endPos - state;
   
-  for (size_t i = 0; i<vec.size(); ++i) {
-    vec[i] = endPos[i] - state[i];
+  for (size_t i = 0; i< NUM_AXES; ++i) {
     assert(!std::isnan(vec[i]));
     assert(!std::isnan(endPos[i]));
     assert(!std::isnan(state[i]));
@@ -195,7 +176,7 @@ void PathPlanner::queueMove(std::vector<FLOAT_T> startPos, std::vector<FLOAT_T> 
     
   // Compute stepper translation, yielding the discrete/rounded distance.
   FLOAT_T num_steps;
-  std::vector<FLOAT_T> delta(NUM_AXES, 0);
+  VectorN delta;
   FLOAT_T sum_delta = 0.0;
   for (int i = 0; i<NUM_AXES; ++i) {
     assert(!std::isnan(vec[i]));
@@ -227,11 +208,10 @@ void PathPlanner::queueMove(std::vector<FLOAT_T> startPos, std::vector<FLOAT_T> 
 
   // change startPos and endPos to give the change in position using machine coordinates
   // also update the state of the machine, i.e. where the effector really is in physical space
-  for (int i = 0; i<NUM_AXES; ++i) {
-    startPos[i] = state[i]; // the real starting position
-    endPos[i] =   state[i] + delta[i]; // the real ending position
-    state[i] += vec[i]; // update the new state of the machine
-  }
+  startPos = state; // the real starting position
+  endPos = state + delta; // the real ending position
+  state += vec; // update the new state of the machine
+
   LOG("new state: " << state[0] << " " << state[1] << " " << state[2] << std::endl);
     
   // handle any slaving activity
@@ -247,7 +227,7 @@ void PathPlanner::queueMove(std::vector<FLOAT_T> startPos, std::vector<FLOAT_T> 
   ////////////////////////////////////////////////////////////////////
     
     
-  std::vector<FLOAT_T> axis_diff(NUM_AXES, 0);        // Axis movement in m
+  VectorN axis_diff;        // Axis movement in m
   PyThreadState *_save; 
   _save = PyEval_SaveThread();
 
@@ -269,8 +249,8 @@ void PathPlanner::queueMove(std::vector<FLOAT_T> startPos, std::vector<FLOAT_T> 
   }
 
   Path *p = &lines[linesWritePos];
-  std::vector<FLOAT_T> stepperStartPos(NUM_AXES, 0);
-  std::vector<FLOAT_T> stepperEndPos(NUM_AXES, 0);
+  VectorN stepperStartPos;
+  VectorN stepperEndPos;
   FLOAT_T distance = 0;
 
   for (int axis = 0; axis < NUM_AXES; axis++) {
@@ -824,7 +804,7 @@ void PathPlanner::runMove(
   assert(steps.empty());
 }
 
-std::vector<FLOAT_T> PathPlanner::getState()
+VectorN PathPlanner::getState()
 {
   return state;
 }

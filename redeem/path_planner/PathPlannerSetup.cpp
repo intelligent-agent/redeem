@@ -35,57 +35,45 @@ void PathPlanner::setMaxBufferedMoveTime(long long dt) {
 }
 
 // Speeds / accels
-void PathPlanner::setMaxSpeeds(std::vector<FLOAT_T> speeds){
-  if ( speeds.size() != NUM_AXES ) {throw InputSizeError();}
+void PathPlanner::setMaxSpeeds(VectorN speeds){
   maxSpeeds = speeds;
 }
 
-void PathPlanner::setMinSpeeds(std::vector<FLOAT_T> speeds){
-  if ( speeds.size() != NUM_AXES ) {throw InputSizeError();}
+void PathPlanner::setMinSpeeds(VectorN speeds){
   minSpeeds = speeds;
 }
 
-void PathPlanner::setAcceleration(std::vector<FLOAT_T> accel){
-  if ( accel.size() != NUM_AXES ) {throw InputSizeError();}
-
+void PathPlanner::setAcceleration(VectorN accel){
   maxAccelerationMPerSquareSecond = accel;
 
   recomputeParameters();
 }
 
-void PathPlanner::setJerks(std::vector<FLOAT_T> jerks){
-  if ( jerks.size() != NUM_AXES ) {throw InputSizeError();}
-
+void PathPlanner::setJerks(VectorN jerks){
   maxJerks = jerks;
 
 }
 
-void PathPlanner::setAxisStepsPerMeter(std::vector<FLOAT_T> stepPerM) {
-  if ( stepPerM.size() != NUM_AXES ) {throw InputSizeError();}
-
+void PathPlanner::setAxisStepsPerMeter(VectorN stepPerM) {
   axisStepsPerM = stepPerM;
 
   recomputeParameters();
 }
 
 // soft endstops
-void PathPlanner::setSoftEndstopsMin(std::vector<FLOAT_T> stops)
+void PathPlanner::setSoftEndstopsMin(VectorN stops)
 {
-  if ( stops.size() != NUM_AXES ) {throw InputSizeError();}
   soft_endstops_min = stops;
 }
 
-void PathPlanner::setSoftEndstopsMax(std::vector<FLOAT_T> stops)
+void PathPlanner::setSoftEndstopsMax(VectorN stops)
 { 
- if ( stops.size() != NUM_AXES ) {throw InputSizeError();}
   soft_endstops_max = stops;
 }
 
 // bed compensation
 void PathPlanner::setBedCompensationMatrix(std::vector<FLOAT_T> matrix)
 {
-  if ( matrix.size() != 9 ) {throw InputSizeError();}
-  
   matrix_bed_comp = matrix;
 }
     
@@ -102,9 +90,8 @@ void PathPlanner::setAxisConfig(int axis)
 }
 
 // the state of the machine
-void PathPlanner::setState(std::vector<FLOAT_T> set)
+void PathPlanner::setState(VectorN set)
 {
-  if ( set.size() != NUM_AXES ) {throw InputSizeError();}
   applyBedCompensation(set);
   state = set;
 }
@@ -128,15 +115,12 @@ void PathPlanner::addSlave(int master_in, int slave_in)
 }
 
 // backlash compensation
-void PathPlanner::setBacklashCompensation(std::vector<FLOAT_T> set)
+void PathPlanner::setBacklashCompensation(VectorN set)
 {
-  if ( set.size() != NUM_AXES ) {throw InputSizeError();}
   backlash_compensation = set;
 }
 
 void PathPlanner::resetBacklash()
 {
-  for (FLOAT_T& bs : backlash_state) {
-    bs = 0.0;
-  }
+  backlash_state.zero();
 }

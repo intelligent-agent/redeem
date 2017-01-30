@@ -27,9 +27,9 @@
 #include <cmath>
 #include "PathPlanner.h"
 
-int PathPlanner::softEndStopApply(const std::vector<FLOAT_T> &startPos, const std::vector<FLOAT_T> &endPos)
+int PathPlanner::softEndStopApply(const VectorN &startPos, const VectorN &endPos)
 {
-  for (size_t i = 0; i<startPos.size(); ++i) {
+  for (size_t i = 0; i<NUM_AXES; ++i) {
     if (startPos[i] < soft_endstops_min[i]) {
       LOGERROR( "queueMove FAILED: axis " << i 
 		<< " start position outside of soft limit (start = " << startPos[i] 
@@ -56,7 +56,7 @@ int PathPlanner::softEndStopApply(const std::vector<FLOAT_T> &startPos, const st
   return 0;
 }
 
-void PathPlanner::applyBedCompensation(std::vector<FLOAT_T> &endPos)
+void PathPlanner::applyBedCompensation(VectorN &endPos)
 {
   // matrix*vector
   FLOAT_T x = endPos[0]*matrix_bed_comp[0] + endPos[1]*matrix_bed_comp[1] + endPos[2]*matrix_bed_comp[2];
@@ -70,7 +70,7 @@ void PathPlanner::applyBedCompensation(std::vector<FLOAT_T> &endPos)
   return;
 }
 
-int PathPlanner::splitInput(const std::vector<FLOAT_T> startPos, const std::vector<FLOAT_T> vec,
+int PathPlanner::splitInput(const VectorN startPos, const VectorN vec,
 			    FLOAT_T speed, FLOAT_T accel, bool cancelable, bool optimize,
 			    bool use_backlash_compensation, int tool_axis, bool virgin)
 {
@@ -106,14 +106,14 @@ int PathPlanner::splitInput(const std::vector<FLOAT_T> startPos, const std::vect
     LOG("move split into " << N << " pieces\n");
 		
     // the sub segments
-    std::vector<FLOAT_T> sub_start(startPos);
-    std::vector<FLOAT_T> sub_stop(NUM_AXES);
+    VectorN sub_start(startPos);
+    VectorN sub_stop;
 		
     for (long i=0; i < N; ++i) {
-      std::vector<FLOAT_T> sub_vec(NUM_AXES);
+      VectorN sub_vec;
 			
       // calculate the end point of the segment
-      for (size_t j=0; j<startPos.size(); ++j) {
+      for (size_t j=0; j<NUM_AXES; ++j) {
 	sub_stop[j] = startPos[j] + vec[j]*(i+1)/N;
 	sub_vec[j] = sub_stop[j] - sub_start[j];
       }
@@ -149,7 +149,7 @@ int PathPlanner::splitInput(const std::vector<FLOAT_T> startPos, const std::vect
   return 0;
 }
 
-void PathPlanner::transformVector(std::vector<FLOAT_T> &vec, const std::vector<FLOAT_T> &startPos)
+void PathPlanner::transformVector(VectorN &vec, const VectorN &startPos)
 {
   if (axis_config == AXIS_CONFIG_DELTA) {
 
@@ -194,7 +194,7 @@ void PathPlanner::transformVector(std::vector<FLOAT_T> &vec, const std::vector<F
   return;
 }
 
-void PathPlanner::reverseTransformVector(std::vector<FLOAT_T> &vec)
+void PathPlanner::reverseTransformVector(VectorN &vec)
 {
 
   hasEndABC = false;
@@ -234,11 +234,11 @@ void PathPlanner::reverseTransformVector(std::vector<FLOAT_T> &vec)
   return;
 }
 
-void PathPlanner::backlashCompensation(std::vector<FLOAT_T> &delta) 
+void PathPlanner::backlashCompensation(VectorN &delta) 
 {
 
   int dirstate;
-  for (size_t i = 0; i<delta.size(); ++i) {
+  for (size_t i = 0; i<NUM_AXES; ++i) {
     dirstate = sgn(delta[i]);
     if ((dirstate != 0) && (dirstate != backlash_state[i])) {
       backlash_state[i] = dirstate;
@@ -249,7 +249,7 @@ void PathPlanner::backlashCompensation(std::vector<FLOAT_T> &delta)
   return;
 }
 
-void PathPlanner::handleSlaves(std::vector<FLOAT_T> &startPos, std::vector<FLOAT_T> &endPos)
+void PathPlanner::handleSlaves(VectorN &startPos, VectorN &endPos)
 {
   if ( has_slaves) {
     for (size_t i=0; i<master.size(); ++i) {
