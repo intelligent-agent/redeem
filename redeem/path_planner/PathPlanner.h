@@ -84,21 +84,22 @@ class PathPlanner {
   unsigned int moveCacheSize; // set on init
 
   int printMoveBufferWait;
-  int minBufferedMoveTime;
-  int maxBufferedMoveTime;
+  long long maxBufferedMoveTime;
 
   std::vector<Path> lines;
 
-  inline void previousPlannerIndex(unsigned int &p){
-    p = (p ? p-1 : moveCacheSize-1);
+  inline unsigned int previousPlannerIndex(unsigned int p){
+    return (p + moveCacheSize - 1) % moveCacheSize;
   }
 
-  inline void nextPlannerIndex(unsigned int& p){
-    p = (p == moveCacheSize - 1 ? 0 : p + 1);
+  inline unsigned int nextPlannerIndex(unsigned int p){
+    return (p + 1) % moveCacheSize;
   }
 
   inline void removeCurrentLine(){
     linesTicksCount -= lines[linesPos].getTimeInTicks();
+    lines[linesPos].zero();
+    assert(linesTicksCount >= 0);
     linesPos++;
     if(linesPos>=moveCacheSize) 
       linesPos=0;
@@ -110,7 +111,29 @@ class PathPlanner {
   }
 	
   std::mutex line_mutex;
-  std::condition_variable lineAvailable;
+  std::condition_variable pathQueueHasSpace;
+
+  inline bool doesPathQueueHaveSpace() {
+    return stop || (linesCount < moveCacheSize && !isLinesBufferFilled());
+  }
+
+  inline void notifyIfPathQueueHasSpace() {
+    if (doesPathQueueHaveSpace()) {
+      pathQueueHasSpace.notify_all();
+    }
+  }
+
+  std::condition_variable pathQueueReadyToPrint;
+
+  inline bool isPathQueueReadyToPrint() {
+    return stop || linesCount > 0;
+  }
+
+  inline void notifyIfPathQueueIsReadyToPrint() {
+    if (isPathQueueReadyToPrint()) {
+      pathQueueReadyToPrint.notify_all();
+    }
+  }
 	
   std::thread runningThread;
   bool stop;
@@ -118,6 +141,14 @@ class PathPlanner {
   PruTimer pru;
   void recomputeParameters();
   void run();
+  void runMove(
+    const int moveMask,
+    const int cancellableMask,
+    const bool sync,
+    const bool wait,
+    const StepperPathParameters& params,
+    std::unique_ptr<SteppersCommand[]> const &commands,
+    const size_t commandsLength);
 	
   // pre-processor functions
   int softEndStopApply(const std::vector<FLOAT_T> &startPos, const std::vector<FLOAT_T> &endPos);
@@ -125,7 +156,7 @@ class PathPlanner {
   int splitInput(const std::vector<FLOAT_T> startPos, const std::vector<FLOAT_T> vec, 
 		 FLOAT_T speed, FLOAT_T accel, bool cancelable, 
 		 bool optimize, bool use_backlash_compensation, 
-		 int tool_axis);
+		 int tool_axis, bool virgin);
   void transformVector(std::vector<FLOAT_T> &vec, const std::vector<FLOAT_T> &startPos);
   void reverseTransformVector(std::vector<FLOAT_T> &vec);
   void backlashCompensation(std::vector<FLOAT_T> &delta);
@@ -268,15 +299,6 @@ class PathPlanner {
    */
   void setPrintMoveBufferWait(int dt);
 
-
-  /**
-   * @brief Set the minimum buffered move time
-   * @details Minimum of move buffered in the PRU (in term of move time in milliseconds) before we stop sending moves to the PRU.
-   * Should be as low as possible so that we can keep some moves in the PathPlanner buffer for proper speed computations
-   * @param dt minimum buffered move time
-   */
-  void setMinBufferedMoveTime(int dt);
-
   /**
    * @brief Set the maximum buffered move time
    * @details Time to wait before processing a print command if the buffer is not full enough, expressed in milliseconds.
@@ -284,7 +306,7 @@ class PathPlanner {
    * but it will increase the startup time of the print.
    * @param dt maximum buffered move time
    */
-  void setMaxBufferedMoveTime(int dt);
+  void setMaxBufferedMoveTime(long long dt);
 
   /**
    * @brief Set the maximum feedrates of the different axis X,Y,Z

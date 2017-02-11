@@ -79,7 +79,7 @@ class Redeem:
          - default is installed directory
          - allows for running in a local directory when debugging
         """
-        firmware_version = "1.2.8~Predator"
+        firmware_version = "1.3.0~The Running Man"
         logging.info("Redeem initializing "+firmware_version)
 
         printer = Printer()
@@ -251,7 +251,7 @@ class Redeem:
 
         # Delta printer setup
         if printer.axis_config == Printer.AXIS_CONFIG_DELTA:
-            opts = ["Hez", "L", "r", "Ae", "Be", "Ce", "A_radial", "B_radial", "C_radial", "A_tangential", "B_tangential", "C_tangential" ]
+            opts = ["Hez", "L", "r", "A_radial", "B_radial", "C_radial", "A_angular", "B_angular", "C_angular" ]
             for opt in opts:
                 Delta.__dict__[opt] = printer.config.getfloat('Delta', opt)
 
@@ -283,7 +283,6 @@ class Redeem:
             # Extruders
             onoff = self.printer.config.getboolean('Heaters', 'onoff_'+e)
             prefix =  self.printer.config.get('Heaters', 'prefix_'+e)
-            max_power = self.printer.config.getfloat('Heaters', 'max_power_'+e)
             if e != "HBP":
                 self.printer.heaters[e] = Extruder(
                                         self.printer.steppers[e],
@@ -303,6 +302,7 @@ class Redeem:
             self.printer.heaters[e].max_temp        = self.printer.config.getfloat('Heaters', 'max_temp_'+e)
             self.printer.heaters[e].max_temp_rise   = self.printer.config.getfloat('Heaters', 'max_rise_temp_'+e)
             self.printer.heaters[e].max_temp_fall   = self.printer.config.getfloat('Heaters', 'max_fall_temp_'+e)
+            self.printer.heaters[e].max_power       = self.printer.config.getfloat('Heaters', 'max_power_'+e)
 
         # Init the three fans. Argument is PWM channel number
         self.printer.fans = []
@@ -449,7 +449,6 @@ class Redeem:
 
         printer.move_cache_size = printer.config.getfloat('Planner', 'move_cache_size')
         printer.print_move_buffer_wait = printer.config.getfloat('Planner', 'print_move_buffer_wait')
-        printer.min_buffered_move_time = printer.config.getfloat('Planner', 'min_buffered_move_time')
         printer.max_buffered_move_time = printer.config.getfloat('Planner', 'max_buffered_move_time')
 
         printer.max_length = printer.config.getfloat('Planner', 'max_length')
@@ -510,8 +509,8 @@ class Redeem:
 
                 delta_bot = self.printer.path_planner.native_planner.delta_bot
 
-                z_offset = delta_bot.vertical_offset(Az,Bz,Cz) # vertical offset
-                xyz = delta_bot.forward_kinematics(Az, Bz, Cz) # effector position
+                z_offset = delta_bot.verticalOffset(Az,Bz,Cz) # vertical offset
+                xyz = delta_bot.deltaToWorld(Az, Bz, Cz) # effector position
 
                 # The default home_pos, provided above, is based on effector space
                 # coordinates for carriage positions. We need to transform these to

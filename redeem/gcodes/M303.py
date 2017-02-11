@@ -38,7 +38,7 @@ class M303(GCodeCommand):
             return
         heater = self.printer.heaters[heater_name]
         temp     = g.get_float_by_letter("S", 200.0)        
-        cycles   = min(3, g.get_int_by_letter("C", 4))       
+        cycles   = max(3, g.get_int_by_letter("C", 4))       
         pre_cal  = bool(g.get_int_by_letter("P", 0))
         tuning_algo_nr = g.get_int_by_letter("Q", 0)
         if tuning_algo_nr not in [0, 1]:
