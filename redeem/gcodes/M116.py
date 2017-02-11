@@ -25,11 +25,11 @@ class M116(GCodeCommand):
         # -1 - HBP, 0 - E, 1 - H, 2 - A, 3 - B, 4 - C
         # No P or H Parameter means all temperatures must be reached
 
-        has_parameter = g.has_letter("P") or g.has_letter("H")
+        has_parameter = g.has_letter("P") or g.has_letter("T")
         if has_parameter:
             if g.has_letter("P"):  # Set hotend temp based on the P-param
                 heater_index = g.get_int_by_letter("P", 0)
-            elif g.has_letter("H"):  # Set hotend temp based on the T-param
+            elif g.has_letter("T"):  # Set hotend temp based on the T-param
                 heater_index = g.get_int_by_letter("T", 0)
             if heater_index > len(self.printer.heaters) - 1:
                 logging.warning("M116: heater index out of bounds: {}".format(heater_index))

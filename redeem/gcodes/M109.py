@@ -24,7 +24,7 @@ class M109(GCodeCommand):
                       "prot": g.prot})
         self.printer.processor.execute(m104)
 
-        has_parameter = g.has_letter("P") or g.has_letter("H")
+        has_parameter = g.has_letter("P") or g.has_letter("T")
         if not has_parameter:
             heaters = ["E", "H"]
             if self.printer.config.reach_revision:
