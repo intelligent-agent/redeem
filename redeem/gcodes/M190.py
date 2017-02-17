@@ -20,7 +20,7 @@ class M190(GCodeCommand):
         temperature = float(g.get_value_by_letter("S"))
         self.printer.heaters['HBP'].set_target_temperature(temperature)
         self.printer.processor.execute(Gcode({"message": "M116",
-                                              "prot": g.prot}))
+                                              "parent": g}))
 
     def get_description(self):
         return "Set heated bed temperature and wait for it to be reached"

@@ -21,9 +21,9 @@ class M109(GCodeCommand):
 
     def execute(self, g):
         m104 = Gcode({"message": "M104 " + " ".join(g.get_tokens()),
-                      "prot": g.prot})
+                      "parent": g})
         self.printer.processor.execute(m104)
-        m116 = Gcode({"message": "M116", "prot": g.prot})
+        m116 = Gcode({"message": "M116", "parent": g})
         self.printer.processor.execute(m116)
 
     def get_description(self):
