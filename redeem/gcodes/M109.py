@@ -31,7 +31,7 @@ class M109(GCodeCommand):
         else:
             parameters = g.get_tokens()
 
-        m116 = Gcode({"message": "M116" + " ".join(parameters), "parent": g})
+        m116 = Gcode({"message": "M116 " + " ".join(parameters), "parent": g})
         self.printer.processor.execute(m116)
 
     def get_description(self):
