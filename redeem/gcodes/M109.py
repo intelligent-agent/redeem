@@ -15,13 +15,10 @@ except ImportError:
     from redeem.Gcode import Gcode
 
 
-
-
 class M109(GCodeCommand):
-
     def execute(self, g):
         m104 = Gcode({"message": "M104 " + " ".join(g.get_tokens()),
-                      "prot": g.prot})
+                      "parent": g})
         self.printer.processor.execute(m104)
 
         has_parameter = g.has_letter("P") or g.has_letter("T")
@@ -34,7 +31,7 @@ class M109(GCodeCommand):
         else:
             parameters = g.get_tokens()
 
-        m116 = Gcode({"message": "M116 " + " ".join(parameters), "prot": g.prot})
+        m116 = Gcode({"message": "M116" + " ".join(parameters), "parent": g})
         self.printer.processor.execute(m116)
 
     def get_description(self):

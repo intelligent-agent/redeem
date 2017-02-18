@@ -35,11 +35,11 @@ class G29(GCodeCommand):
                 if "RFS" in gcode:
                     logging.debug("G29: Removing due to RFS: "+str(gcode))
                 else:
-                    G = Gcode({"message": gcode, "prot": g.prot})
+                    G = Gcode({"message": gcode, "parent": g})
                     self.printer.processor.execute(G)
                     self.printer.path_planner.wait_until_done()
             else: # Execute all
-                G = Gcode({"message": gcode, "prot": g.prot})
+                G = Gcode({"message": gcode, "parent": g})
                 self.printer.processor.execute(G)
                 self.printer.path_planner.wait_until_done()
 

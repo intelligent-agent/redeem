@@ -43,7 +43,7 @@ class G33(GCodeCommand):
         gcodes = self.printer.config.get("Macros", "G29").split("\n")
         self.printer.path_planner.wait_until_done()
         for gcode in gcodes:        
-            G = Gcode({"message": gcode, "prot": g.prot})
+            G = Gcode({"message": gcode, "parent": g})
             self.printer.processor.execute(G)
             self.printer.path_planner.wait_until_done()
 

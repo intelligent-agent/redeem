@@ -51,17 +51,17 @@ class M116(GCodeCommand):
             all_ok[0] |= self.printer.heaters['E'].is_target_temperature_reached()
             all_ok[1] |= self.printer.heaters['H'].is_target_temperature_reached()
             all_ok[2] |= self.printer.heaters['HBP'].is_target_temperature_reached()
+
             if self.printer.config.reach_revision:
                 all_ok[3] |= self.printer.heaters['A'].is_target_temperature_reached()
                 all_ok[4] |= self.printer.heaters['B'].is_target_temperature_reached()
                 all_ok[5] |= self.printer.heaters['C'].is_target_temperature_reached()
 
-            m105 = Gcode({"message": "M105", "prot": g.prot})
+            m105 = Gcode({"message": "M105", "parent": g})
             self.printer.processor.execute(m105)
             if False not in all_ok or not self.printer.running_M116:
                 logging.info("Heating done.")
                 self.printer.send_message(g.prot, "Heating done.")
-                self.printer.reply(m105)
                 self.printer.running_M116 = False
                 return
             else:
@@ -77,7 +77,7 @@ class M116(GCodeCommand):
     def get_long_description(self):
         desc = ("Wait for a specific temperature/all temperatures to be reached",
                 "If no parameter is added M116 will wait for all temperatures to be reached",
-                "If P or H is set then M116 will wait for the specific Heater to reach temperature only",
+                "If P or T is set then M116 will wait for the specific Heater to reach temperature only",
                 "Possible values are: ",
                 "-1 - Heated Bed",
                 " 0 - Extruder E",
