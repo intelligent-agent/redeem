@@ -86,7 +86,6 @@ class PathPlanner:
         self.native_planner.setAcceleration(tuple(self.printer.acceleration))
         self.native_planner.setJerks(tuple(self.printer.jerks))
         self.native_planner.setPrintMoveBufferWait(int(self.printer.print_move_buffer_wait))
-        self.native_planner.setMinBufferedMoveTime(int(self.printer.min_buffered_move_time))
         self.native_planner.setMaxBufferedMoveTime(int(self.printer.max_buffered_move_time))
         self.native_planner.setSoftEndstopsMin(tuple(self.printer.soft_min))
         self.native_planner.setSoftEndstopsMax(tuple(self.printer.soft_max))
@@ -94,10 +93,8 @@ class PathPlanner:
         self.native_planner.setMaxPathLength(self.printer.max_length)
         self.native_planner.setAxisConfig(self.printer.axis_config)
         self.native_planner.delta_bot.setMainDimensions(Delta.Hez, Delta.L, Delta.r)
-        self.native_planner.delta_bot.setEffectorOffset(Delta.Ae, Delta.Be, Delta.Ce)
-        self.native_planner.delta_bot.setRadialError(Delta.A_radial, Delta.B_radial, Delta.C_radial);
-        self.native_planner.delta_bot.setTangentError(Delta.A_tangential, Delta.B_tangential, Delta.C_tangential)
-        self.native_planner.delta_bot.recalculate()
+        self.native_planner.delta_bot.setRadialError(Delta.A_radial, Delta.B_radial, Delta.C_radial)
+        self.native_planner.delta_bot.setAngularError(Delta.A_angular, Delta.B_angular, Delta.C_angular)
         self.configure_slaves()
         self.native_planner.setBacklashCompensation(tuple(self.printer.backlash_compensation));
         self.native_planner.setState(self.prev.end_pos)
@@ -312,8 +309,8 @@ class PathPlanner:
             Bz = path_center['Y']
             Cz = path_center['Z']
             
-            z_offset = self.native_planner.delta_bot.vertical_offset(Az,Bz,Cz) # vertical offset
-            xyz = self.native_planner.delta_bot.forward_kinematics(Az, Bz, Cz) # effector position
+            z_offset = self.native_planner.delta_bot.verticalOffset(Az,Bz,Cz) # vertical offset
+            xyz = self.native_planner.delta_bot.deltaToWorld(Az, Bz, Cz) # effector position
             xyz[2] += z_offset
             path = {'X':xyz[0], 'Y':xyz[1], 'Z':xyz[2]}
             
@@ -420,13 +417,10 @@ class PathPlanner:
 
         self.native_planner.delta_bot.setMainDimensions(
                 Delta.Hez, Delta.L, Delta.r)
-        self.native_planner.delta_bot.setEffectorOffset(
-                Delta.Ae, Delta.Be, Delta.Ce)
         self.native_planner.delta_bot.setRadialError(
                 Delta.A_radial, Delta.B_radial, Delta.C_radial)
-        self.native_planner.delta_bot.setTangentError(
-                Delta.A_tangential, Delta.B_tangential, Delta.C_tangential)
-        self.native_planner.delta_bot.recalculate()
+        self.native_planner.delta_bot.setAngularError(
+                Delta.A_angular, Delta.B_angular, Delta.C_angular)
         
         return params
 

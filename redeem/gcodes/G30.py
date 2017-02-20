@@ -69,7 +69,7 @@ class G30(GCodeCommand):
         logging.debug("G30: probing from point (mm) : X{} Y{} Z{}".format(point["X"]+offset_x, point["Y"]+offset_y, point["Z"]))
 
         # Move to the position
-        G0 = Gcode({"message": "G0 X{} Y{} Z{}".format(point["X"]+offset_x, point["Y"]+offset_y, point["Z"]), "prot": g.prot})    
+        G0 = Gcode({"message": "G0 X{} Y{} Z{}".format(point["X"]+offset_x, point["Y"]+offset_y, point["Z"]), "parent": g})
         self.printer.processor.execute(G0)
         self.printer.path_planner.wait_until_done()
         bed_dist = self.printer.path_planner.probe(probe_length, probe_speed, probe_accel)*1000.0 # convert to mm

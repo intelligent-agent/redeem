@@ -35,7 +35,10 @@ class Gcode:
         try:
             self.message = packet["message"].split(";")[0]
             self.message = self.message.strip(' \t\n\r')
-            self.prot = packet["prot"] if "prot" in packet else "None"
+            self.parent = packet["parent"] if "parent" in packet else None
+            self.prot = packet["prot"] if "prot" in packet else None
+            if self.prot is None:
+                self.prot = self.parent.prot if self.parent else "None"
             self.has_crc = False
             self.answer = "ok"
             #print packet
@@ -147,10 +150,16 @@ class Gcode:
         return self.has_crc
 
     def get_answer(self):
-        return self.answer
+        if self.parent:
+            return self.parent.get_answer()
+        else:
+            return self.answer
 
     def set_answer(self, answer):
-        self.answer = answer
+        if self.parent:
+            self.parent.set_answer(answer)
+        else:
+            self.answer = answer
 
     def is_info_command(self):
         return (self.gcode[-1] == "?")

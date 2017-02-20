@@ -59,7 +59,7 @@ class G34(GCodeCommand):
         logging.debug("G34: orig_z = %f", orig_z)
 
         def exec_and_wait(cmd):
-            G = Gcode({"message": cmd, "prot": g.prot})
+            G = Gcode({"message": cmd, "parent": g})
             self.printer.processor.execute(G)
             self.printer.path_planner.wait_until_done()
 
