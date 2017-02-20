@@ -96,13 +96,14 @@ class G30(GCodeCommand):
         return "Probe the bed at current point"
 
     def get_long_description(self):
-        return ("Probe the bed at the current position, or if specified, a point"
+        return ("Probe the bed at the current position, or if specified, a point "
                 "previously set by M557. X, Y, and Z starting probe positions can be overridden, "
-                "D sets the probe length, or taken from config if nothing is specified. \n"
-                "F sets the probe speed. If not present, it's taken from the config. \n"
-                "A sets the probe acceleration. If not present, it's taken from the config. \n"
-                "B determines if the bed marix is used or not. (0 or 1)\n"
-                "P the point at which to probe, previously set by M557. \n"
+                "D = sets the probe length, or taken from config if nothing is specified. \n"
+                "F = sets the probe speed. If not present, it's taken from the config. \n"
+                "A = sets the probe acceleration. If not present, it's taken from the config. \n"
+                "B = determines if the bed marix is used or not. (0 or 1)\n"
+                "P = the point at which to probe, previously set by M557. \n"
+                "S = save the probed point distance\n"
                 "P and S save the probed bed distance to a list that corresponds with point P")
    
     def is_buffered(self):

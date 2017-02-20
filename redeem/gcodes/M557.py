@@ -52,11 +52,11 @@ class M557(GCodeCommand):
         return "Set probe point"
 
     def get_long_description(self):
-        return ("Set the points at which the bed will be probed to compensate for its plane"
-                "being slightly out of horizontal. The P value is the index of the point"
-                "(indices start at 0) and the X and Y values are the position to move extruder 0"
-                "to to probe the bed. An implementation should allow a minimum of three points"
-                "(P0, P1 and P2). This just records the point coordinates; it does not actually"
+        return ("Set the points at which the bed will be probed to compensate for its plane "
+                "being slightly out of horizontal. The P value is the index of the point "
+                "(indices start at 0) and the X and Y values are the position to move extruder 0 "
+                "to to probe the bed. An implementation should allow a minimum of three points "
+                "(P0, P1 and P2). This just records the point coordinates; it does not actually "
                 "do the probing.\n"
                 "P = Probe point number.\n"
                 "X = X-coordinate\n"

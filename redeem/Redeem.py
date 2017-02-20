@@ -79,7 +79,7 @@ class Redeem:
          - default is installed directory
          - allows for running in a local directory when debugging
         """
-        firmware_version = "1.3.0~The Running Man"
+        firmware_version = "1.3.1~The Running Man"
         logging.info("Redeem initializing "+firmware_version)
 
         printer = Printer()
