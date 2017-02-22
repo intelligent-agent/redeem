@@ -20,7 +20,7 @@ import logging
 class M665(GCodeCommand):
     def execute(self, g):
         if g.num_tokens() == 0:
-             g.set_answer("R: {}, L: {}".format(Delta.r, Delta.L))
+             g.set_answer("ok R: {}, L: {}".format(Delta.r, Delta.L))
         else:
             if g.has_letter("L"):
                 Delta.L = float(g.get_value_by_letter("L"))
@@ -28,7 +28,7 @@ class M665(GCodeCommand):
                 Delta.r = float(g.get_value_by_letter("R"))
                 
             self.printer.path_planner.native_planner.delta_bot.setMainDimensions(Delta.Hez, Delta.L, Delta.r)
-            self.printer.path_planner.native_planner.delta_bot.recalculate()
+            #self.printer.path_planner.native_planner.delta_bot.recalculate()
 
     def get_description(self):
         return "Set delta arm calibration values"
