@@ -28,7 +28,7 @@
 /* Number of axis needed to move the printer head. Only 3 supported */
 #define NUM_MOVING_AXES 3
 
-/* Total number of axis that the system supports, including the currently selected extruder. Currently only 4 is supported */
+/* Total number of axis that the system supports, including the currently selected extruder. */
 #define NUM_AXES 8
 
 /* Number of extruder */

@@ -40,6 +40,7 @@ pathplanner = Extension(
         'redeem/path_planner/Path.cpp',
         'redeem/path_planner/Delta.cpp',
         'redeem/path_planner/vector3.cpp',
+        'redeem/path_planner/vectorN.cpp',
         'redeem/path_planner/PruTimer.cpp',
         'redeem/path_planner/prussdrv.c',
         'redeem/path_planner/Logger.cpp'],

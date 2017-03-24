@@ -5,8 +5,7 @@
 
 #include "config.h"
 
-class Vector3 {
-public:
+struct Vector3 {
     /// The Cartesian coordinates are accessible.
     FLOAT_T x;
     FLOAT_T y;
