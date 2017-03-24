@@ -358,6 +358,12 @@ class Redeem:
                     else:
                         target_temp = 60
                     c.set_target_temperature(target_temp)
+                    max_speed = "therm-{}-fan-{}-max_speed".format(t, f)
+                    if printer.config.has_option('Cold-ends', max_speed):
+                        target_speed = printer.config.getfloat('Cold-ends', max_speed)
+                    else:
+                        target_speed = 1.0
+                    c.set_max_speed(target_speed)
                     c.enable()
                     printer.coolers.append(c)
                     logging.info("Cooler connects therm {} with fan {}".format(t, f))
