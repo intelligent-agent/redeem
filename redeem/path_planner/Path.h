@@ -173,7 +173,7 @@ private:
   // These fields are constant after initialization
   FLOAT_T distance;               /// Total distance of the move in NUM_AXIS-dimensional space in meters
   unsigned int dir;               /// Direction of movement (1 = X+, 2 = Y+, 4= Z+) and whether an axis moves at all (256 = X+, 512 = Y+, 1024 = Z+)
-  std::vector<int> deltas;        /// Steps we want to move (absolute value)
+  IntVectorN deltas;        /// Steps we want to move (absolute value)
 
   // These fields are calculated
   unsigned long long timeInTicks; /// Time for completing a move.
@@ -323,7 +323,7 @@ public:
     return speeds;
   }
 
-  inline const std::vector<int>& getDeltas() {
+  inline const IntVectorN& getDeltas() {
     return deltas;
   }
 

@@ -181,3 +181,66 @@ FLOAT_T dot(const VectorN &v1, const VectorN &v2)
 
   return result;
 }
+
+IntVectorN::IntVectorN()
+{
+  zero();
+}
+
+void IntVectorN::zero()
+{
+  for (int i = 0; i < NUM_AXES; i++)
+  {
+    values[i] = 0;
+  }
+}
+
+IntVectorN& IntVectorN::operator=(const IntVectorN &v)
+{
+  for (int i = 0; i < NUM_AXES; i++)
+  {
+    values[i] = v[i];
+  }
+
+  return *this;
+}
+
+IntVectorN& IntVectorN::operator+=(const IntVectorN &v)
+{
+  for (int i = 0; i < NUM_AXES; i++)
+  {
+    values[i] += v[i];
+  }
+
+  return *this;
+}
+
+IntVectorN& IntVectorN::operator-=(const IntVectorN &v)
+{
+  for (int i = 0; i < NUM_AXES; i++)
+  {
+    values[i] -= v[i];
+  }
+
+  return *this;
+}
+
+IntVectorN& IntVectorN::operator*=(long long v)
+{
+  for (int i = 0; i < NUM_AXES; i++)
+  {
+    values[i] *= v;
+  }
+
+  return *this;
+}
+
+long long& IntVectorN::operator[](int i)
+{
+  return values[i];
+}
+
+const long long& IntVectorN::operator[](int i) const
+{
+  return values[i];
+}

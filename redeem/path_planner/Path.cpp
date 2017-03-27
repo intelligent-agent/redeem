@@ -37,7 +37,7 @@ void Path::zero() {
 
   distance = 0;
   dir = 0;
-  deltas.assign(NUM_AXES, 0);
+  deltas.zero();
 
   timeInTicks = 0;
   speeds.zero();

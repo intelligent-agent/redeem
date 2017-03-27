@@ -63,4 +63,24 @@ VectorN operator/(const VectorN &v1, FLOAT_T v2);
 /// Vector dot product returns a real number.
 FLOAT_T dot(const VectorN &v1, const VectorN &v2);
 
+struct IntVectorN {
+  long long values[NUM_AXES];
+
+  IntVectorN();
+
+  void zero();
+
+  IntVectorN& operator=(const IntVectorN &v);
+  /// Add v to this vector.
+  IntVectorN& operator+=(const IntVectorN &v);
+  /// Subtract v from this vector.
+  IntVectorN& operator-=(const IntVectorN &v);
+  /// Scale by v (integer)
+  IntVectorN& operator*=(long long v);
+  /// Get a specific axis of the vector
+  long long& operator[](int i);
+  /// Same thing, but const
+  const long long& operator[](int i) const;
+};
+
 #endif
