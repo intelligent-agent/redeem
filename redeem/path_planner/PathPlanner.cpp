@@ -28,6 +28,7 @@
 #include <cmath>
 #include <assert.h>
 #include <thread>
+#include <array>
 #include <Python.h>
 
 
@@ -653,11 +654,13 @@ void PathPlanner::runMove(
   };
 
   std::priority_queue < Step, std::vector<Step>, std::greater<Step>> steps;
-  std::vector<StepperPath> stepperPaths(NUM_AXES);
-  std::vector<StepperPathState> stepperPathStates(NUM_AXES);
-  std::vector<unsigned long long> finalStepTimes(NUM_AXES, 0);
+  std::array<StepperPath, NUM_AXES> stepperPaths;
+  std::array<StepperPathState, NUM_AXES> stepperPathStates;
+  std::array<unsigned long long, NUM_AXES> finalStepTimes;
   unsigned long long finalTime = 0;
   size_t commandsIndex = 0;
+
+  finalStepTimes.fill(0);
 
   for (int i = 0; i < NUM_AXES; i++) {
     if (moveMask & (1 << i)) {
