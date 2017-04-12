@@ -446,11 +446,13 @@ class Redeem:
 
         # Create the firmware compiler
         pru_firmware = PruFirmware(
-            dirname + "/firmware/firmware_runtime.p",
+            dirname + "/firmware/firmware_runtime.c",
             dirname + "/firmware/firmware_runtime.bin",
             dirname + "/firmware/firmware_endstops.p",
             dirname + "/firmware/firmware_endstops.bin",
-            self.printer, "/usr/bin/pasm")
+            self.printer, "/usr/bin/clpru", "/usr/bin/pasm",
+            dirname + "/firmware/AM335x_PRU.cmd",
+            dirname + "/firmware/image.cmd")
 
 
         printer.move_cache_size = printer.config.getfloat('Planner', 'move_cache_size')
