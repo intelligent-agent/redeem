@@ -63,8 +63,10 @@ setup(
     packages = find_packages(exclude=["redeem/path_planner"]),
     data_files=[
         ('redeem/firmware', [
-            'redeem/firmware/firmware_runtime.p',
-            'redeem/firmware/firmware_endstops.p']),
+            'redeem/firmware/firmware_runtime.c',
+            'redeem/firmware/firmware_endstops.p',
+            'redeem/firmware/AM335x_PRU.cmd',
+            'redeem/firmware/image.cmd']),
         ('redeem/configs', [
             'configs/default.cfg',
             'configs/thing.cfg',
