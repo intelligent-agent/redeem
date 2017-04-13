@@ -7,8 +7,8 @@ delta.setMainDimensions(0.0, 0.304188, 0.146)
 
 t = PathPlannerMock(1024)
 
-#t.delta_bot = delta
-t.setAxisConfig(0)
+t.delta_bot = delta
+t.setAxisConfig(3)
 t.setMaxPathLength(0.0001)
 
 t.initPRU("/root/redeem/firmware/firmware_runtime.bin","/root/redeem/firmware/firmware_endstops.bin")
@@ -98,7 +98,7 @@ t.waitUntilFinished()
 
 # Move that's uneven across the axes
 start       = (0, 0, 0, 0, 0, 0, 0, 0)
-end         = (0.100, 0.0, 0.0, 0.0, 0, 0, 0, 0)
+end         = (-0.1000, 0.100, 0.100 - 0.26686, 0.00, 0, 0, 0, 0)
 speed       = 1.0
 accel       = 1.0
 cancelable  = False
@@ -110,7 +110,7 @@ tool_axis            = 3
 virgin               = True
 t.queueMove(start, end, speed, accel, cancelable,
     optimize, enable_soft_endstops, use_bed_matrix, use_backlash_compensation,
-    tool_axis, virgin)
+    tool_axis)
 
 t.waitUntilFinished()
 

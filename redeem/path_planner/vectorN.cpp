@@ -1,7 +1,9 @@
 // vectorN.cpp
 
 #include "vectorN.h"
+#include "vector3.h"
 #include <math.h>
+#include <cmath>
 
 VectorN::VectorN()
 {
@@ -89,6 +91,22 @@ FLOAT_T& VectorN::operator[](int i)
 const FLOAT_T& VectorN::operator[](int i) const
 {
   return values[i];
+}
+
+Vector3 VectorN::toVector3() const
+{
+  return Vector3(values[0], values[1], values[2]);
+}
+
+IntVectorN VectorN::round() const
+{
+  IntVectorN result;
+  for (int i = 0; i < NUM_AXES; i++)
+  {
+    result[i] = std::llround(values[i]);
+  }
+
+  return result;
 }
 
 // Helper functions for the VectorN class.
@@ -182,6 +200,26 @@ FLOAT_T dot(const VectorN &v1, const VectorN &v2)
   return result;
 }
 
+VectorN operator/(const VectorN& v1, const VectorN& v2)
+{
+  VectorN v3;
+  for (int i = 0; i < NUM_AXES; i++)
+  {
+    v3[i] = v1[i] / v2[i];
+  }
+  return v3;
+}
+
+VectorN operator*(const VectorN& v1, const VectorN& v2)
+{
+  VectorN v3;
+  for (int i = 0; i < NUM_AXES; i++)
+  {
+    v3[i] = v1[i] * v2[i];
+  }
+  return v3;
+}
+
 IntVectorN::IntVectorN()
 {
   zero();
@@ -243,4 +281,32 @@ long long& IntVectorN::operator[](int i)
 const long long& IntVectorN::operator[](int i) const
 {
   return values[i];
+}
+
+VectorN IntVectorN::toVectorN() const
+{
+  VectorN result;
+  for (int i = 0; i < NUM_AXES; i++)
+  {
+    result[i] = values[i];
+  }
+
+  return result;
+}
+
+IntVector3 IntVectorN::toIntVector3() const
+{
+  return IntVector3(values[0], values[1], values[2]);
+}
+
+IntVectorN operator-(const IntVectorN& v1, const IntVectorN &v2)
+{
+  IntVectorN result;
+
+  for (int i = 0; i < NUM_AXES; i++)
+  {
+    result[i] = v1[i] - v2[i];
+  }
+
+  return result;
 }

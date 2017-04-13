@@ -26,7 +26,7 @@ pathplanner = Extension('_PathPlannerMock',
     extra_compile_args = [
         '-std=c++0x',
         '-g',
-        '-O2',
+        '-O0',
         '-fpermissive',
         '-D_GLIBCXX_USE_NANOSLEEP',
         '-DBUILD_PYTHON_EXT=1', 

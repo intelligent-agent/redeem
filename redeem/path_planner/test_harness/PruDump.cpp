@@ -98,10 +98,30 @@ void printSpeed(std::fstream& stepOut, int axis, bool direction, FLOAT_T secondS
   stepOut << std::endl;
 }
 
+void printPosition(std::fstream& stepOut, int axis, FLOAT_T position, FLOAT_T time) {
+  stepOut << time << "\t";
+
+  for (int i = 0; i < 5; i++)
+  {
+    if (i == axis)
+    {
+      stepOut << position << "\t";
+    }
+    else
+    {
+      stepOut << "?\t";
+    }
+  }
+
+  stepOut << std::endl;
+}
+
 FLOAT_T checkTrapezoid(PathPlanner& pathPlanner, Path& path, std::fstream& stepOut, std::vector<SteppersCommand>& stepperCommands, FLOAT_T startTime) {
 
   std::vector<int> checkDeltas;
   checkDeltas.assign(NUM_AXES, 0);
+  std::vector<FLOAT_T> positions;
+  positions.assign(NUM_AXES, 0);
   std::vector<FLOAT_T> secondStepTime;
   std::vector<FLOAT_T> firstStepTime;
   std::vector<bool> secondStepDir;
@@ -119,9 +139,9 @@ FLOAT_T checkTrapezoid(PathPlanner& pathPlanner, Path& path, std::fstream& stepO
       FLOAT_T axisStartSpeed = path.startSpeed / path.fullSpeed * path.speeds[axis];
       FLOAT_T axisStartInterval = 1.0 / axisStartSpeed;
       secondStepTime[axis] = -1.0 * axisStartInterval;
-      secondStepDir[axis] = path.isAxisPositiveMove(axis);
+      secondStepDir[axis] = true;
       firstStepTime[axis] = -2.0 * axisStartInterval;
-      firstStepDir[axis] = path.isAxisPositiveMove(axis);
+      firstStepDir[axis] = true;
     }
   }
 
@@ -133,18 +153,22 @@ FLOAT_T checkTrapezoid(PathPlanner& pathPlanner, Path& path, std::fstream& stepO
       if (command.step & (1 << axis)) {
 	checkDeltas[axis]++;
 	bool direction = !!(command.direction & (1 << axis));
+
+	positions[axis] += (direction ? 1.0 : -1.0) / pathPlanner.axisStepsPerM[axis];
 	
-	checkAccel(i, axis, path.accels[axis], curStepTime, secondStepTime[axis], firstStepTime[axis]);
+	//checkAccel(i, axis, path.accels[axis], curStepTime, secondStepTime[axis], firstStepTime[axis]);
 
 	if (secondStepTime[axis] >= 0) {
 	  // this skips the synthetic steps
-	  printSpeed(stepOut, axis, secondStepDir[axis], curStepTime, secondStepTime[axis]);
+	  //printSpeed(stepOut, axis, secondStepDir[axis], curStepTime, secondStepTime[axis]);
+	  printPosition(stepOut, axis, positions[axis], curStepTime);
 	}
-
+	/*
 	if (curStepTime > path.stepperPath.accelTime && curStepTime < path.stepperPath.accelTime + path.stepperPath.cruiseTime) {
 	  // this examines previous steps in groups of two, so we have to skip a few on each side to get a meaningful result
 	  checkCruise(i, axis, path.speeds[axis], curStepTime, secondStepTime[axis]);
 	}
+	*/
 
 	firstStepTime[axis] = secondStepTime[axis];
 	firstStepDir[axis] = secondStepDir[axis];
@@ -163,19 +187,19 @@ FLOAT_T checkTrapezoid(PathPlanner& pathPlanner, Path& path, std::fstream& stepO
 
   for (int axis = 0; axis < NUM_AXES; axis++) {
     if (path.isAxisMove(axis)) {
-      FLOAT_T axisEndSpeed = path.endSpeed / path.fullSpeed * path.speeds[axis];
-      FLOAT_T axisEndInterval = 1.0 / axisEndSpeed;
+      //FLOAT_T axisEndSpeed = path.endSpeed / path.fullSpeed * path.speeds[axis];
+      //FLOAT_T axisEndInterval = 1.0 / axisEndSpeed;
 
-      checkAccel(stepperCommands.size(), axis, path.accels[axis], finalStepTime + 1.0 * axisEndInterval, secondStepTime[axis], firstStepTime[axis]);
-      checkAccel(stepperCommands.size() + 1, axis, path.accels[axis], finalStepTime + 2.0 * axisEndInterval, curTicks, secondStepTime[axis]);
+      //checkAccel(stepperCommands.size(), axis, path.accels[axis], finalStepTime + 1.0 * axisEndInterval, secondStepTime[axis], firstStepTime[axis]);
+      //checkAccel(stepperCommands.size() + 1, axis, path.accels[axis], finalStepTime + 2.0 * axisEndInterval, curTicks, secondStepTime[axis]);
       // include one synthetic step here because otherwise we can't get a speed for the final steps
       printSpeed(stepOut, axis, secondStepDir[axis], finalStepTime, secondStepTime[axis]);
     }
   }
 
   for (int axis = 0; axis < NUM_AXES; axis++) {
-    CHECK(checkDeltas[axis] == path.deltas[axis],
-      "axis " << axis << " was supposed to step " << path.deltas[axis] << " times, but it stepped " << checkDeltas[axis] << " times.");
+    //CHECK(checkDeltas[axis] == path.deltas[axis],
+    //  "axis " << axis << " was supposed to step " << path.deltas[axis] << " times, but it stepped " << checkDeltas[axis] << " times.");
   }
 
   return finalStepTime;
