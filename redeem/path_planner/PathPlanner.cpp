@@ -134,9 +134,10 @@ void PathPlanner::queueMove(VectorN startWorldPos, VectorN endWorldPos,
     LOG("After matrix X: "<< endWorldPos[0]<<" Y: "<< endWorldPos[1]<<" Z: "<< endWorldPos[2]<<"\n");
   }
 
+  // handle any slaving activity
+  handleSlaves(startWorldPos, endWorldPos);
 	
   // Get the vector to move us from where we are, to where we ideally want to be.
-  
   IntVectorN endPos = (endWorldPos * axisStepsPerM).round();
 
   // First convert to machine-space
@@ -214,11 +215,6 @@ void PathPlanner::queueMove(VectorN startWorldPos, VectorN endWorldPos,
   if (use_backlash_compensation) {
     backlashCompensation(delta);
   }
-  */
-    
-  // handle any slaving activity
-  // TODO bring this back!
-  //handleSlaves(startPos, endPos);
 
   ////////////////////////////////////////////////////////////////////
   // LOAD INTO QUEUE

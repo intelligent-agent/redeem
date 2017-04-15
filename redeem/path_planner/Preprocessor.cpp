@@ -91,7 +91,14 @@ void PathPlanner::handleSlaves(VectorN &startPos, VectorN &endPos)
     for (size_t i=0; i<master.size(); ++i) {
       startPos[slave[i]] = startPos[master[i]];
       endPos[slave[i]] = endPos[master[i]];
-      state[slave[i]] = state[master[i]];
+      if (axisStepsPerM[master[i]] == axisStepsPerM[slave[i]])
+      {
+	state[slave[i]] = state[master[i]];
+      }
+      else
+      {
+	state[slave[i]] = std::llround(state[master[i]] / axisStepsPerM[master[i]] * axisStepsPerM[slave[i]]);
+      }
     }
   }
 }
