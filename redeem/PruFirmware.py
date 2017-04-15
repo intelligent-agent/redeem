@@ -339,14 +339,14 @@ class PruFirmware:
             end_stop_delay = self.config.getint('Endstops', 'end_stop_delay_cycles')
             configFile.write("#define END_STOP_DELAY " +str(end_stop_delay)+ "\n");
             
-            revision = self.printer.config.replicape_revision;
+            revision = self.printer.config.replicape_revision.strip('0');
             
             # Note that these are all cycle counts of the 200MHz PRU - 1 cycle is 5ns
-            if revision.startswith("00A"): # DRV8825
+            if revision.startswith('A'): # DRV8825
                 configFile.write("#define DELAY_BETWEEN_DIR_AND_STEP 130\n") # t_SU in the spec sheet
                 configFile.write("#define DELAY_BETWEEN_STEP_AND_CLEAR 380\n") # t_WH in the spec sheet
                 configFile.write("#define MINIMUM_DELAY_AFTER_STEP 380\n") # t_WL in the spec sheet
-            elif revision.startswith("00B"): # TMC2100
+            elif revision.startswith('B'): # TMC2100
                 configFile.write("#define DELAY_BETWEEN_DIR_AND_STEP 4\n") # t_DSU in the spec sheet
                 configFile.write("#define DELAY_BETWEEN_STEP_AND_CLEAR 20\n") # t_SH in the spec sheet - assume internal clock of 14MHz, which means we need max(~85, t_clk+20). t_clk+20 is ~91.43, which we round up for safety
                 configFile.write("#define MINIMUM_DELAY_AFTER_STEP 24\n") # t_SL with t_DSH added for safety
