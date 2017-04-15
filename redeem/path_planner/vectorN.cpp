@@ -299,6 +299,18 @@ IntVector3 IntVectorN::toIntVector3() const
   return IntVector3(values[0], values[1], values[2]);
 }
 
+IntVectorN operator+(const IntVectorN& v1, const IntVectorN &v2)
+{
+  IntVectorN result;
+
+  for (int i = 0; i < NUM_AXES; i++)
+  {
+    result[i] = v1[i] + v2[i];
+  }
+
+  return result;
+}
+
 IntVectorN operator-(const IntVectorN& v1, const IntVectorN &v2)
 {
   IntVectorN result;

@@ -70,7 +70,9 @@ void PathPlanner::applyBedCompensation(VectorN &endPos)
   return;
 }
 
-void PathPlanner::backlashCompensation(VectorN &delta)
+inline int sgn(long long val) { return (0 < val) - (val < 0); }
+
+void PathPlanner::backlashCompensation(IntVectorN &delta)
 {
 
   int dirstate;
@@ -78,7 +80,7 @@ void PathPlanner::backlashCompensation(VectorN &delta)
     dirstate = sgn(delta[i]);
     if ((dirstate != 0) && (dirstate != backlash_state[i])) {
       backlash_state[i] = dirstate;
-      delta[i] += dirstate*backlash_compensation[i];
+      delta[i] += std::llround(dirstate * backlash_compensation[i] * axisStepsPerM[i]);
     }
   }
     

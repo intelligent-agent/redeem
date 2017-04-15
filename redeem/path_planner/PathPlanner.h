@@ -152,7 +152,7 @@ class PathPlanner {
   // pre-processor functions
   int softEndStopApply(const VectorN &startPos, const VectorN &endPos);
   void applyBedCompensation(VectorN &endPos);
-  void backlashCompensation(VectorN &delta);
+  void backlashCompensation(IntVectorN &delta);
   void handleSlaves(VectorN &startPos, VectorN &endPos);
 	
 	
@@ -176,9 +176,7 @@ class PathPlanner {
 	
   // backlash compensation
   VectorN backlash_compensation;
-  VectorN backlash_state;
-
-  inline int sgn(FLOAT_T val) { return (0.0 < val) - (val < 0.0);}
+  IntVectorN backlash_state;
 
   Vector3 worldToHBelt(const Vector3&);
   Vector3 hBeltToWorld(const Vector3&);

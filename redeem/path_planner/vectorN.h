@@ -99,7 +99,11 @@ struct IntVectorN {
   IntVector3 toIntVector3() const;
 };
 
+/// Binary + returns new vector (v1 + v2).
+IntVectorN operator+(const IntVectorN &v1, const IntVectorN &v2);
 /// Binary - returns new vector (v1 - v2).
 IntVectorN operator-(const IntVectorN &v1, const IntVectorN &v2);
+
+
 
 #endif

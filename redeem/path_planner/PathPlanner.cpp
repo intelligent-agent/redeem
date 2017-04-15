@@ -208,12 +208,15 @@ void PathPlanner::queueMove(VectorN startWorldPos, VectorN endWorldPos,
     LOG("no move" << std::endl);
     return;
   }
-	
+
+  IntVectorN tweakedEndPos = endPos;
+
   // backlash compensation
-  // TODO bring this back!
-  /*
   if (use_backlash_compensation) {
-    backlashCompensation(delta);
+    IntVectorN adjustedDeltas = rawDeltas;
+    backlashCompensation(adjustedDeltas);
+
+    tweakedEndPos = state + adjustedDeltas;
   }
 
   ////////////////////////////////////////////////////////////////////
@@ -225,7 +228,7 @@ void PathPlanner::queueMove(VectorN startWorldPos, VectorN endWorldPos,
 
   Path p;
 
-  p.initialize(state, endPos, axisStepsPerM, speed, axis_config, delta_bot, cancelable);
+  p.initialize(state, tweakedEndPos, axisStepsPerM, speed, axis_config, delta_bot, cancelable);
 
   if (p.isNoMove()) {
     LOG("Warning: no move path" << std::endl);
