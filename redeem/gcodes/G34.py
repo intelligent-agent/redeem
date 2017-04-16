@@ -72,17 +72,14 @@ class G34(GCodeCommand):
         logging.debug("G34: deploying probe")
         exec_and_wait("G32")
 
-        bed_dist = 1000. * self.printer.path_planner.probe(
+        probe_z = 1000. * self.printer.path_planner.probe(
                 probe_length / 1000., probe_speed, probe_accel)
-
-        logging.debug("G34: bed_dist = %f", bed_dist)
 
         # retract probe
         logging.debug("retracting probe")
         exec_and_wait("G31")
 
         # calculate the difference
-        probe_z = probe_start_z + bed_dist
         logging.debug("probe_z = %f", probe_z)
         z_offset = probe_z - orig_z
         logging.debug("z_offset = %f", z_offset)
