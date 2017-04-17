@@ -117,7 +117,7 @@ class PathPlanner {
   bool queueSyncEvent(bool isBlocking = true);
   int waitUntilSyncEvent();
   void clearSyncEvent();
-  void queueMove(VectorN startPos, VectorN endPos, 
+  void queueMove(VectorN endPos, 
 		 FLOAT_T speed, FLOAT_T accel, 
 		 bool cancelable, bool optimize, 
 		 bool enable_soft_endstops, bool use_bed_matrix, 

@@ -241,7 +241,6 @@ class PathPlanner {
    * 
    * The coordinates unit is in meters. As a general rule, every public method of this class use SI units.
    * 
-   * @param startPos The starting position of the path in meters
    * @param endPos The end position of the path in meters
    * @param speed The feedrate (aka speed) of the move in m/s
    * @param cancelable flags the move as cancelable.
@@ -252,7 +251,7 @@ class PathPlanner {
    * @param tool_axis which axis is our tool attached to
    * @param virgin Flag to indicate if this is a newly passed in value or if it is somewhere in a recursion loop
    */
-  void queueMove(VectorN startPos, VectorN endPos,
+  void queueMove(VectorN endPos,
 		 FLOAT_T speed, FLOAT_T accel, 
 		 bool cancelable=false, bool optimize=true, 
 		 bool enable_soft_endstops=true, bool use_bed_matrix=true, 

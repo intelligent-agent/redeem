@@ -104,7 +104,7 @@ void PathPlanner::clearSyncEvent(){
   PyEval_RestoreThread(_save);
 }
 
-void PathPlanner::queueMove(VectorN startWorldPos, VectorN endWorldPos,
+void PathPlanner::queueMove(VectorN endWorldPos,
 			    FLOAT_T speed, FLOAT_T accel, 
 			    bool cancelable, bool optimize, 
 			    bool enable_soft_endstops, bool use_bed_matrix, 
@@ -118,6 +118,8 @@ void PathPlanner::queueMove(VectorN startWorldPos, VectorN endWorldPos,
   // for (int i = 0; i<NUM_AXES; ++i) {
   //   LOG("AXIS " << i << ": start = " << startPos[i] << "(" << state[i] << "), end = " << endPos[i] << "\n");
   // }
+
+  VectorN startWorldPos = getState();
 	
   // If this is a virgin path then we need to perform all 
   // necessary modifications to the end position

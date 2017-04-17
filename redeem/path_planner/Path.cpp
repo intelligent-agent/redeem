@@ -76,6 +76,7 @@ void Path::zero() {
   flags = 0;
 
   distance = 0;
+  baseSpeed = 0;
   moveMask = 0;
 
   timeInTicks = 0;
@@ -106,8 +107,8 @@ Path& Path::operator=(const Path& path) {
   joinFlags = path.joinFlags;
   flags = path.flags.load();
 
-  baseSpeed = path.baseSpeed;
   distance = path.distance;
+  baseSpeed = path.baseSpeed;
   moveMask = path.moveMask;
 
   timeInTicks = path.timeInTicks;
@@ -130,8 +131,8 @@ Path& Path::operator=(Path&& path) {
   joinFlags = path.joinFlags;
   flags = path.flags.load();
 
-  baseSpeed = path.baseSpeed;
   distance = path.distance;
+  baseSpeed = path.baseSpeed;
   moveMask = path.moveMask;
 
   timeInTicks = path.timeInTicks;
@@ -253,6 +254,9 @@ void Path::calculate(const VectorN& axis_diff, /// Axis movements expressed in m
       // (steps / second) / (steps / second^2) = seconds
       FLOAT_T minimumAxisAccelerationTime = speeds[i] / maxAccelMPerSquareSecond[i];
       minimumAccelerationTime = std::max(minimumAccelerationTime, minimumAxisAccelerationTime);
+    }
+    else {
+      speeds[i] = 0;
     }
   }
 

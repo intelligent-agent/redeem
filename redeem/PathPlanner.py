@@ -458,10 +458,8 @@ class PathPlanner:
             tool_axis = Printer.axis_to_index(self.printer.current_tool)
             
             self.native_planner.setAxisConfig(int(self.printer.axis_config))
-            # Start_pos is unused. TODO: Remove it.  
-            # Bed matrix behaviour is handled in Python space, it is fast enough for that. 
-            self.native_planner.queueMove((0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0),#tuple(new.start_pos),
-                                      tuple(new.end_pos), 
+            
+            self.native_planner.queueMove(tuple(new.end_pos), 
                                       new.speed, 
                                       new.accel,
                                       bool(new.cancelable),
