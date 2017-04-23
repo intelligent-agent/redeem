@@ -48,7 +48,7 @@ pathplanner = Extension(
     extra_compile_args = [
         '-std=c++0x',
         '-g',
-        '-O2',
+        '-Ofast',
         '-fpermissive',
         '-D_GLIBCXX_USE_NANOSLEEP',
         '-DBUILD_PYTHON_EXT=1',
