@@ -150,7 +150,7 @@ class PathPlanner {
     const size_t commandsLength);
 	
   // pre-processor functions
-  int softEndStopApply(const VectorN &startPos, const VectorN &endPos);
+  int softEndStopApply(const VectorN &endPos);
   void applyBedCompensation(VectorN &endPos);
   void backlashCompensation(IntVectorN &delta);
   void handleSlaves(VectorN &startPos, VectorN &endPos);

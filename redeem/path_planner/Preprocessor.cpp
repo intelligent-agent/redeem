@@ -27,20 +27,10 @@
 #include <cmath>
 #include "PathPlanner.h"
 
-int PathPlanner::softEndStopApply(const VectorN &startPos, const VectorN &endPos)
+int PathPlanner::softEndStopApply(const VectorN &endPos)
 {
   for (size_t i = 0; i<NUM_AXES; ++i) {
-    if (startPos[i] < soft_endstops_min[i]) {
-      LOGERROR( "queueMove FAILED: axis " << i 
-		<< " start position outside of soft limit (start = " << startPos[i] 
-		<< ", min limit = " << soft_endstops_min[i] << ")\n");
-      return 1;
-    } else if (startPos[i] > soft_endstops_max[i]) {
-      LOGERROR( "queueMove FAILED: axis " << i 
-		<< " start position outside of soft limit (start = " << startPos[i] 
-		<< ", max limit = " << soft_endstops_max[i] << ")\n");
-      return 1;
-    } else if (endPos[i] < soft_endstops_min[i]) {
+    if (endPos[i] < soft_endstops_min[i]) {
       LOGERROR( "queueMove FAILED: axis " << i 
 		<< " end position outside of soft limit (end = " << endPos[i] 
 		<< ", min limit = " << soft_endstops_min[i] << ")\n");

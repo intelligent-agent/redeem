@@ -120,12 +120,10 @@ void PathPlanner::queueMove(VectorN endWorldPos,
   // }
 
   VectorN startWorldPos = getState();
-	
-  // If this is a virgin path then we need to perform all 
-  // necessary modifications to the end position
+
   // Cap the end position based on soft end stops
-  if ( enable_soft_endstops) {
-    if (softEndStopApply(startWorldPos, endWorldPos)) {
+  if (enable_soft_endstops) {
+    if (softEndStopApply(endWorldPos)) {
       return;
     }
   }
