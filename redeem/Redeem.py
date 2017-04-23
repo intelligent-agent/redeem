@@ -358,6 +358,12 @@ class Redeem:
                     else:
                         target_temp = 60
                     c.set_target_temperature(target_temp)
+                    max_speed = "therm-{}-fan-{}-max_speed".format(t, f)
+                    if printer.config.has_option('Cold-ends', max_speed):
+                        target_speed = printer.config.getfloat('Cold-ends', max_speed)
+                    else:
+                        target_speed = 1.0
+                    c.set_max_speed(target_speed)
                     c.enable()
                     printer.coolers.append(c)
                     logging.info("Cooler connects therm {} with fan {}".format(t, f))
@@ -440,11 +446,13 @@ class Redeem:
 
         # Create the firmware compiler
         pru_firmware = PruFirmware(
-            dirname + "/firmware/firmware_runtime.p",
+            dirname + "/firmware/firmware_runtime.c",
             dirname + "/firmware/firmware_runtime.bin",
             dirname + "/firmware/firmware_endstops.p",
             dirname + "/firmware/firmware_endstops.bin",
-            self.printer, "/usr/bin/pasm")
+            self.printer, "/usr/bin/clpru", "/usr/bin/pasm",
+            dirname + "/firmware/AM335x_PRU.cmd",
+            dirname + "/firmware/image.cmd")
 
 
         printer.move_cache_size = printer.config.getfloat('Planner', 'move_cache_size')

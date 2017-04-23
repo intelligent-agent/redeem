@@ -34,6 +34,68 @@ namespace std {
   %template(vector_FLOAT_T) vector<FLOAT_T>;
 }
 
+
+%typemap(in) VectorN {
+  if (!PySequence_Check($input)) {
+      PyErr_SetString(PyExc_TypeError,"Expecting a sequence");
+      return NULL;
+  }
+  if (PyObject_Length($input) != NUM_AXES) {
+      PyErr_SetString(PyExc_ValueError,"Expecting a sequence with NUM_AXES elements");
+      return NULL;
+  }
+  for (int i = 0; i < NUM_AXES; i++) {
+    PyObject *o = PySequence_GetItem($input,i);
+    if (PyFloat_Check(o)) {
+      $1.values[i] = PyFloat_AsDouble(o);
+    }
+    else if(PyLong_Check(o)) {
+      $1.values[i] = PyLong_AsDouble(o);
+    }
+    else if(PyInt_Check(o)) {
+      $1.values[i] = (double)PyInt_AsLong(o);
+    }
+    else {
+      Py_XDECREF(o);
+      PyErr_SetString(PyExc_ValueError,"Expecting a sequence of floats or longs");
+      return NULL;
+    }
+    
+    Py_DECREF(o);
+  }
+}
+
+%typemap(out) VectorN (PyObject* list, PyObject* element) {
+  list = PyList_New(NUM_AXES);
+  
+  if(!PyList_Check(list)) {
+    Py_XDECREF(list);
+    PyErr_SetString(PyExc_RuntimeError, "Failed to allocate List for VectorN");
+    return NULL;
+  }
+  
+  for(int i = 0; i < NUM_AXES; i++) {
+    element = PyFloat_FromDouble($1.values[i]);
+
+    if(!PyFloat_Check(element)) {
+      Py_XDECREF(element);
+      PyErr_SetString(PyExc_RuntimeError, "Failed to allocate PyFloat for VectorN");
+      Py_DECREF(list);
+      return NULL;
+    }
+
+    if(-1 == PyList_SetItem(list, i, element)) {
+      PyErr_SetString(PyExc_RuntimeError, "Failed to insert PyFloat into PyList for VectorN");
+      Py_DECREF(element);
+      Py_DECREF(list);
+      return NULL;
+    }
+  }
+  
+  $result = list;
+}
+
+
 %apply FLOAT_T *OUTPUT { FLOAT_T* offset };
 %apply FLOAT_T *OUTPUT { FLOAT_T* X, FLOAT_T* Y , FLOAT_T* Z};
 %apply FLOAT_T *OUTPUT { FLOAT_T* Az, FLOAT_T* Bz , FLOAT_T* Cz};
@@ -59,7 +121,7 @@ class PathPlanner {
   bool queueSyncEvent(bool isBlocking = true);
   int waitUntilSyncEvent();
   void clearSyncEvent();
-  void queueMove(std::vector<FLOAT_T> startPos, std::vector<FLOAT_T> endPos, 
+  void queueMove(VectorN startPos, VectorN endPos, 
 		 FLOAT_T speed, FLOAT_T accel, 
 		 bool cancelable, bool optimize, 
 		 bool enable_soft_endstops, bool use_bed_matrix, 
@@ -69,22 +131,22 @@ class PathPlanner {
   void waitUntilFinished();
   void setPrintMoveBufferWait(int dt);
   void setMaxBufferedMoveTime(long long dt);
-  void setMaxSpeeds(std::vector<FLOAT_T> speeds);
-  void setMinSpeeds(std::vector<FLOAT_T> speeds);
-  void setAxisStepsPerMeter(std::vector<FLOAT_T> stepPerM);
-  void setAcceleration(std::vector<FLOAT_T> accel);
-  void setJerks(std::vector<FLOAT_T> jerks);
-  void setSoftEndstopsMin(std::vector<FLOAT_T> stops);
-  void setSoftEndstopsMax(std::vector<FLOAT_T> stops);
+  void setMaxSpeeds(VectorN speeds);
+  void setMinSpeeds(VectorN speeds);
+  void setAxisStepsPerMeter(VectorN stepPerM);
+  void setAcceleration(VectorN accel);
+  void setJerks(VectorN jerks);
+  void setSoftEndstopsMin(VectorN stops);
+  void setSoftEndstopsMax(VectorN stops);
   void setBedCompensationMatrix(std::vector<FLOAT_T> matrix);
   void setMaxPathLength(FLOAT_T maxLength);
   void setAxisConfig(int axis);
-  void setState(std::vector<FLOAT_T> set);
+  void setState(VectorN set);
   void enableSlaves(bool enable);
   void addSlave(int master_in, int slave_in);
-  void setBacklashCompensation(std::vector<FLOAT_T> set);
+  void setBacklashCompensation(VectorN set);
   void resetBacklash();
-  std::vector<FLOAT_T> getState();
+  VectorN getState();
   void suspend();
   void resume();
   void reset();

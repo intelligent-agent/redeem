@@ -35,6 +35,7 @@
 #include <string>
 #include "config.h"
 #include "StepperCommand.h"
+#include "vectorN.h"
 
 #define FLAG_WILL_REACH_FULL_SPEED (1 << 0)
 #define FLAG_ACCELERATION_ENABLED  (1 << 1)
@@ -71,28 +72,28 @@
 #endif
 
 struct StepperPathParameters {
-  std::vector<FLOAT_T> accelStartSpeeds;        /// Starting speed for the primary axis in the acceleration phase in steps/s
-  std::vector<FLOAT_T> accelDeltas;
+  VectorN accelStartSpeeds;        /// Starting speed for the primary axis in the acceleration phase in steps/s
+  VectorN accelDeltas;
   FLOAT_T accelTime;
 
 
-  std::vector<FLOAT_T> cruiseDeltas;
+  VectorN cruiseDeltas;
   FLOAT_T cruiseTime;
 
-  std::vector<FLOAT_T> decelEndSpeeds;    /// Ending speed for primary axis in the deceleration phase in steps/s
-  std::vector<FLOAT_T> decelDeltas;
+  VectorN decelEndSpeeds;    /// Ending speed for primary axis in the deceleration phase in steps/s
+  VectorN decelDeltas;
   FLOAT_T decelTime;
 
   inline void zero() {
-    accelStartSpeeds.assign(NUM_AXES, 0);
-    accelDeltas.assign(NUM_AXES, 0);
+    accelStartSpeeds.zero();
+    accelDeltas.zero();
     accelTime = 0;
 
-    cruiseDeltas.assign(NUM_AXES, 0);
+    cruiseDeltas.zero();
     cruiseTime = 0;
     
-    decelEndSpeeds.assign(NUM_AXES, 0);
-    decelDeltas.assign(NUM_AXES, 0);
+    decelEndSpeeds.zero();
+    decelDeltas.zero();
     decelTime = 0;
   }
 };
@@ -176,8 +177,8 @@ private:
 
   // These fields are calculated
   unsigned long long timeInTicks; /// Time for completing a move.
-  std::vector<FLOAT_T> speeds;    /// Speeds for each axis in steps/s
-  std::vector<FLOAT_T> accels;    /// Accelerations for each axis in steps/s²
+  VectorN speeds;    /// Speeds for each axis in steps/s
+  VectorN accels;    /// Accelerations for each axis in steps/s²
   FLOAT_T fullSpeed;              /// Cruising speed in m/s
   FLOAT_T maxJunctionSpeed;       /// Max. junction speed between this and next segment
   FLOAT_T startSpeed;             /// Starting speed in m/s
@@ -187,8 +188,7 @@ private:
 
   StepperPathParameters stepperPath;
 
-  FLOAT_T calculateSafeSpeed(const std::vector<FLOAT_T>& minSpeeds);
-  int findPrimaryAxis(const std::vector<int>& moves);
+  FLOAT_T calculateSafeSpeed(const VectorN& minSpeeds);
   FLOAT_T calculateStepsForMixedPath(FLOAT_T startSpeed, FLOAT_T endSpeed, FLOAT_T time);
 
 public:
@@ -196,15 +196,15 @@ public:
   Path(const Path& path);
   Path& operator=(const Path&);
 
-  void initialize(const std::vector<FLOAT_T>& start,
-		  const std::vector<FLOAT_T>& end,
+  void initialize(const VectorN& start,
+		  const VectorN& end,
 		  FLOAT_T distance,
 		  bool cancelable);
 
-  void calculate(const std::vector<FLOAT_T>& axis_diff,
-		 const std::vector<FLOAT_T>& minSpeeds,
-		 const std::vector<FLOAT_T>& maxSpeeds,
-		 const std::vector<FLOAT_T>& maxAccelStepsPerSquareSecond,
+  void calculate(const VectorN& axis_diff,
+		 const VectorN& minSpeeds,
+		 const VectorN& maxSpeeds,
+		 const VectorN& maxAccelStepsPerSquareSecond,
 		 FLOAT_T requestedTime,
                  FLOAT_T requestedAccel);
 
@@ -319,7 +319,7 @@ public:
     timeInTicks = time;
   }
 
-  inline const std::vector<FLOAT_T>& getSpeeds() {
+  inline const VectorN& getSpeeds() {
     return speeds;
   }
 
