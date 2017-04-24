@@ -49,7 +49,7 @@ pathplanner = Extension(
     extra_compile_args = [
         '-std=c++0x',
         '-g',
-        '-O2',
+        '-Ofast',
         '-fpermissive',
         '-D_GLIBCXX_USE_NANOSLEEP',
         '-DBUILD_PYTHON_EXT=1',
@@ -60,7 +60,7 @@ pathplanner = Extension(
 
 setup(
     name = "Redeem",
-    version = "1.3.0",
+    version = "1.3.1",
     packages = find_packages(exclude=["redeem/path_planner"]),
     data_files=[
         ('redeem/firmware', [
