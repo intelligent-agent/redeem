@@ -49,7 +49,7 @@ pathplanner = Extension(
     extra_compile_args = [
         '-std=c++0x',
         '-g',
-        '-Ofast',
+        '-O3',
         '-fpermissive',
         '-D_GLIBCXX_USE_NANOSLEEP',
         '-DBUILD_PYTHON_EXT=1',
