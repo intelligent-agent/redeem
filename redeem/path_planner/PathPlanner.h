@@ -144,8 +144,8 @@ class PathPlanner {
     const int cancellableMask,
     const bool sync,
     const bool wait,
-    std::priority_queue<Step>& steps,
-    const StepperPathParameters& params,
+    const FLOAT_T moveEndTime,
+    std::array<std::vector<Step>, NUM_AXES>& steps,
     std::unique_ptr<SteppersCommand[]> const &commands,
     const size_t commandsLength);
 	

@@ -33,7 +33,8 @@
 #include <atomic>
 #include <vector>
 #include <string>
-#include <queue>
+#include <array>
+#include <vector>
 #include "config.h"
 #include "StepperCommand.h"
 #include "vectorN.h"
@@ -137,7 +138,7 @@ private:
   unsigned char moveMask;
 
   // These fields are calculated
-  unsigned long long timeInTicks; /// Time for completing a move.
+  unsigned long long timeInTicks; /// Time for completing a move (optimistically assuming it runs full speed the whole time)
   VectorN speeds;
   FLOAT_T fullSpeed;              /// Cruising speed in m/s
   FLOAT_T maxJunctionSpeed;       /// Max. junction speed between this and next segment
@@ -147,7 +148,7 @@ private:
   FLOAT_T accel;                  /// Acceleration in m/s^2
 
   StepperPathParameters stepperPath;
-  std::priority_queue<Step> steps;
+  std::array<std::vector<Step>, NUM_AXES> steps;
 
   FLOAT_T calculateSafeSpeed(const VectorN& minSpeeds);
 
@@ -171,6 +172,8 @@ public:
 		 const VectorN& maxAccelMPerSquareSecond,
 		 FLOAT_T requestedTime,
                  FLOAT_T requestedAccel);
+
+  FLOAT_T runFinalStepCalculations();
 
   void zero();
 
@@ -325,13 +328,8 @@ public:
     return 2.0 * distance * accel;
   }
 
-  std::priority_queue<Step>& getSteps() {
+  std::array<std::vector<Step>, NUM_AXES>& getSteps() {
     return steps;
-  }
-
-  StepperPathParameters getStepperPathParameters() {
-    assert(areParameterUpToDate());
-    return stepperPath;
   }
 
   void updateStepperPathParameters();

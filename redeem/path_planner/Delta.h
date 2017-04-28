@@ -66,8 +66,8 @@ class Delta {
 
   void recalculate();
   DeltaPathConstants calculatePathConstants(int axis, const IntVector3& deltaMotorStart, const IntVector3& deltaMotorEnd, const Vector3& stepsPerM, FLOAT_T time) const;
-  void calculateSteps(int axis, const DeltaPathConstants& constants, std::priority_queue<Step>& steps) const;
-  void calculateStepsInOneDirection(int axis, const DeltaPathConstants& constants, FLOAT_T startTime, FLOAT_T endTime, FLOAT_T towerX, FLOAT_T towerY, FLOAT_T startHeight, FLOAT_T endHeight, std::priority_queue<Step>& steps) const;
+  void calculateSteps(int axis, const DeltaPathConstants& constants, std::vector<Step>& steps) const;
+  void calculateStepsInOneDirection(int axis, const DeltaPathConstants& constants, FLOAT_T startTime, FLOAT_T endTime, FLOAT_T towerX, FLOAT_T towerY, FLOAT_T startHeight, FLOAT_T endHeight, std::vector<Step>& steps) const;
   FLOAT_T calculateCriticalPointTimeForAxis(int axis, const DeltaPathConstants& constants) const;
   FLOAT_T calculateStepTime(int axis, const DeltaPathConstants& constants, FLOAT_T towerZ, FLOAT_T minTime, FLOAT_T maxTime) const;
 	
@@ -85,7 +85,7 @@ class Delta {
   void deltaToWorld(FLOAT_T Az, FLOAT_T Bz, FLOAT_T Cz, FLOAT_T* X, FLOAT_T* Y, FLOAT_T* Z);
   IntVector3 worldToDeltaMotorPos(const Vector3& pos, const Vector3& stepsPerM);
   void verticalOffset(FLOAT_T Az, FLOAT_T Bz, FLOAT_T Cz, FLOAT_T* offset) const;
-  void calculateMove(const IntVector3& deltaStart, const IntVector3& deltaEnd, const Vector3& stepsPerM, FLOAT_T speed, std::priority_queue<Step>& steps) const;
+  void calculateMove(const IntVector3& deltaStart, const IntVector3& deltaEnd, const Vector3& stepsPerM, FLOAT_T speed, std::array<std::vector<Step>, NUM_AXES>& steps) const;
 };
 
 #endif

@@ -31,7 +31,7 @@
 #include <assert.h>
 #include <algorithm>
 
-void calculateLinearMove(const int axis, const long long startStep, const long long endStep, const FLOAT_T time, std::priority_queue<Step>& steps);
+void calculateLinearMove(const int axis, const long long startStep, const long long endStep, const FLOAT_T time, std::vector<Step>& steps);
 
 Delta::Delta()
 {
@@ -269,7 +269,7 @@ DeltaPathConstants Delta::calculatePathConstants(int axis, const IntVector3& del
   return result;
 }
 
-void Delta::calculateMove(const IntVector3& deltaStart, const IntVector3& deltaEnd, const Vector3& stepsPerM, FLOAT_T time, std::priority_queue<Step>& steps) const
+void Delta::calculateMove(const IntVector3& deltaStart, const IntVector3& deltaEnd, const Vector3& stepsPerM, FLOAT_T time, std::array<std::vector<Step>, NUM_AXES>& steps) const
 {
   auto const timestamp = std::chrono::system_clock::now();
   const DeltaPathConstants c = calculatePathConstants(0, deltaStart, deltaEnd, stepsPerM, time);
@@ -284,7 +284,7 @@ void Delta::calculateMove(const IntVector3& deltaStart, const IntVector3& deltaE
     for (int axis = 0; axis < 3; axis++)
     {
       LOG("no XY move - calculating Z move as linear" << std::endl);
-      calculateLinearMove(axis, deltaStart[axis], deltaEnd[axis], time, steps);
+      calculateLinearMove(axis, deltaStart[axis], deltaEnd[axis], time, steps[axis]);
     }
   }
   else
@@ -294,7 +294,7 @@ void Delta::calculateMove(const IntVector3& deltaStart, const IntVector3& deltaE
     for (int axis = 0; axis < 3; axis++)
     {
       const DeltaPathConstants c = calculatePathConstants(axis, deltaStart, deltaEnd, stepsPerM, time);
-      calculateSteps(axis, c, steps);
+      calculateSteps(axis, c, steps[axis]);
     }
   }
 
@@ -302,7 +302,7 @@ void Delta::calculateMove(const IntVector3& deltaStart, const IntVector3& deltaE
   LOG("calculating move took " << std::chrono::duration_cast<std::chrono::milliseconds>(timeTaken).count() << " ms" << std::endl);
 }
 
-void Delta::calculateSteps(int axis, const DeltaPathConstants& c, std::priority_queue<Step>& steps) const
+void Delta::calculateSteps(int axis, const DeltaPathConstants& c, std::vector<Step>& steps) const
 {
   assert(axis >= 0 && axis <= 2);
 
@@ -311,10 +311,14 @@ void Delta::calculateSteps(int axis, const DeltaPathConstants& c, std::priority_
 
   const FLOAT_T criticalPointTime = calculateCriticalPointTimeForAxis(axis, c);
 
+  assert(steps.empty());
+
   if (std::isnan(criticalPointTime) || criticalPointTime <= 0 || criticalPointTime >= c.time)
   {
     LOG("axis " << axis << " has no critical point - calculating steps from " << c.deltaStart[axis] << " to " << c.deltaEnd[axis] << std::endl);
     // easy case - axis has no critical point
+    steps.reserve(std::abs(c.deltaMotorEnd[axis] - c.deltaMotorStart[axis]));
+
     calculateStepsInOneDirection(axis, c, 0, c.time,
       towerX, towerY, c.deltaStart[axis], c.deltaEnd[axis], steps);
   }
@@ -323,9 +327,11 @@ void Delta::calculateSteps(int axis, const DeltaPathConstants& c, std::priority_
     const Vector3 criticalPointCartesianPosition = c.worldStart + (c.axisSpeeds * criticalPointTime);
     const Vector3 criticalPointDeltaPosition = worldToDelta(criticalPointCartesianPosition);
     const FLOAT_T criticalPointHeight = criticalPointDeltaPosition[axis];
+    const long long criticalPointMotorPos = std::llround(criticalPointHeight * c.stepsPerM[axis]);
 
     LOG("axis " << axis << " has a critical point at " << criticalPointTime << " - calculating steps from " << c.deltaStart[axis] << " to " << criticalPointHeight << " to " << c.deltaEnd[axis] << std::endl);
-    
+    steps.reserve(std::abs(c.deltaMotorStart[axis] - criticalPointMotorPos) + std::abs(criticalPointMotorPos - c.deltaMotorEnd[axis]));
+
     calculateStepsInOneDirection(axis, c, 0, criticalPointTime,
       towerX, towerY, c.deltaStart[axis], criticalPointHeight, steps);
 
@@ -336,7 +342,7 @@ void Delta::calculateSteps(int axis, const DeltaPathConstants& c, std::priority_
 
 }
 
-void Delta::calculateStepsInOneDirection(int axis, const DeltaPathConstants& c, FLOAT_T startTime, FLOAT_T endTime, FLOAT_T towerX, FLOAT_T towerY, FLOAT_T startHeight, FLOAT_T endHeight, std::priority_queue<Step>& steps) const
+void Delta::calculateStepsInOneDirection(int axis, const DeltaPathConstants& c, FLOAT_T startTime, FLOAT_T endTime, FLOAT_T towerX, FLOAT_T towerY, FLOAT_T startHeight, FLOAT_T endHeight, std::vector<Step>& steps) const
 {
   const bool direction = startHeight < endHeight;
 
@@ -354,7 +360,10 @@ void Delta::calculateStepsInOneDirection(int axis, const DeltaPathConstants& c, 
     const FLOAT_T height = (step + stepOffset) / c.stepsPerM[axis];
 
     time = calculateStepTime(axis, c, height, time, endTime);
-    steps.emplace(Step(time, axis, direction));
+
+    assert(steps.empty() || time > steps.back().time);
+
+    steps.emplace_back(Step(time, axis, direction));
 
     assert(!std::isnan(time));
     assert(time <= endTime);

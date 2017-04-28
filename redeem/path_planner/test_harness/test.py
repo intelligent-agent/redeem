@@ -9,7 +9,6 @@ t = PathPlannerMock(1024)
 
 t.delta_bot = delta
 t.setAxisConfig(3)
-t.setMaxPathLength(0.0001)
 
 t.initPRU("/root/redeem/firmware/firmware_runtime.bin","/root/redeem/firmware/firmware_endstops.bin")
 #t.initPRU("/root/redeem/am335x_pru_package/pru_sw/example_apps/bin/PRU_memAccessPRUDataRam.bin","/root/redeem/firmware/firmware_endstops.bin")
@@ -90,9 +89,10 @@ t.queueMove(end, speed, accel, cancelable,
 t.waitUntilFinished()
 '''
 
+t.setState((0, 0, 0, 0, 0, 0, 0, 0))
 
 # Move that's uneven across the axes
-end         = (-0.1000, 0.100, 0.100 - 0.26686, 0.00, 0, 0, 0, 0)
+end         = (-0.1000, 0.100, 0.100, 0.00, 0, 0, 0, 0)
 speed       = 1.0
 accel       = 1.0
 cancelable  = False

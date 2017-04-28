@@ -242,24 +242,21 @@ void PathPlanner::queueMove(VectorN endWorldPos,
   {
     IntVectorN realDeltas;
 
-    std::priority_queue<Step>& pathSteps = p.getSteps();
-    std::priority_queue<Step> temp;
-    while (!pathSteps.empty())
+    for (const auto& axisSteps : p.getSteps())
     {
-      Step step = pathSteps.top();
-      pathSteps.pop();
-      temp.push(step);
-      realDeltas[step.axis] += step.direction ? 1 : -1;
+      FLOAT_T lastTime = 0;
+      for (const auto& step : axisSteps)
+      {
+        realDeltas[step.axis] += step.direction ? 1 : -1;
+	assert(step.time > lastTime);
+	lastTime = step.time;
+      }
     }
 
     for (int i = 0; i < NUM_AXES; i++)
     {
       assert(state[i] + realDeltas[i] == endPos[i]);
     }
-
-    pathSteps.swap(temp);
-
-    assert(temp.empty() && !pathSteps.empty());
   }
   LOG("done!" << std::endl);
 
@@ -599,8 +596,6 @@ void PathPlanner::run() {
       cur->updateStepperPathParameters();
     }
 
-    StepperPathParameters stepperPath = cur->getStepperPathParameters();
-
     int moveMask = 0;
     int cancellableMask = 0;
     for(int i=0; i<NUM_AXES; i++){
@@ -618,9 +613,11 @@ void PathPlanner::run() {
     LOG("fullSpeed:    " << cur->getFullSpeed() << std::endl);
     LOG("acceleration: " << cur->getAcceleration() << std::endl);
 
+    const FLOAT_T moveEndTime = cur->runFinalStepCalculations();
+
     LOG("Sending " << std::dec << linesPos << ", Start speed=" << cur->getStartSpeed() << ", end speed=" << cur->getEndSpeed() << std::endl);
 
-    runMove(moveMask, cancellableMask, cur->isSyncEvent(), cur->isSyncWaitEvent(), cur->getSteps(), stepperPath, commandBlock, maxCommandsPerBlock);
+    runMove(moveMask, cancellableMask, cur->isSyncEvent(), cur->isSyncWaitEvent(), moveEndTime, cur->getSteps(), commandBlock, maxCommandsPerBlock);
 
     //LOG("Current move time " << pru.getTotalQueuedMovesTime() / (double) F_CPU << std::endl);
 
@@ -631,88 +628,135 @@ void PathPlanner::run() {
   }
 }
 
+inline unsigned long long roundStepTime(FLOAT_T stepTime)
+{
+  return std::llround(stepTime * (F_CPU_FLOAT / 2000.0)) * 2000;
+}
+
 void PathPlanner::runMove(
   const int moveMask,
   const int cancellableMask,
   const bool sync,
   const bool wait,
-  std::priority_queue<Step>& steps,
-  const StepperPathParameters& params,
+  const FLOAT_T moveEndTime,
+  std::array<std::vector<Step>, NUM_AXES>& steps,
   std::unique_ptr<SteppersCommand[]> const &commands,
   const size_t commandsLength) {
 
   std::array<unsigned long long, NUM_AXES> finalStepTimes;
+  std::array<size_t, NUM_AXES> stepIndex;
   size_t commandsIndex = 0;
 
   finalStepTimes.fill(0);
+  stepIndex.fill(0);
 
   for (size_t i = 0; i < commandsLength; i++) {
     commands[i] = {};
   }
+  
+  unsigned long long lastStepTime = 0;
 
-  if (!steps.empty())
+  // sanity check - are there any steps at all?
+  {
+    bool haveSteps = false;
+    for (const auto& axisSteps : steps)
+    {
+      if (!axisSteps.empty())
+      {
+        haveSteps = true;
+      }
+    }
+
+    if (!haveSteps)
+    {
+      assert(0);
+      return;
+    }
+  }
+
+  // reserve a command to be an opening delay with no steps
+  uint32_t* lastDelay = &commands[commandsIndex].delay;
+  commandsIndex++;
+
+  // Note that this opening delay doesn't have cancellableMask set - this is intentional because
+  // a command that doesn't step anything shouldn't count towards the number of cancelled commands.
+
+  bool foundStep = true;
+  while (foundStep)
   {
     SteppersCommand& cmd = commands[commandsIndex];
     commandsIndex++;
+    foundStep = false;
 
-    cmd.delay = std::lroundl(params.dilateTime(steps.top().time) * F_CPU);
-  }
-
-  while (!steps.empty()) {
-    SteppersCommand& cmd = commands[commandsIndex];
-    
     cmd.cancellableMask = cancellableMask;
 
-    const long long stepTime = std::llround(F_CPU * params.dilateTime(steps.top().time) / 2000) * 2000;
-    Step lastStep = steps.top();
+    // find a step time
+    unsigned long long stepTime = UINT64_MAX;
 
-    do
+    for (int i = 0; i < NUM_AXES; i++)
     {
-      const Step step = steps.top();
+      const auto& axisSteps = steps[i];
+      const auto axisStepIndex = stepIndex[i];
 
-      assert(!(cmd.step & (1 << step.axis))); // we should never double-step in a single command
-
-      steps.pop();
-
-      cmd.step |= 1 << step.axis;
-
-      if (step.direction)
-	cmd.direction |= 1 << step.axis;
-
-      finalStepTimes[step.axis] = stepTime;
-      lastStep = step;
-
-    } while (!steps.empty() && std::llround(F_CPU * params.dilateTime(steps.top().time) / 2000) * 2000 == stepTime);
-
-    if (!steps.empty()) {
-      const long long nextStepTime = std::llround(F_CPU * params.dilateTime(steps.top().time) / 2000) * 2000;
-      assert(nextStepTime > stepTime);
-      assert(nextStepTime - stepTime >= 2000);
-      cmd.delay = nextStepTime - stepTime;
-    }
-    else {
-      const long long finalTime = std::llround(F_CPU * params.finalTime());
-      
-      cmd.delay = finalTime - stepTime;
-
-      QUEUELOG("last step at " << stepTime / F_CPU_FLOAT << " and final time at " << finalTime / F_CPU_FLOAT
-        << " for a final delay of " << cmd.delay / F_CPU_FLOAT << std::endl);
-
-      assert(finalTime > stepTime);
-      assert(finalTime - stepTime >= 2000);
+      if (axisSteps.size() > axisStepIndex)
+      {
+        stepTime = std::min(stepTime, roundStepTime(axisSteps[axisStepIndex].time));
+        foundStep = true;
+      }
     }
 
-    assert(cmd.delay >= 2000);
-    assert(cmd.delay < F_CPU);
+    if (!foundStep)
+    {
+      assert(stepTime == UINT64_MAX);
+      stepTime = roundStepTime(moveEndTime);
+    }
 
-    commandsIndex++;
+    // set the previous delay
+    assert(lastDelay != nullptr);
+    assert(stepTime > lastStepTime);
+    assert(stepTime - lastStepTime >= 2000);
+    assert(stepTime - lastStepTime < F_CPU / 2);
+
+    *lastDelay = stepTime - lastStepTime;
+
+    if (!foundStep)
+    {
+      QUEUELOG("last step at " << lastStepTime / F_CPU_FLOAT << " and final time at " << roundedStepTime / F_CPU_FLOAT
+        << " for a final delay of " << *lastDelay << std::endl);
+    }
+
+    lastDelay = &cmd.delay;
+    lastStepTime = stepTime;
+
+    // add all the axes that can step at this time
+    for (int i = 0; i < NUM_AXES; i++)
+    {
+      const auto& axisSteps = steps[i];
+      const auto axisStepIndex = stepIndex[i];
+
+      if (axisSteps.size() > axisStepIndex && roundStepTime(axisSteps[axisStepIndex].time) == stepTime)
+      {
+	const auto& step = axisSteps[axisStepIndex];
+
+	assert(!(cmd.step & (1 << i)));
+	assert(step.axis == i);
+
+	cmd.step |= 1 << i;
+	cmd.direction |= ((unsigned char)step.direction) << i;
+
+	stepIndex[i]++;
+	finalStepTimes[i] = stepTime;
+      }
+    }
+
+    assert(cmd.step != 0 || !foundStep);
 
     if (commandsIndex == commandsLength) {
       pru.push_block((uint8_t*)&commands[0], sizeof(SteppersCommand)*commandsIndex, sizeof(SteppersCommand), commandsIndex);
       commandsIndex = 0;
 
       for (size_t i = 0; i < commandsLength; i++) {
-	commands[i] = {};
+        commands[i] = {};
       }
     }
   }
@@ -752,11 +796,13 @@ void PathPlanner::runMove(
       << latestFinishTime - earliestFinishTime << " ticks or " << (latestFinishTime - earliestFinishTime) / F_CPU_FLOAT << " seconds"
       << std::endl);
 
-    LOG("accelSteps: " << params.accelSteps << " cruiseSteps: " << params.cruiseSteps << " decelSteps: " << params.decelSteps << std::endl);
     //assert((latestFinishTime - earliestFinishTime) / F_CPU_FLOAT < 10 * CPU_CYCLE_LENGTH); // all axes should finish within 10 PRU cycles
   }
 
-  assert(steps.empty());
+  for (int i = 0; i < NUM_AXES; i++)
+  {
+    assert(stepIndex[i] == steps[i].size());
+  }
 }
 
 VectorN PathPlanner::getState()

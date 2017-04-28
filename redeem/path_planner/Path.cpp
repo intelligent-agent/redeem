@@ -32,7 +32,7 @@
 #include "Delta.h"
 #include "Logger.h"
 
-void calculateLinearMove(const int axis, const long long startStep, const long long endStep, const FLOAT_T time, std::priority_queue<Step>& steps)
+void calculateLinearMove(const int axis, const long long startStep, const long long endStep, const FLOAT_T time, std::vector<Step>& steps)
 {
   const FLOAT_T distance = endStep - startStep;
 
@@ -42,32 +42,35 @@ void calculateLinearMove(const int axis, const long long startStep, const long l
 
   long long step = startStep;
 
+  steps.reserve(std::abs(endStep - startStep));
+
   while (step != endStep)
   {
     const FLOAT_T position = step + stepOffset;
     const FLOAT_T stepTime = (position - startStep) / distance * time;
 
     assert(stepTime > 0 && stepTime < time);
+    assert(steps.empty() || stepTime > steps.back().time);
 
-    steps.emplace(Step(stepTime, axis, direction));
+    steps.emplace_back(Step(stepTime, axis, direction));
 
     step += stepIncrement;
   }
 }
 
-void calculateXYMove(const IntVector3& start, const IntVector3& end, const Vector3& stepsPerM, FLOAT_T time, std::priority_queue<Step>& steps)
+void calculateXYMove(const IntVector3& start, const IntVector3& end, const Vector3& stepsPerM, FLOAT_T time, std::array<std::vector<Step>, NUM_AXES>& steps)
 {
   for (int i = 0; i < NUM_MOVING_AXES; i++)
   {
-    calculateLinearMove(i, start[i], end[i], time, steps);
+    calculateLinearMove(i, start[i], end[i], time, steps[i]);
   }
 }
 
-void calculateExtruderMove(const IntVectorN& start, const IntVectorN& end, FLOAT_T time, std::priority_queue<Step>& steps)
+void calculateExtruderMove(const IntVectorN& start, const IntVectorN& end, FLOAT_T time, std::array<std::vector<Step>, NUM_AXES>& steps)
 {
   for (int i = NUM_MOVING_AXES; i < NUM_AXES; i++)
   {
-    calculateLinearMove(i, start[i], end[i], time, steps);
+    calculateLinearMove(i, start[i], end[i], time, steps[i]);
   }
 }
 
@@ -89,9 +92,11 @@ void Path::zero() {
   accel = 0;
 
   stepperPath.zero();
-  steps = std::priority_queue<Step>();
 
-  assert(steps.size() == 0);
+  for (auto& stepVector : steps)
+  {
+    stepVector.clear();
+  }
 }
 
 Path::Path() {
@@ -294,6 +299,25 @@ FLOAT_T Path::calculateSafeSpeed(const VectorN& minSpeeds) {
   }
   safe = std::min(safe, fullSpeed);
   return safe;
+}
+
+FLOAT_T Path::runFinalStepCalculations()
+{
+  updateStepperPathParameters();
+
+  for (auto& axisSteps : steps)
+  {
+    for (auto& step : axisSteps)
+    {
+      step.time = stepperPath.dilateTime(step.time);
+    }
+  }
+
+  LOG("accelSteps: " << stepperPath.accelSteps
+    << " cruiseSteps: " << stepperPath.cruiseSteps
+    << " decelSteps: " << stepperPath.decelSteps << std::endl);
+
+  return stepperPath.finalTime();
 }
 
 
