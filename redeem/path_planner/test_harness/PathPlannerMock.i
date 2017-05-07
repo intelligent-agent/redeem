@@ -108,8 +108,8 @@ class Delta {
   void setMainDimensions(FLOAT_T Hez_in, FLOAT_T L_in, FLOAT_T r_in);
   void setRadialError(FLOAT_T A_radial_in, FLOAT_T B_radial_in, FLOAT_T C_radial_in);
   void setAngularError(FLOAT_T A_angular_in, FLOAT_T B_angular_in, FLOAT_T C_angular_in);
-  void worldToDelta(FLOAT_T X, FLOAT_T Y, FLOAT_T Z, FLOAT_T* Az, FLOAT_T* Bz, FLOAT_T* Cz);
-  void deltaToWorld(FLOAT_T Az, FLOAT_T Bz, FLOAT_T Cz, FLOAT_T* X, FLOAT_T* Y, FLOAT_T* Z);
+  Vector3 worldToDelta(const Vector3& pos);
+  Vector3 deltaToWorld(const Vector3& pos);
   void verticalOffset(FLOAT_T Az, FLOAT_T Bz, FLOAT_T Cz, FLOAT_T* offset);
 };
 
@@ -121,11 +121,11 @@ class PathPlanner {
   bool queueSyncEvent(bool isBlocking = true);
   int waitUntilSyncEvent();
   void clearSyncEvent();
-  void queueMove(VectorN startPos, VectorN endPos, 
+  void queueMove(VectorN endPos, 
 		 FLOAT_T speed, FLOAT_T accel, 
 		 bool cancelable, bool optimize, 
 		 bool enable_soft_endstops, bool use_bed_matrix, 
-		 bool use_backlash_compensation, int tool_axis, bool virgin);
+		 bool use_backlash_compensation, int tool_axis);
   void runThread();
   void stopThread(bool join);
   void waitUntilFinished();
@@ -139,7 +139,6 @@ class PathPlanner {
   void setSoftEndstopsMin(VectorN stops);
   void setSoftEndstopsMax(VectorN stops);
   void setBedCompensationMatrix(std::vector<FLOAT_T> matrix);
-  void setMaxPathLength(FLOAT_T maxLength);
   void setAxisConfig(int axis);
   void setState(VectorN set);
   void enableSlaves(bool enable);

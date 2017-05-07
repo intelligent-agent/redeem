@@ -90,7 +90,6 @@ class PathPlanner:
         self.native_planner.setSoftEndstopsMin(tuple(self.printer.soft_min))
         self.native_planner.setSoftEndstopsMax(tuple(self.printer.soft_max))
         self.native_planner.setBedCompensationMatrix(tuple(np.identity(3).ravel()))
-        self.native_planner.setMaxPathLength(self.printer.max_length)
         self.native_planner.setAxisConfig(self.printer.axis_config)
         self.native_planner.delta_bot.setMainDimensions(Delta.Hez, Delta.L, Delta.r)
         self.native_planner.delta_bot.setRadialError(Delta.A_radial, Delta.B_radial, Delta.C_radial)
@@ -217,12 +216,18 @@ class PathPlanner:
             speed = min(abs(speed), abs(self.printer.home_speed[Printer.axis_to_index(a)]))
             accel = min(accel, self.printer.acceleration[Printer.axis_to_index(a)])
             fine_search_speed =  min(abs(speed), abs(self.printer.home_backoff_speed[Printer.axis_to_index(a)]))
+            path_zero[a] = 0
                     
         logging.debug("Search: %s at %s m/s, %s m/s^2" % (path_search, speed, accel))
         logging.debug("Backoff to: %s" % path_backoff)
         logging.debug("Fine search: %s" % path_fine_search)
         logging.debug("Center: %s" % path_center)
 
+        # Set position to zero
+        p = G92Path(path_zero)
+        self.add_path(p)
+        self.wait_until_done()
+        
         # Move until endstop is hit
         p = RelativePath(path_search, speed, accel, True, False, True, False)
         self.add_path(p)
@@ -435,6 +440,7 @@ class PathPlanner:
         #logging.debug("path added: "+ str(new))
         
         if new.is_G92():
+            self.native_planner.setAxisConfig(int(self.printer.axis_config))
             self.native_planner.setState(tuple(new.end_pos))
         elif new.needs_splitting():
             #TODO: move this to C++
@@ -452,10 +458,8 @@ class PathPlanner:
             tool_axis = Printer.axis_to_index(self.printer.current_tool)
             
             self.native_planner.setAxisConfig(int(self.printer.axis_config))
-            # Start_pos is unused. TODO: Remove it.  
-            # Bed matrix behaviour is handled in Python space, it is fast enough for that. 
-            self.native_planner.queueMove((0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0),#tuple(new.start_pos),
-                                      tuple(new.end_pos), 
+            
+            self.native_planner.queueMove(tuple(new.end_pos), 
                                       new.speed, 
                                       new.accel,
                                       bool(new.cancelable),
@@ -463,8 +467,7 @@ class PathPlanner:
                                       bool(new.enable_soft_endstops),
                                       False, #bool(new.use_bed_matrix),
                                       bool(new.use_backlash_compensation), 
-                                      int(tool_axis), 
-                                      True)
+                                      int(tool_axis))
                                       
 
         self.prev = new

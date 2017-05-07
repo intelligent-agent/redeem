@@ -55,10 +55,6 @@
  * 	position.
  */
 
-// sign function
-#define ComputeV(timer,accel)  (((timer>>8)*accel)>>10)
-#define ComputeV2(timer,accel)  (((timer/256.0)*accel)/1024)
-
 class PathPlanner {
  private:
   void updateTrapezoids();
@@ -142,25 +138,21 @@ class PathPlanner {
   PruTimer pru;
   void recomputeParameters();
   void run();
+
   void runMove(
     const int moveMask,
     const int cancellableMask,
     const bool sync,
     const bool wait,
-    const StepperPathParameters& params,
+    const FLOAT_T moveEndTime,
+    std::array<std::vector<Step>, NUM_AXES>& steps,
     std::unique_ptr<SteppersCommand[]> const &commands,
     const size_t commandsLength);
 	
   // pre-processor functions
-  int softEndStopApply(const VectorN &startPos, const VectorN &endPos);
+  int softEndStopApply(const VectorN &endPos);
   void applyBedCompensation(VectorN &endPos);
-  int splitInput(const VectorN startPos, const VectorN vec, 
-		 FLOAT_T speed, FLOAT_T accel, bool cancelable, 
-		 bool optimize, bool use_backlash_compensation, 
-		 int tool_axis, bool virgin);
-  void transformVector(VectorN &vec, const VectorN &startPos);
-  void reverseTransformVector(VectorN &vec);
-  void backlashCompensation(VectorN &delta);
+  void backlashCompensation(IntVectorN &delta);
   void handleSlaves(VectorN &startPos, VectorN &endPos);
 	
 	
@@ -170,20 +162,12 @@ class PathPlanner {
 	
   // bed compensation
   std::vector<FLOAT_T> matrix_bed_comp;
-
-  // maximum segment length
-  FLOAT_T max_path_length;
 	
   // axis configuration (see config.h for options)
   int axis_config;
 	
-  // delta bot options
-  bool hasEndABC;
-  std::vector<FLOAT_T> startABC; // column positions 
-  std::vector<FLOAT_T> endABC;   // column positions 
-	
   // the current state of the machine
-  VectorN state;
+  IntVectorN state;
 	
   // slaves
   bool has_slaves;
@@ -192,9 +176,12 @@ class PathPlanner {
 	
   // backlash compensation
   VectorN backlash_compensation;
-  VectorN backlash_state;
+  IntVectorN backlash_state;
 
-  inline int sgn(FLOAT_T val) { return (0.0 < val) - (val < 0.0);}
+  Vector3 worldToHBelt(const Vector3&);
+  Vector3 hBeltToWorld(const Vector3&);
+  Vector3 worldToCoreXY(const Vector3&);
+  Vector3 coreXYToWorld(const Vector3&);
 
  public:
 
@@ -254,7 +241,6 @@ class PathPlanner {
    * 
    * The coordinates unit is in meters. As a general rule, every public method of this class use SI units.
    * 
-   * @param startPos The starting position of the path in meters
    * @param endPos The end position of the path in meters
    * @param speed The feedrate (aka speed) of the move in m/s
    * @param cancelable flags the move as cancelable.
@@ -265,11 +251,11 @@ class PathPlanner {
    * @param tool_axis which axis is our tool attached to
    * @param virgin Flag to indicate if this is a newly passed in value or if it is somewhere in a recursion loop
    */
-  void queueMove(VectorN startPos, VectorN endPos,
+  void queueMove(VectorN endPos,
 		 FLOAT_T speed, FLOAT_T accel, 
 		 bool cancelable=false, bool optimize=true, 
 		 bool enable_soft_endstops=true, bool use_bed_matrix=true, 
-		 bool use_backlash_compensation=true, int tool_axis=3, bool virgin=true);
+		 bool use_backlash_compensation=true, int tool_axis=3);
   /**
    * @brief Run the path planner thread
    * @details Run the path planner thread that is in charge to compute the different delays and submit it to the PRU for execution.
@@ -380,7 +366,6 @@ class PathPlanner {
   void setSoftEndstopsMin(VectorN stops);
   void setSoftEndstopsMax(VectorN stops);
   void setBedCompensationMatrix(std::vector<FLOAT_T> matrix);
-  void setMaxPathLength(FLOAT_T maxLength);
   void setAxisConfig(int axis);
   void setState(VectorN set);
   void enableSlaves(bool enable);

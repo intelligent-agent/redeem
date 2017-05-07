@@ -117,11 +117,11 @@ class PathPlanner {
   bool queueSyncEvent(bool isBlocking = true);
   int waitUntilSyncEvent();
   void clearSyncEvent();
-  void queueMove(VectorN startPos, VectorN endPos, 
+  void queueMove(VectorN endPos, 
 		 FLOAT_T speed, FLOAT_T accel, 
 		 bool cancelable, bool optimize, 
 		 bool enable_soft_endstops, bool use_bed_matrix, 
-		 bool use_backlash_compensation, int tool_axis, bool virgin);
+		 bool use_backlash_compensation, int tool_axis);
   void runThread();
   void stopThread(bool join);
   void waitUntilFinished();
@@ -135,7 +135,6 @@ class PathPlanner {
   void setSoftEndstopsMin(VectorN stops);
   void setSoftEndstopsMax(VectorN stops);
   void setBedCompensationMatrix(std::vector<FLOAT_T> matrix);
-  void setMaxPathLength(FLOAT_T maxLength);
   void setAxisConfig(int axis);
   void setState(VectorN set);
   void enableSlaves(bool enable);

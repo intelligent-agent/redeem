@@ -459,8 +459,6 @@ class Redeem:
         printer.print_move_buffer_wait = printer.config.getfloat('Planner', 'print_move_buffer_wait')
         printer.max_buffered_move_time = printer.config.getfloat('Planner', 'max_buffered_move_time')
 
-        printer.max_length = printer.config.getfloat('Planner', 'max_length')
-
         self.printer.processor = GCodeProcessor(self.printer)
         self.printer.plugins = PluginsController(self.printer)
 

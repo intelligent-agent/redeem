@@ -76,24 +76,64 @@ void PathPlanner::setBedCompensationMatrix(std::vector<FLOAT_T> matrix)
 {
   matrix_bed_comp = matrix;
 }
-    
-// maximum path length
-void PathPlanner::setMaxPathLength(FLOAT_T maxLength)
-{
-  max_path_length = maxLength;
-}
 
 // axis configuration
 void PathPlanner::setAxisConfig(int axis)
 {
-  axis_config = axis;
+  if (axis_config != axis)
+  {
+    VectorN stateBefore = getState();
+
+    axis_config = axis;
+
+    setState(stateBefore);
+  }
 }
 
 // the state of the machine
 void PathPlanner::setState(VectorN set)
 {
   applyBedCompensation(set);
-  state = set;
+
+  IntVectorN newState = (set * axisStepsPerM).round();
+
+  switch (axis_config)
+  {
+  case AXIS_CONFIG_XY:
+    break;
+  case AXIS_CONFIG_H_BELT:
+  {
+    const Vector3 motionPos = worldToHBelt(set.toVector3());
+    const IntVector3 motionMotorPos = (motionPos * axisStepsPerM.toVector3()).round();
+    newState[0] = motionMotorPos.x;
+    newState[1] = motionMotorPos.y;
+    newState[2] = motionMotorPos.z;
+    break;
+  }
+  case AXIS_CONFIG_CORE_XY:
+  {
+    const Vector3 motionPos = worldToCoreXY(set.toVector3());
+    const IntVector3 motionMotorPos = (motionPos * axisStepsPerM.toVector3()).round();
+    newState[0] = motionMotorPos.x;
+    newState[1] = motionMotorPos.y;
+    newState[2] = motionMotorPos.z;
+    break;
+  }
+  case AXIS_CONFIG_DELTA:
+  {
+    const Vector3 motionPos = delta_bot.worldToDelta(set.toVector3());
+    const IntVector3 motionMotorPos = (motionPos * axisStepsPerM.toVector3()).round();
+    newState[0] = motionMotorPos.x;
+    newState[1] = motionMotorPos.y;
+    newState[2] = motionMotorPos.z;
+    break;
+  }
+
+  default:
+    assert(0);
+  }
+
+  state = newState;
 }
 
 

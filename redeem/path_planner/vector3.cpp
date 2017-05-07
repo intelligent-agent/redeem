@@ -1,7 +1,10 @@
 // vector3.cpp
 
 #include <math.h>
+#include <cmath>
+#include <assert.h>
 #include "vector3.h"
+#include "vectorN.h"
 
 
 // Constructors accept Cartesian coordinates or another vector.
@@ -45,7 +48,46 @@ Vector3& Vector3::norm()
     }
     return *this;
 }
+FLOAT_T& Vector3::operator[](int i)
+{
+  switch (i)
+  {
+  case 0:
+    return x;
+  case 1:
+    return y;
+  case 2:
+    return z;
+  default:
+    assert(0);
+  }
+}
+const FLOAT_T& Vector3::operator[](int i) const
+{
+  switch (i)
+  {
+  case 0:
+    return x;
+  case 1:
+    return y;
+  case 2:
+    return z;
+  default:
+    assert(0);
+  }
+}
 
+/*
+bool Vector3::operator==(const Vector3& o) const
+{
+  return x == o.x && y == o.y && z == o.z;
+}
+*/
+
+IntVector3 Vector3::round() const
+{
+  return IntVector3(std::llround(x), std::llround(y), std::llround(z));
+}
 // Helper functions for the Vector3 class.
 
 FLOAT_T vabs( const Vector3 &v )
@@ -99,4 +141,98 @@ Vector3 cross( const Vector3 &v1, const Vector3 &v2 )
     v3.y = v2.x*v1.z - v1.x*v2.z;
     v3.z = v1.x*v2.y - v2.x*v1.y;
     return v3;
+}
+Vector3 operator/(const Vector3 &v1, const Vector3 &v2)
+{
+  Vector3 v3;
+  v3.x = v1.x / v2.x;
+  v3.y = v1.y / v2.y;
+  v3.z = v1.z / v2.z;
+  return v3;
+}
+Vector3 operator*(const Vector3 &v1, const Vector3 &v2)
+{
+  Vector3 v3;
+  v3.x = v1.x * v2.x;
+  v3.y = v1.y * v2.y;
+  v3.z = v1.z * v2.z;
+  return v3;
+}
+
+IntVector3::IntVector3(long long x, long long y, long long z)
+  : x(x), y(y), z(z)
+{}
+
+IntVector3::IntVector3(const IntVector3& o)
+  : x(o.x), y(o.y), z(o.z)
+{}
+
+IntVector3::~IntVector3()
+{}
+
+IntVector3& IntVector3::operator=(const IntVector3 &v)
+{
+  x = v.x;
+  y = v.y;
+  z = v.z;
+
+  return *this;
+}
+
+IntVector3& IntVector3::operator+=(const IntVector3 &v)
+{
+  x += v.x;
+  y += v.y;
+  z += v.z;
+
+  return *this;
+}
+
+IntVector3& IntVector3::operator-=(const IntVector3 &v)
+{
+  x -= v.x;
+  y -= v.y;
+  z -= v.z;
+
+  return *this;
+}
+
+long long& IntVector3::operator[](int i)
+{
+  switch (i)
+  {
+  case 0:
+    return x;
+  case 1:
+    return y;
+  case 2:
+    return z;
+  default:
+    assert(0);
+  }
+}
+
+const long long& IntVector3::operator[](int i) const
+{
+  switch (i)
+  {
+  case 0:
+    return x;
+  case 1:
+    return y;
+  case 2:
+    return z;
+  default:
+    assert(0);
+  }
+}
+
+bool IntVector3::operator==(const IntVector3& o) const
+{
+  return x == o.x && y == o.y && z == o.z;
+}
+
+Vector3 IntVector3::toVector3() const
+{
+  return Vector3(x, y, z);
 }

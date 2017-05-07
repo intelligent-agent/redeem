@@ -39,6 +39,7 @@
 PruTimer::PruTimer() {
   assert(PruDump::singleton == nullptr);
   PruDump::singleton = new PruDump();
+  ddr_size = 1024 * 1024;
 }
 
 bool PruTimer::initPRU(const std::string &firmware_stepper, const std::string &firmware_endstops) {

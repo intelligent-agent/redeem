@@ -5,6 +5,10 @@
 
 #include "config.h"
 
+class Vector3;
+class IntVectorN;
+class IntVector3;
+
 struct VectorN {
   /// The Cartesian coordinates are accessible.
   FLOAT_T values[NUM_AXES];
@@ -37,6 +41,10 @@ struct VectorN {
   FLOAT_T& operator[](int i);
   /// Same thing, but const
   const FLOAT_T& operator[](int i) const;
+  /// Truncate to a Vector3
+  Vector3 toVector3() const;
+  /// Round to IntVectorN
+  IntVectorN round() const;
 };
 
 // Helper functions.
@@ -62,5 +70,40 @@ VectorN operator*(FLOAT_T v1, const VectorN &v2);
 VectorN operator/(const VectorN &v1, FLOAT_T v2);
 /// Vector dot product returns a real number.
 FLOAT_T dot(const VectorN &v1, const VectorN &v2);
+/// Element-wise division
+VectorN operator/(const VectorN& v1, const VectorN& v2);
+/// Element-wise multiplication
+VectorN operator*(const VectorN& v1, const VectorN& v2);
+
+struct IntVectorN {
+  long long values[NUM_AXES];
+
+  IntVectorN();
+
+  void zero();
+
+  IntVectorN& operator=(const IntVectorN &v);
+  /// Add v to this vector.
+  IntVectorN& operator+=(const IntVectorN &v);
+  /// Subtract v from this vector.
+  IntVectorN& operator-=(const IntVectorN &v);
+  /// Scale by v (integer)
+  IntVectorN& operator*=(long long v);
+  /// Get a specific axis of the vector
+  long long& operator[](int i);
+  /// Same thing, but const
+  const long long& operator[](int i) const;
+  /// Convert to floating point
+  VectorN toVectorN() const;
+  /// Truncate to IntVector3
+  IntVector3 toIntVector3() const;
+};
+
+/// Binary + returns new vector (v1 + v2).
+IntVectorN operator+(const IntVectorN &v1, const IntVectorN &v2);
+/// Binary - returns new vector (v1 - v2).
+IntVectorN operator-(const IntVectorN &v1, const IntVectorN &v2);
+
+
 
 #endif
