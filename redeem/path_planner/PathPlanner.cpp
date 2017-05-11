@@ -163,6 +163,7 @@ void PathPlanner::queueMove(VectorN endWorldPos,
     endPos[1] = endMotionPos[1];
     assert(endPos[2] == endMotionPos[2]);
     endPos[2] = endMotionPos[2];
+    break;
   }
   case AXIS_CONFIG_H_BELT:
   {
@@ -173,6 +174,7 @@ void PathPlanner::queueMove(VectorN endWorldPos,
     endPos[1] = endMotionPos[1];
     assert(endPos[2] == endMotionPos[2]);
     endPos[2] = endMotionPos[2];
+    break;
   }
   case AXIS_CONFIG_XY:
   break;
