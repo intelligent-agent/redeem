@@ -65,7 +65,7 @@ setup(
     data_files=[
         ('redeem/firmware', [
             'redeem/firmware/firmware_runtime.c',
-            'redeem/firmware/firmware_endstops.p',
+            'redeem/firmware/firmware_endstops.c',
             'redeem/firmware/AM335x_PRU.cmd',
             'redeem/firmware/image.cmd']),
         ('redeem/configs', [
