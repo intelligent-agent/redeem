@@ -95,7 +95,8 @@ void Path::zero() {
 
   for (auto& stepVector : steps)
   {
-    stepVector.clear();
+    std::vector<Step> empty;
+    stepVector.swap(empty);
   }
 }
 
