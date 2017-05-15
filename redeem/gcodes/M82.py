@@ -34,3 +34,5 @@ class M82(GCodeCommand):
     def get_long_description(self):
         return "Makes the extruder interpret extrusion as absolute positions. This is the default in Redeem."
 
+    def is_buffered(self):
+                return True

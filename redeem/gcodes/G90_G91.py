@@ -18,6 +18,14 @@ class G90(GCodeCommand):
 
     def execute(self, g):
         self.printer.movement = Path.ABSOLUTE
+        for axis in "XYZ":
+            if axis not in self.printer.axes_absolute:
+                self.printer.axes_absolute.append(axis)
+            if axis in self.printer.axes_relative:
+                self.printer.axes_relative.remove(axis)
+        #If not all axes are absolute now, change to mixed mode
+        if self.printer.axes_relative != []:
+            self.printer.movement = Path.MIXED
 
     def get_description(self):
         return "Set movement mode to absolute"
@@ -30,6 +38,14 @@ class G91(GCodeCommand):
 
     def execute(self, g):
         self.printer.movement = Path.RELATIVE
+        for axis in "XYZ":
+            if axis not in self.printer.axes_relative:
+                self.printer.axes_relative.append(axis)
+            if axis in self.printer.axes_absolute:
+                self.printer.axes_absolute.remove(axis)
+        #If not all axes are relative now, change to mixed mode
+        if self.printer.axes_absolute != []:
+            self.printer.movement = Path.MIXED
 
     def get_description(self):
         return "Set movement mode to relative"
