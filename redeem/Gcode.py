@@ -58,10 +58,28 @@ class Gcode:
                 Gcode.line_number += 1  # Increase the global counter
                 self.has_crc = True
 
-            # Parse
-            self.tokens = self.message.split(" ")
-            self.gcode = self.tokens.pop(0)  # gcode number
-            self.tokens = filter(None, self.tokens)
+            # Parse -- compile a list from self.message of valid G-CODE tokens
+            """
+            Valid GCODE is case insensitive and allows (but does not require)
+            whitespace anywhere, even within a number, though the latter is not
+            supported here.
+
+            Exception: 3D Printer firmware typically includes an M117 command,
+            which displays text to a screen. The message text supplied to M117
+            should not be capitalized.
+
+            Redeem also adds a help feature, where G-CODE commands can be
+            queried in the form, "G?", to list all supported G codes or, "G28?"
+            to report back what G28 does.
+            """
+            match = re.match(r"(M117)([^0-9]?.*)", self.message, re.IGNORECASE)
+            if match:
+                self.tokens = [match.group(1).upper(), match.group(2).strip(" ")]
+            else:
+                self.tokens = re.findall(r"[A-Z](?:[0-9]*\?|[-+]?[0-9]*\.?[0-9]*)", self.message.upper().strip(" "))
+
+            self.gcode = self.tokens.pop(0)  # primary gcode -- tokens (list) retains paramters/secondary data
+
         except Exception as e:
             self.gcode = "No-Gcode"
             logging.exception("Ooops: ")
