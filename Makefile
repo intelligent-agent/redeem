@@ -18,7 +18,7 @@ source:
 	$(PYTHON) setup.py sdist $(COMPILE)
 
 install:
-	$(PYTHON) setup.py install --single-version-externally-managed --root=/
+	$(PYTHON) setup.py install
 	mkdir -p /etc/redeem
 	cp configs/*.cfg /etc/redeem/
 	cp data/*.cht /etc/redeem/
