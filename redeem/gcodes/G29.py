@@ -71,7 +71,7 @@ class G29(GCodeCommand):
 
 
 
-class G29C(GCodeCommand):
+class G29_1(GCodeCommand): # was G29C[ircle]
 
     def execute(self, g):
         bed_diameter_mm = g.get_float_by_letter("D", 140.0)     # Bed diameter
@@ -125,7 +125,7 @@ class G29C(GCodeCommand):
 
 
 
-class G29S(GCodeCommand):
+class G29_2(GCodeCommand): # was G29S[quare]
 
     def execute(self, g):
         width = g.get_float_by_letter("W", 180.0)               # Bed width
