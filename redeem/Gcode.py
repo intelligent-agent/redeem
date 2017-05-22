@@ -76,9 +76,9 @@ class Gcode:
             if match:
                 self.tokens = [match.group(1).upper(), match.group(2).strip(" ")]
             else:
-                self.tokens = re.findall(r"(?:G29C|G29S|[A-Z](?:[0-9]*\?|[-+]?[0-9]*\.?[0-9]*))", self.message.upper().strip(" "))
+                self.tokens = re.findall(r"(?:[A-Z](?:[0-9]*\?|[-+]?[0-9]*\.?[0-9]*))", self.message.upper().strip(" "))
 
-            self.gcode = self.tokens.pop(0)  # primary gcode -- tokens (list) retains paramters/secondary data
+            self.gcode = self.tokens.pop(0).replace('.', '_') # primary gcode -- tokens (list) retains paramters/secondary data
 
         except Exception as e:
             self.gcode = "No-Gcode"
