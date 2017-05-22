@@ -67,12 +67,13 @@ class Gcode:
             M117 Exception: Message text supplied to M117 should not be capitalized.
 
             Redeem's built-in help using '?' after a GCODE command is also supported.
+
             """
             match = re.match(r"(M117)([^0-9]?.*)", self.message, re.IGNORECASE)
             if match:
                 self.tokens = [match.group(1).upper(), match.group(2).strip(" ")]
             else:
-                self.tokens = re.findall(r"(?:[A-Z](?:[0-9]*\?|[-+]?[0-9]*\.?[0-9]*))", self.message.upper().strip(" "))
+                self.tokens = re.findall(r"(?:G29C|G29S|[A-Z](?:[0-9]*\?|[-+]?[0-9]*\.?[0-9]*))", self.message.upper().strip(" "))
 
             self.gcode = self.tokens.pop(0)  # primary gcode -- tokens (list) retains paramters/secondary data
 
