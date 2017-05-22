@@ -64,28 +64,15 @@ class Gcode:
             whitespace anywhere, even within a number, though the latter is not
             supported here.
 
-            Exception: 3D Printer firmware typically includes an M117 command,
-            which displays text to a screen. The message text supplied to M117
-            should not be capitalized.
+            M117 Exception: Message text supplied to M117 should not be capitalized.
 
-            Non-GCODE Standard Exceptions ...
-
-            Redeem also adds a help feature, where G-CODE commands can be
-            queried in the form, "G?", to list all supported G codes or, "G28?"
-            to report back what G28 does. Whilst not gcode standards comliant,
-            this should not cause any harm.
-
-            A more concerning break from standards is the current
-            implementation of bed probing commands, G29S and G29R -- without
-            spaces. Accordingly, these have to be separately handled in the
-            regex below. To remainwithin the standard, these should imo be
-            replaced by G29.1 and G29.2 or simlar. (Gruvin)
+            Redeem's built-in help using '?' after a GCODE command is also supported.
             """
             match = re.match(r"(M117)([^0-9]?.*)", self.message, re.IGNORECASE)
             if match:
                 self.tokens = [match.group(1).upper(), match.group(2).strip(" ")]
             else:
-                self.tokens = re.findall(r"(?:G29S|G29R|[A-Z](?:[0-9]*\?|[-+]?[0-9]*\.?[0-9]*))", self.message.upper().strip(" "))
+                self.tokens = re.findall(r"(?:[A-Z](?:[0-9]*\?|[-+]?[0-9]*\.?[0-9]*))", self.message.upper().strip(" "))
 
             self.gcode = self.tokens.pop(0)  # primary gcode -- tokens (list) retains paramters/secondary data
 
