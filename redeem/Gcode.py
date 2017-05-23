@@ -61,24 +61,29 @@ class Gcode:
                 Gcode.line_number += 1  # Increase the global counter
                 self.has_crc = True
 
-            # Parse -- compile a list from self.message of valid G-CODE tokens
             """
-            Valid GCODE is case insensitive and allows (but does not require)
-            whitespace anywhere, even within a number, though the latter is not
-            supported here.
+            Tokenize gcode "words" per RS274/NFC v3
 
-            M117 Exception: Message text supplied to M117 should not be capitalized.
+            Redeem's built-in help '?' after a primary word is also supported.
 
-            Redeem's built-in help using '?' after a GCODE command is also supported.
-
+            M117 Exception: Text supplied to legacy malformed M117 should not
+            be capitalized or stripped of its whitespace. The first leading
+            space after M117 is optional (and ignored) so long as the first
+            charcter is not a digit (0-9) or a period (.). Example: M117this
+            will work.
             """
-            match = re.match(r"(M117)([^0-9]?.*)", self.message, re.IGNORECASE)
+            match = re.match(r"(M117)(?:$|\ |(?=[^0-9.]{1}))\s?(.*)", self.message, re.IGNORECASE)
             if match:
                 self.tokens = [match.group(1).upper(), match.group(2).strip(" ")]
             else:
-                self.tokens = re.findall(r"(?:[A-Z](?:[0-9]*\?|[-+]?[0-9]*\.?[0-9]*))", self.message.upper().strip(" "))
+                self.tokens = re.findall(r"[A-Z][-+]?[0-9]*\.?[0-9]*\??", \
+                        "".join(self.message.split()).upper() )
 
-            self.gcode = self.tokens.pop(0).replace('.', '_') # primary gcode -- tokens (list) retains paramters/secondary data
+            """
+            Retrieve primary gcode. Exchange . for _ (if any) for Python
+            class name compliance. Example: G29_1
+            """
+            self.gcode = self.tokens.pop(0).replace('.', '_')
 
         except Exception as e:
             self.gcode = "No-Gcode"
