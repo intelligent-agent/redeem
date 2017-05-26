@@ -77,15 +77,13 @@ void calculateExtruderMove(const IntVectorN& start, const IntVectorN& end, FLOAT
 void Path::zero() {
   joinFlags = 0;
   flags = 0;
+  maxJunctionSpeed = 0;
 
   distance = 0;
-  baseSpeed = 0;
   moveMask = 0;
-
   timeInTicks = 0;
   speeds.zero();
   fullSpeed = 0;
-  maxJunctionSpeed = 0;
   startSpeed = 0;
   endSpeed = 0;
   minSpeed = 0;
@@ -112,15 +110,13 @@ Path& Path::operator=(const Path& path) {
   // assignment operator
   joinFlags = path.joinFlags;
   flags = path.flags.load();
+  maxJunctionSpeed = path.maxJunctionSpeed;
 
   distance = path.distance;
-  baseSpeed = path.baseSpeed;
   moveMask = path.moveMask;
-
   timeInTicks = path.timeInTicks;
   speeds = path.speeds;
   fullSpeed = path.fullSpeed;
-  maxJunctionSpeed = path.maxJunctionSpeed;
   startSpeed = path.startSpeed;
   endSpeed = path.endSpeed;
   minSpeed = path.minSpeed;
@@ -136,15 +132,13 @@ Path& Path::operator=(Path&& path) {
   // move assignment operator
   joinFlags = path.joinFlags;
   flags = path.flags.load();
+  maxJunctionSpeed = path.maxJunctionSpeed;
 
   distance = path.distance;
-  baseSpeed = path.baseSpeed;
   moveMask = path.moveMask;
-
   timeInTicks = path.timeInTicks;
   speeds = path.speeds;
   fullSpeed = path.fullSpeed;
-  maxJunctionSpeed = path.maxJunctionSpeed;
   startSpeed = path.startSpeed;
   endSpeed = path.endSpeed;
   minSpeed = path.minSpeed;
@@ -156,123 +150,109 @@ Path& Path::operator=(Path&& path) {
   return *this;
 }
 
-void Path::initialize(const IntVectorN& start,
-		      const IntVectorN& end,
-		      const VectorN& stepsPerM,
-		      FLOAT_T speed,
-		      int axisConfig,
-		      const Delta& delta,
-		      bool cancelable) {
-  this->zero();
-
-  const FLOAT_T distance = vabs((end.toVectorN() - start.toVectorN()) / stepsPerM);
-  const FLOAT_T time = distance / speed; // m / (m/s) = m * (s/m) = s
-
-  assert(!std::isnan(distance));
-  assert(!std::isnan(time));
-
-  this->distance = distance;
-  this->baseSpeed = speed;
-
-  LOG("ideal move should be " << speed << " m/s and cover " << distance << " m in " << time << " seconds" << std::endl);
-
-  switch (axisConfig)
-  {
-  case AXIS_CONFIG_DELTA:
-    delta.calculateMove(start.toIntVector3(), end.toIntVector3(), stepsPerM.toVector3(), time, steps);
-    break;
-  case AXIS_CONFIG_XY:
-  case AXIS_CONFIG_H_BELT:
-  case AXIS_CONFIG_CORE_XY:
-    calculateXYMove(start.toIntVector3(), end.toIntVector3(), stepsPerM.toVector3(), time, steps);
-    break;
-  default:
-    assert(0);
-  }
-
-  calculateExtruderMove(start, end, time, steps);
-
-  assert(!steps.empty());
-
-  const IntVectorN move = end - start;
-
-  for (int axis = 0; axis < NUM_AXES; axis++) {
-    if (move[axis] != 0)
-    {
-      moveMask |= (1 << axis);
-    }
-  }
-
-  joinFlags = 0;
-  flags = (cancelable ? FLAG_CANCELABLE : 0);
-
-  assert(!(isAxisMove(E_AXIS) && isAxisMove(H_AXIS))); // both extruders should never move at the same time
-
-  if ((isAxisMove(E_AXIS) && !isAxisOnlyMove(E_AXIS)) || (isAxisMove(H_AXIS) && !isAxisOnlyMove(H_AXIS))) {
-    flags |= FLAG_USE_PRESSURE_ADVANCE;
-  }
-
-  LOG("Distance in m:     " << distance << std::endl);
-
-  //LOG("StartSpeed in m/s: " << p->startSpeed << std::endl);
-  //LOG("EndSpeed in m/s:   " << p->endSpeed << std::endl);
-}
-
-void Path::calculate(const VectorN& axis_diff, /// Axis movements expressed in meters
-		     const VectorN& minSpeeds, /// Minimum allowable speeds in m/s
-		     const VectorN& maxSpeeds, /// Maximum allowable speeds in m/s
-		     const VectorN& maxAccelMPerSquareSecond,
-		     FLOAT_T requestedSpeed,
-		     FLOAT_T requestedAccel) {
+inline static FLOAT_T calculateMaximumSpeedInternal(unsigned char moveMask, const VectorN& worldMove, const VectorN& maxSpeeds, const FLOAT_T distance)
+{
   // First we need to figure out the minimum time for the move.
   // We determine this by calculating how long each axis would take to complete its move
   // at its maximum speed.
   FLOAT_T minimumTimeForMove = 0;
 
   for (int i = 0; i < NUM_AXES; i++) {
-    if (isAxisMove(i)) {
-      FLOAT_T minimumAxisTimeForMove = fabs(axis_diff[i]) / maxSpeeds[i]; // m / (m/s) = s
+    if (moveMask & (1 << i)) {
+      FLOAT_T minimumAxisTimeForMove = fabs(worldMove[i]) / maxSpeeds[i]; // m / (m/s) = s
+      LOG("axis " << i << " needs to travel " << worldMove[i] << " at a maximum of " << maxSpeeds[i] << " which would take " << minimumAxisTimeForMove << std::endl);
       minimumTimeForMove = std::max(minimumTimeForMove, minimumAxisTimeForMove);
     }
   }
 
-  FLOAT_T maximumSpeed = distance / minimumTimeForMove;
+  return distance / minimumTimeForMove;
+}
+
+inline static FLOAT_T calculateMaximumSpeed(unsigned char moveMask, const VectorN& worldMove, const VectorN& maxSpeeds, const FLOAT_T distance, int axisConfig)
+{
+  if (axisConfig == AXIS_CONFIG_DELTA)
+  {
+    // Fold the entire XYZ distance into X
+    VectorN fakeWorldMove(worldMove);
+    fakeWorldMove[0] = vabs(fakeWorldMove.toVector3());
+    fakeWorldMove[1] = 0;
+    fakeWorldMove[2] = 0;
+
+    const unsigned char fakeMoveMask = moveMask & ~((1 << Y_AXIS) | (1 << Z_AXIS));
+
+    return calculateMaximumSpeedInternal(fakeMoveMask, fakeWorldMove, maxSpeeds, distance);
+  }
+  else if (axisConfig == AXIS_CONFIG_CORE_XY || axisConfig == AXIS_CONFIG_H_BELT)
+  {
+    // Fold the XY distance into X
+    VectorN fakeWorldMove(worldMove);
+    fakeWorldMove[0] = vabs(Vector3(fakeWorldMove[0], fakeWorldMove[1], 0));
+    fakeWorldMove[1] = 0;
+
+    const unsigned char fakeMoveMask = moveMask & ~(1 << Y_AXIS);
+
+    return calculateMaximumSpeedInternal(fakeMoveMask, fakeWorldMove, maxSpeeds, distance);
+  }
+  else
+  {
+    return calculateMaximumSpeedInternal(moveMask, worldMove, maxSpeeds, distance);
+    
+  }
+}
+
+void Path::initialize(const IntVectorN& machineStart,
+  const IntVectorN& machineEnd,
+  const VectorN& worldStart,
+  const VectorN& worldEnd,
+  const VectorN& stepsPerM,
+  const VectorN& minSpeeds, /// Minimum allowable speeds in m/s
+  const VectorN& maxSpeeds, /// Maximum allowable speeds in m/s
+  const VectorN& maxAccelMPerSquareSecond,
+  FLOAT_T requestedSpeed,
+  FLOAT_T requestedAccel,
+  int axisConfig,
+  const Delta& delta,
+  bool cancelable) {
+  this->zero();
+
+  const IntVectorN machineMove = machineEnd - machineStart;
+  const VectorN worldMove = worldEnd - worldStart;
+  distance = vabs(worldMove);
+
+  joinFlags = 0;
+  flags = (cancelable ? FLAG_CANCELABLE : 0);
+
+  assert(!std::isnan(distance));
+
+  for (int axis = 0; axis < NUM_AXES; axis++) {
+    if (machineMove[axis] != 0)
+    {
+      moveMask |= (1 << axis);
+    }
+  }
 
   // Now figure out if we can honor the user's requested speed.
-  if (requestedSpeed > maximumSpeed) {
-    fullSpeed = maximumSpeed;
-  }
-  else {
-    fullSpeed = requestedSpeed;
-  }
-
+  fullSpeed = std::min(requestedSpeed, calculateMaximumSpeed(moveMask, worldMove, maxSpeeds, distance, axisConfig));
   assert(!std::isnan(fullSpeed));
 
-  FLOAT_T idealTimeForMove = distance / fullSpeed; // m / (m/s) = s
+  const FLOAT_T idealTimeForMove = distance / fullSpeed; // m / (m/s) = s
   timeInTicks = F_CPU * idealTimeForMove; // ticks / s * s = ticks
 
-  // Now determine the maximum possible acceleration to get to fullSpeed.
-  FLOAT_T minimumAccelerationTime = 0;
   for (int i = 0; i < NUM_AXES; i++) {
     if (isAxisMove(i)) {
-      speeds[i] = axis_diff[i] / idealTimeForMove;
-      // v = a * t  =>  t = v / a
-      // (steps / second) / (steps / second^2) = seconds
-      FLOAT_T minimumAxisAccelerationTime = speeds[i] / maxAccelMPerSquareSecond[i];
-      minimumAccelerationTime = std::max(minimumAccelerationTime, minimumAxisAccelerationTime);
+      speeds[i] = worldMove[i] / idealTimeForMove;
     }
     else {
       speeds[i] = 0;
     }
   }
 
-  FLOAT_T maximumAccel = fullSpeed / minimumAccelerationTime;
-
-  accel = std::min(requestedAccel, maximumAccel);
-  FLOAT_T idealTimeForAcceleration = fullSpeed / accel; // (m/s) / (m/s^2) = s
+  // As it turns out, this function can also calculate accel if we give it values that are all derivatives of what it normally wants
+  accel = std::min(requestedAccel, calculateMaximumSpeed(moveMask, speeds, maxAccelMPerSquareSecond, fullSpeed, axisConfig));
 
   // Calculate whether we're guaranteed to reach cruising speed.
-  FLOAT_T maximumAccelDistance = idealTimeForAcceleration * (fullSpeed / 2.0);
+  FLOAT_T maximumAccelTime = fullSpeed / accel; // (m/s) / (m/s^2) = s
+  FLOAT_T maximumAccelDistance = maximumAccelTime * (fullSpeed / 2.0);
   if (2.0 * maximumAccelDistance < distance) {
     // This move has enough distance that we can accelerate from 0 to fullSpeed and back to 0.
     // We'll definitely hit cruising speed.
@@ -281,8 +261,33 @@ void Path::calculate(const VectorN& axis_diff, /// Axis movements expressed in m
 
   startSpeed = endSpeed = minSpeed = calculateSafeSpeed(minSpeeds);
 
-  LOG("Speed in m/s:      " << fullSpeed << std::endl);
-  LOG("Accel in m/s²:     " << accel << std::endl);
+  LOG("ideal move should be " << fullSpeed << " m/s and cover " << distance << " m in " << idealTimeForMove << " seconds" << std::endl);
+
+  switch (axisConfig)
+  {
+  case AXIS_CONFIG_DELTA:
+    delta.calculateMove(machineStart.toIntVector3(), machineEnd.toIntVector3(), stepsPerM.toVector3(), idealTimeForMove, steps);
+    break;
+  case AXIS_CONFIG_XY:
+  case AXIS_CONFIG_H_BELT:
+  case AXIS_CONFIG_CORE_XY:
+    calculateXYMove(machineStart.toIntVector3(), machineEnd.toIntVector3(), stepsPerM.toVector3(), idealTimeForMove, steps);
+    break;
+  default:
+    assert(0);
+  }
+
+  calculateExtruderMove(machineStart, machineEnd, idealTimeForMove, steps);
+
+  assert(!steps.empty());
+
+  if ((isAxisMove(E_AXIS) && !isAxisOnlyMove(E_AXIS)) || (isAxisMove(H_AXIS) && !isAxisOnlyMove(H_AXIS))) {
+    flags |= FLAG_USE_PRESSURE_ADVANCE;
+  }
+
+  LOG("Distance in m:     " << distance << std::endl);
+  LOG("Speed in m/s:      " << fullSpeed << " requested: " << requestedSpeed << std::endl);
+  LOG("Accel in m/s²:     " << accel << " requested: " << requestedAccel << std::endl);
   LOG("Ticks :            " << timeInTicks << std::endl);
 
   invalidateStepperPathParameters();
@@ -417,7 +422,7 @@ void Path::updateStepperPathParameters() {
   assert(accelDistance >= 0 && cruiseDistance >= 0 && decelDistance >= 0);
   assert(std::abs(distance - (accelDistance + cruiseDistance + decelDistance)) < NEGLIGIBLE_ERROR);
 
-  stepperPath.baseSpeed = baseSpeed;
+  stepperPath.baseSpeed = fullSpeed;
   stepperPath.startSpeed = startSpeed;
   stepperPath.cruiseSpeed = cruiseSpeed;
   stepperPath.endSpeed = endSpeed;

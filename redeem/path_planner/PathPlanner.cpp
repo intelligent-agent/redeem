@@ -230,7 +230,9 @@ void PathPlanner::queueMove(VectorN endWorldPos,
 
   Path p;
 
-  p.initialize(state, tweakedEndPos, axisStepsPerM, speed, axis_config, delta_bot, cancelable);
+  p.initialize(state, tweakedEndPos, startWorldPos, endWorldPos, axisStepsPerM,
+    minSpeeds, maxSpeeds, maxAccelerationMPerSquareSecond,
+    speed, accel, axis_config, delta_bot, cancelable);
 
   if (p.isNoMove()) {
     LOG("Warning: no move path" << std::endl);
@@ -257,12 +259,14 @@ void PathPlanner::queueMove(VectorN endWorldPos,
 
     for (int i = 0; i < NUM_AXES; i++)
     {
-      assert(state[i] + realDeltas[i] == endPos[i]);
+      if (state[i] + realDeltas[i] != endPos[i])
+      {
+	LOG("step count sanity check failed on axis " << i << " because " << state[i] << " + " << realDeltas[i] << " != " << endPos[i] << std::endl);
+	assert(0);
+      }
     }
   }
   LOG("done!" << std::endl);
-
-  p.calculate(endWorldPos - startWorldPos, minSpeeds, maxSpeeds, maxAccelerationMPerSquareSecond, speed, accel);
 
   unsigned int linesCacheRemaining = moveCacheSize - linesCount;
   long long linesTicksRemaining = maxBufferedMoveTime - linesTicksCount;
