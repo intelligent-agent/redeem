@@ -56,7 +56,11 @@ class Printer:
         self.movement           = Path.ABSOLUTE
         self.axis_config        = self.AXIS_CONFIG_XY
         self.feed_rate          = 0.5
-        self.accel              = 0.5
+        # this rate is the one used at the beginning of startup for any moves without G1 F,
+        # other than homing, which obeys it's speed correctly.
+        self.accel              = 9.8
+        # this accel is the global max unless over-ridden using G1 Q, this is
+        # compared to the one listed in local.cfg, the lower one controls the printer.
         self.current_tool       = "E"
         self.running_M116       = False
         # For movement commands, whether the E axis refers to the active
@@ -137,7 +141,7 @@ class Printer:
                 if not stepper.current_enabled:
                     # Stepper does not have current enabled.
                     stepper.set_current_enabled()  # Force update
-                
+
 
     def reply(self, gcode):
         """ Send a reply through the proper channel """
