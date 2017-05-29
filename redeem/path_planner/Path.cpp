@@ -287,7 +287,7 @@ void Path::initialize(const IntVectorN& machineStart,
 
   LOG("Distance in m:     " << distance << std::endl);
   LOG("Speed in m/s:      " << fullSpeed << " requested: " << requestedSpeed << std::endl);
-  LOG("Accel in m/s²:     " << accel << " requested: " << requestedAccel << std::endl);
+  LOG("Accel in m/s:     " << accel << " requested: " << requestedAccel << std::endl);
   LOG("Ticks :            " << timeInTicks << std::endl);
 
   invalidateStepperPathParameters();
