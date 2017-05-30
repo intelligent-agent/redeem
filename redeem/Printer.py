@@ -95,6 +95,9 @@ class Printer:
         # By default, do not check for slaves
         self.has_slaves = False
 
+        # Arc
+        self.arc_plane = Path.X_Y_ARC_PLANE
+
         return
 
     def add_slave(self, master, slave):

@@ -37,6 +37,14 @@ class Path:
 
     # Numpy array type used throughout    
     DTYPE = np.float64
+
+    # http://www.manufacturinget.org/2011/12/cnc-g-code-g17-g18-and-g19/
+    X_Y_ARC_PLANE = 0
+    X_Z_ARC_PLANE = 1
+    Y_Z_ARC_PLANE = 2
+
+    # max length of any segment in an arc
+    ARC_SEGMENT_LENGTH = 0.1 / 1000
     
     def __init__(self, axes, speed, accel, cancelable=False, use_bed_matrix=True, use_backlash_compensation=True, enable_soft_endstops=True):
         """ The axes of evil, the feed rate in m/s and ABS or REL """
@@ -53,7 +61,6 @@ class Path:
         self.start_pos = None
         self.end_pos = None
         self.ideal_end_post = None
-        
 
     def is_G92(self):
         """ Special path, only set the global position on this """
@@ -76,10 +83,8 @@ class Path:
         return
 
     def needs_splitting(self):
-        #return False
-        """ Return true if this is a radius """
-        if self.movement == Path.G2 or self.movement == Path.G3:
-            return True
+        """ Return true if this is a arc movement"""
+        return self.movement == Path.G2 or self.movement == Path.G3
 
     def get_segments(self):
         """ Returns split segments for delta or arcs """
@@ -94,69 +99,96 @@ class Path:
     def inv_parametric_circle(self, x, xc, R):
         t = np.arccos((x-xc)/R)
         return t
-        
+
+    def get_plane_coordinates(self, pos):
+        """ Returns the two points in the arc plane """
+        if self.printer.arc_plane == Path.X_Y_ARC_PLANE:
+            return pos[0], pos[1]
+        if self.printer.arc_plane == Path.X_Z_ARC_PLANE:
+            return pos[0], pos[2]
+        # Path.Y_Z_ARC_PLANE
+        return pos[1], pos[2]
+
+    def get_plane_location(self, pos):
+        """ Returns the arc plane position """
+        if self.printer.arc_plane == Path.X_Y_ARC_PLANE:
+            return pos[2]
+        if self.printer.arc_plane == Path.X_Z_ARC_PLANE:
+            return pos[1]
+        # Path.Y_Z_ARC_PLANE
+        return pos[0]
+
+    def get_arc_coordinates(self, point):
+        """ Creates a coordinate given a point and the plane location """
+        if self.printer.arc_plane == Path.X_Y_ARC_PLANE:
+            return {'X': point[0], 'Y': point[1]}
+        if self.printer.arc_plane == Path.X_Z_ARC_PLANE:
+            return {'X': point[0], 'Z': point[1]}
+        # Path.Y_Z_ARC_PLANE
+        return {'Y': point[0], 'Z': point[1]}
+
+    def get_offset(self):
+        if self.printer.arc_plane == Path.X_Y_ARC_PLANE:
+            return self.I, self.J
+        if self.printer.arc_plane == Path.X_Z_ARC_PLANE:
+            return self.I, self.K
+        # Path.Y_Z_ARC_PLANE
+        return self.J, self.K
+
+    def get_distance(self, pointA, pointB):
+        return np.sqrt( (pointB[1]-pointA[1])**2 + (pointB[0]-pointA[1])**2 )
 
     def get_arc_segments(self):
-        # The code in this function was taken from 
-        # http://stackoverflow.com/questions/11331854/how-can-i-generate-an-arc-in-numpy
-        start_point = self.prev.ideal_end_pos[:2]
-        end_point   = self.ideal_end_pos[:2]
 
-        i = self.I
-        j = self.J
+        # references:
+        #  - http://stackoverflow.com/questions/11331854/how-can-i-generate-an-arc-in-numpy
+        #  - http://www.manufacturinget.org/2011/12/cnc-g-code-g02-and-g03/
 
-        # Find radius
-        R = np.sqrt(i**2 + j**2)
+        # points on the arc plane
+        start_point = self.get_plane_coordinates(self.prev.ideal_end_pos)
+        end_point = self.get_plane_coordinates(self.ideal_end_pos)
+        plane_location = self.get_plane_location(self.ideal_end_pos)
 
-        #logging.info(start_point)
-        #logging.info(end_point)
-        #logging.info(R)
+        # center offset from start point on the arc plane
+        offset = self.get_offset()
 
+        radius = np.sqrt(offset[0]**2 + offset[1]**2)
 
-        # Find start and end points
-        start_t = self.inv_parametric_circle(start_point[0], start_point[0]+i, R)
-        end_t   = self.inv_parametric_circle(end_point[0], start_point[0]+i, R)
+        logging.info("start point: {}".format(start_point))
+        logging.info("offset: {}".format(offset))
+        logging.info("end point: {}".format(end_point))
+        logging.info("radius: {}".format(radius))
 
-        num_segments = np.ceil(np.abs(end_t-start_t)/self.split_size)+1
+        # Find start and end tangent vectors
+        start_t = self.inv_parametric_circle(start_point[0], offset[0], radius)
+        end_t = self.inv_parametric_circle(end_point[0], offset[0], radius)
 
+        # number of segments based on 
+        arc_length = np.pi * radius * np.arctan(self.get_distance(start_point, end_point) / radius)
+        num_segments = np.ceil(arc_length / self.ARC_SEGMENT_LENGTH)
 
-        # TODO: test this, it is probably wrong. 
-        if self.movement == G2: 
+        # calculate arc tangent vectors
+        if self.movement == Path.G2:
             arc_T = np.linspace(start_t, end_t, num_segments)
         else:        
             arc_T = np.linspace(end_t, start_t, num_segments)
-        X,Y = self.parametric_circle(arc_T, start_point[0]+i, start_point[1]+j, R)
-    
-        #logging.info([X, Y])
-        
-        # Interpolate the remaining values
-        vals = np.transpose([
-                    np.linspace(
-                        self.prev.ideal_end_pos[i], 
-                        self.ideal_end_pos[i], 
-                        num_segments
-                        ) for i in xrange(self.printer.MAX_AXES)]) 
 
-        # Update the X and Y positions
-        for i, val in enumerate(vals):
-            val[:2] = (X[i], Y[i])
-        vals = np.delete(vals, 0, axis=0)
+        # create plane point pairs (either X/Y, X/Z or Y/Z)
+        X, Y = self.parametric_circle(arc_T, start_point[0]+offset[0], start_point[1]+offset[1], radius)
 
-        vec_segments = [dict(zip(self.printer.axes_zipped, list(val))) for val in vals]
         path_segments = []
 
-        for index, segment in enumerate(vec_segments):
-            #print segment
-            path = AbsolutePath(segment, self.speed, self.accel, self.cancelable, self.use_bed_matrix, False) #
+        for index, segment in enumerate(zip(X, Y)):
+            segment_end = self.get_arc_coordinates(segment)
+            logging.info("segment: {}".format(segment_end))
+            path = AbsolutePath(segment_end, self.speed, self.accel, self.cancelable, self.use_bed_matrix, False)
             if index is not 0:
                 path.set_prev(path_segments[-1])
             else:
                 path.set_prev(self.prev)
-            path_segments.append(path)
 
-        #for seg in path_segments:
-        #    logging.info(seg)
- 
+            logging.info("path segment: {}".format(path))
+            path_segments.append(path)
 
         return path_segments
 
