@@ -1,93 +1,330 @@
 #!/usr/bin/python
-# Example taken from http://stackoverflow.com/questions/11331854/how-can-i-generate-an-arc-in-numpy
-
-from numpy import cos,sin,arccos
+import unittest
 import numpy as np
-
-def parametric_circle(t,xc,yc,R):
-    x = xc + R*cos(t)
-    y = yc + R*sin(t)
-    return x, y
-
-def inv_parametric_circle(x,xc,R):
-    t = arccos((x-xc)/R)
-    return t
-
-N = 30
-#R = 0.750
-x0 = 0.0
-y0 = 10.0
-
-x1 = 12.803
-y1 = 15.303 
-i = 7.50
-j = 0.0
-
-
-
-x0 = 0
-y0 = 1
-
-x1 = 1.2803
-y1 = 1.5303
-
-i = 0.750
-j = 0
-
-R = np.sqrt(i**2 + j**2)
-
-xc = x0 + i
-yc = y0 + j
-
-
-x0_origin = x0 - xc
-y0_origin = y0 - yc
-
-x1_origin = x1 - xc
-y1_origin = y1 - yc
-
-
-ys = (y0_origin, y1_origin)
-xs = (x0_origin, x1_origin)
-
-start_theta, end_theta = np.arctan2(ys, xs)
-
-
-print("start / end thetas: {}, {}".format(start_theta, end_theta))
-
-##
-# circumference = 2 * np.pi * R
-# arc_angle = (end_theta-start_theta) / 2*pi
-# arc_length = circumference * arc_angle
-# arc_length = 2 * np.pi * R * (end_theta-start_theta) / 2 * np.pi
-# arc_length = R * (end_theta - start_theta)
-# N = arc_length / ARC_MOVEMENT
-
-N = 30
-
-arc_thetas = np.linspace(start_theta, end_theta, N)
-
-print("arc thetas: {}".format(arc_thetas))
-
-arc_x, arc_y = parametric_circle(arc_thetas, xc, yc, R)
-
 import matplotlib.pyplot as plt
 
-colors_arc = (0, 0, 0)
-color_start = (1, 0, 0)
-color_end = (0,1, 0)
-color_center = (0, 0, 1)
-area = np.pi * 3
 
-# Plot
-plt.scatter(arc_x, arc_y, s=3, c=colors_arc, alpha=0.5)
-plt.scatter((x0), (y0), s=100, c=color_start, alpha=1, marker='h')
-plt.scatter((x1), (y1), s=100, c=color_end, alpha=1, marker='h')
-plt.scatter((xc), (yc), s=100, c=color_center, alpha=1, marker='h')
-plt.show()
+
+def parametric_circle(t,xc,yc,R):
+    x = xc + R * np.cos(t)
+    y = yc + R * np.sin(t)
+    return x, y
+
+
+def create_arc_segments(x0,y0, x1,y1, i, j, cw = True):
+    R = np.sqrt(i ** 2 + j ** 2)
+
+    xc = x0 + i
+    yc = y0 + j
+
+    x0_origin = x0 - xc
+    y0_origin = y0 - yc
+
+    x1_origin = x1 - xc
+    y1_origin = y1 - yc
+
+    ys = (y0_origin, y1_origin)
+    xs = (x0_origin, x1_origin)
+
+    start_theta, end_theta = np.arctan2(ys, xs)
+
+    ''' clockwise => theta always decreasing'''
+    ''' counterclockwise => theta always increasing'''
+
+    ''' in order to use linspace, cw motion needs start theta greater than end theta. if not, need to correct'''
+    ''' for ccw motion if start theta is not less than end theta, need to correct'''
+
+    ''' since it's modulo pi, we can adjust by using the distance from +/- pi'''
+
+
+    if start_theta < end_theta and cw:
+        start_theta = np.pi + abs(-np.pi - start_theta)
+
+    if start_theta > end_theta and not cw:
+        start_theta = -np.pi - abs(np.pi - start_theta)
+
+    print("start {} end {}".format(start_theta, end_theta))
+
+    arc_length = R * abs(end_theta - start_theta)
+    num_segments = int(arc_length / 0.25)
+
+    arc_thetas = np.linspace(start_theta+2*np.pi, end_theta+2*np.pi, num_segments)
+
+    arc_x = xc + R * np.cos(arc_thetas)
+    arc_y = yc + R * np.sin(arc_thetas)
+
+    return arc_x, arc_y
+
+def show_plot(x0, y0, x1, y1, i, j, arc_x, arc_y, title=None):
+
+    xc = x0 + i
+    yc = y0 + j
+
+    colors_arc = (0, 0, 0)
+    color_start = (0, 1, 0)
+    color_end = (1,0, 0)
+    color_center = (0, 0, 1)
+    area = np.pi * 3
+
+    # Plot
+    plt.scatter(arc_x, arc_y, s=20, c=colors_arc, alpha=0.5)
+    plt.scatter((x0), (y0), s=100, c=color_start, alpha=1, marker='h')
+    plt.scatter((x1), (y1), s=100, c=color_end, alpha=1, marker='h')
+    plt.scatter((xc), (yc), s=100, c=color_center, alpha=1, marker='h')
+
+    if title:
+        plt.title(title)
+
+    plt.show()
+
+
+class TestArcSegments(unittest.TestCase):
+
+    def test_machinenet_example(self):
+        x0 = 0.0
+        y0 = 1.0
+
+        x1 = 1.2803
+        y1 = 1.5303
+        i = 0.750
+        j = 0.0
+
+        arc_x, arc_y = create_arc_segments(x0, y0, x1, y1, i, j)
+        show_plot(x0, y0, x1, y1, i, j, arc_x, arc_y, title="machinenet example cw")
+
+    def test_start_quadrant_3_end_quadrant_2_cw(self):
+        x0 = -25
+        y0 = 0
+
+        x1 = -8
+        y1 = 21.464
+
+        i = 17
+        j = 4
+
+        arc_x, arc_y = create_arc_segments(x0, y0, x1, y1, i, j, cw=True)
+        show_plot(x0, y0, x1, y1, i, j, arc_x, arc_y, title='quadrant_3_end_quadrant_2_cw')
+
+    def test_start_quadrant_3_end_quadrant_2_ccw(self):
+        x0 = -25
+        y0 = 0
+
+        x1 = -8
+        y1 = 21.464
+
+        i = 17
+        j = 4
+
+        arc_x, arc_y = create_arc_segments(x0, y0, x1, y1, i, j, cw=False)
+        show_plot(x0, y0, x1, y1, i, j, arc_x, arc_y, title='quadrant_3_end_quadrant_2_ccw')
+
+    def test_start_quadrant_3_end_quadrant_4_cw(self):
+        x0 = -7
+        y0 = -6
+
+        x1 = 7
+        y1 = -2
+
+        i = 5
+        j = 9
+
+        arc_x, arc_y = create_arc_segments(x0, y0, x1, y1, i, j, cw=True)
+        show_plot(x0, y0, x1, y1, i, j, arc_x, arc_y, 'test_start_quadrant_3_end_quadrant_4_cw')
+
+    def test_start_quadrant_3_end_quadrant_4_ccw(self):
+        x0 = -7
+        y0 = -6
+
+        x1 = 7
+        y1 = -2
+
+        i = 5
+        j = 9
+
+        arc_x, arc_y = create_arc_segments(x0, y0, x1, y1, i, j, cw=False)
+        show_plot(x0, y0, x1, y1, i, j, arc_x, arc_y, 'test_start_quadrant_3_end_quadrant_4_ccw')
+
+    def test_start_quadrant_3_end_quadrant_1_cw(self):
+        x0 = -7
+        y0 = -6
+
+        x1 = 4.481
+        y1 = 11
+
+        i = 5
+        j = 9
+
+        arc_x, arc_y = create_arc_segments(x0, y0, x1, y1, i, j, cw=True)
+        show_plot(x0, y0, x1, y1, i, j, arc_x, arc_y, 'test_start_quadrant_3_end_quadrant_1_cw')
+
+    def test_start_quadrant_3_end_quadrant_1_ccw(self):
+        x0 = -7
+        y0 = -6
+
+        x1 = 4.481
+        y1 = 11
+
+        i = 5
+        j = 9
+
+        arc_x, arc_y = create_arc_segments(x0, y0, x1, y1, i, j, cw=False)
+        show_plot(x0, y0, x1, y1, i, j, arc_x, arc_y, 'test_start_quadrant_3_end_quadrant_1_ccw')
+
+    def test_start_quadrant_3_end_quadrant_3_cw(self):
+        x0 = -7
+        y0 = -6
+
+        x1 = -4
+        y1 = -7.1
+
+        i = 5
+        j = 9
+
+        arc_x, arc_y = create_arc_segments(x0, y0, x1, y1, i, j, cw=True)
+        show_plot(x0, y0, x1, y1, i, j, arc_x, arc_y, 'test_start_quadrant_3_end_quadrant_3_cw')
+
+    def test_start_quadrant_3_end_quadrant_3_ccw(self):
+        x0 = -7
+        y0 = -6
+
+        x1 = -4
+        y1 = -7.1
+
+        i = 5
+        j = 9
+
+        arc_x, arc_y = create_arc_segments(x0, y0, x1, y1, i, j, cw=False)
+        show_plot(x0, y0, x1, y1, i, j, arc_x, arc_y, 'test_start_quadrant_3_end_quadrant_3_ccw')
+
+    def test_quarter_circle_quadrant_1_cw(self):
+        x0 = 0.0
+        y0 = 12.0
+
+        x1 = 12
+        y1 = 0
+
+        i = 0
+        j = -12.0
+
+        arc_x, arc_y = create_arc_segments(x0, y0, x1, y1, i, j, cw=True)
+        show_plot(x0, y0, x1, y1, i, j, arc_x, arc_y, 'test_quarter_circle_quadrant_1_cw')
+
+    def test_quarter_circle_quadrant_1_ccw(self):
+        x0 = 0.0
+        y0 = 12.0
+
+        x1 = 12
+        y1 = 0
+
+        i = 0
+        j = -12.0
+
+        arc_x, arc_y = create_arc_segments(x0, y0, x1, y1, i, j, cw=False)
+        show_plot(x0, y0, x1, y1, i, j, arc_x, arc_y, 'test_quarter_circle_quadrant_1_ccw')
+
+    def test_three_quarter_circle_quadrant_2_ccw(self):
+        x0 = 0.0
+        y0 = 12.0
+
+        x1 = -12
+        y1 = 0
+
+        i = 0
+        j = -12.0
+
+        arc_x, arc_y = create_arc_segments(x0, y0, x1, y1, i, j, cw=False)
+        show_plot(x0, y0, x1, y1, i, j, arc_x, arc_y, 'test_three_quarter_circle_quadrant_2_ccw')
+
+    def test_inverted_start_end_point_cw(self):
+        x0 = 7
+        y0 = -2
+
+        x1 = -7
+        y1 = -6
+
+        i = -9
+        j = 5
+
+        arc_x, arc_y = create_arc_segments(x0, y0, x1, y1, i, j, cw=True)
+        show_plot(x0, y0, x1, y1, i, j, arc_x, arc_y, 'test_inverted_start_end_point_cw')
+
+    def test_inverted_start_end_point_ccw(self):
+        x0 = 7
+        y0 = -2
+
+        x1 = -7
+        y1 = -6
+
+        i = -9
+        j = 5
+
+        arc_x, arc_y = create_arc_segments(x0, y0, x1, y1, i, j, cw=False)
+        show_plot(x0, y0, x1, y1, i, j, arc_x, arc_y, 'test_inverted_start_end_point_ccw')
+
+
+if __name__ == '__main__':
+    unittest.main()
+
 
 
 #
+# N = 30
+# #R = 0.750
+# x0 = 0.0
+# y0 = 10.0
+#
+# x1 = 12.803
+# y1 = 15.303
+# i = 7.50
+# j = 0.0
+#
+#
+#
+# x0 = 0
+# y0 = 1
+#
+# x1 = 1.2803
+# y1 = 1.5303
+#
+# i = 0.750
+# j = 0
+#
+#
+# print("start / end thetas: {}, {}".format(start_theta, end_theta))
+#
+# ##
+# # circumference = 2 * np.pi * R
+# # arc_angle = (end_theta-start_theta) / 2*pi
+# # arc_length = circumference * arc_angle
+# # arc_length = 2 * np.pi * R * (end_theta-start_theta) / 2 * np.pi
+# # arc_length = R * (end_theta - start_theta)
+# # N = arc_length / ARC_MOVEMENT
+#
+# N = 30
+#
+# arc_thetas = np.linspace(start_theta, end_theta, N)
+#
+# print("arc thetas: {}".format(arc_thetas))
+#
+# arc_x, arc_y = parametric_circle(arc_thetas, xc, yc, R)
+#
+# import matplotlib.pyplot as plt
+#
+# colors_arc = (0, 0, 0)
+# color_start = (1, 0, 0)
+# color_end = (0,1, 0)
+# color_center = (0, 0, 1)
+# area = np.pi * 3
+#
+# # Plot
+# plt.scatter(arc_x, arc_y, s=3, c=colors_arc, alpha=0.5)
+# plt.scatter((x0), (y0), s=100, c=color_start, alpha=1, marker='h')
+# plt.scatter((x1), (y1), s=100, c=color_end, alpha=1, marker='h')
+# plt.scatter((xc), (yc), s=100, c=color_center, alpha=1, marker='h')
+# plt.show()
+#
+#
+# #
 #
 #
 #
