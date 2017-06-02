@@ -32,18 +32,31 @@ import numpy as np
 from PruInterface import PruInterface
 from BedCompensation import BedCompensation
 from DeltaAutoCalibration import delta_auto_calibration
+from Alarm import Alarm
+import traceback
 
 try:
-    from path_planner.PathPlannerNative import PathPlannerNative
+    from path_planner.PathPlannerNative import PathPlannerNative, AlarmCallbackNative
 except Exception, e:
     try:
-        from _PathPlannerNative import PathPlannerNative
+        from _PathPlannerNative import PathPlannerNative, AlarmCallbackNative
     except:
         logging.error("You have to compile the native path planner before running"
                   " Redeem. Make sure you have swig installed (apt-get "
                   "install swig) and run cd ../../PathPlanner/PathPlanner && "
                   "python setup.py install")
         raise e
+
+class AlarmWrapper(AlarmCallbackNative):
+    def __init__(self):
+        AlarmCallbackNative.__init__(self)
+
+    def call(self, type, message, short_message):
+        logging.error("Native path planner alarm: {} {} {}".format(type, message, short_message))
+        try:
+            a = Alarm(int(type), message, short_message)
+        except Exception:
+            logging.error(traceback.format_exc())
 
 class PathPlanner:
 
@@ -67,7 +80,8 @@ class PathPlanner:
             self.native_planner = None
 
     def __init_path_planner(self):
-        self.native_planner = PathPlannerNative(int(self.printer.move_cache_size))
+        self.alarm_wrapper = AlarmWrapper()
+        self.native_planner = PathPlannerNative(int(self.printer.move_cache_size), self.alarm_wrapper)
 
         fw0 = self.pru_firmware.get_firmware(0)
         fw1 = self.pru_firmware.get_firmware(1)

@@ -88,6 +88,11 @@ class Alarm:
         elif self.type == Alarm.FILAMENT_JAM:
             Alarm.action_command("pause")
             Alarm.action_command("alarm_filament_jam", self.message)
+        elif self.type == Alarm.ENDSTOP_HIT:
+            self.stop_print()
+            self.inform_listeners()
+            Alarm.action_command("pause")
+            Alarm.action_command("alarm_endstop_hit", self.message)
         elif self.type == Alarm.ALARM_TEST:
             logging.info("Alarm: Operational")
             Alarm.action_command("alarm_operational", self.message)

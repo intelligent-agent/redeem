@@ -55,6 +55,16 @@ inline void delay(uint32_t until)
 	while(PRU0_CTRL.CYCLE < until);
 }
 
+inline void armPru0Interrupt()
+{
+	__asm("        LDI       r31.b0, 35"); // PRU0_ARM_INTERRUPT
+}
+
+inline void armPru1Interrupt()
+{
+	__asm("        LDI       r31.b0, 36"); // PRU1_ARM_INTERRUPT
+}
+
 int main(void) {
 	// Initialization
 	CT_CFG.SYSCFG_bit.STANDBY_INIT = 0;
@@ -153,6 +163,21 @@ int main(void) {
 					ddr_addr = (uint32_t*)curCommand;
 					break;
 				}
+				else if (curCommand->cancellableMask == 0
+						&& (allDirectionsAllowed & curCommand->step) != curCommand->step)
+				{
+					// This move isn't cancellable, but one or more of its axes are blocked.
+					// Stop immediately and sound the alarm.
+
+					*events_counter = 0xFFFFFFFF;
+					armPru0Interrupt();
+					
+					// Don't allow recovery - we have some unknown number of steps already queued up.
+					// Just wait for the host to reset the whole PRU.
+					while(1)
+					{ }
+				}
+
                 g_stepsRemaining = 0;
 
 				// TODO This is carried over from the original assembly, but it's unclear
@@ -213,7 +238,7 @@ int main(void) {
 						*pru_control = 1;
 					}
 
-					__asm("        LDI       r31.b0, 36"); // PRU1_ARM_INTERRUPT
+					armPru1Interrupt();
 				}
 
 				while(*pru_control != 0)
@@ -222,7 +247,7 @@ int main(void) {
 
 			(*events_counter)++;
 
-			__asm("        LDI       R31.b0, 35"); // PRU0_ARM_INTERRUPT
+			armPru0Interrupt();
 
 			// Copy this pointer back so we can check it for DDR_MAGIC
 			ddr_addr = (uint32_t*)curCommand;

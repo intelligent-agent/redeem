@@ -41,6 +41,8 @@
 #include "vectorN.h"
 #include "config.h"
 
+class AlarmCallback;
+
 /*
  * The path planner is fed a sequence of paths. 
  * These paths are in *ideal* coordinates. 
@@ -63,8 +65,12 @@ class PathPlanner {
   void forwardPlanner(unsigned int first);
 
   VectorN machineToWorld(const IntVectorN& machinePos);
-  IntVectorN worldToMachine(const VectorN& worldPos);
+  IntVectorN worldToMachine(const VectorN& worldPos, bool* possible = nullptr);
 	
+  void pruAlarmCallback();
+
+  AlarmCallback& alarmCallback;
+
   VectorN maxSpeeds;
   VectorN maxSpeedJumps;
   VectorN maxAccelerationStepsPerSquareSecond;
@@ -134,6 +140,7 @@ class PathPlanner {
 	
   std::thread runningThread;
   bool stop;
+  std::atomic_bool acceptingPaths;
 	
   PruTimer pru;
   void recomputeParameters();
@@ -196,7 +203,7 @@ class PathPlanner {
    * @details Create a new path planner that is used to compute paths parameters and send it to the PRU for execution
    * @param cacheSize Size of the movement planner cache
    */
-  PathPlanner(unsigned int cacheSize);
+  PathPlanner(unsigned int cacheSize, AlarmCallback& alarmCallback);
 	
   /**
    * @brief  Init the internal PRU co-processors

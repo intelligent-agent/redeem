@@ -39,6 +39,8 @@ struct Vector3 {
 
     IntVector3 round() const;
 
+    bool hasNan() const;
+
     //bool operator==(const Vector3& o) const;
     //bool operator!=(const Vector3& o) const { return !(*this == o); };
 };
