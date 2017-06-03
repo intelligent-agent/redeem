@@ -41,6 +41,7 @@ class G2(GCodeCommand):
 
         path.I = float(g.get_value_by_letter("I"))/1000.0 if g.has_letter("I") else 0.0
         path.J = float(g.get_value_by_letter("J"))/1000.0 if g.has_letter("J") else 0.0
+        path.K = float(g.get_value_by_letter("K"))/1000.0 if g.has_letter("K") else 0.0
 
         return path        
 
@@ -60,8 +61,10 @@ class G2(GCodeCommand):
 
     def get_test_gcodes(self):
         return [
-            "G1 Y10"
-            "G2 X12.803 Y15.303 I7.50", 
+            "G90",
+            "G1 X10 Y60",
+            "G2 X60 Y10 I50",
+            "G3 X10 Y60 J50"
         ]
 
 class G3(G2):
