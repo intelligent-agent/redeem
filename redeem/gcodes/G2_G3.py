@@ -39,6 +39,9 @@ class G2(GCodeCommand):
             logging.error("invalid movement: " + str(self.printer.movement))
             # TODO: fix this        
 
+        path.axis_0 = 0 # X
+        path.axis_1 = 1 # Y
+        path.axis_linear = 3 # E
         path.I = float(g.get_value_by_letter("I"))/1000.0 if g.has_letter("I") else 0.0
         path.J = float(g.get_value_by_letter("J"))/1000.0 if g.has_letter("J") else 0.0
         path.K = float(g.get_value_by_letter("K"))/1000.0 if g.has_letter("K") else 0.0

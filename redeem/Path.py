@@ -92,15 +92,12 @@ class Path:
 
     def get_arc_segments(self): 
         # Based on code from Grbl - https://github.com/grbl/grbl/blob/master/grbl/gcode.c
-
+        # Requires parameter validity checking in gcode/G2_G3.py before we get here
         start_point = self.prev.ideal_end_pos
         end_point   = self.ideal_end_pos
-
-        # TODO: the following constants should be parameters, to allow arcs in any plane (or at least X/Y, X/Z, Y/Z)
-        # XXX: Hard code to arc on X/Y plane with "helix" direction in E for extrusion to work
-        axis_0 = 0 # X
-        axis_1 = 1 # Y
-        axis_linear = 3 # E
+        axis_0 = self.axis_0
+        axis_1 = self.axis_1
+        axis_linear = self.axis_linear
         is_clockwise_arc = True if self.movement == Path.G2 else False
    
         """
@@ -185,12 +182,28 @@ class Path:
             # construct the arc from num_segments vectors
             path_segments = []
             segment = np.copy(start_point)
+            count = 0
             for index in range(0, num_segments):
-                # Compute location by applying transformation matrix from initial radius vector(=-offset).
-                cos_Ti = math.cos( (index+1) * theta_per_segment )
-                sin_Ti = math.sin( (index+1) * theta_per_segment )
-                r_axis0 = -offset[axis_0] * cos_Ti + offset[axis_1] * sin_Ti
-                r_axis1 = -offset[axis_0] * sin_Ti - offset[axis_1] * cos_Ti
+                """
+                For a small performacne gain, we just rotate the previous
+                vector three times, then correct any small drift on the forth
+                """
+                if (count < 4):
+                    # Apply vector rotation matrix. ~40 usec
+                    r_axisi = r_axis0 * sin_T + r_axis1 * cos_T
+                    r_axis0 = r_axis0 * cos_T - r_axis1 * sin_T
+                    r_axis1 = r_axisi
+                    count += 1
+                else:
+                    """
+                    Compute exact location by applying transformation matrix
+                    from initial radius vector(=-offset)
+                    """
+                    cos_Ti = math.cos( (index+1) * theta_per_segment )
+                    sin_Ti = math.sin( (index+1) * theta_per_segment )
+                    r_axis0 = -offset[axis_0] * cos_Ti + offset[axis_1] * sin_Ti
+                    r_axis1 = -offset[axis_0] * sin_Ti - offset[axis_1] * cos_Ti
+                    count = 0
 
                 segment[axis_0] = center_axis0 + r_axis0
                 segment[axis_1] = center_axis1 + r_axis1
