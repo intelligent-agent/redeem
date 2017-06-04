@@ -56,7 +56,6 @@ struct DeltaPathConstants
 
 class Delta {
  private:
-  FLOAT_T Hez; // Distance head extends below the effector.
   FLOAT_T L; // lenth of rod
   FLOAT_T r; // Radius of columns
 	
@@ -75,7 +74,7 @@ class Delta {
   Delta();
   ~Delta();
 
-  void setMainDimensions(FLOAT_T Hez_in, FLOAT_T L_in, FLOAT_T r_in);
+  void setMainDimensions(FLOAT_T L_in, FLOAT_T r_in);
   void setRadialError(FLOAT_T A_radial_in, FLOAT_T B_radial_in, FLOAT_T C_radial_in);
   void setAngularError(FLOAT_T A_angular_in, FLOAT_T B_angular_in, FLOAT_T C_angular_in);
 

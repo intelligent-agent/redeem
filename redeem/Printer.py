@@ -224,7 +224,7 @@ class Printer:
 
         # Save Delta config
         logging.debug("save_settings: setting delta config")
-        opts = ["Hez", "L", "r", "A_radial", "B_radial", "C_radial", "A_angular", "B_angular", "C_angular" ]
+        opts = ["L", "r", "A_radial", "B_radial", "C_radial", "A_angular", "B_angular", "C_angular" ]
         for opt in opts:
             self.config.set('Delta', opt, str(Delta.__dict__[opt]))
 

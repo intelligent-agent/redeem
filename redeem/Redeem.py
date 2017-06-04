@@ -251,7 +251,7 @@ class Redeem:
 
         # Delta printer setup
         if printer.axis_config == Printer.AXIS_CONFIG_DELTA:
-            opts = ["Hez", "L", "r", "A_radial", "B_radial", "C_radial", "A_angular", "B_angular", "C_angular" ]
+            opts = ["L", "r", "A_radial", "B_radial", "C_radial", "A_angular", "B_angular", "C_angular" ]
             for opt in opts:
                 Delta.__dict__[opt] = printer.config.getfloat('Delta', opt)
 

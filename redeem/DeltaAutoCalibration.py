@@ -166,7 +166,6 @@ class AutoCalibrationDeltaParameters:
                    yradial, zradial)
 
     def to_redeem_delta(self, delta, center_offsets):
-        delta.Hez = 0.
         delta.L = self.diagonal / 1000.
         delta.r = self.radius / 1000.
         delta.A_radial = 0.
