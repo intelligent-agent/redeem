@@ -35,7 +35,6 @@ void calculateLinearMove(const int axis, const long long startStep, const long l
 
 Delta::Delta()
 {
-  Hez = 0.0;
   L = 0.0;
   r = 0.0;
 	
@@ -52,9 +51,8 @@ Delta::Delta()
 
 Delta::~Delta() {}
 
-void Delta::setMainDimensions(FLOAT_T Hez_in, FLOAT_T L_in, FLOAT_T r_in)
+void Delta::setMainDimensions(FLOAT_T L_in, FLOAT_T r_in)
 {
-  Hez = Hez_in;
   L = L_in;
   r = r_in;
 
@@ -126,10 +124,8 @@ Vector3 Delta::worldToDelta(const Vector3& pos) const
   const FLOAT_T Bcz = sqrt(L2 - XB*XB - YB*YB);
   const FLOAT_T Ccz = sqrt(L2 - XC*XC - YC*YC);
 
-  const FLOAT_T offset = pos.z + Hez;
-
   // Calculate the position of the carriages
-  return Vector3(Acz + offset, Bcz + offset, Ccz + offset);
+  return Vector3(Acz + pos.z, Bcz + pos.z, Ccz + pos.z);
   
   //~ LOG("Delta: Az = " << *Az << "\n");
   //~ LOG("Delta: Bz = " << *Bz << "\n");

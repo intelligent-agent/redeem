@@ -91,7 +91,7 @@ class PathPlanner:
         self.native_planner.setSoftEndstopsMax(tuple(self.printer.soft_max))
         self.native_planner.setBedCompensationMatrix(tuple(np.identity(3).ravel()))
         self.native_planner.setAxisConfig(self.printer.axis_config)
-        self.native_planner.delta_bot.setMainDimensions(Delta.Hez, Delta.L, Delta.r)
+        self.native_planner.delta_bot.setMainDimensions(Delta.L, Delta.r)
         self.native_planner.delta_bot.setRadialError(Delta.A_radial, Delta.B_radial, Delta.C_radial)
         self.native_planner.delta_bot.setAngularError(Delta.A_angular, Delta.B_angular, Delta.C_angular)
         self.configure_slaves()
@@ -421,7 +421,7 @@ class PathPlanner:
         # update the native planner with the new values
 
         self.native_planner.delta_bot.setMainDimensions(
-                Delta.Hez, Delta.L, Delta.r)
+                Delta.L, Delta.r)
         self.native_planner.delta_bot.setRadialError(
                 Delta.A_radial, Delta.B_radial, Delta.C_radial)
         self.native_planner.delta_bot.setAngularError(

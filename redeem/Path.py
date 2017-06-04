@@ -22,6 +22,7 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
 """
 
 import numpy as np
+import math
 import logging
 
 class Path:
@@ -54,11 +55,21 @@ class Path:
         self.start_pos = None
         self.end_pos = None
         self.ideal_end_post = None
-        
+        self.arc_tolerance = 2E-6 # meters = 2 microns. TODO: FFF processes do not need this precision. Should probably be user configurable
+        self.axis_0 = None
+        self.axis_1 = None
+        self.axis_linear = None
 
     def is_G92(self):
         """ Special path, only set the global position on this """
         return self.movement == Path.G92
+
+    def set_arc_plane(self, axis_0, axis_1):
+        self.axis_0 = axis_0
+        self.axis_1 = axis_1
+
+    def set_arc_linear(self, axis):
+        self.axis_linear = axis
 
     def set_homing_feedrate(self):
         """ The feed rate is set to the lowest axis in the set """
@@ -87,77 +98,139 @@ class Path:
         if self.movement == Path.G2 or self.movement == Path.G3:
             return self.get_arc_segments()
 
-    def parametric_circle(self, t, xc, yc, R):
-        x = xc + R*np.cos(t)
-        y = yc + R*np.sin(t)
-        return x,y
+    def get_arc_segments(self): 
+        # Based on optimized code from Grbl - https://github.com/grbl/grbl/blob/master/grbl/gcode.c
+        # Parameter should first be validated sane, in gcode/G2_G3.py
 
-    def inv_parametric_circle(self, x, xc, R):
-        t = np.arccos((x-xc)/R)
-        return t
-        
+        start_point = self.prev.ideal_end_pos
+        end_point   = self.ideal_end_pos
+        axis_0 = self.axis_0
+        axis_1 = self.axis_1
+        axis_linear = self.axis_linear
+        is_clockwise_arc = True if self.movement == Path.G2 else False
+   
+        """
+        Check if we can achieve the requested arc. From Grbl code comments ... 
+            "[It is an error if] the radius to the current point and the radius to the
+            target point differs more than 0.002mm (EMC def. 0.5mm OR 0.005mm and 0.1% radius)."
+        """
+        offset = np.array([
+                self.axes.get('I',  0.0),
+                self.axes.get('J',  0.0),
+                self.axes.get('K',  0.0)
+            ]) 
+        d0 = end_point[axis_0] - start_point[axis_0] - offset[axis_0] # delta axis_0 between circle center and target
+        d1 = end_point[axis_1] - start_point[axis_1] - offset[axis_1] # delta ax0s_1 between circle center and target
+        target_r = math.sqrt(d0**2 + d1**2)
+        radius = math.sqrt(offset[axis_0]**2 + offset[axis_1]**2) # between start_point and circle center
+        delta_radius = abs(target_r - radius)
+        if delta_radius > 0.005E-3:
+            if delta_radius > 0.5E-3:
+                logging.error("ARC definition error: >0.5mm (%fmm)", delta_radius/1000)
+                return []
+            if delta_radius > (0.001 * radius):
+                logging.error("ARC definition error: > 0.005mm and 0.1% (%fmm)", delta_radius/1000)
+                return []
 
-    def get_arc_segments(self):
-        # The code in this function was taken from 
-        # http://stackoverflow.com/questions/11331854/how-can-i-generate-an-arc-in-numpy
-        start_point = self.prev.ideal_end_pos[:2]
-        end_point   = self.ideal_end_pos[:2]
+        """
+        Execute an arc in offset mode format. position == current xyz, target == target xyz, 
+        offset == offset from current xyz, axis_X defines circle plane in tool space, axis_linear is
+        the direction of helical travel, radius == circle radius, isclockwise boolean. Used
+        for vector transformation direction.
+        The arc is approximated by generating a huge number of tiny, linear segments. The chordal tolerance
+        of each segment is configured in settings.arc_tolerance, which is defined to be the maximum normal
+        distance from segment to the circle when the end points both lie on the circle.
+        """
+        center_axis0 = start_point[axis_0] + offset[axis_0] 
+        center_axis1 = start_point[axis_1] + offset[axis_1]
+        r_axis0 = -offset[axis_0]  # Radius vector from center to current location
+        r_axis1 = -offset[axis_1]
+        rt_axis0 = end_point[axis_0] - center_axis0
+        rt_axis1 = end_point[axis_1] - center_axis1
+             
+        # CCW angle between position and target from circle center. Only one atan2() trig computation required.
+        angular_travel = math.atan2(r_axis0 * rt_axis1 - r_axis1 * rt_axis0, r_axis0 * rt_axis0 + r_axis1 * rt_axis1);
+        if is_clockwise_arc: # Correct atan2 output per direction
+            if angular_travel >= -5.0E-7:
+                angular_travel -= 2 * math.pi
+        else:
+            if angular_travel <= 5.0E-7:
+                angular_travel += 2 * math.pi
 
-        i = self.I
-        j = self.J
+        num_segments = int(
+                math.floor( 
+                    abs(0.5 * angular_travel * radius) 
+                  / math.sqrt(self.arc_tolerance * ( 2 * radius - self.arc_tolerance))
+                )
+            )
 
-        # Find radius
-        R = np.sqrt(i**2 + j**2)
+        if num_segments > 0:
 
-        #logging.info(start_point)
-        #logging.info(end_point)
-        #logging.info(R)
+            theta_per_segment = angular_travel / num_segments
+            linear_per_segment = (end_point[axis_linear] - start_point[axis_linear]) / num_segments
 
+            """
+            Vector rotation by transformation matrix: r is the original vector, r_T
+            is the rotated vector, and phi is the angle of rotation. Solution
+            approach by Jens Geisler.
 
-        # Find start and end points
-        start_t = self.inv_parametric_circle(start_point[0], start_point[0]+i, R)
-        end_t   = self.inv_parametric_circle(end_point[0], start_point[0]+i, R)
+                r_T = [cos(phi) -sin(phi);
+                       sin(phi)  cos(phi)] * r
+                                                                   
+            For arc generation, the center of the circle is the axis of rotation
+            and the radius vector is defined from the circle center to the initial
+            position. Each line segment is formed by successive vector rotations.
+            Single precision values can accumulate error greater than tool
+            precision in rare cases.  So, exact arc path correction is implemented.
+            This approach avoids the problem of too many very expensive trig
+            operations [sin(),cos(),tan()] which can take 100-200 usec each to
+            compute.
+            ... [see grbl:motion_control.c for more]
 
-        num_segments = np.ceil(np.abs(end_t-start_t)/self.split_size)+1
+            """
 
+            cos_T = 1 - theta_per_segment**2 / 2
+            sin_T = theta_per_segment - theta_per_segment**3 / 6
+            
+            # construct the arc from num_segments vectors
+            path_segments = []
+            segment = np.copy(start_point)
+            count = 0
+            for index in range(0, num_segments):
+                """
+                For a small performacne gain, we just rotate the previous
+                vector three times, then correct any small drift on the forth
+                """
+                if (count < 4):
+                    # Apply vector rotation matrix. ~40 usec
+                    r_axisi = r_axis0 * sin_T + r_axis1 * cos_T
+                    r_axis0 = r_axis0 * cos_T - r_axis1 * sin_T
+                    r_axis1 = r_axisi
+                    count += 1
+                else:
+                    """
+                    Compute exact location by applying transformation matrix
+                    from initial radius vector(=-offset)
+                    """
+                    cos_Ti = math.cos( (index+1) * theta_per_segment )
+                    sin_Ti = math.sin( (index+1) * theta_per_segment )
+                    r_axis0 = -offset[axis_0] * cos_Ti + offset[axis_1] * sin_Ti
+                    r_axis1 = -offset[axis_0] * sin_Ti - offset[axis_1] * cos_Ti
+                    count = 0
 
-        # TODO: test this, it is probably wrong. 
-        if self.movement == G2: 
-            arc_T = np.linspace(start_t, end_t, num_segments)
-        else:        
-            arc_T = np.linspace(end_t, start_t, num_segments)
-        X,Y = self.parametric_circle(arc_T, start_point[0]+i, start_point[1]+j, R)
-    
-        #logging.info([X, Y])
-        
-        # Interpolate the remaining values
-        vals = np.transpose([
-                    np.linspace(
-                        self.prev.ideal_end_pos[i], 
-                        self.ideal_end_pos[i], 
-                        num_segments
-                        ) for i in xrange(self.printer.MAX_AXES)]) 
+                segment[axis_0] = center_axis0 + r_axis0
+                segment[axis_1] = center_axis1 + r_axis1
+                segment[axis_linear] += linear_per_segment
 
-        # Update the X and Y positions
-        for i, val in enumerate(vals):
-            val[:2] = (X[i], Y[i])
-        vals = np.delete(vals, 0, axis=0)
+                vector = dict(zip(self.printer.AXES, segment))
+                path = AbsolutePath(vector, self.speed, self.accel, self.cancelable, self.use_bed_matrix, False)
+                if index is not 0:
+                    path.set_prev(path_segments[-1])
+                else:
+                    path.set_prev(self.prev)
 
-        vec_segments = [dict(zip(self.printer.axes_zipped, list(val))) for val in vals]
-        path_segments = []
+                path_segments.append(path)
 
-        for index, segment in enumerate(vec_segments):
-            #print segment
-            path = AbsolutePath(segment, self.speed, self.accel, self.cancelable, self.use_bed_matrix, False) #
-            if index is not 0:
-                path.set_prev(path_segments[-1])
-            else:
-                path.set_prev(self.prev)
-            path_segments.append(path)
-
-        #for seg in path_segments:
-        #    logging.info(seg)
- 
         return path_segments
 
     def __str__(self):
