@@ -129,8 +129,8 @@ class AutoCalibrationDeltaParameters:
         ystop -= height
         zstop -= height
 
-        yadj = delta.B_tangential - delta.A_tangential
-        zadj = delta.C_tangential - delta.A_tangential
+        yadj = 1000. * (delta.B_tangential - delta.A_tangential)
+        zadj = 1000. * (delta.C_tangential - delta.A_tangential)
 
         logging.debug("input delta parameters: Diagonal (L) = %f", diagonal/1000.)
         logging.debug("input delta parameters: Radius   (r) = %f", radius/1000.)
@@ -140,8 +140,8 @@ class AutoCalibrationDeltaParameters:
         logging.debug("input delta parameters: A_tangential = %f", delta.A_tangential)
         logging.debug("input delta parameters: B_tangential = %f", delta.B_tangential)
         logging.debug("input delta parameters: C_tangential = %f", delta.C_tangential)
-        logging.debug("input delta parameters: yadj         = %f", yadj)
-        logging.debug("input delta parameters: zadj         = %f", zadj)
+        logging.debug("input delta parameters: yadj         = %f", yadj/1000.)
+        logging.debug("input delta parameters: zadj         = %f", zadj/1000.)
 
         return cls(diagonal, radius, height,
                    xstop, ystop, zstop,
@@ -158,8 +158,8 @@ class AutoCalibrationDeltaParameters:
         delta.B_radial = 0.
         delta.C_radial = 0.
         delta.A_tangential = 0
-        delta.B_tangential = self.yadj
-        delta.C_tangential = self.zadj
+        delta.B_tangential = self.yadj / 1000.
+        delta.C_tangential = self.zadj / 1000.
 
         center_offsets["X"] = -1. * (self.height + self.xstop) / 1000.
         center_offsets["Y"] = -1. * (self.height + self.ystop) / 1000.
@@ -208,8 +208,8 @@ class AutoCalibrationDeltaParameters:
         L = self.diagonal / 1000.
         r = self.radius / 1000.
         A_tangential = 0
-        B_tangential = self.yadj
-        C_tangential = self.zadj
+        B_tangential = self.yadj / 1000.
+        C_tangential = self.zadj / 1000.
 
         offset_x = -1. * (self.height + self.xstop) / 1000.
         offset_y = -1. * (self.height + self.ystop) / 1000.
