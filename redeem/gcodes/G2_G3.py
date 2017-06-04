@@ -23,13 +23,23 @@ class G2(GCodeCommand):
             self.printer.feed_rate /= 60000.0
             g.remove_token_by_letter("F")
         smds = {}
+        arc_plane = [] # XY, XZ, or YZ -- in any order. A third X|Y|Z if any becomes the axis_linear for "helical" moves
+        arc_linear = None
         for i in range(g.num_tokens()):
             axis = g.token_letter(i)
+            plane_axis = self.printer.AXES[:3].find(axis) # X, Y or Z?
+            if plane_axis >= 0:
+                if len(arc_plane) < 2: 
+                    arc_plane.append(plane_axis)
+                else:
+                    arc_linear = plane_axis 
+            
 	    # Get the value, new position or vector
 	    value =  float(g.token_value(i)) / 1000.0
 	    if (axis == 'E' or axis == 'H') and self.printer.extrude_factor != 1.0:
                value *= self.printer.extrude_factor
-            smds[axis] = value        
+
+            smds[axis] = value
 
         if self.printer.movement == Path.ABSOLUTE:
             path = AbsolutePath(smds, self.printer.feed_rate * self.printer.factor, self.printer.accel)
@@ -39,8 +49,8 @@ class G2(GCodeCommand):
             logging.error("invalid movement: " + str(self.printer.movement))
             # TODO: fix this        
 
-        path.I = float(g.get_value_by_letter("I"))/1000.0 if g.has_letter("I") else 0.0
-        path.J = float(g.get_value_by_letter("J"))/1000.0 if g.has_letter("J") else 0.0
+        path.set_arc_plane(arc_plane[0], arc_plane[1])
+        path.set_arc_linear(arc_linear) 
 
         return path        
 
@@ -60,8 +70,10 @@ class G2(GCodeCommand):
 
     def get_test_gcodes(self):
         return [
-            "G1 Y10"
-            "G2 X12.803 Y15.303 I7.50", 
+            "G90",
+            "G1 X10 Y60",
+            "G2 X60 Y10 I50",
+            "G3 X10 Y60 J50"
         ]
 
 class G3(G2):
