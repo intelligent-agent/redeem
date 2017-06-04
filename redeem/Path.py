@@ -55,13 +55,21 @@ class Path:
         self.start_pos = None
         self.end_pos = None
         self.ideal_end_post = None
-        self.arc_tolerance = 2E-6 # meters = 2 microns. TODO: should probably be user configurable
-        
+        self.arc_tolerance = 2E-6 # meters = 2 microns. TODO: FFF processes do not need this precision. Should probably be user configurable
+        self.axis_0 = None
+        self.axis_1 = None
+        self.axis_linear = None
 
     def is_G92(self):
         """ Special path, only set the global position on this """
         return self.movement == Path.G92
 
+    def set_arc_plane(self, axis_0, axis_1):
+        self.axis_0 = axis_0
+        self.axis_1 = axis_1
+
+    def set_arc_linear(self, axis):
+        self.axis_linear = axis
 
     def set_homing_feedrate(self):
         """ The feed rate is set to the lowest axis in the set """
@@ -91,8 +99,9 @@ class Path:
             return self.get_arc_segments()
 
     def get_arc_segments(self): 
-        # Based on code from Grbl - https://github.com/grbl/grbl/blob/master/grbl/gcode.c
-        # Requires parameter validity checking in gcode/G2_G3.py before we get here
+        # Based on optimized code from Grbl - https://github.com/grbl/grbl/blob/master/grbl/gcode.c
+        # Parameter should first be validated sane, in gcode/G2_G3.py
+
         start_point = self.prev.ideal_end_pos
         end_point   = self.ideal_end_pos
         axis_0 = self.axis_0
@@ -105,7 +114,11 @@ class Path:
             "[It is an error if] the radius to the current point and the radius to the
             target point differs more than 0.002mm (EMC def. 0.5mm OR 0.005mm and 0.1% radius)."
         """
-        offset = np.array( [ self.I, self.J, self.K ] ) 
+        offset = np.array([
+                self.axes.get('I',  0.0),
+                self.axes.get('J',  0.0),
+                self.axes.get('K',  0.0)
+            ]) 
         d0 = end_point[axis_0] - start_point[axis_0] - offset[axis_0] # delta axis_0 between circle center and target
         d1 = end_point[axis_1] - start_point[axis_1] - offset[axis_1] # delta ax0s_1 between circle center and target
         target_r = math.sqrt(d0**2 + d1**2)
