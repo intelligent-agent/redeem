@@ -448,7 +448,7 @@ class Redeem:
         pru_firmware = PruFirmware(
             dirname + "/firmware/firmware_runtime.c",
             dirname + "/firmware/firmware_runtime.bin",
-            dirname + "/firmware/firmware_endstops.p",
+            dirname + "/firmware/firmware_endstops.c",
             dirname + "/firmware/firmware_endstops.bin",
             self.printer, "/usr/bin/clpru", "/usr/bin/pasm",
             dirname + "/firmware/AM335x_PRU.cmd",
