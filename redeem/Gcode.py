@@ -39,24 +39,11 @@ class Gcode:
             self.has_crc = False
             self.answer = "ok"
             #print packet
-            if len(self.message) == 0:
+            if len(self.message.strip(" ")) == 0:
                 #print packet
                 #logging.debug("Empty message")
                 self.gcode = "No-Gcode"
                 return
-            self.tokens = self.message.split(" ")
-            if self.tokens[0][0] == "N":  # Ok, checksum
-                line_num = re.findall(r"[\d]+", self.message)[0]
-                cmd = self.message.split("*")[0]  # Command
-                csc = self.message.split("*")[1]  # Command to compare with
-                if int(csc) != self._getCS(cmd):
-                    logging.error("CRC error!")
-                # Remove crc stuff
-                self.message = self.message.\
-                    split("*")[0][(1+len(line_num))::].strip(" ")
-                self.line_number = int(line_num)  # Set the line number
-                Gcode.line_number += 1  # Increase the global counter
-                self.has_crc = True
 
             """
             Tokenize gcode "words" per RS274/NFC v3
@@ -68,6 +55,8 @@ class Gcode:
             space after M117 is optional (and ignored) so long as the first
             charcter is not a digit (0-9) or a period (.). Example: M117this
             will work.
+
+            CRC (*nn) and, "(comment)"s are filtered out of the tokens list
             """
             match = re.match(r"(M117)(?:$|\ |(?=[^0-9.]{1}))\s?(.*)", self.message, re.IGNORECASE)
             if match:
@@ -76,8 +65,20 @@ class Gcode:
                 self.tokens = re.findall(r"[A-Z][-+]?[0-9]*\.?[0-9]*\??", \
                         "".join(self.message.split()).upper() )
 
+            # process line numbers and CRC, if present
+            if self.tokens[0][0] == "N":  # Ok, checksum
+                line_num = re.findall(r"\d+", self.tokens[0])[0]
+                cmd = self.message.split("*")[0]  # Command
+                csc = self.message.split("*")[1]  # Command to compare with
+                if int(csc) != self._getCS(cmd):
+                    logging.error("CRC error!")
+                self.line_number = int(line_num)  # Set the line number
+                Gcode.line_number += 1  # Increase the global counter
+                self.has_crc = True
+                self.tokens.pop(0) # remove the line number token
+
             """
-            Retrieve primary gcode. Exchange . for _ (if any) for Python
+            Retrieve primary gcode, exchanging any '.' for '_' for Python
             class name compliance. Example: G29_1
             """
             self.gcode = self.tokens.pop(0).replace('.', '_')
