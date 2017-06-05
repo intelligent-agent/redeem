@@ -25,10 +25,10 @@ class G2(GCodeCommand):
         smds = {}
         for i in range(g.num_tokens()):
             axis = g.token_letter(i)
-	    # Get the value, new position or vector
-	    value =  float(g.token_value(i)) / 1000.0
-	    if (axis == 'E' or axis == 'H') and self.printer.extrude_factor != 1.0:
-               value *= self.printer.extrude_factor
+            # Get the value, new position or vector
+            value =  float(g.token_value(i)) / 1000.0
+            if (axis == 'E' or axis == 'H') and self.printer.extrude_factor != 1.0:
+                   value *= self.printer.extrude_factor
             smds[axis] = value        
 
         if self.printer.movement == Path.ABSOLUTE:
@@ -72,6 +72,10 @@ class G2(GCodeCommand):
             "G2 X12.803 Y15.303 I7.50", 
         ]
 
+class G02(GCodeCommand):
+    # alias for G2
+    pass
+
 class G3(G2):
     def execute(self, g):
         path = self.execute_common(g)
@@ -85,3 +89,6 @@ class G3(G2):
         return ("Counter-clockwise arc (experimental, not tested) "
                "")
 
+class G03(G3):
+    # alias for G3
+    pass

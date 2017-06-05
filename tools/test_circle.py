@@ -1,17 +1,31 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 import unittest
 import numpy as np
 import matplotlib.pyplot as plt
+# import sympy as sp
+
+#
+# def parametric_circle(t,xc,yc,R):
+#     x = xc + R * np.cos(t)
+#     y = yc + R * np.sin(t)
+#     return x, y
 
 
+def find_circle_center(x1, y1, x2, y2, r):
 
-def parametric_circle(t,xc,yc,R):
-    x = xc + R * np.cos(t)
-    y = yc + R * np.sin(t)
-    return x, y
+    c1 = sp.Circle(sp.Point(x1, y1), abs(r))
+    c2 = sp.Circle(sp.Point(x2, y2), abs(r))
+
+    intersection = c1.intersection(c2)
+
+    if len(intersection) < 1:
+        raise Exception("radius circles do not intersect")
+    if len(intersection) < 2 or r > 0:  # single intersection or "positive" radius center point
+        return intersection[0].x, intersection[0].y
+    return intersection[1].x, intersection[1].y # "negative" radius center point
 
 
-def create_arc_segments(x0,y0, x1,y1, i, j, cw = True):
+def create_arc_segments(x0, y0, x1, y1, i, j, cw=True):
     R = np.sqrt(i ** 2 + j ** 2)
 
     xc = x0 + i
@@ -36,11 +50,10 @@ def create_arc_segments(x0,y0, x1,y1, i, j, cw = True):
 
     ''' since it's modulo pi, we can adjust by using the distance from +/- pi'''
 
-
-    if start_theta < end_theta and cw:
+    if start_theta <= end_theta and cw:
         start_theta = np.pi + abs(-np.pi - start_theta)
 
-    if start_theta > end_theta and not cw:
+    if start_theta >= end_theta and not cw:
         start_theta = -np.pi - abs(np.pi - start_theta)
 
     print("start {} end {}".format(start_theta, end_theta))
@@ -48,12 +61,13 @@ def create_arc_segments(x0,y0, x1,y1, i, j, cw = True):
     arc_length = R * abs(end_theta - start_theta)
     num_segments = int(arc_length / 0.25)
 
-    arc_thetas = np.linspace(start_theta+2*np.pi, end_theta+2*np.pi, num_segments)
+    arc_thetas = np.linspace(start_theta, end_theta, num_segments)
 
     arc_x = xc + R * np.cos(arc_thetas)
     arc_y = yc + R * np.sin(arc_thetas)
 
     return arc_x, arc_y
+
 
 def show_plot(x0, y0, x1, y1, i, j, arc_x, arc_y, title=None):
 
@@ -68,7 +82,7 @@ def show_plot(x0, y0, x1, y1, i, j, arc_x, arc_y, title=None):
 
     # Plot
     plt.scatter(arc_x, arc_y, s=20, c=colors_arc, alpha=0.5)
-    plt.scatter((x0), (y0), s=100, c=color_start, alpha=1, marker='h')
+    plt.scatter((x0), (y0), s=300, c=color_start, alpha=1, marker='h')
     plt.scatter((x1), (y1), s=100, c=color_end, alpha=1, marker='h')
     plt.scatter((xc), (yc), s=100, c=color_center, alpha=1, marker='h')
 
@@ -260,6 +274,56 @@ class TestArcSegments(unittest.TestCase):
 
         arc_x, arc_y = create_arc_segments(x0, y0, x1, y1, i, j, cw=False)
         show_plot(x0, y0, x1, y1, i, j, arc_x, arc_y, 'test_inverted_start_end_point_ccw')
+
+    def test_full_circle_cw(self):
+        x0 = 0
+        y0 = 1
+
+        x1 = 0
+        y1 = 1
+
+        i = 0.750
+        j = 0
+
+        arc_x, arc_y = create_arc_segments(x0, y0, x1, y1, i, j, cw=True)
+        show_plot(x0, y0, x1, y1, i, j, arc_x, arc_y, 'test_full_circle_cw')
+
+    def test_full_circle_ccw(self):
+        x0 = 0
+        y0 = 1
+
+        x1 = 0
+        y1 = 1
+
+        i = 0.750
+        j = 0
+
+        arc_x, arc_y = create_arc_segments(x0, y0, x1, y1, i, j, cw=False)
+        show_plot(x0, y0, x1, y1, i, j, arc_x, arc_y, 'test_full_circle_ccw')
+
+    # def test_inverted_start_end_point_cw_positive_radius_version(self):
+    #     x0 = 7
+    #     y0 = -2
+    #
+    #     x1 = -7
+    #     y1 = -6
+    #
+    #     i = -9
+    #     j = 5
+    #
+    #     r = np.sqrt(i**2 + j**2)
+    #
+    #     xc, yc = find_circle_center(x0, y0, x1, y1, r)
+    #
+    #     # calculate i and j
+    #     derived_i = x0 - xc
+    #     derived_j = y0 - yc
+    #
+    #     self.assertEqual(derived_i, i)
+    #     self.assertEqual(derived_j, j)
+    #
+    #     arc_x, arc_y = create_arc_segments(x0, y0, x1, y1, derived_i, derived_j, cw=True)
+    #     show_plot(x0, y0, x1, y1, derived_i, derived_j, arc_x, arc_y, 'test_inverted_start_end_point_cw')
 
 
 if __name__ == '__main__':
