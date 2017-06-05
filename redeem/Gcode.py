@@ -58,6 +58,8 @@ class Gcode:
 
             CRC (*nn) and, "(comment)"s are filtered out of the tokens list
             """
+            # strip gcode parenthasized comments
+            self.message = re.sub(r"\(.*\)", "", self.message)
             match = re.match(r"(M117)(?:$|\ |(?=[^0-9.]{1}))\s?(.*)", self.message, re.IGNORECASE)
             if match:
                 self.tokens = [match.group(1).upper(), match.group(2).strip(" ")]
