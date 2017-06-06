@@ -652,6 +652,7 @@ void PathPlanner::runMove(
   std::array<unsigned long long, NUM_AXES> finalStepTimes;
   std::array<size_t, NUM_AXES> stepIndex;
   size_t commandsIndex = 0;
+  unsigned long long totalSteps = 0;
 
   finalStepTimes.fill(0);
   stepIndex.fill(0);
@@ -683,6 +684,7 @@ void PathPlanner::runMove(
   // reserve a command to be an opening delay with no steps
   uint32_t* lastDelay = &commands[commandsIndex].delay;
   commandsIndex++;
+  totalSteps++;
 
   // Note that this opening delay doesn't have cancellableMask set - this is intentional because
   // a command that doesn't step anything shouldn't count towards the number of cancelled commands.
@@ -690,11 +692,7 @@ void PathPlanner::runMove(
   bool foundStep = true;
   while (foundStep)
   {
-    SteppersCommand& cmd = commands[commandsIndex];
-    commandsIndex++;
     foundStep = false;
-
-    cmd.cancellableMask = cancellableMask;
 
     // find a step time
     unsigned long long stepTime = UINT64_MAX;
@@ -729,7 +727,14 @@ void PathPlanner::runMove(
     {
       QUEUELOG("last step at " << lastStepTime / F_CPU_FLOAT << " and final time at " << roundedStepTime / F_CPU_FLOAT
         << " for a final delay of " << *lastDelay << std::endl);
+      break;
     }
+
+    SteppersCommand& cmd = commands[commandsIndex];
+    commandsIndex++;
+    totalSteps++;
+
+    cmd.cancellableMask = cancellableMask;
 
     lastDelay = &cmd.delay;
     lastStepTime = stepTime;
@@ -755,7 +760,7 @@ void PathPlanner::runMove(
       }
     }
 
-    assert(cmd.step != 0 || !foundStep);
+    assert(cmd.step != 0);
 
     if (commandsIndex == commandsLength) {
       pru.push_block((uint8_t*)&commands[0], sizeof(SteppersCommand)*commandsIndex, sizeof(SteppersCommand), commandsIndex);
@@ -770,6 +775,8 @@ void PathPlanner::runMove(
   if (sync) {
     if (commandsIndex == 0) {
       commandsIndex = 1;
+      totalSteps++;
+      LOG("needed a dummy step for synchronization" << std::endl);
       assert(commandsIndex < commandsLength);
       assert(commands[commandsIndex].step == 0 && commands[commandsIndex].delay == 0);
     }
@@ -804,6 +811,8 @@ void PathPlanner::runMove(
 
     //assert((latestFinishTime - earliestFinishTime) / F_CPU_FLOAT < 10 * CPU_CYCLE_LENGTH); // all axes should finish within 10 PRU cycles
   }
+  
+  LOG("move needed " << totalSteps << " steps" << std::endl);
 
   for (int i = 0; i < NUM_AXES; i++)
   {
