@@ -34,12 +34,15 @@ class Gcode:
         """ Init; parse the token """
         try:
             self.message = packet["message"].split(";")[0]
-            self.message = self.message.strip(' \t\n\r')
-            self.prot = packet["prot"] if "prot" in packet else "None"
+            self.message = self.message.strip('\t\n\r')
+            self.parent = packet["parent"] if "parent" in packet else None
+            self.prot = packet["prot"] if "prot" in packet else None
+            if self.prot is None:
+                self.prot = self.parent.prot if self.parent else "None"
             self.has_crc = False
             self.answer = "ok"
             #print packet
-            if len(self.message.strip(" ")) == 0:
+            if len(self.message.strip()) == 0:
                 #print packet
                 #logging.debug("Empty message")
                 self.gcode = "No-Gcode"
@@ -61,7 +64,7 @@ class Gcode:
             # strip gcode comments
             self.message = re.sub(r"\(.*\)", "", self.message)
             self.tokens = re.findall(
-                   r"[A-Z][-+]?[0-9]*\.?[0-9]*\??", 
+                   r"[A-Z][-+]?[0-9]*\.?[0-9]*\??",
                    "".join(self.message.split()).upper()
                 )
 
@@ -76,6 +79,9 @@ class Gcode:
                 Gcode.line_number += 1  # Increase the global counter
                 self.has_crc = True
                 self.tokens.pop(0) # remove the line number token
+                # Remove crc stuff from messages
+                self.message = self.message.\
+                    split("*")[0][(1+len(line_num))::].strip(" ")
 
             """
             Retrieve primary gcode, exchanging any '.' for '_' for Python
@@ -175,10 +181,16 @@ class Gcode:
         return self.has_crc
 
     def get_answer(self):
-        return self.answer
+        if self.parent:
+            return self.parent.get_answer()
+        else:
+            return self.answer
 
     def set_answer(self, answer):
-        self.answer = answer
+        if self.parent:
+            self.parent.set_answer(answer)
+        else:
+            self.answer = answer
 
     def is_info_command(self):
         return (self.gcode[-1] == "?")
