@@ -33,20 +33,23 @@ class Logger {
 private:
 	static std::mutex coutMutex;
 	
-	std::stringstream internalStream;
+	std::unique_lock<std::mutex> lock;
 	
 public:
 	
-	Logger()  {
+	Logger() :
+	  lock(coutMutex)
+	{
+
 		std::chrono::time_point<std::chrono::system_clock> timestamp = std::chrono::system_clock::now();
 		
-		internalStream << "[ " <<  std::chrono::duration_cast<std::chrono::milliseconds>(timestamp.time_since_epoch()).count()
+		std::cerr << "[ " <<  std::chrono::duration_cast<std::chrono::milliseconds>(timestamp.time_since_epoch()).count()
 		<< " ]\t";
 	}
 	
 	template <typename TToken>
 	Logger& operator << (const TToken& s) {
-		internalStream << s;
+		std::cerr << s;
 		
 		return *this;
 	}
@@ -61,23 +64,27 @@ public:
 	Logger& operator<<(StandardEndLine manip)
 	{
 		// call the function, but we cannot return it's value
-		manip(internalStream);
+		manip(std::cerr);
 		
 		return *this;
 	}
 	
 	virtual ~Logger() {
-		std::unique_lock<std::mutex> lk(coutMutex);
-		std::cerr << internalStream.str();
 	}
 };
 
 #define LOGERROR(x) Logger() << x
 
 #ifdef DEBUG
-   #define LOG(x) Logger() << x
+    #define LOG(x) Logger() << x
   #else
     #define LOG(x) //Logger() << x
+#endif
+
+#ifdef QUEUE_DEBUG
+    #define QUEUELOG(x) Logger() << x
+  #else
+    #define QUEUELOG(X)
 #endif
 
 #endif /* defined(__PathPlanner__Logger__) */

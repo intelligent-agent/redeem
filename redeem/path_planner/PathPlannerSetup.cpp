@@ -30,87 +30,110 @@ void PathPlanner::setPrintMoveBufferWait(int dt) {
   printMoveBufferWait = dt;
 }
 
-void PathPlanner::setMinBufferedMoveTime(int dt) {
-  minBufferedMoveTime = dt;
-}
-
-void PathPlanner::setMaxBufferedMoveTime(int dt) {
+void PathPlanner::setMaxBufferedMoveTime(long long dt) {
   maxBufferedMoveTime = dt;
 }
 
 // Speeds / accels
-void PathPlanner::setMaxSpeeds(std::vector<FLOAT_T> speeds){
-  if ( speeds.size() != NUM_AXES ) {throw InputSizeError();}
+void PathPlanner::setMaxSpeeds(VectorN speeds){
   maxSpeeds = speeds;
 }
 
-void PathPlanner::setMinSpeeds(std::vector<FLOAT_T> speeds){
-  if ( speeds.size() != NUM_AXES ) {throw InputSizeError();}
+void PathPlanner::setMinSpeeds(VectorN speeds){
   minSpeeds = speeds;
 }
 
-void PathPlanner::setAcceleration(std::vector<FLOAT_T> accel){
-  if ( accel.size() != NUM_AXES ) {throw InputSizeError();}
-
+void PathPlanner::setAcceleration(VectorN accel){
   maxAccelerationMPerSquareSecond = accel;
 
   recomputeParameters();
 }
 
-void PathPlanner::setJerks(std::vector<FLOAT_T> jerks){
-  if ( jerks.size() != NUM_AXES ) {throw InputSizeError();}
-
+void PathPlanner::setJerks(VectorN jerks){
   maxJerks = jerks;
 
 }
 
-void PathPlanner::setAxisStepsPerMeter(std::vector<FLOAT_T> stepPerM) {
-  if ( stepPerM.size() != NUM_AXES ) {throw InputSizeError();}
-
+void PathPlanner::setAxisStepsPerMeter(VectorN stepPerM) {
   axisStepsPerM = stepPerM;
 
   recomputeParameters();
 }
 
 // soft endstops
-void PathPlanner::setSoftEndstopsMin(std::vector<FLOAT_T> stops)
+void PathPlanner::setSoftEndstopsMin(VectorN stops)
 {
-  if ( stops.size() != NUM_AXES ) {throw InputSizeError();}
   soft_endstops_min = stops;
 }
 
-void PathPlanner::setSoftEndstopsMax(std::vector<FLOAT_T> stops)
+void PathPlanner::setSoftEndstopsMax(VectorN stops)
 { 
- if ( stops.size() != NUM_AXES ) {throw InputSizeError();}
   soft_endstops_max = stops;
 }
 
 // bed compensation
 void PathPlanner::setBedCompensationMatrix(std::vector<FLOAT_T> matrix)
 {
-  if ( matrix.size() != 9 ) {throw InputSizeError();}
-  
   matrix_bed_comp = matrix;
-}
-    
-// maximum path length
-void PathPlanner::setMaxPathLength(FLOAT_T maxLength)
-{
-  max_path_length = maxLength;
 }
 
 // axis configuration
 void PathPlanner::setAxisConfig(int axis)
 {
-  axis_config = axis;
+  if (axis_config != axis)
+  {
+    VectorN stateBefore = getState();
+
+    axis_config = axis;
+
+    setState(stateBefore);
+  }
 }
 
 // the state of the machine
-void PathPlanner::setState(std::vector<FLOAT_T> set)
+void PathPlanner::setState(VectorN set)
 {
-  if ( set.size() != NUM_AXES ) {throw InputSizeError();}
   applyBedCompensation(set);
-  state = set;
+
+  IntVectorN newState = (set * axisStepsPerM).round();
+
+  switch (axis_config)
+  {
+  case AXIS_CONFIG_XY:
+    break;
+  case AXIS_CONFIG_H_BELT:
+  {
+    const Vector3 motionPos = worldToHBelt(set.toVector3());
+    const IntVector3 motionMotorPos = (motionPos * axisStepsPerM.toVector3()).round();
+    newState[0] = motionMotorPos.x;
+    newState[1] = motionMotorPos.y;
+    newState[2] = motionMotorPos.z;
+    break;
+  }
+  case AXIS_CONFIG_CORE_XY:
+  {
+    const Vector3 motionPos = worldToCoreXY(set.toVector3());
+    const IntVector3 motionMotorPos = (motionPos * axisStepsPerM.toVector3()).round();
+    newState[0] = motionMotorPos.x;
+    newState[1] = motionMotorPos.y;
+    newState[2] = motionMotorPos.z;
+    break;
+  }
+  case AXIS_CONFIG_DELTA:
+  {
+    const Vector3 motionPos = delta_bot.worldToDelta(set.toVector3());
+    const IntVector3 motionMotorPos = (motionPos * axisStepsPerM.toVector3()).round();
+    newState[0] = motionMotorPos.x;
+    newState[1] = motionMotorPos.y;
+    newState[2] = motionMotorPos.z;
+    break;
+  }
+
+  default:
+    assert(0);
+  }
+
+  state = newState;
 }
 
 
@@ -132,15 +155,12 @@ void PathPlanner::addSlave(int master_in, int slave_in)
 }
 
 // backlash compensation
-void PathPlanner::setBacklashCompensation(std::vector<FLOAT_T> set)
+void PathPlanner::setBacklashCompensation(VectorN set)
 {
-  if ( set.size() != NUM_AXES ) {throw InputSizeError();}
   backlash_compensation = set;
 }
 
 void PathPlanner::resetBacklash()
 {
-  for (FLOAT_T& bs : backlash_state) {
-    bs = 0.0;
-  }
+  backlash_state.zero();
 }

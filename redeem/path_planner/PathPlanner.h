@@ -38,6 +38,7 @@
 #include "PruTimer.h"
 #include "Path.h"
 #include "Delta.h"
+#include "vectorN.h"
 #include "config.h"
 
 /*
@@ -54,10 +55,6 @@
  * 	position.
  */
 
-// sign function
-#define ComputeV(timer,accel)  (((timer>>8)*accel)>>10)
-#define ComputeV2(timer,accel)  (((timer/256.0)*accel)/1024)
-
 class PathPlanner {
  private:
   void updateTrapezoids();
@@ -67,14 +64,14 @@ class PathPlanner {
 	
 	
 	
-  std::vector<FLOAT_T> maxSpeeds;
-  std::vector<FLOAT_T> minSpeeds;
-  std::vector<FLOAT_T> maxJerks;
-  std::vector<FLOAT_T> maxAccelerationStepsPerSquareSecond;
-  std::vector<FLOAT_T> maxAccelerationMPerSquareSecond;
+  VectorN maxSpeeds;
+  VectorN minSpeeds;
+  VectorN maxJerks;
+  VectorN maxAccelerationStepsPerSquareSecond;
+  VectorN maxAccelerationMPerSquareSecond;
 	
   FLOAT_T minimumSpeed;			
-  std::vector<FLOAT_T> axisStepsPerM;
+  VectorN axisStepsPerM;
 
   std::atomic_uint_fast32_t linesPos; // Position for executing line movement
   std::atomic_uint_fast32_t linesWritePos; // Position where we write the next cached line move
@@ -84,21 +81,22 @@ class PathPlanner {
   unsigned int moveCacheSize; // set on init
 
   int printMoveBufferWait;
-  int minBufferedMoveTime;
-  int maxBufferedMoveTime;
+  long long maxBufferedMoveTime;
 
   std::vector<Path> lines;
 
-  inline void previousPlannerIndex(unsigned int &p){
-    p = (p ? p-1 : moveCacheSize-1);
+  inline unsigned int previousPlannerIndex(unsigned int p){
+    return (p + moveCacheSize - 1) % moveCacheSize;
   }
 
-  inline void nextPlannerIndex(unsigned int& p){
-    p = (p == moveCacheSize - 1 ? 0 : p + 1);
+  inline unsigned int nextPlannerIndex(unsigned int p){
+    return (p + 1) % moveCacheSize;
   }
 
   inline void removeCurrentLine(){
     linesTicksCount -= lines[linesPos].getTimeInTicks();
+    lines[linesPos].zero();
+    assert(linesTicksCount >= 0);
     linesPos++;
     if(linesPos>=moveCacheSize) 
       linesPos=0;
@@ -110,7 +108,29 @@ class PathPlanner {
   }
 	
   std::mutex line_mutex;
-  std::condition_variable lineAvailable;
+  std::condition_variable pathQueueHasSpace;
+
+  inline bool doesPathQueueHaveSpace() {
+    return stop || (linesCount < moveCacheSize && !isLinesBufferFilled());
+  }
+
+  inline void notifyIfPathQueueHasSpace() {
+    if (doesPathQueueHaveSpace()) {
+      pathQueueHasSpace.notify_all();
+    }
+  }
+
+  std::condition_variable pathQueueReadyToPrint;
+
+  inline bool isPathQueueReadyToPrint() {
+    return stop || linesCount > 0;
+  }
+
+  inline void notifyIfPathQueueIsReadyToPrint() {
+    if (isPathQueueReadyToPrint()) {
+      pathQueueReadyToPrint.notify_all();
+    }
+  }
 	
   std::thread runningThread;
   bool stop;
@@ -118,40 +138,36 @@ class PathPlanner {
   PruTimer pru;
   void recomputeParameters();
   void run();
+
+  void runMove(
+    const int moveMask,
+    const int cancellableMask,
+    const bool sync,
+    const bool wait,
+    const FLOAT_T moveEndTime,
+    std::array<std::vector<Step>, NUM_AXES>& steps,
+    std::unique_ptr<SteppersCommand[]> const &commands,
+    const size_t commandsLength);
 	
   // pre-processor functions
-  int softEndStopApply(const std::vector<FLOAT_T> &startPos, const std::vector<FLOAT_T> &endPos);
-  void applyBedCompensation(std::vector<FLOAT_T> &endPos);
-  int splitInput(const std::vector<FLOAT_T> startPos, const std::vector<FLOAT_T> vec, 
-		 FLOAT_T speed, FLOAT_T accel, bool cancelable, 
-		 bool optimize, bool use_backlash_compensation, 
-		 int tool_axis);
-  void transformVector(std::vector<FLOAT_T> &vec, const std::vector<FLOAT_T> &startPos);
-  void reverseTransformVector(std::vector<FLOAT_T> &vec);
-  void backlashCompensation(std::vector<FLOAT_T> &delta);
-  void handleSlaves(std::vector<FLOAT_T> &startPos, std::vector<FLOAT_T> &endPos);
+  int softEndStopApply(const VectorN &endPos);
+  void applyBedCompensation(VectorN &endPos);
+  void backlashCompensation(IntVectorN &delta);
+  void handleSlaves(VectorN &startPos, VectorN &endPos);
 	
 	
   // soft endstops
-  std::vector<FLOAT_T> soft_endstops_min;
-  std::vector<FLOAT_T> soft_endstops_max;
+  VectorN soft_endstops_min;
+  VectorN soft_endstops_max;
 	
   // bed compensation
   std::vector<FLOAT_T> matrix_bed_comp;
-
-  // maximum segment length
-  FLOAT_T max_path_length;
 	
   // axis configuration (see config.h for options)
   int axis_config;
 	
-  // delta bot options
-  bool hasEndABC;
-  std::vector<FLOAT_T> startABC; // column positions 
-  std::vector<FLOAT_T> endABC;   // column positions 
-	
   // the current state of the machine
-  std::vector<FLOAT_T> state;
+  IntVectorN state;
 	
   // slaves
   bool has_slaves;
@@ -159,10 +175,13 @@ class PathPlanner {
   std::vector<int> slave;
 	
   // backlash compensation
-  std::vector<FLOAT_T> backlash_compensation;
-  std::vector<FLOAT_T> backlash_state;
+  VectorN backlash_compensation;
+  IntVectorN backlash_state;
 
-  inline int sgn(FLOAT_T val) { return (0.0 < val) - (val < 0.0);}
+  Vector3 worldToHBelt(const Vector3&);
+  Vector3 hBeltToWorld(const Vector3&);
+  Vector3 worldToCoreXY(const Vector3&);
+  Vector3 coreXYToWorld(const Vector3&);
 
  public:
 
@@ -222,7 +241,6 @@ class PathPlanner {
    * 
    * The coordinates unit is in meters. As a general rule, every public method of this class use SI units.
    * 
-   * @param startPos The starting position of the path in meters
    * @param endPos The end position of the path in meters
    * @param speed The feedrate (aka speed) of the move in m/s
    * @param cancelable flags the move as cancelable.
@@ -233,11 +251,11 @@ class PathPlanner {
    * @param tool_axis which axis is our tool attached to
    * @param virgin Flag to indicate if this is a newly passed in value or if it is somewhere in a recursion loop
    */
-  void queueMove(std::vector<FLOAT_T> startPos, std::vector<FLOAT_T> endPos, 
+  void queueMove(VectorN endPos,
 		 FLOAT_T speed, FLOAT_T accel, 
 		 bool cancelable=false, bool optimize=true, 
 		 bool enable_soft_endstops=true, bool use_bed_matrix=true, 
-		 bool use_backlash_compensation=true, int tool_axis=3, bool virgin=true);
+		 bool use_backlash_compensation=true, int tool_axis=3);
   /**
    * @brief Run the path planner thread
    * @details Run the path planner thread that is in charge to compute the different delays and submit it to the PRU for execution.
@@ -268,15 +286,6 @@ class PathPlanner {
    */
   void setPrintMoveBufferWait(int dt);
 
-
-  /**
-   * @brief Set the minimum buffered move time
-   * @details Minimum of move buffered in the PRU (in term of move time in milliseconds) before we stop sending moves to the PRU.
-   * Should be as low as possible so that we can keep some moves in the PathPlanner buffer for proper speed computations
-   * @param dt minimum buffered move time
-   */
-  void setMinBufferedMoveTime(int dt);
-
   /**
    * @brief Set the maximum buffered move time
    * @details Time to wait before processing a print command if the buffer is not full enough, expressed in milliseconds.
@@ -284,7 +293,7 @@ class PathPlanner {
    * but it will increase the startup time of the print.
    * @param dt maximum buffered move time
    */
-  void setMaxBufferedMoveTime(int dt);
+  void setMaxBufferedMoveTime(long long dt);
 
   /**
    * @brief Set the maximum feedrates of the different axis X,Y,Z
@@ -292,7 +301,7 @@ class PathPlanner {
    * 
    * @param rates The feedrate for each of the axis, consisting of a NUM_AXES length array.
    */
-  void setMaxSpeeds(std::vector<FLOAT_T> speeds);
+  void setMaxSpeeds(VectorN speeds);
 
   /**
    * @brief Set the maximum feedrates of the different axis X,Y,Z
@@ -300,7 +309,7 @@ class PathPlanner {
    * 
    * @param rates The feedrate for each of the axis, consisting of a NUM_AXES length array.
    */
-  void setMinSpeeds(std::vector<FLOAT_T> speeds);
+  void setMinSpeeds(VectorN speeds);
 
   /**
    * @brief Set the number of steps required to move each axis by 1 meter
@@ -308,7 +317,7 @@ class PathPlanner {
    * 
    * @param stepPerM the number of steps required to move each axis by 1 meter, consisting of a NUM_AXES length array.
    */
-  void setAxisStepsPerMeter(std::vector<FLOAT_T> stepPerM);
+  void setAxisStepsPerMeter(VectorN stepPerM);
 
   /**
    * @brief Set the max acceleration for all moves
@@ -316,7 +325,7 @@ class PathPlanner {
    * 
    * @param accel The acceleration in m/s^2
    */
-  void setAcceleration(std::vector<FLOAT_T> accel);
+  void setAcceleration(VectorN accel);
 
   /**
    * @brief Set the maximum speed that can be used when in a corner
@@ -343,7 +352,7 @@ class PathPlanner {
    *
    * @param maxJerk The maximum jerk for X and Y axis in m/s
    */
-  void setJerks(std::vector<FLOAT_T> jerks);
+  void setJerks(VectorN jerks);
 	
   void suspend() {
     pru.suspend();
@@ -354,18 +363,17 @@ class PathPlanner {
   }
 
     
-  void setSoftEndstopsMin(std::vector<FLOAT_T> stops);
-  void setSoftEndstopsMax(std::vector<FLOAT_T> stops);
+  void setSoftEndstopsMin(VectorN stops);
+  void setSoftEndstopsMax(VectorN stops);
   void setBedCompensationMatrix(std::vector<FLOAT_T> matrix);
-  void setMaxPathLength(FLOAT_T maxLength);
   void setAxisConfig(int axis);
-  void setState(std::vector<FLOAT_T> set);
+  void setState(VectorN set);
   void enableSlaves(bool enable);
   void addSlave(int master_in, int slave_in);
-  void setBacklashCompensation(std::vector<FLOAT_T> set);
+  void setBacklashCompensation(VectorN set);
   void resetBacklash();
 	
-  std::vector<FLOAT_T> getState();
+  VectorN getState();
 
   void reset();
 	

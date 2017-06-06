@@ -1,4 +1,4 @@
-%module PathPlannerNative
+%module PathPlannerMock
 
 %include "typemaps.i"
 %include "std_string.i"
@@ -9,13 +9,14 @@
 
 
 %{
-#include "PathPlanner.h"
-#include "Delta.h"
+#include "../PathPlanner.h"
+#include "../Delta.h"
+#include "PruDump.h"
 %}
 
-%include "config.h"
+%include "../config.h"
 
-%rename(PathPlannerNative) PathPlanner;
+%rename(PathPlannerMock) PathPlanner;
 
 // exception handler
 %exception {
@@ -33,9 +34,6 @@ namespace std {
   %template(vector_FLOAT_T) vector<FLOAT_T>;
 }
 
-%apply FLOAT_T *OUTPUT { FLOAT_T* offset };
-%apply FLOAT_T *OUTPUT { FLOAT_T* X, FLOAT_T* Y , FLOAT_T* Z};
-%apply FLOAT_T *OUTPUT { FLOAT_T* Az, FLOAT_T* Bz , FLOAT_T* Cz};
 
 %typemap(in) VectorN {
   if (!PySequence_Check($input)) {
@@ -97,6 +95,12 @@ namespace std {
   $result = list;
 }
 
+
+%apply FLOAT_T *OUTPUT { FLOAT_T* offset };
+%apply FLOAT_T *OUTPUT { FLOAT_T* X, FLOAT_T* Y , FLOAT_T* Z};
+%apply FLOAT_T *OUTPUT { FLOAT_T* Az, FLOAT_T* Bz , FLOAT_T* Cz};
+
+
 class Delta {
  public:
   Delta();
@@ -104,8 +108,8 @@ class Delta {
   void setMainDimensions(FLOAT_T Hez_in, FLOAT_T L_in, FLOAT_T r_in);
   void setRadialError(FLOAT_T A_radial_in, FLOAT_T B_radial_in, FLOAT_T C_radial_in);
   void setAngularError(FLOAT_T A_angular_in, FLOAT_T B_angular_in, FLOAT_T C_angular_in);
-  void worldToDelta(FLOAT_T X, FLOAT_T Y, FLOAT_T Z, FLOAT_T* Az, FLOAT_T* Bz, FLOAT_T* Cz);
-  void deltaToWorld(FLOAT_T Az, FLOAT_T Bz, FLOAT_T Cz, FLOAT_T* X, FLOAT_T* Y, FLOAT_T* Z);
+  Vector3 worldToDelta(const Vector3& pos);
+  Vector3 deltaToWorld(const Vector3& pos);
   void verticalOffset(FLOAT_T Az, FLOAT_T Bz, FLOAT_T Cz, FLOAT_T* offset);
 };
 
@@ -147,4 +151,10 @@ class PathPlanner {
   void reset();
   virtual ~PathPlanner();
 
+};
+
+class PruDump {
+ public:
+  static PruDump* get();
+  void test(PathPlanner& pathPlanner);
 };

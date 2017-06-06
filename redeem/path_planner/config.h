@@ -22,15 +22,13 @@
 
 #define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
 
-#define PATH_PLANNER_VERSION "v1.0.0"
-
 #ifndef PathPlanner_config_h
 #define PathPlanner_config_h
 
 /* Number of axis needed to move the printer head. Only 3 supported */
 #define NUM_MOVING_AXES 3
 
-/* Total number of axis that the system supports, including the currently selected extruder. Currently only 4 is supported */
+/* Total number of axis that the system supports, including the currently selected extruder. */
 #define NUM_AXES 8
 
 /* Number of extruder */
@@ -38,9 +36,14 @@
 
 /* The speed of the timer created by the PRU in Hz */
 #define F_CPU 200000000
+#define F_CPU_FLOAT 200000000.0
+#define CPU_CYCLE_LENGTH (1.0/200000000.0) // AKA 5e-9
 
 /* Data type for floating point */
 #define FLOAT_T double
+
+/* Negligible numeric error - also 1/50th of a CPU cycle */
+#define NEGLIGIBLE_ERROR 1e-10
 
 #define AXIS_CONFIG_XY      0
 #define AXIS_CONFIG_H_BELT  1

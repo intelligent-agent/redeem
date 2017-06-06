@@ -32,17 +32,21 @@
 #include <assert.h>
 #include <atomic>
 #include <vector>
+#include <string>
+#include <array>
+#include <vector>
 #include "config.h"
 #include "StepperCommand.h"
+#include "vectorN.h"
 
-#define FLAG_WARMUP                (1 << 0)
-#define FLAG_WILL_REACH_FULL_SPEED (1 << 1)
-#define FLAG_ACCELERATION_ENABLED  (1 << 2)
-#define FLAG_CHECK_ENDSTOPS        (1 << 3)
-#define FLAG_BLOCKED               (1 << 4)
-#define FLAG_CANCELABLE            (1 << 5)
-#define FLAG_SYNC                  (1 << 6)
-#define FLAG_SYNC_WAIT             (1 << 7)
+#define FLAG_WILL_REACH_FULL_SPEED (1 << 0)
+#define FLAG_ACCELERATION_ENABLED  (1 << 1)
+#define FLAG_CHECK_ENDSTOPS        (1 << 2)
+#define FLAG_BLOCKED               (1 << 3)
+#define FLAG_CANCELABLE            (1 << 4)
+#define FLAG_SYNC                  (1 << 5)
+#define FLAG_SYNC_WAIT             (1 << 6)
+#define FLAG_USE_PRESSURE_ADVANCE  (1 << 7)
 
 /** Are the step parameter computed */
 #define FLAG_JOIN_STEPPARAMS_COMPUTED (1 << 0)
@@ -69,65 +73,109 @@
 #endif
 #endif
 
-struct StepperPathParameters {
-  FLOAT_T vMax;                   /// Maximum reached speed in steps/s.
-  FLOAT_T vStart;                 /// Starting speed in steps/s.
-  FLOAT_T vEnd;                   /// End speed in steps/s
+class Delta;
 
-  unsigned int accelSteps;        /// How many steps does it take to reach the plateau.
-  unsigned int decelSteps;        /// How many steps does it take to reach the end speed.
+struct Step {
+  FLOAT_T time;
+  unsigned char axis;
+  bool direction;
+
+  Step(FLOAT_T time, unsigned char axis, bool direction)
+    : time(time),
+    axis(axis),
+    direction(direction)
+  {}
+
+  bool operator<(Step const& o) const {
+    return time > o.time;
+  }
+};
+
+struct StepperPathParameters {
+  FLOAT_T baseSpeed;
+  FLOAT_T startSpeed;
+  FLOAT_T cruiseSpeed;
+  FLOAT_T endSpeed;
+  FLOAT_T accel;
+  FLOAT_T distance;
+
+  FLOAT_T baseAccelEnd;
+  FLOAT_T baseCruiseEnd;
+  FLOAT_T baseMoveEnd;
+
+  FLOAT_T moveEnd;
+
+  mutable unsigned long long accelSteps;
+  mutable unsigned long long cruiseSteps;
+  mutable unsigned long long decelSteps;
+
+  inline void zero() {
+    startSpeed = 0;
+    cruiseSpeed = 0;
+    endSpeed = 0;
+    accel = 0;
+    distance = 0;
+
+    accelSteps = 0;
+    cruiseSteps = 0;
+    decelSteps = 0;
+  }
+
+  FLOAT_T dilateTime(FLOAT_T t) const;
+
+  FLOAT_T finalTime() const;
 };
 
 class Path {
 private:
+  // These fields change throughout the lifecycle of a Path
   unsigned int joinFlags;
   std::atomic_uint_fast32_t flags;
 
-  int primaryAxis;                /// Axis with longest move.
-  unsigned long long timeInTicks; /// Time for completing a move.
-  unsigned int dir;               /// Direction of movement (1 = X+, 2 = Y+, 4= Z+) and whether an axis moves at all (256 = X+, 512 = Y+, 1024 = Z+)
-  std::vector<int> deltas;         /// Steps we want to move (absolute)
-  std::vector<int> errors;         /// Error calculation for Bresenham algorithm
-  std::vector<FLOAT_T> speeds;    /// Speeds for each axis in m/tick
-  FLOAT_T fullSpeed;              /// Desired speed m/s
-  FLOAT_T invFullSpeed;           /// 1.0/fullSpeed for fatser computation
-  FLOAT_T accelerationDistance2;  /// Real 2.0*distanceÜacceleration mm²/s²
+  // These fields are constant after initialization
+  FLOAT_T distance;               /// Total distance of the move in NUM_AXIS-dimensional space in meters
+  FLOAT_T baseSpeed;
+  unsigned char moveMask;
+
+  // These fields are calculated
+  unsigned long long timeInTicks; /// Time for completing a move (optimistically assuming it runs full speed the whole time)
+  VectorN speeds;
+  FLOAT_T fullSpeed;              /// Cruising speed in m/s
   FLOAT_T maxJunctionSpeed;       /// Max. junction speed between this and next segment
   FLOAT_T startSpeed;             /// Starting speed in m/s
   FLOAT_T endSpeed;               /// Exit speed in m/s
-  FLOAT_T minSpeed;
-  FLOAT_T distance;
-  FLOAT_T speed; // Feedrate in m/s
-  FLOAT_T accel; // Acceleration in m/s^2
-  unsigned int fullInterval;      /// interval at full speed in ticks/step.
-  unsigned int primaryAxisAcceleration;  /// Acceleration along primary axis in steps/s²
-  unsigned int primaryAxisSteps;  /// Total number of primary axis steps in the move
-
-  std::vector<FLOAT_T> startPos;
-  std::vector<FLOAT_T> endPos;
-
-
+  FLOAT_T minSpeed;               /// Minimum allowable speed for the move
+  FLOAT_T accel;                  /// Acceleration in m/s^2
 
   StepperPathParameters stepperPath;
+  std::array<std::vector<Step>, NUM_AXES> steps;
 
-  void zero();
-  FLOAT_T calculateSafeSpeed(const std::vector<FLOAT_T>& minSpeeds);
+  FLOAT_T calculateSafeSpeed(const VectorN& minSpeeds);
 
 public:
   Path();
   Path(const Path& path);
+  Path& operator=(const Path&);
+  Path& operator=(Path&&);
 
-  void initialize(const std::vector<FLOAT_T>& start,
-		  const std::vector<FLOAT_T>& end,
-		  FLOAT_T distance,
-		  FLOAT_T speed,
-		  FLOAT_T accel,
-		  bool cancelable);
+  void initialize(const IntVectorN& start,
+    const IntVectorN& end,
+    const VectorN& stepsPerM,
+    FLOAT_T speed,
+    int axisConfig,
+    const Delta& delta,
+    bool cancelable);
 
-  void calculate(const std::vector<FLOAT_T>& axis_diff,
-		 const std::vector<FLOAT_T>& minSpeeds,
-		 const std::vector<FLOAT_T>& maxSpeeds,
-		 const std::vector<FLOAT_T>& maxAccelStepsPerSquareSecond);
+  void calculate(const VectorN& axis_diff,
+		 const VectorN& minSpeeds,
+		 const VectorN& maxSpeeds,
+		 const VectorN& maxAccelMPerSquareSecond,
+		 FLOAT_T requestedTime,
+                 FLOAT_T requestedAccel);
+
+  FLOAT_T runFinalStepCalculations();
+
+  void zero();
 
   inline void clearJoinFlags() {
     joinFlags = 0;
@@ -139,6 +187,7 @@ public:
 
   inline void invalidateStepperPathParameters() {
     joinFlags &= ~FLAG_JOIN_STEPPARAMS_COMPUTED;
+    stepperPath.zero();
   }
 
   inline bool isStartSpeedFixed() {
@@ -158,7 +207,7 @@ public:
   }
 
   inline bool isCancelable() {
-    return joinFlags & FLAG_CANCELABLE;
+    return flags & FLAG_CANCELABLE;
   }
 
   inline void setEndSpeedFixed(bool newState) {
@@ -167,18 +216,6 @@ public:
 
   inline void clearFlags() {
     flags = 0;
-  }
-
-  inline bool isWarmUp() {
-    return flags & FLAG_WARMUP;
-  }
-
-  inline uint8_t getWaitForXLinesFilled() {
-    return primaryAxis;
-  }
-
-  inline void setWaitForXLinesFilled(uint8_t b) {
-    primaryAxis = b;
   }
 
   inline void block() {
@@ -201,10 +238,6 @@ public:
     return flags & FLAG_WILL_REACH_FULL_SPEED;
   }
 
-  inline void setMoveWillReachFullSpeed() {
-    flags |= FLAG_WILL_REACH_FULL_SPEED;
-  }
-
   inline bool isSyncEvent() {
     return flags & FLAG_SYNC;
   }
@@ -217,24 +250,24 @@ public:
     flags |= wait ? FLAG_SYNC_WAIT : FLAG_SYNC;
   }
 
+  inline bool willUsePressureAdvance() {
+    return flags & FLAG_USE_PRESSURE_ADVANCE;
+  }
+
   inline bool isNoMove() {
-    return (dir & (255 << 8)) == 0;
+    return (moveMask & 255) == 0;
   }
 
   inline bool isAxisMove(unsigned int axis) {
-    return (dir & (256 << axis));
-  }
-
-  inline bool isAxisNegativeMove(unsigned int axis) {
-    return (dir & ((256 << axis) + (1 << axis))) == (unsigned int)(256 << axis);
-  }
-
-  inline bool isAxisPositiveMove(unsigned int axis) {
-    return (dir & ((256 << axis) + (1 << axis))) == (unsigned int)((256 << axis) + (1 << axis));
+    return (moveMask & (1 << axis)) != 0;
   }
 
   inline bool isAxisOnlyMove(unsigned int axis) {
-    return ((dir & (255 << 8)) == (unsigned int)(256 << axis));
+    return (moveMask & 255) == (unsigned int)(1 << axis);
+  }
+
+  inline unsigned char getAxisMoveMask() {
+    return moveMask & 255;
   }
 
   inline unsigned long getTimeInTicks() {
@@ -245,16 +278,8 @@ public:
     timeInTicks = time;
   }
 
-  inline const std::vector<FLOAT_T>& getSpeeds() {
+  inline const VectorN& getSpeeds() {
     return speeds;
-  }
-
-  inline const std::vector<int>& getDeltas() {
-    return deltas;
-  }
-
-  inline const std::vector<int>& getInitialErrors() {
-    return errors;
   }
 
   inline FLOAT_T getMaxJunctionSpeed() {
@@ -295,29 +320,16 @@ public:
     return accel;
   }
 
+  /// Note: This magical number is present because it's useful in the formula
+  /// v^2 = v0^2 + 2 * a * (r - r0)
+  /// This determines final velocity from initial velocity, acceleration, and
+  /// distance traveled. It's useful because it doesn't involve time.
   inline FLOAT_T getAccelerationDistance2() {
-    return accelerationDistance2;
+    return 2.0 * distance * accel;
   }
 
-  inline unsigned int getFullInterval() {
-    return fullInterval;
-  }
-
-  inline int getPrimaryAxis() {
-    return primaryAxis;
-  }
-
-  inline unsigned int getPrimaryAxisSteps() {
-    return primaryAxisSteps;
-  }
-
-  inline unsigned int getPrimaryAxisAcceleration() {
-    return primaryAxisAcceleration;
-  }
-
-  StepperPathParameters getStepperPathParameters() {
-    assert(areParameterUpToDate());
-    return stepperPath;
+  std::array<std::vector<Step>, NUM_AXES>& getSteps() {
+    return steps;
   }
 
   void updateStepperPathParameters();

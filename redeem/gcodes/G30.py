@@ -69,7 +69,7 @@ class G30(GCodeCommand):
         logging.debug("G30: probing from point (mm) : X{} Y{} Z{}".format(point["X"]+offset_x, point["Y"]+offset_y, point["Z"]))
 
         # Move to the position
-        G0 = Gcode({"message": "G0 X{} Y{} Z{}".format(point["X"]+offset_x, point["Y"]+offset_y, point["Z"]), "prot": g.prot})    
+        G0 = Gcode({"message": "G0 X{} Y{} Z{}".format(point["X"]+offset_x, point["Y"]+offset_y, point["Z"]), "parent": g})
         self.printer.processor.execute(G0)
         self.printer.path_planner.wait_until_done()
         bed_dist = self.printer.path_planner.probe(probe_length, probe_speed, probe_accel)*1000.0 # convert to mm
@@ -96,13 +96,14 @@ class G30(GCodeCommand):
         return "Probe the bed at current point"
 
     def get_long_description(self):
-        return ("Probe the bed at the current position, or if specified, a point"
+        return ("Probe the bed at the current position, or if specified, a point "
                 "previously set by M557. X, Y, and Z starting probe positions can be overridden, "
-                "D sets the probe length, or taken from config if nothing is specified. \n"
-                "F sets the probe speed. If not present, it's taken from the config. \n"
-                "A sets the probe acceleration. If not present, it's taken from the config. \n"
-                "B determines if the bed marix is used or not. (0 or 1)\n"
-                "P the point at which to probe, previously set by M557. \n"
+                "D = sets the probe length, or taken from config if nothing is specified. \n"
+                "F = sets the probe speed. If not present, it's taken from the config. \n"
+                "A = sets the probe acceleration. If not present, it's taken from the config. \n"
+                "B = determines if the bed marix is used or not. (0 or 1)\n"
+                "P = the point at which to probe, previously set by M557. \n"
+                "S = save the probed point distance\n"
                 "P and S save the probed bed distance to a list that corresponds with point P")
    
     def is_buffered(self):

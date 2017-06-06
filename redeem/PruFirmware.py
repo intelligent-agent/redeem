@@ -33,7 +33,7 @@ from Printer import Printer
 class PruFirmware:
     def __init__(self, firmware_source_file0, binary_filename0,
                  firmware_source_file1, binary_filename1,
-                 printer, compiler):
+                 printer, compiler, assembler, linker_cmdfile, repackage_cmdfile):
         """Create and initialize a PruFirmware
 
         Parameters
@@ -47,7 +47,13 @@ class PruFirmware:
         config_parser : ConfigParser
             The config parser with the config file already loaded
         compiler : string
-            Path to the pasm compiler
+            Path to the PRU C compiler
+        assembler : string
+            Path to the pasm assembler
+        linker_cmdfile : string
+            Path to the cmd file that maps the device for the linker
+        repackage_cmdfile : string
+            Path to the cmd file describing how to repackage the firmware
         """
 
         self.firmware_source_file0 = os.path.realpath(firmware_source_file0)
@@ -57,6 +63,9 @@ class PruFirmware:
         self.config = printer.config
         self.printer = printer
         self.compiler = os.path.realpath(compiler)
+        self.assembler = os.path.realpath(assembler)
+        self.linker_cmdfile = os.path.realpath(linker_cmdfile)
+        self.repackage_cmdfile = os.path.realpath(repackage_cmdfile)
 
         #Remove the bin extension of the firmware output filename
         if os.path.splitext(self.binary_filename0)[1] != '.bin':
@@ -75,16 +84,13 @@ class PruFirmware:
                 'Invalid binary output filenameon file 1. '
                 'It should have the .bin extension.')
 
-        self.binary_filename_compiler0 = \
-            os.path.splitext(self.binary_filename0)[0]
-        self.binary_filename_compiler1 = \
-            os.path.splitext(self.binary_filename1)[0]
-
         if not os.path.exists(self.compiler):
-            logging.error(
-                'PASM compiler not found. '
-                'Go to the firmware directory and issue the `make` command.')
-            raise RuntimeError('PASM compiler not found.')
+            logging.error('CLPRU compiler not found.')
+            raise RuntimeError('CLPRU compiler not found.')
+
+        if not os.path.exists(self.assembler):
+            logging.error('PASM assembler not found.')
+            raise RuntimeError('PASM assembler not found.')
 
     def is_needing_firmware_compilation(self):
         """ Returns True if the firmware needs recompilation """
@@ -121,45 +127,95 @@ class PruFirmware:
 
         config_file = self.make_config_file()
 
-        cmd0 = [self.compiler, '-b']
-        cmd1 = [self.compiler, '-b']
-
         # Copy the files to tmp, cos the pasm is really picky!
-        tmp_name_0 = "/tmp/"+os.path.splitext(os.path.basename(self.firmware_source_file0))[0]
-        tmp_name_1 = "/tmp/"+os.path.splitext(os.path.basename(self.firmware_source_file1))[0]
+        tmp_name_0 = "/tmp/"+os.path.basename(self.firmware_source_file0)
+        tmp_name_1 = "/tmp/"+os.path.basename(self.firmware_source_file1)
+        tmp_output_name_0 = "/tmp/"+os.path.basename(self.binary_filename0)
+        tmp_output_name_1 = "/tmp/"+os.path.basename(self.binary_filename1)
 
-        logging.debug('Copying firmware 0 from ' + self.firmware_source_file0 + ' to ' + tmp_name_0 + '.p')
-        shutil.copyfile(self.firmware_source_file0, tmp_name_0+".p")
+        logging.debug('Copying firmware 0 from ' + self.firmware_source_file0 + ' to ' + tmp_name_0)
+        shutil.copyfile(self.firmware_source_file0, tmp_name_0)
 
-        logging.debug('Copying firmware 1 from ' + self.firmware_source_file1 + ' to ' + tmp_name_1 + '.p')
-        shutil.copyfile(self.firmware_source_file1, tmp_name_1+".p")
+        logging.debug('Copying firmware 1 from ' + self.firmware_source_file1 + ' to ' + tmp_name_1)
+        shutil.copyfile(self.firmware_source_file1, tmp_name_1)
 
-        cmd0.extend([tmp_name_0+".p", tmp_name_0])
-        cmd1.extend([tmp_name_1+".p", tmp_name_1])
+        return_value = self.build_firmware(tmp_name_0, tmp_output_name_0)
 
-        logging.debug("Compiling firmware 0 with " + ' '.join(cmd0))
+        if return_value == False:
+            return False
+
+        return_value = self.build_firmware(tmp_name_1, tmp_output_name_1)
+
+        if return_value == False:
+            return False
+
+        shutil.copyfile(tmp_output_name_0, self.binary_filename0)
+        shutil.copyfile(tmp_output_name_1, self.binary_filename1)
+
+        return True
+
+    def build_firmware(self, input, output):
+        extension = os.path.splitext(input)[1]
+        if extension == ".p":
+            return self.build_firmware_assembled(input, output)
+        elif extension == ".c":
+            return self.build_firmware_compiled(input, output)
+        else:
+            raise RuntimeError("Unknown firmware extension: "+extension)
+
+    def build_firmware_assembled(self, input, output):
+        cmd = [self.assembler, '-b', input, os.path.splitext(output)[0]]
+        logging.debug("Assembling firmware with " + ' '.join(cmd))
         try:
-            subprocess.check_output(cmd0, stderr=subprocess.STDOUT)
-            # Move the file back
-            shutil.copyfile(tmp_name_0+".bin", self.binary_filename_compiler0+".bin")
+            subprocess.check_output(cmd, stderr=subprocess.STDOUT)
+            logging.debug("Compilation succeeded.")
+        except subprocess.CalledProcessError as e:
+            logging.exception('Error while compiling firmware: ')
+            logging.error('Command output:' + e.output)
+            return False
+        return True
+
+    def build_firmware_compiled(self, input, output):
+        obj_output = os.path.splitext(output)[0] + ".obj"
+        elf_output = os.path.splitext(output)[0] + ".elf"
+
+        compile_cmd = [self.compiler, '-v3', '-O3', '--hardware_mac=on', '--endian=little', '-I/usr/src/pru-software-support-package/include/am335x',
+                   '-I/usr/share/ti/cgt-pru/include', '--obj_directory', '/tmp', input]
+
+        logging.debug("Compiling firmware with " + ' '.join(compile_cmd))
+        try:
+            subprocess.check_output(compile_cmd, stderr=subprocess.STDOUT)
             logging.debug("Compilation succeeded.")
         except subprocess.CalledProcessError as e:
             logging.exception('Error while compiling firmware: ')
             logging.error('Command output:' + e.output)
             return False
 
-        logging.debug("Compiling firmware 1 with " + ' '.join(cmd1))
+        link_cmd = [self.compiler, '-v3', '-O3', '--hardware_mac=on', '--endian=little', '-z', '-i', '/usr/share/ti/cgt-pru/lib',
+                '--stack_size=0x100', '--heap_size=0x100', '--rom_model', '-o', elf_output, obj_output, self.linker_cmdfile]
+
+        logging.debug("Linking firmware with " + ' '.join(link_cmd))
         try:
-            subprocess.check_output(cmd1, stderr=subprocess.STDOUT)
-            # Move the file back
-            shutil.copyfile(tmp_name_1+".bin", self.binary_filename_compiler1+".bin")
-            logging.debug("Compilation succeeded.")
+            subprocess.check_output(link_cmd, stderr=subprocess.STDOUT)
+            logging.debug("Linking succeeded.")
         except subprocess.CalledProcessError as e:
-            logging.exception('Error while compiling firmware: ')
+            logging.exception('Error while linking firmware: ')
+            logging.error('Command output:' + e.output)
+            return False
+
+        repackage_cmd = ['/usr/bin/hexpru', '-o', output, self.repackage_cmdfile, elf_output]
+
+        logging.debug("Repacking firmware with " + ' '.join(repackage_cmd))
+        try:
+            subprocess.check_output(repackage_cmd, stderr=subprocess.STDOUT)
+            logging.debug("Repacking succeeded.")
+        except subprocess.CalledProcessError as e:
+            logging.exception('Error while repacking firmware: ')
             logging.error('Command output:' + e.output)
             return False
 
         return True
+
 
     def get_firmware(self, prunum=0):
         """ Return the path to the firmware bin file, None if the firmware
@@ -282,7 +338,20 @@ class PruFirmware:
             # Add end stop delay to the config file
             end_stop_delay = self.config.getint('Endstops', 'end_stop_delay_cycles')
             configFile.write("#define END_STOP_DELAY " +str(end_stop_delay)+ "\n");
-
+            
+            revision = self.printer.config.replicape_revision.strip('0');
+            
+            # Note that these are all cycle counts of the 200MHz PRU - 1 cycle is 5ns
+            if revision.startswith('A'): # DRV8825
+                configFile.write("#define DELAY_BETWEEN_DIR_AND_STEP 130\n") # t_SU in the spec sheet
+                configFile.write("#define DELAY_BETWEEN_STEP_AND_CLEAR 380\n") # t_WH in the spec sheet
+                configFile.write("#define MINIMUM_DELAY_AFTER_STEP 380\n") # t_WL in the spec sheet
+            elif revision.startswith('B'): # TMC2100
+                configFile.write("#define DELAY_BETWEEN_DIR_AND_STEP 4\n") # t_DSU in the spec sheet
+                configFile.write("#define DELAY_BETWEEN_STEP_AND_CLEAR 20\n") # t_SH in the spec sheet - assume internal clock of 14MHz, which means we need max(~85, t_clk+20). t_clk+20 is ~91.43, which we round up for safety
+                configFile.write("#define MINIMUM_DELAY_AFTER_STEP 24\n") # t_SL with t_DSH added for safety
+            else:
+                raise RuntimeError("Unknown Replicape revision "+revision+", cannot determine stepper delays")
         return configFile_0
 
 if __name__ == '__main__':

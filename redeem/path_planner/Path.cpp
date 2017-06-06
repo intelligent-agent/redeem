@@ -26,39 +26,78 @@
 */
 
 #include <cmath>
+#include <algorithm>
+#include <numeric>
 #include "Path.h"
+#include "Delta.h"
 #include "Logger.h"
+
+void calculateLinearMove(const int axis, const long long startStep, const long long endStep, const FLOAT_T time, std::vector<Step>& steps)
+{
+  const FLOAT_T distance = endStep - startStep;
+
+  const bool direction = startStep < endStep;
+  const long long stepIncrement = direction ? 1 : -1;
+  const FLOAT_T stepOffset = stepIncrement / 2.0;
+
+  long long step = startStep;
+
+  steps.reserve(std::abs(endStep - startStep));
+
+  while (step != endStep)
+  {
+    const FLOAT_T position = step + stepOffset;
+    const FLOAT_T stepTime = (position - startStep) / distance * time;
+
+    assert(stepTime > 0 && stepTime < time);
+    assert(steps.empty() || stepTime > steps.back().time);
+
+    steps.emplace_back(Step(stepTime, axis, direction));
+
+    step += stepIncrement;
+  }
+}
+
+void calculateXYMove(const IntVector3& start, const IntVector3& end, const Vector3& stepsPerM, FLOAT_T time, std::array<std::vector<Step>, NUM_AXES>& steps)
+{
+  for (int i = 0; i < NUM_MOVING_AXES; i++)
+  {
+    calculateLinearMove(i, start[i], end[i], time, steps[i]);
+  }
+}
+
+void calculateExtruderMove(const IntVectorN& start, const IntVectorN& end, FLOAT_T time, std::array<std::vector<Step>, NUM_AXES>& steps)
+{
+  for (int i = NUM_MOVING_AXES; i < NUM_AXES; i++)
+  {
+    calculateLinearMove(i, start[i], end[i], time, steps[i]);
+  }
+}
 
 void Path::zero() {
   joinFlags = 0;
   flags = 0;
 
-  primaryAxis = 0;
+  distance = 0;
+  baseSpeed = 0;
+  moveMask = 0;
+
   timeInTicks = 0;
-  dir = 0;
-
-  deltas.assign(NUM_AXES, 0);
-  errors.assign(NUM_AXES, 0);
-  speeds.assign(NUM_AXES, 0);
-
+  speeds.zero();
   fullSpeed = 0;
-  invFullSpeed = 0;
-  accelerationDistance2 = 0;
   maxJunctionSpeed = 0;
   startSpeed = 0;
   endSpeed = 0;
   minSpeed = 0;
-  distance = 0;
-  speed = 0;
   accel = 0;
-  fullInterval = 0;
-  primaryAxisAcceleration = 0;
-  primaryAxisSteps = 0;
 
-  startPos.assign(NUM_AXES, 0);
-  endPos.assign(NUM_AXES, 0);
+  stepperPath.zero();
 
-  stepperPath = { 0 };
+  for (auto& stepVector : steps)
+  {
+    std::vector<Step> empty;
+    stepVector.swap(empty);
+  }
 }
 
 Path::Path() {
@@ -66,170 +105,190 @@ Path::Path() {
 }
 
 Path::Path(const Path& path) {
-  // copy constructor
+  operator=(path);
+}
+
+Path& Path::operator=(const Path& path) {
+  // assignment operator
   joinFlags = path.joinFlags;
   flags = path.flags.load();
 
-  primaryAxis = path.primaryAxis;
+  distance = path.distance;
+  baseSpeed = path.baseSpeed;
+  moveMask = path.moveMask;
+
   timeInTicks = path.timeInTicks;
-  dir = path.dir;
-
-  deltas = path.deltas;
-  errors = path.errors;
   speeds = path.speeds;
-
   fullSpeed = path.fullSpeed;
-  invFullSpeed = path.invFullSpeed;
-  accelerationDistance2 = path.accelerationDistance2;
   maxJunctionSpeed = path.maxJunctionSpeed;
   startSpeed = path.startSpeed;
   endSpeed = path.endSpeed;
   minSpeed = path.minSpeed;
-  distance = path.distance;
-  speed = path.speed;
   accel = path.accel;
-  fullInterval = path.fullInterval;
-  primaryAxisAcceleration = path.primaryAxisAcceleration;
-  primaryAxisSteps = path.primaryAxisSteps;
-
-  startPos = path.startPos;
-  endPos = path.endPos;
 
   stepperPath = path.stepperPath;
+  steps = path.steps;
+
+  return *this;
 }
 
-void Path::initialize(const std::vector<FLOAT_T>& startPos,
-		      const std::vector<FLOAT_T>& endPos,
-		      FLOAT_T distance,
-		      FLOAT_T speed,
-		      FLOAT_T accel,
-		      bool cancelable) {
+Path& Path::operator=(Path&& path) {
+  // move assignment operator
+  joinFlags = path.joinFlags;
+  flags = path.flags.load();
 
-  LOG("Path: Initialize()"<< std::endl);
+  distance = path.distance;
+  baseSpeed = path.baseSpeed;
+  moveMask = path.moveMask;
+
+  timeInTicks = path.timeInTicks;
+  speeds = path.speeds;
+  fullSpeed = path.fullSpeed;
+  maxJunctionSpeed = path.maxJunctionSpeed;
+  startSpeed = path.startSpeed;
+  endSpeed = path.endSpeed;
+  minSpeed = path.minSpeed;
+  accel = path.accel;
+
+  stepperPath = path.stepperPath;
+  steps = std::move(path.steps);
+
+  return *this;
+}
+
+void Path::initialize(const IntVectorN& start,
+		      const IntVectorN& end,
+		      const VectorN& stepsPerM,
+		      FLOAT_T speed,
+		      int axisConfig,
+		      const Delta& delta,
+		      bool cancelable) {
   this->zero();
 
-  primaryAxis = X_AXIS;
-  this->startPos = startPos;
-  this->endPos = endPos;
+  const FLOAT_T distance = vabs((end.toVectorN() - start.toVectorN()) / stepsPerM);
+  const FLOAT_T time = distance / speed; // m / (m/s) = m * (s/m) = s
+
+  assert(!std::isnan(distance));
+  assert(!std::isnan(time));
+
   this->distance = distance;
-  this->speed = speed;
-  this->accel = accel;
+  this->baseSpeed = speed;
+
+  LOG("ideal move should be " << speed << " m/s and cover " << distance << " m in " << time << " seconds" << std::endl);
+
+  switch (axisConfig)
+  {
+  case AXIS_CONFIG_DELTA:
+    delta.calculateMove(start.toIntVector3(), end.toIntVector3(), stepsPerM.toVector3(), time, steps);
+    break;
+  case AXIS_CONFIG_XY:
+  case AXIS_CONFIG_H_BELT:
+  case AXIS_CONFIG_CORE_XY:
+    calculateXYMove(start.toIntVector3(), end.toIntVector3(), stepsPerM.toVector3(), time, steps);
+    break;
+  default:
+    assert(0);
+  }
+
+  calculateExtruderMove(start, end, time, steps);
+
+  assert(!steps.empty());
+
+  const IntVectorN move = end - start;
 
   for (int axis = 0; axis < NUM_AXES; axis++) {
-    deltas[axis] = endPos[axis] - startPos[axis];
-
-    // set bits for axes with positive moves and make delta absolute
-    if (deltas[axis] >= 0)
-      dir |= (1 << axis);
-    else
-      deltas[axis] *= -1;
-
-    // set bits for axes that move at all
-    if (deltas[axis] != 0) {
-      dir |= (256 << axis);
-      LOG("Path: Axis " << axis << " is move since p->delta is " << deltas[axis] << std::endl);
+    if (move[axis] != 0)
+    {
+      moveMask |= (1 << axis);
     }
-
-    // determine primary axis for the move
-    if (deltas[axis] > deltas[primaryAxis])
-      primaryAxis = axis;
   }
 
-  LOG("Path: Primary axis is " << primaryAxis << std::endl);
+  joinFlags = 0;
+  flags = (cancelable ? FLAG_CANCELABLE : 0);
 
-  joinFlags = (cancelable ? FLAG_CANCELABLE : 0);
-  flags = 0;
-  primaryAxisSteps = deltas[primaryAxis];
-  timeInTicks = F_CPU * distance / speed;
+  assert(!(isAxisMove(E_AXIS) && isAxisMove(H_AXIS))); // both extruders should never move at the same time
 
-  LOG("Path: Distance in m:     " << distance << std::endl);
-  LOG("Path: Speed in m/s:      " << speed << std::endl);
-  LOG("Path: Accel in m/s^2:    " << accel << std::endl);
-  LOG("Path: Ticks :            " << timeInTicks << std::endl);
-  LOG("Path: StartSpeed in m/s: " << startSpeed << std::endl);
-  LOG("Path: EndSpeed in m/s:   " << endSpeed << std::endl);
+  if ((isAxisMove(E_AXIS) && !isAxisOnlyMove(E_AXIS)) || (isAxisMove(H_AXIS) && !isAxisOnlyMove(H_AXIS))) {
+    flags |= FLAG_USE_PRESSURE_ADVANCE;
+  }
+
+  LOG("Distance in m:     " << distance << std::endl);
+
+  //LOG("StartSpeed in m/s: " << p->startSpeed << std::endl);
+  //LOG("EndSpeed in m/s:   " << p->endSpeed << std::endl);
 }
 
-void Path::calculate(const std::vector<FLOAT_T>& axis_diff,
-		     const std::vector<FLOAT_T>& minSpeeds,
-		     const std::vector<FLOAT_T>& maxSpeeds,
-		     const std::vector<FLOAT_T>& maxAccelStepsPerSquareSecond) {
-
-  std::vector<unsigned int> axisInterval(NUM_AXES, 0);
-
-  LOG( "Path: CalculateMove: Time in ticks:    " << timeInTicks << " ticks" << std::endl);
-
-  // Compute the slowest allowed interval (ticks/step), so maximum feedrate is not violated
-  unsigned int limitInterval = (float)timeInTicks / (float)primaryAxisSteps;
-  // until not violated by other constraints, this is the target interval
-  LOG( "Path: CalculateMove: limitInterval is " << limitInterval << " steps/s" << std::endl);
+void Path::calculate(const VectorN& axis_diff, /// Axis movements expressed in meters
+		     const VectorN& minSpeeds, /// Minimum allowable speeds in m/s
+		     const VectorN& maxSpeeds, /// Maximum allowable speeds in m/s
+		     const VectorN& maxAccelMPerSquareSecond,
+		     FLOAT_T requestedSpeed,
+		     FLOAT_T requestedAccel) {
+  // First we need to figure out the minimum time for the move.
+  // We determine this by calculating how long each axis would take to complete its move
+  // at its maximum speed.
+  FLOAT_T minimumTimeForMove = 0;
 
   for (int i = 0; i < NUM_AXES; i++) {
     if (isAxisMove(i)) {
-      axisInterval[i] = fabs(axis_diff[i] * F_CPU) / (maxSpeeds[i] * primaryAxisSteps); // m*ticks/s/(mm/s*steps) = ticks/step
-      limitInterval = std::max(axisInterval[i], limitInterval);
+      FLOAT_T minimumAxisTimeForMove = fabs(axis_diff[i]) / maxSpeeds[i]; // m / (m/s) = s
+      minimumTimeForMove = std::max(minimumTimeForMove, minimumAxisTimeForMove);
     }
-    else
-      axisInterval[i] = 0;
-    //LOG( "Path: CalculateMove: AxisInterval " << i << ": " << axisInterval[i] << std::endl);
-    //LOG( "Path: CalculateMove: AxisAccel   " << i << ": " << maxAccelStepsPerSquareSecond[i] << std::endl);
   }
 
-  LOG("Path: CalculateMove: limitInterval is " << limitInterval << " steps/s" << std::endl);
-  fullInterval = limitInterval; // This is our target interval
+  FLOAT_T maximumSpeed = distance / minimumTimeForMove;
 
-  // this is the time if we move at full speed for the entire move
-  FLOAT_T timeAtFullSpeed = (limitInterval * primaryAxisSteps); // ticks/step * steps = ticks
+  // Now figure out if we can honor the user's requested speed.
+  if (requestedSpeed > maximumSpeed) {
+    fullSpeed = maximumSpeed;
+  }
+  else {
+    fullSpeed = requestedSpeed;
+  }
 
+  assert(!std::isnan(fullSpeed));
+
+  FLOAT_T idealTimeForMove = distance / fullSpeed; // m / (m/s) = s
+  timeInTicks = F_CPU * idealTimeForMove; // ticks / s * s = ticks
+
+  // Now determine the maximum possible acceleration to get to fullSpeed.
+  FLOAT_T minimumAccelerationTime = 0;
   for (int i = 0; i < NUM_AXES; i++) {
     if (isAxisMove(i)) {
-      axisInterval[i] = timeAtFullSpeed / deltas[i];
-      speeds[i] = -std::fabs(axis_diff[i] / timeAtFullSpeed); // m/tick
-      if (isAxisNegativeMove(i))
-	speeds[i] *= -1;
-      //p->accels[i] = maxAccelerationMPerSquareSecond[i];
+      speeds[i] = axis_diff[i] / idealTimeForMove;
+      // v = a * t  =>  t = v / a
+      // (steps / second) / (steps / second^2) = seconds
+      FLOAT_T minimumAxisAccelerationTime = speeds[i] / maxAccelMPerSquareSecond[i];
+      minimumAccelerationTime = std::max(minimumAccelerationTime, minimumAxisAccelerationTime);
     }
-    else
+    else {
       speeds[i] = 0;
-  }
-
-  fullSpeed = (distance / timeAtFullSpeed)*F_CPU;
-  invFullSpeed = 1.0 / fullSpeed;
-
-  // slowest time to accelerate from v0 to limitInterval determines used acceleration
-  // t = (v_end-v_start)/a
-  FLOAT_T slowest_axis_plateau_time_repro = 1e15; // repro to reduce division Unit: 1/s
-  for (int i = 0; i < NUM_AXES; i++) {
-    if (isAxisMove(i)) {
-      // v = a * t => t = v/a = F_CPU/(c*a) => 1/t = c*a/F_CPU
-      slowest_axis_plateau_time_repro = std::min(slowest_axis_plateau_time_repro, (FLOAT_T)axisInterval[i] * maxAccelStepsPerSquareSecond[i]); //  steps/s^2 * step/tick  Ticks/s^2
     }
   }
 
-  //LOG("slowest_axis_plateau_time_repro: "<<slowest_axis_plateau_time_repro<<std::endl);
-  //LOG("axisInterval[p->primaryAxis]: " << axisInterval[p->primaryAxis] << std::endl);
+  FLOAT_T maximumAccel = fullSpeed / minimumAccelerationTime;
 
-  // Errors for delta move are initialized in timer (except extruder)
-  errors[0] = errors[1] = errors[2] = deltas[primaryAxis] >> 1;
-  primaryAxisAcceleration = slowest_axis_plateau_time_repro / axisInterval[primaryAxis]; // a = v/t = F_CPU/(c*t): Steps/s^2
+  accel = std::min(requestedAccel, maximumAccel);
+  FLOAT_T idealTimeForAcceleration = fullSpeed / accel; // (m/s) / (m/s^2) = s
 
-  //Now we can calculate the new primary axis acceleration, so that the slowest axis max acceleration is not violated
-  //LOG("p->accelerationPrim: " << p->accelerationPrim << " steps/s²"<< std::endl);
+  // Calculate whether we're guaranteed to reach cruising speed.
+  FLOAT_T maximumAccelDistance = idealTimeForAcceleration * (fullSpeed / 2.0);
+  if (2.0 * maximumAccelDistance < distance) {
+    // This move has enough distance that we can accelerate from 0 to fullSpeed and back to 0.
+    // We'll definitely hit cruising speed.
+    flags |= FLAG_WILL_REACH_FULL_SPEED;
+  }
 
-
-  accelerationDistance2 = 2.0 * distance * slowest_axis_plateau_time_repro * fullSpeed / F_CPU; // m^2/s^2
   startSpeed = endSpeed = minSpeed = calculateSafeSpeed(minSpeeds);
-  // Can accelerate to full speed within the line
-  if (startSpeed * startSpeed + accelerationDistance2 >= fullSpeed * fullSpeed)
-    setMoveWillReachFullSpeed();
 
-  //LOG("fullInterval: " << p->fullInterval << " ticks" << std::endl);
-  //LOG("fullSpeed: " << p->fullSpeed << " m/s" << std::endl);
+  LOG("Speed in m/s:      " << fullSpeed << std::endl);
+  LOG("Accel in m/s²:     " << accel << std::endl);
+  LOG("Ticks :            " << timeInTicks << std::endl);
 
   invalidateStepperPathParameters();
 }
 
-FLOAT_T Path::calculateSafeSpeed(const std::vector<FLOAT_T>& minSpeeds) {
+FLOAT_T Path::calculateSafeSpeed(const VectorN& minSpeeds) {
   FLOAT_T safe = 1e15;
 
   // Cap the speed based on axis. 
@@ -243,38 +302,193 @@ FLOAT_T Path::calculateSafeSpeed(const std::vector<FLOAT_T>& minSpeeds) {
   return safe;
 }
 
+FLOAT_T Path::runFinalStepCalculations()
+{
+  updateStepperPathParameters();
+
+  for (auto& axisSteps : steps)
+  {
+    for (auto& step : axisSteps)
+    {
+      step.time = stepperPath.dilateTime(step.time);
+    }
+  }
+
+  LOG("accelSteps: " << stepperPath.accelSteps
+    << " cruiseSteps: " << stepperPath.cruiseSteps
+    << " decelSteps: " << stepperPath.decelSteps << std::endl);
+
+  return stepperPath.finalTime();
+}
+
+
 /** Update parameter used by updateTrapezoids
 
 Computes the acceleration/decelleration steps and advanced parameter associated.
 */
 void Path::updateStepperPathParameters() {
-  if (areParameterUpToDate() || isWarmUp())
+  if (areParameterUpToDate())
     return;
 
-  stepperPath.vMax = F_CPU / fullInterval; // maximum steps per second, we can reach   
-  //LOG("vMax for path is : " << p->vMax << " steps/s "<< std::endl);	
+  FLOAT_T cruiseSpeed = fullSpeed;
 
-  LOG( "Path::updateStepperPathParameters()"<<std::endl);
-  FLOAT_T startFactor = startSpeed * invFullSpeed;
-  FLOAT_T endFactor = endSpeed   * invFullSpeed;
-  stepperPath.vStart = stepperPath.vMax * startFactor; //starting speed
-  stepperPath.vEnd = stepperPath.vMax * endFactor;
-  LOG("Path::vStart is " << stepperPath.vStart << " steps/s" <<std::endl);
-  FLOAT_T vmax2 = stepperPath.vMax*stepperPath.vMax;
-  stepperPath.accelSteps = (((vmax2 - (stepperPath.vStart * stepperPath.vStart))
-    / (primaryAxisAcceleration * 2)) + 1); // Always add 1 for missing precision
-  stepperPath.decelSteps = (((vmax2 - (stepperPath.vEnd   * stepperPath.vEnd))
-    / (primaryAxisAcceleration * 2)) + 1);
+  FLOAT_T accelTime = (fullSpeed - startSpeed) / accel;
+  FLOAT_T decelTime = (fullSpeed - endSpeed) / accel;
 
-  LOG("Path::accelSteps before cap: " << stepperPath.accelSteps << " steps" <<std::endl);
-  if (stepperPath.accelSteps + stepperPath.decelSteps >= primaryAxisSteps) {   // can't reach limit speed
-    unsigned int red = (stepperPath.accelSteps + stepperPath.decelSteps + 2 - primaryAxisSteps) >> 1;
-    stepperPath.accelSteps = stepperPath.accelSteps - std::min(stepperPath.accelSteps, red);
-    stepperPath.decelSteps = stepperPath.decelSteps - std::min(stepperPath.decelSteps, red);
+  FLOAT_T accelDistance = (cruiseSpeed * cruiseSpeed - startSpeed * startSpeed) / (2.0 * accel);
+  FLOAT_T decelDistance = (cruiseSpeed * cruiseSpeed - endSpeed * endSpeed) / (2.0 * accel);
+  assert(accelDistance >= 0);
+  assert(decelDistance >= 0);
 
-    assert(!willMoveReachFullSpeed());
+  FLOAT_T cruiseDistance = distance - accelDistance - decelDistance;
+  FLOAT_T cruiseTime = cruiseDistance / cruiseSpeed;
+  
+  if (accelDistance + decelDistance > distance) {
+    //           cruiseSpeed                  // (no, C++, this isn't a multiline comment)
+    //               /\                       //
+    //              /  \                      //
+    //             /    \ endSpeed            //
+    //            /   ---d2                   //
+    //startSpeed /                            //
+    //           -----d1                      //
+    //
+    // vf^2 = vi^2 + 2*a*d
+    // -> d = (vf^2 - vi^2) / (2*a)
+    // distance = d1 + d2
+    // -> distance = (cruiseSpeed^2 - startSpeed^2) / (2*accel) + (endSpeed^2 - cruiseSpeed^2) / (2*-accel) // note the negative accel
+    // -> distance = (cruiseSpeed^2 - startSpeed^2) / (2*accel) - (endSpeed^2 - cruiseSpeed^2) / (2*accel)
+    // -> distance = (cruiseSpeed^2 - startSpeed^2 - endSpeed^2 + cruiseSpeed^2) / (2*accel)
+    // -> 2*accel*distance = 2*cruiseSpeed^2 - startSpeed^2 - endSpeed^2
+    // -> 2*accel*distance + startSpeed^2 + endSpeed^2 = 2*cruiseSpeed^2
+    // -> cruiseSpeed = sqrt(accel*distance + (startSpeed^2 + endSpeed^2) / 2)
+    cruiseSpeed = std::sqrt(accel * distance + (startSpeed * startSpeed + endSpeed * endSpeed) / 2.0);
+
+    // Try to reduce cruiseSpeed 1% so we get just a bit of cruising time. This makes the calculations
+    // below more stable.
+    cruiseSpeed = std::max(startSpeed, std::max(endSpeed, cruiseSpeed * 0.99));
+
+    accelTime = (cruiseSpeed - startSpeed) / accel;
+    decelTime = (cruiseSpeed - endSpeed) / accel;
+
+    accelDistance = (cruiseSpeed * cruiseSpeed - startSpeed * startSpeed) / (2.0 * accel);
+    decelDistance = (cruiseSpeed * cruiseSpeed - endSpeed * endSpeed) / (2.0 * accel);
+
+    cruiseDistance = distance - accelDistance - decelDistance;
+
+    if (cruiseDistance < 0) {
+      // As it turns out, the optimizer can over-accelerate on very short moves because it
+      // doesn't check that the end speed of a move is reachable from the start speed within
+      // limits. This hasn't been a problem because it only affects moves that are only a few
+      // steps in the first place. However, when it occurs, this assert will fire.
+      //assert(std::abs(cruiseDistance) < NEGLIGIBLE_ERROR);
+
+      if (accelDistance == 0) {
+	assert(accelTime == 0);
+
+	cruiseDistance = 0;
+	cruiseTime = 0;
+	cruiseSpeed = startSpeed;
+
+	decelDistance = distance;
+	decelTime = distance / ((cruiseSpeed + endSpeed) / 2.0);
+      }
+      else if (decelDistance == 0) {
+	assert(decelTime == 0);
+
+	cruiseDistance = 0;
+	cruiseTime = 0;
+	cruiseSpeed = endSpeed;
+
+	accelDistance = distance;
+	accelTime = distance / ((cruiseSpeed + startSpeed) / 2.0);
+      }
+      else {
+	assert(0);
+      }
+    }
+
+    cruiseTime = cruiseDistance / cruiseSpeed;
+
+    LOG("Move will not reach full speed" << std::endl);
   }
-  LOG("accelSteps: " << stepperPath.accelSteps << " steps" <<std::endl);
+
+  LOG("accelTime: " << accelTime << " cruiseTime: " << cruiseTime << " decelTime: " << decelTime << std::endl);
+  assert(accelTime >= 0 && cruiseTime >= 0 && decelTime >= 0);
+  assert(accelDistance >= 0 && cruiseDistance >= 0 && decelDistance >= 0);
+  assert(std::abs(distance - (accelDistance + cruiseDistance + decelDistance)) < NEGLIGIBLE_ERROR);
+
+  stepperPath.baseSpeed = baseSpeed;
+  stepperPath.startSpeed = startSpeed;
+  stepperPath.cruiseSpeed = cruiseSpeed;
+  stepperPath.endSpeed = endSpeed;
+  stepperPath.accel = accel;
+  stepperPath.distance = distance;
+
+  const FLOAT_T& Vi = startSpeed;
+  const FLOAT_T& Vc = cruiseSpeed;
+  const FLOAT_T& Vf = endSpeed;
+  const FLOAT_T& A = accel;
+  const FLOAT_T& D = distance;
+
+  const FLOAT_T Vi2 = Vi * Vi;
+  const FLOAT_T Vc2 = Vc * Vc;
+  const FLOAT_T Vf2 = Vf * Vf;
+
+  stepperPath.baseAccelEnd = (-(Vi2 - Vc2)) / (2 * A*Vc);
+  stepperPath.baseCruiseEnd = (Vf2 - Vc2 + 2 * A*D) / (2 * A*Vc);
+  stepperPath.baseMoveEnd = D / Vc;
+
+  stepperPath.moveEnd = (Vi2 - 2 * Vc*Vi + Vf2 - 2 * Vc*Vf + 2 * Vc2 + 2 * A*D) / (2 * A*Vc);
 
   joinFlags |= FLAG_JOIN_STEPPARAMS_COMPUTED;
+
+  assert(areParameterUpToDate());
+}
+
+FLOAT_T StepperPathParameters::dilateTime(FLOAT_T t) const
+{
+  const FLOAT_T& Vi = startSpeed;
+  const FLOAT_T& Vc = cruiseSpeed;
+  const FLOAT_T& Vf = endSpeed;
+  const FLOAT_T& A = accel;
+  const FLOAT_T& D = distance;
+
+  const FLOAT_T Vi2 = Vi * Vi;
+  const FLOAT_T Vc2 = Vc * Vc;
+  const FLOAT_T Vf2 = Vf * Vf;
+
+  assert(t >= 0);
+
+  t *= baseSpeed / cruiseSpeed;
+
+  FLOAT_T result = NAN;
+
+  if (t < baseAccelEnd)
+  {
+    accelSteps++;
+    result = (sqrt(2 * A*Vc*t + Vi2) - Vi) / A;
+  }
+  else if (t < baseCruiseEnd)
+  {
+    cruiseSteps++;
+    result = (2 * A*Vc*t + Vi2 + (-2)*Vc*Vi + Vc2) / (2 * A*Vc);
+  }
+  else if (t < baseMoveEnd)
+  {
+    decelSteps++;
+    result = (-(2 * Vc*sqrt((-2)*A*Vc*t + Vf2 + 2 * A*D) - Vi2 + 2 * Vc*Vi - Vf2 + (-2)*Vc2 + (-2)*A*D)) / (2 * A*Vc);
+  }
+  else
+  {
+    assert(0);
+  }
+
+  assert(!std::isnan(result));
+
+  return result;
+}
+
+FLOAT_T StepperPathParameters::finalTime() const
+{
+  return moveEnd;
 }
