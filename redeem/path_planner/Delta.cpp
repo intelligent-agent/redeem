@@ -275,7 +275,8 @@ void Delta::calculateMove(const IntVector3& deltaStart, const IntVector3& deltaE
     // no motion platform movement - this might be a retraction or somesuch
     return;
   }
-  if (c.worldStart.x == c.worldEnd.x && c.worldStart.y == c.worldEnd.y)
+  if ((c.deltaMotorEnd[0] - c.deltaMotorStart[0] == c.deltaMotorEnd[1] - c.deltaMotorStart[1])
+      && (c.deltaMotorEnd[0] - c.deltaMotorStart[0] == c.deltaMotorEnd[2] - c.deltaMotorStart[2]))
   {
     for (int axis = 0; axis < 3; axis++)
     {
