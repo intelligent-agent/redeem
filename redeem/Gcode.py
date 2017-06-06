@@ -56,16 +56,14 @@ class Gcode:
             charcter is not a digit (0-9) or a period (.). Example: M117this
             will work.
 
-            CRC (*nn) and, "(comment)"s are filtered out of the tokens list
+            CRC (*nn), "(comment)"s are also removed from result.
             """
-            # strip gcode parenthasized comments
+            # strip gcode comments
             self.message = re.sub(r"\(.*\)", "", self.message)
-            match = re.match(r"(M117)(?:$|\ |(?=[^0-9.]{1}))\s?(.*)", self.message, re.IGNORECASE)
-            if match:
-                self.tokens = [match.group(1).upper(), match.group(2).strip(" ")]
-            else:
-                self.tokens = re.findall(r"[A-Z][-+]?[0-9]*\.?[0-9]*\??", \
-                        "".join(self.message.split()).upper() )
+            self.tokens = re.findall(
+                   r"[A-Z][-+]?[0-9]*\.?[0-9]*\??", 
+                   "".join(self.message.split()).upper()
+                )
 
             # process line numbers and CRC, if present
             if self.tokens[0][0] == "N":  # Ok, checksum
@@ -111,6 +109,13 @@ class Gcode:
     def set_tokens(self, tokens):
         """ Set the tokens """
         self.tokens = tokens
+
+    def get_message(self):
+        """ 
+        Return raw received message (minus line numbers, CRC and gcode comments).
+        Useful for processing non-gcode-standards commands, like M117 and M574
+        """
+        return self.message
 
     def has_letter(self, letter):
         """ Check if the letter exists as token """
