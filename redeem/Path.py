@@ -140,11 +140,11 @@ class Path:
         start_theta, end_theta = np.arctan2(origin1, origin0)
 
         # clockwise angles are always increasing, adjust for +/- pi modulus
-        if start_theta <= end_theta and self.movement == Path.G2:
+        if start_theta <= end_theta and self.movement is Path.G2:
             start_theta = np.pi + abs(-np.pi - start_theta)
 
         # counter-clockwise anges are always decreasing, adjust for +/- modulus
-        if start_theta >= end_theta and self.movement == Path.G3:
+        if start_theta >= end_theta and self.movement is Path.G3:
             start_theta = -np.pi - abs(np.pi - start_theta)
 
         # determine the length of the arc in order to determine how many segments to split into
@@ -162,8 +162,9 @@ class Path:
         # for each coordinate along the arc, create a segment
         for index, segment in enumerate(zip(arc_0, arc_1)):
             segment_end = self._get_axes_point(segment)
-
             path = AbsolutePath(segment_end, self.speed, self.accel, self.cancelable, self.use_bed_matrix, False)
+            # these paths don't get added to the path planner directly, need to set printer manually (?)
+            path.printer = self.printer
             if index is not 0:
                 path.set_prev(path_segments[-1])
             else:

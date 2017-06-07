@@ -94,17 +94,17 @@ def show_plot(x0, y0, x1, y1, i, j, arc_x, arc_y, title=None):
 
 class TestArcSegments(unittest.TestCase):
 
-    def test_machinenet_example(self):
-        x0 = 0.0
-        y0 = 1.0
-
-        x1 = 1.2803
-        y1 = 1.5303
-        i = 0.750
-        j = 0.0
-
-        arc_x, arc_y = create_arc_segments(x0, y0, x1, y1, i, j)
-        show_plot(x0, y0, x1, y1, i, j, arc_x, arc_y, title="machinenet example cw")
+    # def test_machinenet_example(self):
+    #     x0 = 0.0
+    #     y0 = 1.0
+    #
+    #     x1 = 1.2803
+    #     y1 = 1.5303
+    #     i = 0.750
+    #     j = 0.0
+    #
+    #     arc_x, arc_y = create_arc_segments(x0, y0, x1, y1, i, j)
+    #     show_plot(x0, y0, x1, y1, i, j, arc_x, arc_y, title="machinenet example cw")
 
     def test_start_quadrant_3_end_quadrant_2_cw(self):
         x0 = -25
@@ -119,187 +119,187 @@ class TestArcSegments(unittest.TestCase):
         arc_x, arc_y = create_arc_segments(x0, y0, x1, y1, i, j, cw=True)
         show_plot(x0, y0, x1, y1, i, j, arc_x, arc_y, title='quadrant_3_end_quadrant_2_cw')
 
-    def test_start_quadrant_3_end_quadrant_2_ccw(self):
-        x0 = -25
-        y0 = 0
-
-        x1 = -8
-        y1 = 21.464
-
-        i = 17
-        j = 4
-
-        arc_x, arc_y = create_arc_segments(x0, y0, x1, y1, i, j, cw=False)
-        show_plot(x0, y0, x1, y1, i, j, arc_x, arc_y, title='quadrant_3_end_quadrant_2_ccw')
-
-    def test_start_quadrant_3_end_quadrant_4_cw(self):
-        x0 = -7
-        y0 = -6
-
-        x1 = 7
-        y1 = -2
-
-        i = 5
-        j = 9
-
-        arc_x, arc_y = create_arc_segments(x0, y0, x1, y1, i, j, cw=True)
-        show_plot(x0, y0, x1, y1, i, j, arc_x, arc_y, 'test_start_quadrant_3_end_quadrant_4_cw')
-
-    def test_start_quadrant_3_end_quadrant_4_ccw(self):
-        x0 = -7
-        y0 = -6
-
-        x1 = 7
-        y1 = -2
-
-        i = 5
-        j = 9
-
-        arc_x, arc_y = create_arc_segments(x0, y0, x1, y1, i, j, cw=False)
-        show_plot(x0, y0, x1, y1, i, j, arc_x, arc_y, 'test_start_quadrant_3_end_quadrant_4_ccw')
-
-    def test_start_quadrant_3_end_quadrant_1_cw(self):
-        x0 = -7
-        y0 = -6
-
-        x1 = 4.481
-        y1 = 11
-
-        i = 5
-        j = 9
-
-        arc_x, arc_y = create_arc_segments(x0, y0, x1, y1, i, j, cw=True)
-        show_plot(x0, y0, x1, y1, i, j, arc_x, arc_y, 'test_start_quadrant_3_end_quadrant_1_cw')
-
-    def test_start_quadrant_3_end_quadrant_1_ccw(self):
-        x0 = -7
-        y0 = -6
-
-        x1 = 4.481
-        y1 = 11
-
-        i = 5
-        j = 9
-
-        arc_x, arc_y = create_arc_segments(x0, y0, x1, y1, i, j, cw=False)
-        show_plot(x0, y0, x1, y1, i, j, arc_x, arc_y, 'test_start_quadrant_3_end_quadrant_1_ccw')
-
-    def test_start_quadrant_3_end_quadrant_3_cw(self):
-        x0 = -7
-        y0 = -6
-
-        x1 = -4
-        y1 = -7.1
-
-        i = 5
-        j = 9
-
-        arc_x, arc_y = create_arc_segments(x0, y0, x1, y1, i, j, cw=True)
-        show_plot(x0, y0, x1, y1, i, j, arc_x, arc_y, 'test_start_quadrant_3_end_quadrant_3_cw')
-
-    def test_start_quadrant_3_end_quadrant_3_ccw(self):
-        x0 = -7
-        y0 = -6
-
-        x1 = -4
-        y1 = -7.1
-
-        i = 5
-        j = 9
-
-        arc_x, arc_y = create_arc_segments(x0, y0, x1, y1, i, j, cw=False)
-        show_plot(x0, y0, x1, y1, i, j, arc_x, arc_y, 'test_start_quadrant_3_end_quadrant_3_ccw')
-
-    def test_quarter_circle_quadrant_1_cw(self):
-        x0 = 0.0
-        y0 = 12.0
-
-        x1 = 12
-        y1 = 0
-
-        i = 0
-        j = -12.0
-
-        arc_x, arc_y = create_arc_segments(x0, y0, x1, y1, i, j, cw=True)
-        show_plot(x0, y0, x1, y1, i, j, arc_x, arc_y, 'test_quarter_circle_quadrant_1_cw')
-
-    def test_quarter_circle_quadrant_1_ccw(self):
-        x0 = 0.0
-        y0 = 12.0
-
-        x1 = 12
-        y1 = 0
-
-        i = 0
-        j = -12.0
-
-        arc_x, arc_y = create_arc_segments(x0, y0, x1, y1, i, j, cw=False)
-        show_plot(x0, y0, x1, y1, i, j, arc_x, arc_y, 'test_quarter_circle_quadrant_1_ccw')
-
-    def test_three_quarter_circle_quadrant_2_ccw(self):
-        x0 = 0.0
-        y0 = 12.0
-
-        x1 = -12
-        y1 = 0
-
-        i = 0
-        j = -12.0
-
-        arc_x, arc_y = create_arc_segments(x0, y0, x1, y1, i, j, cw=False)
-        show_plot(x0, y0, x1, y1, i, j, arc_x, arc_y, 'test_three_quarter_circle_quadrant_2_ccw')
-
-    def test_inverted_start_end_point_cw(self):
-        x0 = 7
-        y0 = -2
-
-        x1 = -7
-        y1 = -6
-
-        i = -9
-        j = 5
-
-        arc_x, arc_y = create_arc_segments(x0, y0, x1, y1, i, j, cw=True)
-        show_plot(x0, y0, x1, y1, i, j, arc_x, arc_y, 'test_inverted_start_end_point_cw')
-
-    def test_inverted_start_end_point_ccw(self):
-        x0 = 7
-        y0 = -2
-
-        x1 = -7
-        y1 = -6
-
-        i = -9
-        j = 5
-
-        arc_x, arc_y = create_arc_segments(x0, y0, x1, y1, i, j, cw=False)
-        show_plot(x0, y0, x1, y1, i, j, arc_x, arc_y, 'test_inverted_start_end_point_ccw')
-
-    def test_full_circle_cw(self):
-        x0 = 0
-        y0 = 1
-
-        x1 = 0
-        y1 = 1
-
-        i = 0.750
-        j = 0
-
-        arc_x, arc_y = create_arc_segments(x0, y0, x1, y1, i, j, cw=True)
-        show_plot(x0, y0, x1, y1, i, j, arc_x, arc_y, 'test_full_circle_cw')
-
-    def test_full_circle_ccw(self):
-        x0 = 0
-        y0 = 1
-
-        x1 = 0
-        y1 = 1
-
-        i = 0.750
-        j = 0
-
-        arc_x, arc_y = create_arc_segments(x0, y0, x1, y1, i, j, cw=False)
-        show_plot(x0, y0, x1, y1, i, j, arc_x, arc_y, 'test_full_circle_ccw')
+    # def test_start_quadrant_3_end_quadrant_2_ccw(self):
+    #     x0 = -25
+    #     y0 = 0
+    #
+    #     x1 = -8
+    #     y1 = 21.464
+    #
+    #     i = 17
+    #     j = 4
+    #
+    #     arc_x, arc_y = create_arc_segments(x0, y0, x1, y1, i, j, cw=False)
+    #     show_plot(x0, y0, x1, y1, i, j, arc_x, arc_y, title='quadrant_3_end_quadrant_2_ccw')
+    #
+    # def test_start_quadrant_3_end_quadrant_4_cw(self):
+    #     x0 = -7
+    #     y0 = -6
+    #
+    #     x1 = 7
+    #     y1 = -2
+    #
+    #     i = 5
+    #     j = 9
+    #
+    #     arc_x, arc_y = create_arc_segments(x0, y0, x1, y1, i, j, cw=True)
+    #     show_plot(x0, y0, x1, y1, i, j, arc_x, arc_y, 'test_start_quadrant_3_end_quadrant_4_cw')
+    #
+    # def test_start_quadrant_3_end_quadrant_4_ccw(self):
+    #     x0 = -7
+    #     y0 = -6
+    #
+    #     x1 = 7
+    #     y1 = -2
+    #
+    #     i = 5
+    #     j = 9
+    #
+    #     arc_x, arc_y = create_arc_segments(x0, y0, x1, y1, i, j, cw=False)
+    #     show_plot(x0, y0, x1, y1, i, j, arc_x, arc_y, 'test_start_quadrant_3_end_quadrant_4_ccw')
+    #
+    # def test_start_quadrant_3_end_quadrant_1_cw(self):
+    #     x0 = -7
+    #     y0 = -6
+    #
+    #     x1 = 4.481
+    #     y1 = 11
+    #
+    #     i = 5
+    #     j = 9
+    #
+    #     arc_x, arc_y = create_arc_segments(x0, y0, x1, y1, i, j, cw=True)
+    #     show_plot(x0, y0, x1, y1, i, j, arc_x, arc_y, 'test_start_quadrant_3_end_quadrant_1_cw')
+    #
+    # def test_start_quadrant_3_end_quadrant_1_ccw(self):
+    #     x0 = -7
+    #     y0 = -6
+    #
+    #     x1 = 4.481
+    #     y1 = 11
+    #
+    #     i = 5
+    #     j = 9
+    #
+    #     arc_x, arc_y = create_arc_segments(x0, y0, x1, y1, i, j, cw=False)
+    #     show_plot(x0, y0, x1, y1, i, j, arc_x, arc_y, 'test_start_quadrant_3_end_quadrant_1_ccw')
+    #
+    # def test_start_quadrant_3_end_quadrant_3_cw(self):
+    #     x0 = -7
+    #     y0 = -6
+    #
+    #     x1 = -4
+    #     y1 = -7.1
+    #
+    #     i = 5
+    #     j = 9
+    #
+    #     arc_x, arc_y = create_arc_segments(x0, y0, x1, y1, i, j, cw=True)
+    #     show_plot(x0, y0, x1, y1, i, j, arc_x, arc_y, 'test_start_quadrant_3_end_quadrant_3_cw')
+    #
+    # def test_start_quadrant_3_end_quadrant_3_ccw(self):
+    #     x0 = -7
+    #     y0 = -6
+    #
+    #     x1 = -4
+    #     y1 = -7.1
+    #
+    #     i = 5
+    #     j = 9
+    #
+    #     arc_x, arc_y = create_arc_segments(x0, y0, x1, y1, i, j, cw=False)
+    #     show_plot(x0, y0, x1, y1, i, j, arc_x, arc_y, 'test_start_quadrant_3_end_quadrant_3_ccw')
+    #
+    # def test_quarter_circle_quadrant_1_cw(self):
+    #     x0 = 0.0
+    #     y0 = 12.0
+    #
+    #     x1 = 12
+    #     y1 = 0
+    #
+    #     i = 0
+    #     j = -12.0
+    #
+    #     arc_x, arc_y = create_arc_segments(x0, y0, x1, y1, i, j, cw=True)
+    #     show_plot(x0, y0, x1, y1, i, j, arc_x, arc_y, 'test_quarter_circle_quadrant_1_cw')
+    #
+    # def test_quarter_circle_quadrant_1_ccw(self):
+    #     x0 = 0.0
+    #     y0 = 12.0
+    #
+    #     x1 = 12
+    #     y1 = 0
+    #
+    #     i = 0
+    #     j = -12.0
+    #
+    #     arc_x, arc_y = create_arc_segments(x0, y0, x1, y1, i, j, cw=False)
+    #     show_plot(x0, y0, x1, y1, i, j, arc_x, arc_y, 'test_quarter_circle_quadrant_1_ccw')
+    #
+    # def test_three_quarter_circle_quadrant_2_ccw(self):
+    #     x0 = 0.0
+    #     y0 = 12.0
+    #
+    #     x1 = -12
+    #     y1 = 0
+    #
+    #     i = 0
+    #     j = -12.0
+    #
+    #     arc_x, arc_y = create_arc_segments(x0, y0, x1, y1, i, j, cw=False)
+    #     show_plot(x0, y0, x1, y1, i, j, arc_x, arc_y, 'test_three_quarter_circle_quadrant_2_ccw')
+    #
+    # def test_inverted_start_end_point_cw(self):
+    #     x0 = 7
+    #     y0 = -2
+    #
+    #     x1 = -7
+    #     y1 = -6
+    #
+    #     i = -9
+    #     j = 5
+    #
+    #     arc_x, arc_y = create_arc_segments(x0, y0, x1, y1, i, j, cw=True)
+    #     show_plot(x0, y0, x1, y1, i, j, arc_x, arc_y, 'test_inverted_start_end_point_cw')
+    #
+    # def test_inverted_start_end_point_ccw(self):
+    #     x0 = 7
+    #     y0 = -2
+    #
+    #     x1 = -7
+    #     y1 = -6
+    #
+    #     i = -9
+    #     j = 5
+    #
+    #     arc_x, arc_y = create_arc_segments(x0, y0, x1, y1, i, j, cw=False)
+    #     show_plot(x0, y0, x1, y1, i, j, arc_x, arc_y, 'test_inverted_start_end_point_ccw')
+    #
+    # def test_full_circle_cw(self):
+    #     x0 = 0
+    #     y0 = 1
+    #
+    #     x1 = 0
+    #     y1 = 1
+    #
+    #     i = 0.750
+    #     j = 0
+    #
+    #     arc_x, arc_y = create_arc_segments(x0, y0, x1, y1, i, j, cw=True)
+    #     show_plot(x0, y0, x1, y1, i, j, arc_x, arc_y, 'test_full_circle_cw')
+    #
+    # def test_full_circle_ccw(self):
+    #     x0 = 0
+    #     y0 = 1
+    #
+    #     x1 = 0
+    #     y1 = 1
+    #
+    #     i = 0.750
+    #     j = 0
+    #
+    #     arc_x, arc_y = create_arc_segments(x0, y0, x1, y1, i, j, cw=False)
+    #     show_plot(x0, y0, x1, y1, i, j, arc_x, arc_y, 'test_full_circle_ccw')
 
     # def test_inverted_start_end_point_cw_positive_radius_version(self):
     #     x0 = 7
