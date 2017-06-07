@@ -17,7 +17,7 @@ except ImportError:
 
 class M117(GCodeCommand):
     def execute(self, g):
-        text = g.tokens[0]
+        text = g.get_message()[len("M117"):]
         Alarm.action_command("display_message", text)
         #self.printer.comms["octoprint"].send_message(text)
 
