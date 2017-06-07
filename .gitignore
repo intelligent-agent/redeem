@@ -27,3 +27,7 @@ dist/
 Redeem.egg-info/
 build/
 sftp-config.json
+
+
+# Ignore temp directory
+tmp/

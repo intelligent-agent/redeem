@@ -44,7 +44,7 @@ class Path:
     Y_Z_ARC_PLANE = 2
 
     # max length of any segment in an arc
-    ARC_SEGMENT_LENGTH = 0.1 / 1000
+    ARC_SEGMENT_LENGTH = 1.0 / 1000
     
     def __init__(self, axes, speed, accel, cancelable=False, use_bed_matrix=True, use_backlash_compensation=True, enable_soft_endstops=True):
         """ The axes of evil, the feed rate in m/s and ABS or REL """
