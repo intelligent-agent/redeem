@@ -1,6 +1,5 @@
 from setuptools import setup, find_packages, Extension
 import numpy as np
-import unittest
 import os
 
 from distutils.sysconfig import get_config_vars
@@ -20,10 +19,6 @@ os.environ['OPT'] = " ".join(
     flag for flag in opt.split() if flag != '-Wstrict-prototypes'
 )
 
-def test_suite():
-    test_loader = unittest.TestLoader()
-    test_suite = test_loader.discover('redeem/tests', pattern='test_*.py')
-    return test_suite
 
 
 # Requirements for our application
@@ -109,6 +104,5 @@ setup(
             'redeem = redeem.Redeem:main'
         ]
     },
-    include_package_data = True,
-    test_suite='setup.test_suite'
+    include_package_data = True
 )
