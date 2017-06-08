@@ -34,7 +34,7 @@ class Gcode:
         """ Init; parse the token """
         try:
             self.message = packet["message"].split(";")[0]
-            self.message = self.message.strip(' \t\n\r')
+            self.message = self.message.strip('\t\n\r')
             self.parent = packet["parent"] if "parent" in packet else None
             self.prot = packet["prot"] if "prot" in packet else None
             if self.prot is None:
