@@ -9,6 +9,7 @@ License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 
 from GCodeCommand import GCodeCommand
 import os
+import logging
 try:
     from Printer import Printer
     from Path import Path
@@ -25,7 +26,7 @@ class M83(GCodeCommand):
                 self.printer.axes_relative.append(axis)
             if axis in self.printer.axes_absolute:
                 self.printer.axes_absolute.remove(axis)
-        #If all axes are relative now, change to absolute mode
+        #If all axes are relative now, change to relative mode
         if self.printer.axes_absolute == []:
             self.printer.movement = Path.RELATIVE
 
@@ -35,3 +36,5 @@ class M83(GCodeCommand):
     def get_long_description(self):
         return "Makes the extruder interpret extrusion values as relative positions."
 
+    def is_buffered(self):
+                return True

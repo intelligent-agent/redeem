@@ -42,29 +42,53 @@ class Gcode:
             self.has_crc = False
             self.answer = "ok"
             #print packet
-            if len(self.message) == 0:
+            if len(self.message.strip()) == 0:
                 #print packet
                 #logging.debug("Empty message")
                 self.gcode = "No-Gcode"
                 return
-            self.tokens = self.message.split(" ")
+
+            """
+            Tokenize gcode "words" per RS274/NFC v3
+
+            Redeem's built-in help '?' after a primary word is also supported.
+
+            M117 Exception: Text supplied to legacy malformed M117 should not
+            be capitalized or stripped of its whitespace. The first leading
+            space after M117 is optional (and ignored) so long as the first
+            charcter is not a digit (0-9) or a period (.). Example: M117this
+            will work.
+
+            CRC (*nn), "(comment)"s are also removed from result.
+            """
+            # strip gcode comments
+            self.message = re.sub(r"\(.*\)", "", self.message)
+            self.tokens = re.findall(
+                   r"[A-Z][-+]?[0-9]*\.?[0-9]*\??",
+                   "".join(self.message.split()).upper()
+                )
+
+            # process line numbers and CRC, if present
             if self.tokens[0][0] == "N":  # Ok, checksum
-                line_num = re.findall(r"[\d]+", self.message)[0]
+                line_num = re.findall(r"\d+", self.tokens[0])[0]
                 cmd = self.message.split("*")[0]  # Command
                 csc = self.message.split("*")[1]  # Command to compare with
                 if int(csc) != self._getCS(cmd):
                     logging.error("CRC error!")
-                # Remove crc stuff
-                self.message = self.message.\
-                    split("*")[0][(1+len(line_num))::].strip(" ")
                 self.line_number = int(line_num)  # Set the line number
                 Gcode.line_number += 1  # Increase the global counter
                 self.has_crc = True
+                self.tokens.pop(0) # remove the line number token
+                # Remove crc stuff from messages
+                self.message = self.message.\
+                    split("*")[0][(1+len(line_num))::].strip(" ")
 
-            # Parse
-            self.tokens = self.message.split(" ")
-            self.gcode = self.tokens.pop(0)  # gcode number
-            self.tokens = filter(None, self.tokens)
+            """
+            Retrieve primary gcode, exchanging any '.' for '_' for Python
+            class name compliance. Example: G29_1
+            """
+            self.gcode = self.tokens.pop(0).replace('.', '_')
+
         except Exception as e:
             self.gcode = "No-Gcode"
             logging.exception("Ooops: ")
@@ -91,6 +115,13 @@ class Gcode:
     def set_tokens(self, tokens):
         """ Set the tokens """
         self.tokens = tokens
+
+    def get_message(self):
+        """ 
+        Return raw received message (minus line numbers, CRC and gcode comments).
+        Useful for processing non-gcode-standards commands, like M117 and M574
+        """
+        return self.message
 
     def has_letter(self, letter):
         """ Check if the letter exists as token """

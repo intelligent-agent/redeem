@@ -131,17 +131,14 @@ private:
   // These fields change throughout the lifecycle of a Path
   unsigned int joinFlags;
   std::atomic_uint_fast32_t flags;
+  FLOAT_T maxJunctionSpeed;       /// Max. junction speed between this and next segment
 
   // These fields are constant after initialization
   FLOAT_T distance;               /// Total distance of the move in NUM_AXIS-dimensional space in meters
-  FLOAT_T baseSpeed;
   unsigned char moveMask;
-
-  // These fields are calculated
   unsigned long long timeInTicks; /// Time for completing a move (optimistically assuming it runs full speed the whole time)
   VectorN speeds;
   FLOAT_T fullSpeed;              /// Cruising speed in m/s
-  FLOAT_T maxJunctionSpeed;       /// Max. junction speed between this and next segment
   FLOAT_T startSpeed;             /// Starting speed in m/s
   FLOAT_T endSpeed;               /// Exit speed in m/s
   FLOAT_T minSpeed;               /// Minimum allowable speed for the move
@@ -158,20 +155,19 @@ public:
   Path& operator=(const Path&);
   Path& operator=(Path&&);
 
-  void initialize(const IntVectorN& start,
-    const IntVectorN& end,
+  void initialize(const IntVectorN& machineStart,
+    const IntVectorN& machineEnd,
+    const VectorN& worldStart,
+    const VectorN& worldEnd,
     const VectorN& stepsPerM,
-    FLOAT_T speed,
+    const VectorN& minSpeeds, /// Minimum allowable speeds in m/s
+    const VectorN& maxSpeeds, /// Maximum allowable speeds in m/s
+    const VectorN& maxAccelMPerSquareSecond,
+    FLOAT_T requestedSpeed,
+    FLOAT_T requestedAccel,
     int axisConfig,
     const Delta& delta,
     bool cancelable);
-
-  void calculate(const VectorN& axis_diff,
-		 const VectorN& minSpeeds,
-		 const VectorN& maxSpeeds,
-		 const VectorN& maxAccelMPerSquareSecond,
-		 FLOAT_T requestedTime,
-                 FLOAT_T requestedAccel);
 
   FLOAT_T runFinalStepCalculations();
 

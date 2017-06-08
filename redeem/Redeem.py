@@ -251,7 +251,7 @@ class Redeem:
 
         # Delta printer setup
         if printer.axis_config == Printer.AXIS_CONFIG_DELTA:
-            opts = ["Hez", "L", "r", "A_radial", "B_radial", "C_radial", "A_angular", "B_angular", "C_angular" ]
+            opts = ["L", "r", "A_radial", "B_radial", "C_radial", "A_angular", "B_angular", "C_angular" ]
             for opt in opts:
                 Delta.__dict__[opt] = printer.config.getfloat('Delta', opt)
 
@@ -448,7 +448,7 @@ class Redeem:
         pru_firmware = PruFirmware(
             dirname + "/firmware/firmware_runtime.c",
             dirname + "/firmware/firmware_runtime.bin",
-            dirname + "/firmware/firmware_endstops.p",
+            dirname + "/firmware/firmware_endstops.c",
             dirname + "/firmware/firmware_endstops.bin",
             self.printer, "/usr/bin/clpru", "/usr/bin/pasm",
             dirname + "/firmware/AM335x_PRU.cmd",

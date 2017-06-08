@@ -30,7 +30,6 @@ for details.
 
 
 class Delta:
-    Hez = 0.0601    # Distance head extends below the effector.
     L   = 0.322     # Length of the rod
     r   = 0.175    # Radius of the columns
 
