@@ -43,6 +43,8 @@ class PruTimer {
 	int mem_fd;
 	uint8_t *ddr_mem;
 	uint8_t *ddr_mem_end;
+
+	uint8_t *shared_mem;
 	
 	uint8_t *ddr_write_location; //Next available write location
 	uint32_t* ddr_nr_events; //location of number of events returned by the PRU
@@ -120,6 +122,8 @@ public:
 	void reset();
 	
 	void push_block(uint8_t* blockMemory, size_t blockLen, unsigned int unit, unsigned long totalTime);
+
+	size_t getStepsRemaining();
 };
 
 #endif /* defined(__PathPlanner__PruTimer__) */

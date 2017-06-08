@@ -164,3 +164,8 @@ void PathPlanner::resetBacklash()
 {
   backlash_state.zero();
 }
+
+FLOAT_T PathPlanner::getLastProbeDistance()
+{
+  return lastProbeDistance;
+}

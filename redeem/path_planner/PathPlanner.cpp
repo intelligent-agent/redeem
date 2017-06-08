@@ -46,6 +46,8 @@ PathPlanner::PathPlanner(unsigned int cacheSize) {
 	
   axis_config = AXIS_CONFIG_XY;
   has_slaves = false;
+  state.zero();
+  lastProbeDistance = 0;
 
   // set bed compensation matrix to identity
   matrix_bed_comp.resize(9, 0);
@@ -108,7 +110,8 @@ void PathPlanner::queueMove(VectorN endWorldPos,
 			    FLOAT_T speed, FLOAT_T accel, 
 			    bool cancelable, bool optimize, 
 			    bool enable_soft_endstops, bool use_bed_matrix, 
-			    bool use_backlash_compensation, int tool_axis) 
+			    bool use_backlash_compensation, bool is_probe,
+			    int tool_axis)
 {
   ////////////////////////////////////////////////////////////////////
   // PRE-PROCESSING
@@ -232,7 +235,7 @@ void PathPlanner::queueMove(VectorN endWorldPos,
 
   p.initialize(state, tweakedEndPos, startWorldPos, endWorldPos, axisStepsPerM,
     minSpeeds, maxSpeeds, maxAccelerationMPerSquareSecond,
-    speed, accel, axis_config, delta_bot, cancelable);
+    speed, accel, axis_config, delta_bot, cancelable, is_probe);
 
   if (p.isNoMove()) {
     LOG("Warning: no move path" << std::endl);
@@ -555,6 +558,8 @@ void PathPlanner::run() {
     }
     Path* cur = &lines[linesPos];
 
+    IntVectorN probeDistanceTraveled;
+
     // If the buffer is half or more empty and the line to print is an optimized one, 
     // wait for 500 ms again so that we can get some other path in the path planner buffer, 
     // and we do that until the buffer is not anymore half empty.
@@ -598,7 +603,6 @@ void PathPlanner::run() {
     // Only enable axes that are moving. If the axis doesn't need to move then it can stay disabled depending on configuration.
     cur->fixStartAndEndSpeed();
     if(!cur->areParameterUpToDate()){  // should never happen, but with bad timings???
-      LOG( "Path planner thread: Need to update parameters! This should not happen!" << std::endl);
       cur->updateStepperPathParameters();
     }
 
@@ -623,7 +627,16 @@ void PathPlanner::run() {
 
     LOG("Sending " << std::dec << linesPos << ", Start speed=" << cur->getStartSpeed() << ", end speed=" << cur->getEndSpeed() << std::endl);
 
-    runMove(moveMask, cancellableMask, cur->isSyncEvent(), cur->isSyncWaitEvent(), moveEndTime, cur->getSteps(), commandBlock, maxCommandsPerBlock);
+    runMove(moveMask, cancellableMask, cur->isSyncEvent(), cur->isSyncWaitEvent(), moveEndTime, cur->getSteps(), commandBlock, maxCommandsPerBlock,
+      cur->isProbeMove() ? &probeDistanceTraveled : nullptr);
+
+    if (cur->isProbeMove())
+    {
+      const VectorN startPos = machineToWorld(cur->getStartMachinePos());
+      const VectorN endPos = machineToWorld(cur->getStartMachinePos() + probeDistanceTraveled);
+
+      lastProbeDistance = vabs(endPos - startPos);
+    }
 
     //LOG("Current move time " << pru.getTotalQueuedMovesTime() / (double) F_CPU << std::endl);
 
@@ -647,11 +660,13 @@ void PathPlanner::runMove(
   const FLOAT_T moveEndTime,
   std::array<std::vector<Step>, NUM_AXES>& steps,
   std::unique_ptr<SteppersCommand[]> const &commands,
-  const size_t commandsLength) {
+  const size_t commandsLength,
+  IntVectorN* probeDistanceTraveled) {
 
   std::array<unsigned long long, NUM_AXES> finalStepTimes;
   std::array<size_t, NUM_AXES> stepIndex;
   size_t commandsIndex = 0;
+  std::vector<SteppersCommand> probeSteps;
   unsigned long long totalSteps = 0;
 
   finalStepTimes.fill(0);
@@ -764,10 +779,21 @@ void PathPlanner::runMove(
 
     if (commandsIndex == commandsLength) {
       pru.push_block((uint8_t*)&commands[0], sizeof(SteppersCommand)*commandsIndex, sizeof(SteppersCommand), commandsIndex);
+
+      if (probeDistanceTraveled)
+      {
+	probeSteps.reserve(probeSteps.size() + commandsIndex);
+
+	for (size_t i = 0; i < commandsIndex; i++)
+	{
+	  probeSteps.push_back(commands[i]);
+	}
+      }
+
       commandsIndex = 0;
 
       for (size_t i = 0; i < commandsLength; i++) {
-        commands[i] = {};
+	commands[i] = {};
       }
     }
   }
@@ -790,6 +816,16 @@ void PathPlanner::runMove(
 
   if (commandsIndex != 0) {
     pru.push_block((uint8_t*)&commands[0], sizeof(SteppersCommand)*commandsIndex, sizeof(SteppersCommand), commandsIndex);
+
+    if (probeDistanceTraveled)
+    {
+      probeSteps.reserve(probeSteps.size() + commandsIndex);
+
+      for (size_t i = 0; i < commandsIndex; i++)
+      {
+	probeSteps.push_back(commands[i]);
+      }
+    }
   }
 
   {
@@ -811,18 +847,42 @@ void PathPlanner::runMove(
 
     //assert((latestFinishTime - earliestFinishTime) / F_CPU_FLOAT < 10 * CPU_CYCLE_LENGTH); // all axes should finish within 10 PRU cycles
   }
-  
+
   LOG("move needed " << totalSteps << " steps" << std::endl);
 
   for (int i = 0; i < NUM_AXES; i++)
   {
     assert(stepIndex[i] == steps[i].size());
   }
+
+  if (probeDistanceTraveled)
+  {
+    pru.waitUntilFinished();
+    const size_t stepsRemaining = pru.getStepsRemaining();
+    const size_t stepsTraveled = probeSteps.size() - stepsRemaining;
+
+    assert(stepsRemaining < probeSteps.size());
+    IntVectorN deltasTraveled;
+
+    for (size_t i = 0; i < stepsTraveled; i++)
+    {
+      for (int axis = 0; axis < NUM_AXES; axis++)
+      {
+	const SteppersCommand& command = probeSteps[i];
+	if (command.step & (1 << axis))
+	{
+	  deltasTraveled[axis] += (command.direction & (1 << axis)) ? 1 : -1;
+	}
+      }
+    }
+    
+    *probeDistanceTraveled = deltasTraveled;
+  }
 }
 
-VectorN PathPlanner::getState()
+VectorN PathPlanner::machineToWorld(const IntVectorN& machinePos)
 {
-  VectorN output = state.toVectorN() / axisStepsPerM;
+  VectorN output = machinePos.toVectorN() / axisStepsPerM;
   Vector3 motionPos;
   switch (axis_config)
   {
@@ -830,13 +890,13 @@ VectorN PathPlanner::getState()
     motionPos = output.toVector3();
     break;
   case AXIS_CONFIG_H_BELT:
-    motionPos = hBeltToWorld(state.toVectorN().toVector3() / axisStepsPerM.toVector3());
+    motionPos = hBeltToWorld(machinePos.toVectorN().toVector3() / axisStepsPerM.toVector3());
     break;
   case AXIS_CONFIG_CORE_XY:
-    motionPos = coreXYToWorld(state.toVectorN().toVector3() / axisStepsPerM.toVector3());
+    motionPos = coreXYToWorld(machinePos.toVectorN().toVector3() / axisStepsPerM.toVector3());
     break;
   case AXIS_CONFIG_DELTA:
-    motionPos = delta_bot.deltaToWorld(state.toVectorN().toVector3() / axisStepsPerM.toVector3());
+    motionPos = delta_bot.deltaToWorld(machinePos.toVectorN().toVector3() / axisStepsPerM.toVector3());
     break;
   default:
     assert(0);
@@ -847,4 +907,9 @@ VectorN PathPlanner::getState()
   output[2] = motionPos.z;
 
   return output;
+}
+
+VectorN PathPlanner::getState()
+{
+  return machineToWorld(state);
 }

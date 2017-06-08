@@ -121,7 +121,7 @@ class PathPlanner {
 		 FLOAT_T speed, FLOAT_T accel, 
 		 bool cancelable, bool optimize, 
 		 bool enable_soft_endstops, bool use_bed_matrix, 
-		 bool use_backlash_compensation, int tool_axis);
+		 bool use_backlash_compensation, bool is_probe, int tool_axis);
   void runThread();
   void stopThread(bool join);
   void waitUntilFinished();
@@ -142,6 +142,7 @@ class PathPlanner {
   void setBacklashCompensation(VectorN set);
   void resetBacklash();
   VectorN getState();
+  FLOAT_T getLastProbeDistance();
   void suspend();
   void resume();
   void reset();

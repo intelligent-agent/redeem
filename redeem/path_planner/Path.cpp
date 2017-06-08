@@ -88,6 +88,7 @@ void Path::zero() {
   endSpeed = 0;
   minSpeed = 0;
   accel = 0;
+  startMachinePos.zero();
 
   stepperPath.zero();
 
@@ -121,6 +122,7 @@ Path& Path::operator=(const Path& path) {
   endSpeed = path.endSpeed;
   minSpeed = path.minSpeed;
   accel = path.accel;
+  startMachinePos = path.startMachinePos;
 
   stepperPath = path.stepperPath;
   steps = path.steps;
@@ -143,6 +145,7 @@ Path& Path::operator=(Path&& path) {
   endSpeed = path.endSpeed;
   minSpeed = path.minSpeed;
   accel = path.accel;
+  startMachinePos = path.startMachinePos;
 
   stepperPath = path.stepperPath;
   steps = std::move(path.steps);
@@ -212,15 +215,17 @@ void Path::initialize(const IntVectorN& machineStart,
   FLOAT_T requestedAccel,
   int axisConfig,
   const Delta& delta,
-  bool cancelable) {
+  bool cancelable,
+  bool is_probe) {
   this->zero();
 
   const IntVectorN machineMove = machineEnd - machineStart;
   const VectorN worldMove = worldEnd - worldStart;
   distance = vabs(worldMove);
+  startMachinePos = machineStart;
 
   joinFlags = 0;
-  flags = (cancelable ? FLAG_CANCELABLE : 0);
+  flags = (cancelable ? FLAG_CANCELABLE : 0) | (is_probe ? FLAG_PROBE : 0);
 
   assert(!std::isnan(distance));
 
