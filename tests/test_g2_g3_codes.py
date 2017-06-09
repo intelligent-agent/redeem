@@ -17,7 +17,7 @@ class G2G3CodesTest(TestCase):
         self.gcode_processor = self.redeem.printer.processor
 
         # the native planner handles processing the paths
-        # create mock so that replicape doesn't actually execute test commands
+        # create mock so that replicape doesn't send the paths to any connected stepper motors
         self.redeem.printer.path_planner.native_planner = Mock()
 
     def tearDown(self):
