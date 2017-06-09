@@ -24,10 +24,12 @@ os.environ['OPT'] = " ".join(
 # Requirements for our application
 # Note: WIP, not a complete list
 INSTALL_REQUIRES = [
-	"spidev==3.2.0", 
+    "spidev==3.2.0",
     "scipy",
     "numpy",
-    "python-smbus"
+    "sympy",
+    "python-smbus",
+    "mock"
 ]
 
 

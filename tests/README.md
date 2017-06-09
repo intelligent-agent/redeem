@@ -1,0 +1,1 @@
+In order to run this test module, run `python -m unittest discover tests` from parent directory.

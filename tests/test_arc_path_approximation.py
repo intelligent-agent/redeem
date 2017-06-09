@@ -33,9 +33,9 @@ class ArcPathTest(TestCase):
 
         # Plot
         plt.scatter(arc_x, arc_y, s=20, c=colors_arc, alpha=0.5)
-        plt.scatter((start['X']*1000), (start['Y']*1000), s=300, c=color_start, alpha=1, marker='h')
-        plt.scatter((finish['X']*1000), (finish['Y']*1000), s=100, c=color_end, alpha=1, marker='h')
-        plt.scatter((center['X']*1000), (center['Y']*1000), s=100, c=color_center, alpha=1, marker='h')
+        plt.scatter((start['X']*1000), (start['Y']*1000), s=300, c=color_start, alpha=0.25, marker='h')
+        plt.scatter((finish['X']*1000), (finish['Y']*1000), s=100, c=color_end, alpha=0.25, marker='h')
+        plt.scatter((center['X']*1000), (center['Y']*1000), s=100, c=color_center, alpha=0.25, marker='h')
 
         plt.title(title)
         plt.xlabel('x (mm)')
@@ -92,6 +92,13 @@ class ArcPathTest(TestCase):
 
         if show_plots:
             self._show_plot(start, finish, center, paths, title)
+
+    def test_very_small_arc(self):
+        start = {'X': 0.0/1000, 'Y': 1.0/1000}
+        finish = {'X': 1.2803/1000, 'Y': 1.5303/1000}
+        center = {'X': 0.750/1000, 'Y': 1.0/1000}
+
+        self._test_arc(start, finish, center, self.CCW, 'test_very_small_arcs')
 
     def test_machinenet_example_ccw(self):
 
@@ -227,3 +234,8 @@ class ArcPathTest(TestCase):
         center = {'Y': 0.0, 'X': 0.0}
 
         self._test_arc(to_m(start), to_m(end), to_m(center), self.CCW, 'test_three_quarter_circle_quadrant_2_ccw')
+
+    # def test_pos_radius_variant_cw
+    # def test_pos_radius_variant_ccw
+    # def test_neg_radius_variant_cw
+    # def test_neg_radius_variant_ccw

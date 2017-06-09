@@ -40,7 +40,10 @@ class G2(GCodeCommand):
             return
 
         # http://www.manufacturinget.org/2011/12/cnc-g-code-g02-and-g03/
-        
+        if g.has_letter('R'):
+            path.R = float(g.get_value_by_letter("R")) / 1000.0
+            return path
+
         if self.printer.arc_plane in [Path.X_Y_ARC_PLANE, Path.X_Z_ARC_PLANE]:
             path.I = float(g.get_value_by_letter("I"))/1000.0 if g.has_letter("I") else 0.0
 
@@ -60,20 +63,21 @@ class G2(GCodeCommand):
         self.printer.path_planner.add_path(path)
    
     def get_description(self):
-        return ("Clockwise arc (experimental, not tested) "
-               "")
+        return ("Clockwise arc")
 
     def is_buffered(self):
         return True
 
     def get_test_gcodes(self):
         return [
-            "G1 Y10"
-            "G2 X12.803 Y15.303 I7.50", 
+            "G17",
+            "G1 Y10",
+            "G2 X12.803 Y15.303 I7.50"
         ]
 
-class G02(GCodeCommand):
-    # alias for G2
+
+# alias for G2, since some CAD/CAM generate with leading zero
+class G02(G2):
     pass
 
 class G3(G2):
@@ -86,9 +90,9 @@ class G3(G2):
 
 
     def get_description(self):
-        return ("Counter-clockwise arc (experimental, not tested) "
-               "")
+        return ("Counter-clockwise arc")
 
+
+# alias for G3, since some CAD/CAM generate with leading zero
 class G03(G3):
-    # alias for G3
     pass

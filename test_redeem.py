@@ -52,9 +52,7 @@ def test_file(test):
 if __name__ == "__main__":
 
     test_str = """
-    G17
-    G1 Y1.0 F8.0
-    G2 X1.2803 Y1.5303 I.750
+    G28 Z0
     """    
     
     test_code(test_str)

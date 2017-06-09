@@ -22,7 +22,7 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
 """
 
 import numpy as np
-import logging
+import sympy as sp
 
 class Path:
     
@@ -44,7 +44,7 @@ class Path:
     Y_Z_ARC_PLANE = 2
 
     # max length of any segment in an arc
-    ARC_SEGMENT_LENGTH = 1.0 / 1000
+    ARC_SEGMENT_LENGTH = 1.0 / 1000  # TODO : make setting
     
     def __init__(self, axes, speed, accel, cancelable=False, use_bed_matrix=True, use_backlash_compensation=True, enable_soft_endstops=True):
         """ The axes of evil, the feed rate in m/s and ABS or REL """
@@ -118,19 +118,41 @@ class Path:
         # Path.Y_Z_ARC_PLANE
         return self.J, self.K
 
+    def _find_circle_center(self, start0, start1, end0, end1, radius):
+        """each circle defines all possible coordinates the arc center could be
+        the two circles intersect at the possible centers of the arc radius"""
+        c1 = sp.Circle(sp.Point(start0, start1), abs(radius))
+        c2 = sp.Circle(sp.Point(end0, end1), abs(radius))
+
+        intersection = c1.intersection(c2)
+
+        if len(intersection) < 1:
+            raise Exception("radius circles do not intersect")  # TODO : proper way of handling GCode error (?)
+        if len(intersection) < 2 or r > 0:  # single intersection or "positive" radius center point
+            return intersection[0].x, intersection[0].y
+        return intersection[1].x, intersection[1].y  # "negative" radius center point
+
+    # Performance may not be a concern; G2/G3 seem only to be used by CNC mills/lathes which have lower gcode throughput
+    # If performance is an issue, move functionality to `PathPlannerNative`
     def get_arc_segments(self):
-        """Returns paths that approximate an arc"""
+        """Returns paths that approximated an arc."""
         #  reference : http://www.manufacturinget.org/2011/12/cnc-g-code-g02-and-g03/
 
         # isolate dimensions relevant for the active plane (eg X,Y for XY plane)
         start0, start1 = self._get_point_on_plane(self.prev.ideal_end_pos)
         end0, end1 = self._get_point_on_plane(self.ideal_end_pos)
-        offset0, offset1 = self._get_offset_on_plane()
 
-        radius = np.sqrt(offset0 ** 2 + offset1 ** 2)
+        # 'R' variant gives radius, need to calculate circle center
+        if hasattr(self, 'R'):
+            radius = self.R
+            circle0, circle1 = self._find_circle_center(start0, start1, end0, end1, radius)
+        # I/J/K gives offset, need to calculate radius and circle center
+        else:
+            offset0, offset1 = self._get_offset_on_plane()
+            radius = np.sqrt(offset0 ** 2 + offset1 ** 2)
 
-        # calculate the arc center
-        circle0, circle1 = start0 + offset0, start1 + offset1
+            # calculate the arc center
+            circle0, circle1 = start0 + offset0, start1 + offset1
 
         # arctan2 defined with center of circle at 0,0. adjust other dimensions to match
         origin1 = (start1-circle1, end1-circle1)
@@ -154,6 +176,7 @@ class Path:
         # create equally spaced angles (in radians) from start to end
         arc_thetas = np.linspace(start_theta + 2 * np.pi, end_theta + 2 * np.pi, num_segments)
 
+        # calculate all the points along the arc
         arc_0 = circle0 + radius * np.cos(arc_thetas)
         arc_1 = circle1 + radius * np.sin(arc_thetas)
 
@@ -162,8 +185,9 @@ class Path:
         # for each coordinate along the arc, create a segment
         for index, segment in enumerate(zip(arc_0, arc_1)):
             segment_end = self._get_axes_point(segment)
+            print('segment: {}'.format(segment_end))
             path = AbsolutePath(segment_end, self.speed, self.accel, self.cancelable, self.use_bed_matrix, False)
-            # these paths don't get added to the path planner directly, need to set printer manually (?)
+            # in order to set previous, printer attribute needs to be set based on the original path's printer
             path.printer = self.printer
             if index is not 0:
                 path.set_prev(path_segments[-1])
