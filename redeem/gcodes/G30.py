@@ -174,7 +174,7 @@ class G30_1(GCodeCommand):
         #should be correct, assuming probe starts at Z(5), requested Z(0)  probe Z(-0.3), adjusted global Z should be 5.3 
         # assuming probe starts at Z(5), requested Z(-0.2), probe Z(-0.3), adjusted global Z should be 5.1
     
-        Z_adjusted = point["Z"] - bed_dist + Z_new
+        Z_adjusted = point["Z"] - bed_dist - Z_new
         logging.debug("Bed dist: "+str(bed_dist)+" mm")
         logging.debug("Old Z{}, New Z{}.".format(point["Z"], Z_adjusted))
 
