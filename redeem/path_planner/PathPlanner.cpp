@@ -293,8 +293,20 @@ void PathPlanner::queueMove(VectorN endWorldPos,
   // Now swap p into the path queue - note that we shouldn't refer to p after this because it won't contain anything useful
   qp = std::move(p);
   
-  state = endPos; // update the new state of the machine
-  LOG("new state: " << state[0] << " " << state[1] << " " << state[2] << std::endl);
+  // capture state so we can check it after a probe
+  const IntVectorN startPos = state;
+  
+  if(!is_probe)
+  {
+    state = endPos; // update the new state of the machine
+    LOG("new state: " << state[0] << " " << state[1] << " " << state[2] << std::endl);
+  }
+  else
+  {
+    LOG("probe move - not updating state" << std::endl);
+  }
+
+  
 
   ////////////////////////////////////////////////////////////////////
   // PERFORM PLANNING
@@ -319,6 +331,17 @@ void PathPlanner::queueMove(VectorN endWorldPos,
     }
     notifyIfPathQueueIsReadyToPrint();
   }
+
+  if(is_probe)
+  {
+    LOG("Probe Move - waiting for the queue to empty");
+    std::unique_lock<std::mutex> lk(line_mutex);
+    pathQueueHasSpace.wait(lk, [this] { return linesCount==0 || stop; });
+
+    assert(state != startPos);
+  }
+
+  
 
   PyEval_RestoreThread(_save);
 }
@@ -633,7 +656,10 @@ void PathPlanner::run() {
     if (cur->isProbeMove())
     {
       const VectorN startPos = machineToWorld(cur->getStartMachinePos());
-      const VectorN endPos = machineToWorld(cur->getStartMachinePos() + probeDistanceTraveled);
+
+      assert(state == cur->getStartMachinePos());
+      state = cur->getStartMachinePos() + probeDistanceTraveled;
+      const VectorN endPos = getState();
 
       lastProbeDistance = vabs(endPos - startPos);
     }

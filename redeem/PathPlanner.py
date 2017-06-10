@@ -379,22 +379,15 @@ class PathPlanner:
         z_dist = self.native_planner.getLastProbeDistance()
         logging.debug("Probe distance : "+str(z_dist))
         
-        # make a move to take us back to where we started
-        end   = {"Z":z_dist}
-        path = RelativePath(end, speed, accel, 
+        # the path planner has kept track of our position - ask it to move back
+        path = AbsolutePath(start_pos, speed, accel, 
                             cancelable=True, 
                             use_bed_matrix=True,
                             use_backlash_compensation=True, 
                             enable_soft_endstops=False)
         self.add_path(path)
         self.wait_until_done()
-        
-        # reset position back to where we actually are
-        path = G92Path({"Z": start_pos["Z"]}, use_bed_matrix=True)
-        self.add_path(path)
-        self.wait_until_done()
-        start_state = self.native_planner.getState()
-        
+
         # tell the printer we are no longer in homing mode (updates firmware if required)     
         self.printer.homing(False)
         

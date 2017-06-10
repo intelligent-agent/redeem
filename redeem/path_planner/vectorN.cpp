@@ -322,3 +322,21 @@ IntVectorN operator-(const IntVectorN& v1, const IntVectorN &v2)
 
   return result;
 }
+
+bool operator==(const IntVectorN &v1, const IntVectorN &v2)
+{
+  for (int i = 0; i < NUM_AXES; i++)
+  {
+    if(v1[i] != v2[i])
+    {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+bool operator!=(const IntVectorN &v1, const IntVectorN &v2)
+{
+  return !(v1 == v2);
+}
