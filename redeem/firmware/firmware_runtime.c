@@ -74,7 +74,7 @@ int main(void) {
 	*GPIO2_CLEARDATAOUT = gpio2;
 	*GPIO3_CLEARDATAOUT = gpio3;
 
-    g_stepsRemaining = 0;
+	g_stepsRemaining = 0;
 
 	while(1)
 	{
