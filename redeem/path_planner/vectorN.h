@@ -103,7 +103,9 @@ struct IntVectorN {
 IntVectorN operator+(const IntVectorN &v1, const IntVectorN &v2);
 /// Binary - returns new vector (v1 - v2).
 IntVectorN operator-(const IntVectorN &v1, const IntVectorN &v2);
-
-
+/// Binary == check equality
+bool operator==(const IntVectorN &v1, const IntVectorN &v2);
+/// Binaru != check inequality
+bool operator!=(const IntVectorN &v1, const IntVectorN &v2);
 
 #endif

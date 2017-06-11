@@ -47,6 +47,7 @@
 #define FLAG_SYNC                  (1 << 5)
 #define FLAG_SYNC_WAIT             (1 << 6)
 #define FLAG_USE_PRESSURE_ADVANCE  (1 << 7)
+#define FLAG_PROBE                 (1 << 8)
 
 /** Are the step parameter computed */
 #define FLAG_JOIN_STEPPARAMS_COMPUTED (1 << 0)
@@ -143,6 +144,7 @@ private:
   FLOAT_T endSpeed;               /// Exit speed in m/s
   FLOAT_T minSpeed;               /// Minimum allowable speed for the move
   FLOAT_T accel;                  /// Acceleration in m/s^2
+  IntVectorN startMachinePos;     /// Starting position of the machine
 
   StepperPathParameters stepperPath;
   std::array<std::vector<Step>, NUM_AXES> steps;
@@ -167,7 +169,8 @@ public:
     FLOAT_T requestedAccel,
     int axisConfig,
     const Delta& delta,
-    bool cancelable);
+    bool cancelable,
+    bool is_probe);
 
   FLOAT_T runFinalStepCalculations();
 
@@ -250,6 +253,10 @@ public:
     return flags & FLAG_USE_PRESSURE_ADVANCE;
   }
 
+  inline bool isProbeMove() {
+    return flags & FLAG_PROBE;
+  }
+
   inline bool isNoMove() {
     return (moveMask & 255) == 0;
   }
@@ -322,6 +329,10 @@ public:
   /// distance traveled. It's useful because it doesn't involve time.
   inline FLOAT_T getAccelerationDistance2() {
     return 2.0 * distance * accel;
+  }
+
+  const IntVectorN& getStartMachinePos() {
+    return startMachinePos;
   }
 
   std::array<std::vector<Step>, NUM_AXES>& getSteps() {
