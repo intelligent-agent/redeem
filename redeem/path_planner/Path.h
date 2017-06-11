@@ -149,7 +149,7 @@ private:
   StepperPathParameters stepperPath;
   std::array<std::vector<Step>, NUM_AXES> steps;
 
-  FLOAT_T calculateSafeSpeed(const VectorN& minSpeeds);
+  FLOAT_T calculateSafeSpeed(const VectorN& worldMove, const VectorN& maxSpeedJumps);
 
 public:
   Path();
@@ -162,7 +162,7 @@ public:
     const VectorN& worldStart,
     const VectorN& worldEnd,
     const VectorN& stepsPerM,
-    const VectorN& minSpeeds, /// Minimum allowable speeds in m/s
+    const VectorN& maxSpeedJumps, /// Maximum allowable speed jumps in m/s
     const VectorN& maxSpeeds, /// Maximum allowable speeds in m/s
     const VectorN& maxAccelMPerSquareSecond,
     FLOAT_T requestedSpeed,
