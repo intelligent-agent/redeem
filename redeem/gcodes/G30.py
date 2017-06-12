@@ -24,7 +24,7 @@ class G30(GCodeCommand):
 
     def execute(self, g):
         if g.has_letter("P"): # Load point
-            index = int(g.get_value_by_letter("P"))
+            index = g.get_int_by_letter("P")
             point = self.printer.probe_points[index]
         else:
             # If no probe point is specified, use current pos
@@ -35,27 +35,27 @@ class G30(GCodeCommand):
             logging.debug("G30: current position (mm) :  X{} Y{} Z{}".format(point["X"], point["Y"], point["Z"]))
             
         if g.has_letter("X"): # Override X
-            point["X"] = float(g.get_value_by_letter("X"))
+            point["X"] = g.get_float_by_letter("X")
         if g.has_letter("Y"): # Override Y
-            point["Y"] = float(g.get_value_by_letter("Y"))
+            point["Y"] = g.get_float_by_letter("Y")
         if g.has_letter("Z"): # Override Z
-            point["Z"] = float(g.get_value_by_letter("Z"))        
+            point["Z"] = g.get_float_by_letter("Z")        
 
         # Get probe length, if present, else use value from config. 
         if g.has_letter("D"):
-            probe_length = float(g.get_value_by_letter("D")) / 1000.
+            probe_length = g.get_float_by_letter("D") / 1000.
         else:
             probe_length = self.printer.config.getfloat('Probe', 'length')
 
         # Get probe speed, if present, else use value from config. 
         if g.has_letter("F"):
-            probe_speed = float(g.get_value_by_letter("F")) / 60000.0
+            probe_speed = g.get_float_by_letter("F") / 60000.0
         else:
             probe_speed = self.printer.config.getfloat('Probe', 'speed')
         
         # Get acceleration, if present, else use value from config.
         if g.has_letter("A"):
-            probe_accel = float(g.get_value_by_letter("A"))
+            probe_accel = g.get_float_by_letter("A")
         else:
             probe_accel = self.printer.config.getfloat('Probe', 'accel')
         
@@ -129,26 +129,26 @@ class G30_1(GCodeCommand):
                 g.prot,
                 "Warning: Y not supported for G30.1, proceeding as if none existed.")
         if g.has_letter("Z"): # Override Z
-            Z_new = float(g.get_value_by_letter("Z"))
+            Z_new = g.get_float_by_letter("Z")
         else:
             Z_new= 0
            
         # Usable letters listed here          
         # Get probe length, if present, else use value from config. 
         if g.has_letter("D"):
-            probe_length = float(g.get_value_by_letter("D")) / 1000.
+            probe_length = g.get_float_by_letter("D") / 1000.
         else:
             probe_length = self.printer.config.getfloat('Probe', 'length')
   
         # Get probe speed. If not preset, use printers curent speed. 
         if g.has_letter("F"):
-            probe_speed = float(g.get_value_by_letter("F")) / 60000.0
+            probe_speed = g.get_float_by_letter("F") / 60000.0
         else:
             probe_speed = self.printer.config.getfloat('Probe', 'speed')
         
         # Get acceleration. If not present, use value from config.        
         if g.has_letter("A"):
-            probe_accel = float(g.get_value_by_letter("A"))
+            probe_accel = g.get_float_by_letter("A")
         else:
             probe_accel = self.printer.config.getfloat('Probe', 'accel')
         # what does use_bed_matrix do?

@@ -34,20 +34,20 @@ class G34(GCodeCommand):
 
         # Get probe length, if present, else use 1 cm.
         if g.has_letter("D"):
-            probe_length = float(g.get_value_by_letter("D"))
+            probe_length = g.get_float_by_letter("D")
         else:
             probe_length = 1000. * self.printer.config.getfloat('Probe',
                                                                 'length')
 
         # Get probe speed. If not preset, use printers current speed.
         if g.has_letter("F"):
-            probe_speed = float(g.get_value_by_letter("F")) / 60000.0
+            probe_speed = g.get_float_by_letter("F") / 60000.0
         else:
             probe_speed = self.printer.config.getfloat('Probe', 'speed')
 
         # Get acceleration. If not present, use value from config.
         if g.has_letter("A"):
-            probe_accel = float(g.get_value_by_letter("A"))
+            probe_accel = g.get_float_by_letter("A")
         else:
             probe_accel = self.printer.config.getfloat('Probe', 'accel')
 

@@ -19,7 +19,7 @@ class G2(GCodeCommand):
     def execute_common(self, g):
         if g.has_letter("F"):  # Get the feed rate
             # Convert from mm/min to SI unit m/s
-            self.printer.feed_rate = float(g.get_value_by_letter("F"))
+            self.printer.feed_rate = g.get_float_by_letter("F")
             self.printer.feed_rate /= 60000.0
             g.remove_token_by_letter("F")
         smds = {}

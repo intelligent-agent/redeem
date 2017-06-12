@@ -26,7 +26,7 @@ class M608(GCodeCommand):
         # Tokens present, process tokens
         for axis in self.printer.axes_zipped:
             if g.has_letter(axis):
-                slave = g.get_value_by_letter(axis).upper()
+                slave = g.get_int_by_letter(axis).upper()
                 if slave == "":
                     logging.info("Axis {} has no slaves".format(axis))
                     self.printer.send_message(g.prot, "Axis {} is now slaveless".format(axis))

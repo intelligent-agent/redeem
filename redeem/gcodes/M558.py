@@ -21,7 +21,7 @@ class M558(GCodeCommand):
 
     def execute(self, g):
         if g.has_letter("P"):
-            t = int(g.get_value_by_letter("P"))
+            t = g.get_int_by_letter("P")
         else:
             logging.warning("M558: Missing P-parameter")
             return         

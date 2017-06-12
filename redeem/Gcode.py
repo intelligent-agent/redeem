@@ -106,7 +106,7 @@ class Gcode:
 
     def token_value(self, index):
         """ Get the value after the letter """
-        return self.tokens[index][1::]
+        return float(self.tokens[index][1::]) * self.printer.factor
 
     def get_tokens(self):
         """ Return the tokens """
@@ -130,24 +130,29 @@ class Gcode:
                 return True
         return False
 
-    def get_value_by_letter(self, letter):
+    def __get_value_by_letter(self, letter):
         for token in self.tokens:
             if token[0] == letter:
                 return token[1::]
         return None
 
-    def get_float_by_letter(self, letter, default):
+    def get_float_by_letter(self, letter, default=0.0):
         if self.has_letter(letter):
-            if self.has_letter_value(letter):
-                return float(self.get_value_by_letter(letter))
+            try:
+                return float(self.__get_value_by_letter(letter)) * self.printer.factor
+            except TypeError:
+                pass
         return default
 
-    def get_int_by_letter(self, letter, default):
+    def get_int_by_letter(self, letter, default=0):
         """ Get an int or return a default value """
         if self.has_letter(letter):
-            # Convert to float first since Cura 2.1 sends M104 as 255.0
-            return int(float(self.get_value_by_letter(letter)))
-        return int(default)
+            try:
+                # Convert to float first since Cura 2.1 sends M104 as 255.0
+                return int(float(self.__get_value_by_letter(letter)) * self.printer.factor)
+            except TypeError:
+                pass
+        return default
 
     def has_letter_value(self, letter):
         for token in self.tokens:
@@ -166,8 +171,13 @@ class Gcode:
 
     def get_tokens_as_dict(self):
         """ Return the remaining tokans as a dict"""
-        return {t[0]: t[1:] for t in self.get_tokens()}
-
+        tad = {}
+        for t in self.get_tokens():
+            try:
+                tad[t[0]] = float(t[1:]) * self.printer.factor
+            except TypeError:
+                tad[t[0]] = ""
+        return tad 
 
     def _getCS(self, cmd):
         """ Compute a Checksum of the letters in the command """

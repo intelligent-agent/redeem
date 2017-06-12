@@ -21,22 +21,22 @@ class M557(GCodeCommand):
 
     def execute(self, g):
         if g.has_letter("P"):
-            p = int(g.get_value_by_letter("P"))
+            p = g.get_int_by_letter("P")
         else:
             logging.warning("M557: Missing P-parameter")
             return         
         if g.has_letter("X"):
-            X = float(g.get_value_by_letter("X"))
+            X = g.get_float_by_letter("X")
         else:
             logging.warning("M557: Missing X-parameter")
             return
         if g.has_letter("Y"):
-            Y = float(g.get_value_by_letter("Y"))
+            Y = g.get_float_by_letter("Y")
         else:
             logging.warning("M557: Missing Y-parameter")
             return
         if g.has_letter("Z"):
-            Z = float(g.get_value_by_letter("Z"))
+            Z = g.get_float_by_letter("Z")
         else:
             logging.warning("M557: Missing Z-parameter")
             Z = 0

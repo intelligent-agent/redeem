@@ -22,12 +22,12 @@ class G0(GCodeCommand):
     def execute(self, g):
         if g.has_letter("F"):  # Get the feed rate
             # Convert from mm/min to SI unit m/s
-            self.printer.feed_rate = float(g.get_value_by_letter("F"))
+            self.printer.feed_rate = g.get_float_by_letter("F")
             self.printer.feed_rate /= 60000.0
             g.remove_token_by_letter("F")
         if  g.has_letter("Q"):  # Get the Accel
             # Convert from mm/min^2 to SI unit m/s^2
-            self.printer.accel = float(g.get_value_by_letter("Q"))
+            self.printer.accel = g.get_float_by_letter("Q")
             self.printer.accel /= 3600000.0
             g.remove_token_by_letter("Q")
         smds = {}

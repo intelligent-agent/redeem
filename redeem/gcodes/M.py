@@ -33,7 +33,7 @@ class M(GCodeCommand):
         else:
             highlight = ""
             if g.has_letter("S"):
-                highlight = g.get_value_by_letter("S")
+                highlight = g.get_int_by_letter("S")
                 #print("Highlight: "+str(highlight))
             for gcode, desc in sorted(gcodes.items()):
                 if gcode[0] == "M":
