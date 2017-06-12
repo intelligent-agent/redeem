@@ -30,4 +30,5 @@ sftp-config.json
 
 
 # Ignore temp directory
-tmp/
+*.svg
+

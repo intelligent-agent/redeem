@@ -185,7 +185,6 @@ class Path:
         # for each coordinate along the arc, create a segment
         for index, segment in enumerate(zip(arc_0, arc_1)):
             segment_end = self._get_axes_point(segment)
-            print('segment: {}'.format(segment_end))
             path = AbsolutePath(segment_end, self.speed, self.accel, self.cancelable, self.use_bed_matrix, False)
             # in order to set previous, printer attribute needs to be set based on the original path's printer
             path.printer = self.printer
