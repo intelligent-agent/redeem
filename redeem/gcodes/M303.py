@@ -31,18 +31,18 @@ import logging
 class M303(GCodeCommand):
 
     def execute(self, g):
-        heater_nr = g.get_int_by_letter("E", 0)
+        heater_nr = g.get_int_by_letter("H", 0)
         heater_name = ["HBP", "E", "H", "A", "B", "C"][heater_nr+1] # Map to name
         if not heater_name in self.printer.heaters:
             logging.warning("M303: Heater does not exist")
             return
         heater = self.printer.heaters[heater_name]
         temp     = g.get_float_by_letter("S", 200.0)        
-        cycles   = max(3, g.get_int_by_letter("C", 4))       
+        cycles   = max(3, g.get_int_by_letter("N", 4))       
         pre_cal  = bool(g.get_int_by_letter("P", 0))
-        tuning_algo_nr = g.get_int_by_letter("Q", 0)
+        tuning_algo_nr = g.get_int_by_letter("L", 0)
         if tuning_algo_nr not in [0, 1]:
-            logging.warning("Unknown uning algorithm '{}'. Use one of 0, 1. Choosing 0.".format(tuning_algo_nr))
+            logging.warning("Unknown tuning algorithm '{}'. Use one of 0, 1. Choosing 0.".format(tuning_algo_nr))
             tuning_algo_nr = 0
         tuning_algo = ["TL","ZN"][tuning_algo_nr]
 
@@ -82,12 +82,12 @@ class M303(GCodeCommand):
             "and Derivative (Kd) values for the hotend or "
             "bed (E-1). Send the appropriate code and wait "
             "for the output to update the firmware. "
-            "E<0 or 1> overrides the extruder. Use E-1 for heated bed. \n"
+            "H<0 or 1> overrides the extruder. Use P-1 for heated bed. \n"
             "Default is the 'E' extruder with index 0. \n"
             "S overrides the temperature to calibrate for. Default is 200. \n"
-            "C overrides the number of cycles to run, default is 4 \n"
+            "N overrides the number of cycles to run, default is 4 \n"
             "P (0,1) Enable pre-calibration. Useful for systems with very high power\n"
-            "Q Tuning algorithm. 0 = Tyreus-Luyben, 1 = Zieger-Nichols classic")
+            "L Tuning algorithm. 0 = Tyreus-Luyben, 1 = Zieger-Nichols classic")
 
 
 

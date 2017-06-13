@@ -15,7 +15,12 @@ class M910(GCodeCommand):
 
     def execute(self, g):
         for i in range(g.num_tokens()):
-            self.printer.steppers[g.token_letter(i)].set_decay(int(g.token_value(i)))
+            letter = g.token_letter(i)
+            if g.has_value(i):
+                val = int(g.token_value(i, factored=False))
+                if letter in self.printer.steppers:
+                    self.printer.steppers[letter].set_decay(val)
+                    logging.debug("Stepper %s decay set to %d", letter, val)
 
     def get_description(self):
         return "Set stepper controller decay mode"

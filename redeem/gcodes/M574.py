@@ -48,12 +48,12 @@ class M574(GCodeCommand):
 
     def get_long_description(self):
         return ("If no tokens are given, return the current end stop config. "
-                "To set the end stop config: "
+                "To set the end stop config: \n"
                 "This G-code takes one end stop, and one configuration "
                 "where the configuration is which stepper motors to stop and "
-                "the direction in which to stop it. Example:\r\n"
-                "    M574 X1 x_ccw\r\n"
-                "    (The single space separators are required.)\r\n"
+                "the direction in which to stop it.\n \n Example:\n"
+                "    M574 X1 x_ccw\n"
+                "    (The single space separators are required.)\n \n"
                 "This will cause the X axis to stop moving in the counter clock wise "
-                "direction.\r\n\r\n"
-                "Note that this recompiles and restarts the firmware")
+                "direction.\n \n"
+                "Note that this recompiles and restarts the firmware.")

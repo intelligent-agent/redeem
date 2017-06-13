@@ -104,17 +104,17 @@ class Gcode:
         """ Get the letter """
         return self.tokens[index][0]
 
-    def token_value(self, index):
-        """ Get the value after the letter """
-        val = 0.0
+    def token_value(self, index, factored=True):
+        """ Get the value after the letter.  By default, factor for G20/21 units for axes and F. """
         try:
             t = self.tokens[index]
             val = float(t[1:])
-            if t[0] in self.printer.AXES:
+            distance_letters = "XYZABCEFIJKQ" # gcode letters whose values are affected by G20/21
+            if factored == True and t[0] in distance_letters:
                 val *= self.printer.factor
-        except TypeError:
-            pass
-        return val
+            return val
+        except ValueError:
+            return 0.0
 
     def get_tokens(self):
         """ Return the tokens """
@@ -138,35 +138,31 @@ class Gcode:
                 return True
         return False
 
-    def __get_value_by_letter(self, letter):
-        for token in self.tokens:
-            if token[0] == letter:
-                return token[1::]
+    def has_value(self, index):
+        try:
+            if len(self.tokens[index]) > 1:
+                return True
+        except IndexError:
+            pass
+        return False
+
+    def get_token_index_by_letter(self, letter):
+        for i in range(len(self.tokens)):
+            if self.tokens[i][0] == letter:
+                return i
         return None
 
-    def get_float_by_letter(self, letter, default=0.0):
+    def get_float_by_letter(self, letter, default=0.0, factored=True):
+        """ Get a float or return a default value. By default, factor for G20/21 units. """
         val = default
-        if self.has_letter(letter):
-            try:
-                val = float(self.__get_value_by_letter(letter))
-                if letter in self.printer.AXES:
-                    val *= self.printer.factor
-            except TypeError:
-                pass
+        index = self.get_token_index_by_letter(letter)
+        if index != None:
+            val = self.token_value(index, factored=factored)
         return val
 
-    def get_int_by_letter(self, letter, default=0):
-        """ Get an int or return a default value """
-        if self.has_letter(letter):
-            val = default
-            try:
-                # Convert to float first since Cura 2.1 sends M104 as 255.0
-                val = int(float(self.__get_value_by_letter(letter)))
-                if letter in self.printer.AXES:
-                    val *= self.printer.factor
-            except TypeError:
-                pass
-        return int(val)
+    def get_int_by_letter(self, letter, default=0, factored=True):
+        """ Get an int or return a default value. By default, factor for G20/21 units. """
+        return int(self.get_float_by_letter(letter, default=default, factored=factored))
 
     def has_letter_value(self, letter):
         for token in self.tokens:
@@ -183,16 +179,12 @@ class Gcode:
     def num_tokens(self):
         return len(self.tokens)
 
-    def get_tokens_as_dict(self):
-        """ Return the remaining tokans as a dict"""
+    def get_tokens_as_dict(self, factored=False):
+        """ Return the remaining tokans as a dict. By default, do NOT factor for G20/21 units. """
         tad = {}
-        for t in self.get_tokens():
-            try:
-                tad[t[0]] = float(t[1:])
-                if t[0] in self.printer.AXES:
-                    tad[t[0]] *= self.printer.factor
-            except TypeError:
-                tad[t[0]] = ""
+        for i in range(self.num_tokens()):
+            tad[self.tokens[i][0]] = self.token_value(i, factored)
+        logging.debug("Token dict = %s", tad)
         return tad 
 
     def _getCS(self, cmd):
