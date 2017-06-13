@@ -106,7 +106,15 @@ class Gcode:
 
     def token_value(self, index):
         """ Get the value after the letter """
-        return float(self.tokens[index][1::]) * self.printer.factor
+        val = 0.0
+        try:
+            t = self.tokens[index]
+            val = float(t[1:])
+            if t[0] in self.printer.AXES:
+                val *= self.printer.factor
+        except TypeError:
+            pass
+        return val
 
     def get_tokens(self):
         """ Return the tokens """
@@ -137,22 +145,28 @@ class Gcode:
         return None
 
     def get_float_by_letter(self, letter, default=0.0):
+        val = default
         if self.has_letter(letter):
             try:
-                return float(self.__get_value_by_letter(letter)) * self.printer.factor
+                val = float(self.__get_value_by_letter(letter))
+                if letter in self.printer.AXES:
+                    val *= self.printer.factor
             except TypeError:
                 pass
-        return default
+        return val
 
     def get_int_by_letter(self, letter, default=0):
         """ Get an int or return a default value """
         if self.has_letter(letter):
+            val = default
             try:
                 # Convert to float first since Cura 2.1 sends M104 as 255.0
-                return int(float(self.__get_value_by_letter(letter)) * self.printer.factor)
+                val = int(float(self.__get_value_by_letter(letter)))
+                if letter in self.printer.AXES:
+                    val *= self.printer.factor
             except TypeError:
                 pass
-        return default
+        return int(val)
 
     def has_letter_value(self, letter):
         for token in self.tokens:
@@ -174,7 +188,9 @@ class Gcode:
         tad = {}
         for t in self.get_tokens():
             try:
-                tad[t[0]] = float(t[1:]) * self.printer.factor
+                tad[t[0]] = float(t[1:])
+                if t[0] in self.printer.AXES:
+                    tad[t[0]] *= self.printer.factor
             except TypeError:
                 tad[t[0]] = ""
         return tad 
