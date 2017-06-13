@@ -302,11 +302,9 @@ FLOAT_T Path::calculateSafeSpeed(const VectorN& worldMove, const VectorN& maxSpe
   FLOAT_T safeTime = 0;
 
   for (int i = 0; i<NUM_AXES; i++) {
-    if (isAxisMove(i)) {
-      const FLOAT_T safeAxisTime = std::abs(worldMove[i]) / (maxSpeedJumps[i] / 2);
-      assert(safeAxisTime > 0);
-      safeTime = std::max(safeTime, safeAxisTime);
-    }
+    const FLOAT_T safeAxisTime = std::abs(worldMove[i]) / (maxSpeedJumps[i] / 2);
+    assert(safeAxisTime >= 0);
+    safeTime = std::max(safeTime, safeAxisTime);
   }
 
   const FLOAT_T safeSpeed = distance / safeTime;
