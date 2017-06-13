@@ -35,7 +35,7 @@ class G0(GCodeCommand):
             axis = self.printer.movement_axis(g.token_letter(i))
 
             # Get the value, new position or vector
-            value =  float(g.token_value(i)) / 1000.0
+            value = float(g.token_value(i)) / 1000.0
             if axis in ('E', 'H', 'A', 'B', 'C') and self.printer.extrude_factor != 1.0:
                 value *= self.printer.extrude_factor
             smds[axis] = value

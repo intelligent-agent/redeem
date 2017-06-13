@@ -25,7 +25,11 @@ class G30(GCodeCommand):
     def execute(self, g):
         if g.has_letter("P"): # Load point
             index = g.get_int_by_letter("P")
-            point = self.printer.probe_points[index]
+            try:
+                point = self.printer.probe_points[index]
+            except IndexError:
+                logging.warning("G30 point P%d not yet defined. Aborting.", index)
+                return
         else:
             # If no probe point is specified, use current pos
             # this value is in metres
@@ -54,12 +58,12 @@ class G30(GCodeCommand):
             probe_speed = self.printer.config.getfloat('Probe', 'speed')
         
         # Get acceleration, if present, else use value from config.
-        if g.has_letter("A"):
-            probe_accel = g.get_float_by_letter("A")
+        if g.has_letter("Q"):
+            probe_accel = g.get_float_by_letter("Q")
         else:
             probe_accel = self.printer.config.getfloat('Probe', 'accel')
         
-        use_bed_matrix = bool(g.get_int_by_letter("B", 0))
+        use_bed_matrix = bool(g.get_int_by_letter("M", 0))
 
         # Find the Probe offset
         # values in config file are in metres, need to convert to millimetres
@@ -97,13 +101,13 @@ class G30(GCodeCommand):
 
     def get_long_description(self):
         return ("Probe the bed at the current position, or if specified, a point "
-                "previously set by M557. X, Y, and Z starting probe positions can be overridden, "
-                "D = sets the probe length, or taken from config if nothing is specified. \n"
-                "F = sets the probe speed. If not present, it's taken from the config. \n"
-                "A = sets the probe acceleration. If not present, it's taken from the config. \n"
-                "B = determines if the bed marix is used or not. (0 or 1)\n"
-                "P = the point at which to probe, previously set by M557. \n"
-                "S = save the probed point distance\n"
+                "previously set by M557. X, Y, and Z starting probe positions can be overridden.\n\n"
+                "  D = sets the probe length (mm), or taken from config if nothing is specified. \n"
+                "  F = sets the probe speed. If not present, it's taken from the config. \n"
+                "  Q = sets the probe acceleration. If not present, it's taken from the config. \n"
+                "  M = determines if the bed marix is used or not. (0 or 1)\n"
+                "  P = the point at which to probe, previously set by M557. \n"
+                "  S = save the probed point distance\n"
                 "P and S save the probed bed distance to a list that corresponds with point P")
    
     def is_buffered(self):

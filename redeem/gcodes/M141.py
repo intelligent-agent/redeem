@@ -18,7 +18,7 @@ class M141(GCodeCommand):
             logging.warning("M141 supplied invalid arguments. P, F and S are required")
             return
         fan = self.printer.fans[g.get_int_by_letter("P")]
-        fan.set_PWM_frequency(g.get_int_by_letter("F"))
+        fan.set_PWM_frequency(g.get_int_by_letter("F", factored=False))
         fan.set_value(g.get_float_by_letter("S"))
 
     def get_description(self):
