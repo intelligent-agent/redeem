@@ -128,10 +128,9 @@ class PathPlanner {
   void setPrintMoveBufferWait(int dt);
   void setMaxBufferedMoveTime(long long dt);
   void setMaxSpeeds(VectorN speeds);
-  void setMinSpeeds(VectorN speeds);
   void setAxisStepsPerMeter(VectorN stepPerM);
   void setAcceleration(VectorN accel);
-  void setJerks(VectorN jerks);
+  void setMaxSpeedJumps(VectorN speedJumps);
   void setSoftEndstopsMin(VectorN stops);
   void setSoftEndstopsMax(VectorN stops);
   void setBedCompensationMatrix(std::vector<FLOAT_T> matrix);

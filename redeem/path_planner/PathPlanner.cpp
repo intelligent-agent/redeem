@@ -234,7 +234,7 @@ void PathPlanner::queueMove(VectorN endWorldPos,
   Path p;
 
   p.initialize(state, tweakedEndPos, startWorldPos, endWorldPos, axisStepsPerM,
-    minSpeeds, maxSpeeds, maxAccelerationMPerSquareSecond,
+    maxSpeedJumps, maxSpeeds, maxAccelerationMPerSquareSecond,
     speed, accel, axis_config, delta_bot, cancelable, is_probe);
 
   if (p.isNoMove()) {
@@ -350,7 +350,7 @@ void PathPlanner::queueMove(VectorN endWorldPos,
 /**
    This is the path planner.
  
-   It goes from the last entry and tries to increase the end speed of previous moves in a fashion that the maximum jerk
+   It goes from the last entry and tries to increase the end speed of previous moves in a fashion that the maximum speed jump
    is never exceeded. If a segment with reached maximum speed is met, the planner stops. Everything left from this
    is already optimal from previous updates.
    The first 2 entries in the queue are not checked. The first is the one that is already in print and the following will likely become active.
@@ -423,10 +423,10 @@ void PathPlanner::computeMaxJunctionSpeed(Path *previous, Path *current){
   LOG("Computing Max junction speed"<<std::endl);
 
   for(int i=0; i<NUM_AXES; i++){
-    FLOAT_T jerk = std::fabs(current->getSpeeds()[i] - previous->getSpeeds()[i]);
+    FLOAT_T speedJump = std::fabs(current->getSpeeds()[i] - previous->getSpeeds()[i]);
 
-    if (jerk > maxJerks[i]){
-      factor = std::min(factor, maxJerks[i] / jerk);
+    if (speedJump > maxSpeedJumps[i]){
+      factor = std::min(factor, maxSpeedJumps[i] / speedJump);
     }
   }
 

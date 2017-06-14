@@ -432,8 +432,7 @@ class Redeem:
         for axis in printer.steppers.keys():
             i = Printer.axis_to_index(axis)
             printer.max_speeds[i] = printer.config.getfloat('Planner', 'max_speed_'+axis.lower())
-            printer.min_speeds[i] = printer.config.getfloat('Planner', 'min_speed_'+axis.lower())
-            printer.jerks[i] = printer.config.getfloat('Planner', 'max_jerk_'+axis.lower())
+            printer.max_speed_jumps[i] = printer.config.getfloat('Planner', 'max_jerk_'+axis.lower())
             printer.home_speed[i] = printer.config.getfloat('Homing', 'home_speed_'+axis.lower())
             printer.home_backoff_speed[i] = printer.config.getfloat('Homing', 'home_backoff_speed_'+axis.lower())
             printer.home_backoff_offset[i] = printer.config.getfloat('Homing', 'home_backoff_offset_'+axis.lower())

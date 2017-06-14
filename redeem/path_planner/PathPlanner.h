@@ -65,8 +65,7 @@ class PathPlanner {
   VectorN machineToWorld(const IntVectorN& machinePos);
 	
   VectorN maxSpeeds;
-  VectorN minSpeeds;
-  VectorN maxJerks;
+  VectorN maxSpeedJumps;
   VectorN maxAccelerationStepsPerSquareSecond;
   VectorN maxAccelerationMPerSquareSecond;
 	
@@ -309,14 +308,6 @@ class PathPlanner {
   void setMaxSpeeds(VectorN speeds);
 
   /**
-   * @brief Set the maximum feedrates of the different axis X,Y,Z
-   * @details Set the maximum feedrates of the different axis in m/s
-   * 
-   * @param rates The feedrate for each of the axis, consisting of a NUM_AXES length array.
-   */
-  void setMinSpeeds(VectorN speeds);
-
-  /**
    * @brief Set the number of steps required to move each axis by 1 meter
    * @details Set the number of steps required to move each axis by 1 meter
    * 
@@ -334,30 +325,16 @@ class PathPlanner {
 
   /**
    * @brief Set the maximum speed that can be used when in a corner
-   * @details The jerk determines your start speed and the maximum speed at the join of two segments.
+   * @details The speed jump determines your start speed and the maximum speed at the join of two segments.
    * 
    * Its unit is m/s. 
    * 
-   * If the printer is standing still, the start speed is jerk/2. At the join of two segments, the speed 
-   * difference is limited to the jerk value.
-   * 
-   * Examples:
-   * 
-   * For all examples jerk is assumed as 40.
-   * 
-   * Segment 1: vx = 50, vy = 0
-   * Segment 2: vx = 0, vy = 50
-   * v_diff = sqrt((50-0)^2+(0-50)^2) = 70.71
-   * v_diff > jerk => vx_1 = vy_2 = jerk/v_diff*vx_1 = 40/70.71*50 = 28.3 mm/s at the join
-   * 
-   * Segment 1: vx = 50, vy = 0
-   * Segment 2: vx = 35.36, vy = 35.36
-   * v_diff = sqrt((50-35.36)^2+(0-35.36)^2) = 38.27 < jerk
-   * Corner can be printed with full speed of 50 mm/s
+   * If the printer is standing still, the start speed is speed jump/2. At the join of two segments, the speed 
+   * difference is limited to the speed jump value.
    *
-   * @param maxJerk The maximum jerk for X and Y axis in m/s
+   * @param speedJumps the maximum speed jump for each axis in m/s^2
    */
-  void setJerks(VectorN jerks);
+  void setMaxSpeedJumps(VectorN speedJumps);
 	
   void suspend() {
     pru.suspend();

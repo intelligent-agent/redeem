@@ -78,8 +78,7 @@ class Printer:
         self.num_axes = 8
 
         self.max_speeds             = np.ones(self.num_axes)
-        self.min_speeds             = np.ones(self.num_axes)*0.01
-        self.jerks                  = np.ones(self.num_axes)*0.01
+        self.max_speed_jumps        = np.ones(self.num_axes)*0.01
         self.acceleration           = [0.3]*self.num_axes
         self.home_speed             = np.ones(self.num_axes)
         self.home_backoff_speed     = np.ones(self.num_axes)
@@ -105,26 +104,6 @@ class Printer:
         the slave will get the same position as the axis'''
         self.slaves[master] = slave
         self.has_slaves = True
-
-    def check_values(self):
-        """
-        make sure that values are valid
-        """
-
-        # check min speed
-        for axis in self.steppers:
-            stepper = self.steppers[axis]
-            if stepper.in_use:
-                idx = Printer.axis_to_index(axis)
-                steps_per_second = self.min_speeds[idx]*self.steps_pr_meter[idx]
-                logging.debug("Axis {0} min steps/s = {1}".format(axis, steps_per_second))
-                if steps_per_second < 1:
-                    err = "minimum speed of axis {0} is too low. Increase min_speed_{0}, microstepping_{0}, or adjust steps_pr_mm_{0}".format(axis.lower())
-                    logging.warning(err)
-                    raise RuntimeError(err)
-
-
-        return
 
     def ensure_steppers_enabled(self):
         """
