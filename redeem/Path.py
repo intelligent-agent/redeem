@@ -23,6 +23,7 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
 
 import numpy as np
 import sympy as sp
+import logging
 
 class Path:
     
@@ -141,6 +142,9 @@ class Path:
         # isolate dimensions relevant for the active plane (eg X,Y for XY plane)
         start0, start1 = self._get_point_on_plane(self.prev.ideal_end_pos)
         end0, end1 = self._get_point_on_plane(self.ideal_end_pos)
+        logging.debug("end pos: {}".format(self.ideal_end_pos))
+        logging.debug("start point: {}, end point: {}".format([start0, start1], [end0, end1]))
+
 
         # 'R' variant gives radius, need to calculate circle center
         if hasattr(self, 'R'):
@@ -169,6 +173,8 @@ class Path:
         if start_theta >= end_theta and self.movement is Path.G3:
             start_theta = -np.pi - abs(np.pi - start_theta)
 
+        logging.debug("start theta: {}, end theta: {}".format(start_theta, end_theta))
+
         # determine the length of the arc in order to determine how many segments to split into
         arc_length = radius * abs(end_theta - start_theta)
         num_segments = int(arc_length / self.ARC_SEGMENT_LENGTH)
@@ -185,6 +191,7 @@ class Path:
         # for each coordinate along the arc, create a segment
         for index, segment in enumerate(zip(arc_0, arc_1)):
             segment_end = self._get_axes_point(segment)
+            logging.debug("segment point: {}".format(segment_end))
             path = AbsolutePath(segment_end, self.speed, self.accel, self.cancelable, self.use_bed_matrix, False)
             # in order to set previous, printer attribute needs to be set based on the original path's printer
             path.printer = self.printer
