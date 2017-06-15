@@ -141,52 +141,7 @@ void PathPlanner::queueMove(VectorN endWorldPos,
   handleSlaves(startWorldPos, endWorldPos);
 	
   // Get the vector to move us from where we are, to where we ideally want to be.
-  IntVectorN endPos = (endWorldPos * axisStepsPerM).round();
-
-  // First convert to machine-space
-  switch (axis_config)
-  {
-  case AXIS_CONFIG_DELTA:
-  {
-    const Vector3 deltaEnd = delta_bot.worldToDelta(endWorldPos.toVector3());
-    LOG("Delta end: X: " << deltaEnd[0] << " Y: " << deltaEnd[1] << " Z: " << deltaEnd[2] << std::endl);
-    const IntVector3 endMotionPos = (deltaEnd * axisStepsPerM.toVector3()).round();
-    LOG("Delta end motors: X: " << endMotionPos[0] << " Y: " << endMotionPos[1] << " Z: " << endMotionPos[2] << std::endl);
-    endPos[0] = endMotionPos[0];
-    endPos[1] = endMotionPos[1];
-    endPos[2] = endMotionPos[2];
-    break;
-  }
-  case AXIS_CONFIG_CORE_XY:
-  {
-    const Vector3 coreXYEnd = worldToCoreXY(endWorldPos.toVector3());
-    const IntVector3 endMotionPos = (coreXYEnd * axisStepsPerM.toVector3()).round();
-
-    endPos[0] = endMotionPos[0];
-    endPos[1] = endMotionPos[1];
-    assert(endPos[2] == endMotionPos[2]);
-    endPos[2] = endMotionPos[2];
-    break;
-  }
-  case AXIS_CONFIG_H_BELT:
-  {
-    const Vector3 hBeltEnd = worldToHBelt(endWorldPos.toVector3());
-    const IntVector3 endMotionPos = (hBeltEnd * axisStepsPerM.toVector3()).round();
-
-    endPos[0] = endMotionPos[0];
-    endPos[1] = endMotionPos[1];
-    assert(endPos[2] == endMotionPos[2]);
-    endPos[2] = endMotionPos[2];
-    break;
-  }
-  case AXIS_CONFIG_XY:
-  break;
-  default:
-    endPos.zero();
-    LOG("don't know what to do for axis config: " << axis_config << std::endl);
-    assert(0);
-    break;
-  }
+  IntVectorN endPos = worldToMachine(endWorldPos);
 
   // This is only useful for debugging purposes - the motion platform may not move
   // directly from start to end, but the net total of steps should equal this.
@@ -938,4 +893,55 @@ VectorN PathPlanner::machineToWorld(const IntVectorN& machinePos)
 VectorN PathPlanner::getState()
 {
   return machineToWorld(state);
+}
+
+IntVectorN PathPlanner::worldToMachine(const VectorN& worldPos)
+{
+  IntVectorN output = (worldPos * axisStepsPerM).round();
+
+  switch (axis_config)
+  {
+  case AXIS_CONFIG_DELTA:
+  {
+    const Vector3 deltaEnd = delta_bot.worldToDelta(worldPos.toVector3());
+    LOG("Delta end: X: " << deltaEnd[0] << " Y: " << deltaEnd[1] << " Z: " << deltaEnd[2] << std::endl);
+    const IntVector3 endMotionPos = (deltaEnd * axisStepsPerM.toVector3()).round();
+    LOG("Delta end motors: X: " << endMotionPos[0] << " Y: " << endMotionPos[1] << " Z: " << endMotionPos[2] << std::endl);
+    output[0] = endMotionPos[0];
+    output[1] = endMotionPos[1];
+    output[2] = endMotionPos[2];
+    break;
+  }
+  case AXIS_CONFIG_CORE_XY:
+  {
+    const Vector3 coreXYEnd = worldToCoreXY(worldPos.toVector3());
+    const IntVector3 endMotionPos = (coreXYEnd * axisStepsPerM.toVector3()).round();
+
+    output[0] = endMotionPos[0];
+    output[1] = endMotionPos[1];
+    assert(output[2] == endMotionPos[2]);
+    output[2] = endMotionPos[2];
+    break;
+  }
+  case AXIS_CONFIG_H_BELT:
+  {
+    const Vector3 hBeltEnd = worldToHBelt(worldPos.toVector3());
+    const IntVector3 endMotionPos = (hBeltEnd * axisStepsPerM.toVector3()).round();
+
+    output[0] = endMotionPos[0];
+    output[1] = endMotionPos[1];
+    assert(output[2] == endMotionPos[2]);
+    output[2] = endMotionPos[2];
+    break;
+  }
+  case AXIS_CONFIG_XY:
+  break;
+  default:
+    output.zero();
+    LOG("don't know what to do for axis config: " << axis_config << std::endl);
+    assert(0);
+    break;
+  }
+
+  return output;
 }

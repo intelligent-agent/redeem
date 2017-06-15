@@ -63,6 +63,7 @@ class PathPlanner {
   void forwardPlanner(unsigned int first);
 
   VectorN machineToWorld(const IntVectorN& machinePos);
+  IntVectorN worldToMachine(const VectorN& worldPos);
 	
   VectorN maxSpeeds;
   VectorN maxSpeedJumps;
