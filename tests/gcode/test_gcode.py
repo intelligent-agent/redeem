@@ -6,13 +6,19 @@ sys.path.insert(0, '../redeem')
 from Gcode import Gcode
 from mock import patch, Mock
 
+""" 
+We want to keeps our tests within the scope of just the file we're testing,
+as much as possible. So we won't instantiate an entire Printer object, when the
+only variable required for these tests is Printer::factor and we don't call any 
+of Printer's methods.
+"""
 class Printer():
     factor = 1.0
 
 class GcodeTest(TestCase):
 
     def setUp(self):
-        Gcode.printer = Printer()
+        Gcode.printer = Printer() # As done in redeem.py
         packet = {
             "message": "N99  G2 8 x0 Y-0.2345 z +12.345 67 ab C(comment)*92; noise",
             "answer": "ok"
@@ -50,10 +56,8 @@ class GcodeTest(TestCase):
     def test_gcode_token_distance(self):
         self.assertEqual(self.g.token_distance(2), 12.34567)
 
-        t = self.g.printer.factor
         self.g.printer.factor = 2.54
         self.assertEqual(self.g.token_distance(2), 12.34567 * 2.54)
-        self.g.printer.factor = t
 
     def test_gcode_get_tokens(self):
         self.assertEqual(self.g.get_tokens(), self.g.tokens)
@@ -92,10 +96,8 @@ class GcodeTest(TestCase):
         self.assertEqual(self.g.get_float_by_letter("Y"), -0.2345)
 
     def test_gcode_get_distance_by_letter(self):
-        t = self.g.printer.factor
         self.g.printer.factor = 2.54
         self.assertEqual(self.g.get_distance_by_letter("Y"), -0.2345 * 2.54)
-        self.g.printer.factor = t
 
     def test_gcode_get_int_by_letter(self):
         self.assertEqual(self.g.get_int_by_letter("Z"), 12)
@@ -105,10 +107,8 @@ class GcodeTest(TestCase):
         self.assertEqual(self.g.has_letter_value("A"), False)
 
     def test_gcode_remove_token_by_letter(self):
-        t = self.g
         self.g.remove_token_by_letter("Z")
         self.assertEqual(self.g.tokens, ["X0", "Y-0.2345", "A", "B", "C"])
-        self.g = t
 
     def test_gcode_num_tokens(self):
         self.assertEqual(self.g.num_tokens(), 6)
@@ -133,11 +133,9 @@ class GcodeTest(TestCase):
         self.assertEqual(self.g.get_answer(), "ok")
 
     def test_gcode_set_answer(self):
-        t = self.g.answer
         self.assertEqual(self.g.answer, "ok")
         self.g.set_answer("xxx")
         self.assertEqual(self.g.answer, "xxx")
-        self.g.answer = t
 
     def test_gcode_is_info_command(self):
         self.assertEqual(self.g.is_info_command(), False)

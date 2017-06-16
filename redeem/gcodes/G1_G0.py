@@ -41,11 +41,11 @@ class G0(GCodeCommand):
             smds[axis] = value
     
         if self.printer.movement == Path.ABSOLUTE:
-            path = AbsolutePath(smds, self.printer.feed_rate * self.printer.factor, self.printer.accel)
+            path = AbsolutePath(smds, self.printer.feed_rate * self.printer.factor, self.printer.accel * self.printer.factor)
         elif self.printer.movement == Path.RELATIVE:
-            path = RelativePath(smds, self.printer.feed_rate * self.printer.factor, self.printer.accel)
+            path = RelativePath(smds, self.printer.feed_rate * self.printer.factor, self.printer.accel * self.printer.factor)
         elif self.printer.movement == Path.MIXED:
-            path = MixedPath(smds, self.printer.feed_rate * self.printer.factor, self.printer.accel)
+            path = MixedPath(smds, self.printer.feed_rate * self.printer.factor, self.printer.accel * self.printer.factor)
         else:
             logging.error("invalid movement: " + str(self.printer.movement))
             return
