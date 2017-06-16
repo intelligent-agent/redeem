@@ -68,13 +68,13 @@ class Gcode:
                    "".join(self.message.split()).upper()
                 )
 
-            # process line numbers and CRC, if present
+            # process line numbers and checksum, if present
             if self.tokens[0][0] == "N":  # Ok, checksum
                 line_num = re.findall(r"\d+", self.tokens[0])[0]
-                cmd = self.message.split("*")[0]  # Command
-                csc = self.message.split("*")[1]  # Command to compare with
+                cmd = packet["message"].split("*")[0]       # message
+                csc = int(packet["message"].split("*")[1].split(";")[0])  # checksum to compare with
                 if int(csc) != self._getCS(cmd):
-                    logging.error("CRC error!")
+                    raise ValueError('GCODE message failed CRC check')
                 self.line_number = int(line_num)  # Set the line number
                 Gcode.line_number += 1  # Increase the global counter
                 self.has_crc = True
@@ -104,17 +104,18 @@ class Gcode:
         """ Get the letter """
         return self.tokens[index][0]
 
-    def token_value(self, index, factored=True):
+    def token_value(self, index):
         """ Get the value after the letter.  By default, factor for G20/21 units for axes and F. """
         try:
             t = self.tokens[index]
             val = float(t[1:])
-            distance_letters = "XYZABCEFIJKQ" # gcode letters whose values are affected by G20/21
-            if factored == True and t[0] in distance_letters:
-                val *= self.printer.factor
             return val
         except ValueError:
             return 0.0
+
+    def token_distance(self, index):
+        """ Return a token's value, factoring in current G20/21 unit. """
+        return self.token_value(index) * self.printer.factor
 
     def get_tokens(self):
         """ Return the tokens """
@@ -152,17 +153,25 @@ class Gcode:
                 return i
         return None
 
-    def get_float_by_letter(self, letter, default=0.0, factored=True):
-        """ Get a float or return a default value. By default, factor for G20/21 units. """
+    def get_float_by_letter(self, letter, default=0.0):
+        """ Get a float or return a default value. """
         val = default
         index = self.get_token_index_by_letter(letter)
         if index != None:
-            val = self.token_value(index, factored=factored)
+            val = self.token_value(index)
         return val
 
-    def get_int_by_letter(self, letter, default=0, factored=True):
-        """ Get an int or return a default value. By default, factor for G20/21 units. """
-        return int(self.get_float_by_letter(letter, default=default, factored=factored))
+    def get_distance_by_letter(self, letter, default=0.0):
+        """ Get a float or return a default value. Factor in curent G20/21 unit setting. """
+        val = default
+        index = self.get_token_index_by_letter(letter)
+        if index != None:
+            val = self.token_distance(index)
+        return val
+
+    def get_int_by_letter(self, letter, default=0):
+        """ Get an int or return a default value. """
+        return int(self.get_float_by_letter(letter, default=default))
 
     def has_letter_value(self, letter):
         for token in self.tokens:
@@ -179,11 +188,11 @@ class Gcode:
     def num_tokens(self):
         return len(self.tokens)
 
-    def get_tokens_as_dict(self, factored=False):
-        """ Return the remaining tokans as a dict. By default, do NOT factor for G20/21 units. """
+    def get_tokens_as_dict(self):
+        """ Return the remaining tokans as a dict. """
         tad = {}
         for i in range(self.num_tokens()):
-            tad[self.tokens[i][0]] = self.token_value(i, factored)
+            tad[self.tokens[i][0]] = self.token_value(i)
         logging.debug("Token dict = %s", tad)
         return tad 
 
