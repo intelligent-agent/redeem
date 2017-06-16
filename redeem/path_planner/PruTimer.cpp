@@ -42,8 +42,14 @@
 
 #define DDR_MAGIC			0xbabe7175
 
+#define PRU_ICSS 0x4A300000 
+#define PRU_ICSS_LEN 512*1024
+#define SHARED_RAM_START 0x00012000
+
 PruTimer::PruTimer() {
 	ddr_mem = 0;
+	ddr_mem_end = 0;
+	shared_mem = 0;
 	mem_fd=-1;
 	ddr_addr = 0;
 	ddr_size = 0;
@@ -156,7 +162,17 @@ bool PruTimer::initPRU(const std::string &firmware_stepper, const std::string &f
     }
 	
 	LOG( "Mapped memory starting at 0x" << std::hex << (unsigned long)ddr_mem << std::endl << std::dec);
-	
+
+	shared_mem = (uint8_t*)mmap(0, PRU_ICSS_LEN, PROT_WRITE | PROT_READ, MAP_SHARED, mem_fd, PRU_ICSS);
+
+	if (shared_mem == nullptr)
+	{
+		LOG("Failed to map the shared memory " << strerror(errno) << std::endl);
+		close(mem_fd);
+		return false;
+	}
+
+
 	
 	
 	ddr_write_location  = ddr_mem;
@@ -629,4 +645,8 @@ void PruTimer::resume() {
 	//We lock it so that we are thread safe
 	std::unique_lock<std::mutex> lk(mutex_memory);
 	*pru_control = 0;
+}
+
+size_t PruTimer::getStepsRemaining() {
+	return *(volatile size_t*)(shared_mem + SHARED_RAM_START + 16);
 }

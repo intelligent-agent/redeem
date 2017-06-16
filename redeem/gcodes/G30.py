@@ -174,11 +174,13 @@ class G30_1(GCodeCommand):
         self.printer.path_planner.wait_until_done()
         bed_dist = self.printer.path_planner.probe(probe_length, probe_speed, probe_accel)*1000.0 # convert to mm
         
-        #calculated required offset to make bed euqal to Z0 or user's specified Z.
-        #should be correct, assuming probe starts at Z(5), requested Z(0)  probe Z(-0.3), adjusted global Z should be 5.3 
-        # assuming probe starts at Z(5), requested Z(-0.2), probe Z(-0.3), adjusted global Z should be 5.1
+        #calculated required offset to make bed equal to Z0 or user's specified Z.
+        # should be correct, assuming probe starts at Z(5), requested Z(0)  probe Z(-0.3), adjusted global Z should be 5.3
+        # assuming probe starts at Z(5), and probe result is -0.3. This says real probe start was 5.3.
+        # if we want to start printing at 0.2 above bed, new z should be 5.1.
+        # 5 - (-0.3) - 0.2 = 5.1
     
-        Z_adjusted = point["Z"] - bed_dist + Z_new
+        Z_adjusted = point["Z"] - bed_dist - Z_new
         logging.debug("Bed dist: "+str(bed_dist)+" mm")
         logging.debug("Old Z{}, New Z{}.".format(point["Z"], Z_adjusted))
 

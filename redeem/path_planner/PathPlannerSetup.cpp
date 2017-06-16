@@ -39,18 +39,14 @@ void PathPlanner::setMaxSpeeds(VectorN speeds){
   maxSpeeds = speeds;
 }
 
-void PathPlanner::setMinSpeeds(VectorN speeds){
-  minSpeeds = speeds;
-}
-
 void PathPlanner::setAcceleration(VectorN accel){
   maxAccelerationMPerSquareSecond = accel;
 
   recomputeParameters();
 }
 
-void PathPlanner::setJerks(VectorN jerks){
-  maxJerks = jerks;
+void PathPlanner::setMaxSpeedJumps(VectorN speedJumps){
+  maxSpeedJumps = speedJumps;
 
 }
 
@@ -163,4 +159,9 @@ void PathPlanner::setBacklashCompensation(VectorN set)
 void PathPlanner::resetBacklash()
 {
   backlash_state.zero();
+}
+
+FLOAT_T PathPlanner::getLastProbeDistance()
+{
+  return lastProbeDistance;
 }

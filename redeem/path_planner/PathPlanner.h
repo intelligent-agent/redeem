@@ -61,12 +61,12 @@ class PathPlanner {
   void computeMaxJunctionSpeed(Path *previous,Path *current);
   void backwardPlanner(unsigned int start,unsigned int last);
   void forwardPlanner(unsigned int first);
-	
-	
+
+  VectorN machineToWorld(const IntVectorN& machinePos);
+  IntVectorN worldToMachine(const VectorN& worldPos);
 	
   VectorN maxSpeeds;
-  VectorN minSpeeds;
-  VectorN maxJerks;
+  VectorN maxSpeedJumps;
   VectorN maxAccelerationStepsPerSquareSecond;
   VectorN maxAccelerationMPerSquareSecond;
 	
@@ -147,7 +147,8 @@ class PathPlanner {
     const FLOAT_T moveEndTime,
     std::array<std::vector<Step>, NUM_AXES>& steps,
     std::unique_ptr<SteppersCommand[]> const &commands,
-    const size_t commandsLength);
+    const size_t commandsLength,
+    IntVectorN* probeDistanceTraveled);
 	
   // pre-processor functions
   int softEndStopApply(const VectorN &endPos);
@@ -168,6 +169,9 @@ class PathPlanner {
 	
   // the current state of the machine
   IntVectorN state;
+
+  // distance of the last bed probe movement
+  FLOAT_T lastProbeDistance;
 	
   // slaves
   bool has_slaves;
@@ -248,14 +252,15 @@ class PathPlanner {
    * @param enable_soft_endstops use soft end stop values to clip path
    * @param use_bed_matrix use a bed leveling correction
    * @param use_backlash_compensation use backlash compensation
+   * @param is_probe move is a probe and probe distance needs to be measured
    * @param tool_axis which axis is our tool attached to
    * @param virgin Flag to indicate if this is a newly passed in value or if it is somewhere in a recursion loop
    */
   void queueMove(VectorN endPos,
 		 FLOAT_T speed, FLOAT_T accel, 
-		 bool cancelable=false, bool optimize=true, 
-		 bool enable_soft_endstops=true, bool use_bed_matrix=true, 
-		 bool use_backlash_compensation=true, int tool_axis=3);
+		 bool cancelable, bool optimize, 
+		 bool enable_soft_endstops, bool use_bed_matrix, 
+		 bool use_backlash_compensation, bool is_probe, int tool_axis=3);
   /**
    * @brief Run the path planner thread
    * @details Run the path planner thread that is in charge to compute the different delays and submit it to the PRU for execution.
@@ -304,14 +309,6 @@ class PathPlanner {
   void setMaxSpeeds(VectorN speeds);
 
   /**
-   * @brief Set the maximum feedrates of the different axis X,Y,Z
-   * @details Set the maximum feedrates of the different axis in m/s
-   * 
-   * @param rates The feedrate for each of the axis, consisting of a NUM_AXES length array.
-   */
-  void setMinSpeeds(VectorN speeds);
-
-  /**
    * @brief Set the number of steps required to move each axis by 1 meter
    * @details Set the number of steps required to move each axis by 1 meter
    * 
@@ -329,30 +326,16 @@ class PathPlanner {
 
   /**
    * @brief Set the maximum speed that can be used when in a corner
-   * @details The jerk determines your start speed and the maximum speed at the join of two segments.
+   * @details The speed jump determines your start speed and the maximum speed at the join of two segments.
    * 
    * Its unit is m/s. 
    * 
-   * If the printer is standing still, the start speed is jerk/2. At the join of two segments, the speed 
-   * difference is limited to the jerk value.
-   * 
-   * Examples:
-   * 
-   * For all examples jerk is assumed as 40.
-   * 
-   * Segment 1: vx = 50, vy = 0
-   * Segment 2: vx = 0, vy = 50
-   * v_diff = sqrt((50-0)^2+(0-50)^2) = 70.71
-   * v_diff > jerk => vx_1 = vy_2 = jerk/v_diff*vx_1 = 40/70.71*50 = 28.3 mm/s at the join
-   * 
-   * Segment 1: vx = 50, vy = 0
-   * Segment 2: vx = 35.36, vy = 35.36
-   * v_diff = sqrt((50-35.36)^2+(0-35.36)^2) = 38.27 < jerk
-   * Corner can be printed with full speed of 50 mm/s
+   * If the printer is standing still, the start speed is speed jump/2. At the join of two segments, the speed 
+   * difference is limited to the speed jump value.
    *
-   * @param maxJerk The maximum jerk for X and Y axis in m/s
+   * @param speedJumps the maximum speed jump for each axis in m/s^2
    */
-  void setJerks(VectorN jerks);
+  void setMaxSpeedJumps(VectorN speedJumps);
 	
   void suspend() {
     pru.suspend();
@@ -374,6 +357,8 @@ class PathPlanner {
   void resetBacklash();
 	
   VectorN getState();
+
+  FLOAT_T getLastProbeDistance();
 
   void reset();
 	

@@ -121,17 +121,16 @@ class PathPlanner {
 		 FLOAT_T speed, FLOAT_T accel, 
 		 bool cancelable, bool optimize, 
 		 bool enable_soft_endstops, bool use_bed_matrix, 
-		 bool use_backlash_compensation, int tool_axis);
+		 bool use_backlash_compensation, bool is_probe, int tool_axis);
   void runThread();
   void stopThread(bool join);
   void waitUntilFinished();
   void setPrintMoveBufferWait(int dt);
   void setMaxBufferedMoveTime(long long dt);
   void setMaxSpeeds(VectorN speeds);
-  void setMinSpeeds(VectorN speeds);
   void setAxisStepsPerMeter(VectorN stepPerM);
   void setAcceleration(VectorN accel);
-  void setJerks(VectorN jerks);
+  void setMaxSpeedJumps(VectorN speedJumps);
   void setSoftEndstopsMin(VectorN stops);
   void setSoftEndstopsMax(VectorN stops);
   void setBedCompensationMatrix(std::vector<FLOAT_T> matrix);
@@ -142,6 +141,7 @@ class PathPlanner {
   void setBacklashCompensation(VectorN set);
   void resetBacklash();
   VectorN getState();
+  FLOAT_T getLastProbeDistance();
   void suspend();
   void resume();
   void reset();
