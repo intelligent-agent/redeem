@@ -13,7 +13,10 @@ class GcodeTest(TestCase):
 
     def setUp(self):
         Gcode.printer = Printer()
-        packet = {"message": "N99  G2 8 x0 Y-0.2345 z +12.345 67 ab C(comment)*92; noise"}
+        packet = {
+            "message": "N99  G2 8 x0 Y-0.2345 z +12.345 67 ab C(comment)*92; noise",
+            "answer": "ok"
+            }
         self.g = Gcode(packet)
 
     def tearDown(self):
@@ -118,4 +121,26 @@ class GcodeTest(TestCase):
             self.assertEqual(key, keys[i])
             self.assertEqual(t[key], vals[i])
 
-    
+    def test_gcode__get_cs(self):
+        self.assertEqual(1, self.g._getCS("1234567890"))
+
+    def test_gcode_is_crc(self):
+        self.assertEqual(self.g.is_crc(), True)
+        g = Gcode({"message": "G28"})
+        self.assertEqual(g.is_crc(), False)
+
+    def test_gcode_get_answer(self):
+        self.assertEqual(self.g.get_answer(), "ok")
+
+    def test_gcode_set_answer(self):
+        t = self.g.answer
+        self.assertEqual(self.g.answer, "ok")
+        self.g.set_answer("xxx")
+        self.assertEqual(self.g.answer, "xxx")
+        self.g.answer = t
+
+    def test_gcode_is_info_command(self):
+        self.assertEqual(self.g.is_info_command(), False)
+        g = Gcode({"message": "G28?"})
+        self.assertEqual(g.is_info_command(), True)
+
