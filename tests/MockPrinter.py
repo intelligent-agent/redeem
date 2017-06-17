@@ -10,6 +10,7 @@ from Path import Path, AbsolutePath, RelativePath, MixedPath
 from PathPlanner import PathPlanner
 from GCodeProcessor import GCodeProcessor
 from Gcode import Gcode
+from CascadingConfigParser import CascadingConfigParser
 
 class MockPrinter(unittest.TestCase):
 
@@ -19,17 +20,23 @@ class MockPrinter(unittest.TestCase):
 
     @classmethod
     def setUpClass(self):
-        self.printer = Printer()
-        self.printer.movement == Path.ABSOLUTE
-        Gcode.printer = self.printer
-        Path.printer = self.printer
-        self.mock_path_planner = mock.create_autospec(PathPlanner)
-        self.printer.path_planner = self.mock_path_planner
+        printer = Printer()
+        self.printer = printer
+
+        self.printer.path_planner = mock.create_autospec(PathPlanner)
+        self.printer.send_message = mock.create_autospec(self.printer.send_message)
         self.printer.processor = GCodeProcessor(self.printer)
         self.printer.comms[0] = mock.create_autospec(USB)
+        printer.config = CascadingConfigParser(['../configs/default.cfg'])
+        printer.config.check('../configs/default.cfg')
 
-        self.printer.feed_rate = 0.050 # m/s
-        self.printer.accel = 0.050 / 60 # m/s/s
+        printer.movement == Path.ABSOLUTE
+        printer.feed_rate = 0.050 # m/s
+        printer.accel = 0.050 / 60 # m/s/s
+
+        Gcode.printer = printer
+        Path.printer = printer
+
 
         """ 
         We want to ensure that printer.factor is always obeyed correctly
