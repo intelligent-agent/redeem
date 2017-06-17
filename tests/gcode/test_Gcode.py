@@ -1,10 +1,9 @@
-from unittest import TestCase
+import unittest
 
 import sys
 sys.path.insert(0, '../redeem')
 
 from Gcode import Gcode
-from mock import patch, Mock
 
 """ 
 We want to keeps our tests within the scope of just the file we're testing,
@@ -15,7 +14,7 @@ of Printer's methods.
 class Printer():
     factor = 1.0
 
-class GcodeTest(TestCase):
+class GcodeTest(unittest.TestCase):
 
     def setUp(self):
         Gcode.printer = Printer() # As done in redeem.py

@@ -22,12 +22,12 @@ class G0(GCodeCommand):
     def execute(self, g):
         if g.has_letter("F"):  # Get the feed rate
             # Convert from mm/min to SI unit m/s
-            self.printer.feed_rate = g.get_float_by_letter("F")
+            self.printer.feed_rate = g.get_distance_by_letter("F")
             self.printer.feed_rate /= 60000.0
             g.remove_token_by_letter("F")
         if  g.has_letter("Q"):  # Get the Accel
             # Convert from mm/min^2 to SI unit m/s^2
-            self.printer.accel = g.get_float_by_letter("Q")
+            self.printer.accel = g.get_distance_by_letter("Q")
             self.printer.accel /= 3600000.0
             g.remove_token_by_letter("Q")
         smds = {}
@@ -35,17 +35,17 @@ class G0(GCodeCommand):
             axis = self.printer.movement_axis(g.token_letter(i))
 
             # Get the value, new position or vector
-            value = float(g.token_value(i)) / 1000.0
+            value = float(g.token_distance(i)) / 1000.0
             if axis in ('E', 'H', 'A', 'B', 'C') and self.printer.extrude_factor != 1.0:
                 value *= self.printer.extrude_factor
             smds[axis] = value
     
         if self.printer.movement == Path.ABSOLUTE:
-            path = AbsolutePath(smds, self.printer.feed_rate * self.printer.factor, self.printer.accel * self.printer.factor)
+            path = AbsolutePath(smds, self.printer.feed_rate, self.printer.accel)
         elif self.printer.movement == Path.RELATIVE:
-            path = RelativePath(smds, self.printer.feed_rate * self.printer.factor, self.printer.accel * self.printer.factor)
+            path = RelativePath(smds, self.printer.feed_rate, self.printer.accel)
         elif self.printer.movement == Path.MIXED:
-            path = MixedPath(smds, self.printer.feed_rate * self.printer.factor, self.printer.accel * self.printer.factor)
+            path = MixedPath(smds, self.printer.feed_rate, self.printer.accel)
         else:
             logging.error("invalid movement: " + str(self.printer.movement))
             return
