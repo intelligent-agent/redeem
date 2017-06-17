@@ -6,27 +6,30 @@ sys.path.insert(0, '../redeem')
 
 from Printer import Printer
 from USB import USB
-from Path import Path, AbsolutePath, RelativePath, MixedPath, G92Path
+from Path import Path, AbsolutePath, RelativePath, MixedPath
 from PathPlanner import PathPlanner
 from GCodeProcessor import GCodeProcessor
 from Gcode import Gcode
 
 class MockPrinter(unittest.TestCase):
 
+    AbsolutePath = AbsolutePath
+    RelativePath = RelativePath
+    MixedPath = MixedPath
+
     @classmethod
     def setUpClass(self):
         self.printer = Printer()
         self.printer.movement == Path.ABSOLUTE
-        self.printer.feed_rate = 0.050 # m/s
-        self.printer.accel = 0.050 / 60 # m/s/s
-        
         Gcode.printer = self.printer
         Path.printer = self.printer
-
         self.mock_path_planner = mock.create_autospec(PathPlanner)
         self.printer.path_planner = self.mock_path_planner
         self.printer.processor = GCodeProcessor(self.printer)
         self.printer.comms[0] = mock.create_autospec(USB)
+
+        self.printer.feed_rate = 0.050 # m/s
+        self.printer.accel = 0.050 / 60 # m/s/s
 
         """ 
         We want to ensure that printer.factor is always obeyed correctly
