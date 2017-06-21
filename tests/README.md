@@ -2,6 +2,15 @@
 
 To run all unit tests for Redeem, change to the `/usr/src/redeem/tests` folder and execute `pytests -v`. (The `-v` is optional.)
 
+You'll need to install at least `pytest` and `testfixtures`. As `root` ...
+
+```
+# pip install pytest
+# pip install testfixtures
+```
+
+If other packages are needed, you'll be told which ones when you try to run the tests.
+
 Here's an example run from way back in June 2017 ...
 
 ```
@@ -14,26 +23,8 @@ collected 24 items
 
 gcode/test_gcode.py::GcodeTest::test_gcode__get_cs PASSED
 gcode/test_gcode.py::GcodeTest::test_gcode_code PASSED
-gcode/test_gcode.py::GcodeTest::test_gcode_get_answer PASSED
-gcode/test_gcode.py::GcodeTest::test_gcode_get_distance_by_letter PASSED
-gcode/test_gcode.py::GcodeTest::test_gcode_get_float_by_letter PASSED
-gcode/test_gcode.py::GcodeTest::test_gcode_get_int_by_letter PASSED
-gcode/test_gcode.py::GcodeTest::test_gcode_get_message PASSED
-gcode/test_gcode.py::GcodeTest::test_gcode_get_token_index_by_letter PASSED
-gcode/test_gcode.py::GcodeTest::test_gcode_get_tokens PASSED
-gcode/test_gcode.py::GcodeTest::test_gcode_get_tokens_as_dict PASSED
-gcode/test_gcode.py::GcodeTest::test_gcode_has_letter PASSED
-gcode/test_gcode.py::GcodeTest::test_gcode_has_letter_value PASSED
-gcode/test_gcode.py::GcodeTest::test_gcode_has_value PASSED
-gcode/test_gcode.py::GcodeTest::test_gcode_is_crc PASSED
-gcode/test_gcode.py::GcodeTest::test_gcode_is_info_command PASSED
-gcode/test_gcode.py::GcodeTest::test_gcode_is_valid PASSED
-gcode/test_gcode.py::GcodeTest::test_gcode_num_tokens PASSED
-gcode/test_gcode.py::GcodeTest::test_gcode_parser PASSED
-gcode/test_gcode.py::GcodeTest::test_gcode_remove_token_by_letter PASSED
-gcode/test_gcode.py::GcodeTest::test_gcode_set_answer PASSED
-gcode/test_gcode.py::GcodeTest::test_gcode_set_tokens PASSED
-gcode/test_gcode.py::GcodeTest::test_gcode_token_distance PASSED
+...
+...
 gcode/test_gcode.py::GcodeTest::test_gcode_token_letter PASSED
 gcode/test_gcode.py::GcodeTest::test_token_value PASSED
 
