@@ -18,7 +18,10 @@ except ImportError:
 class M82(GCodeCommand):
 
     def execute(self, g):
-        self.printer.movement = Path.MIXED
+        if self.printer.movement == Path.MIXED:
+            self.printer.movement = Path.ABSOLUTE
+
+        self.printer.axes_relative = []
         for axis in "EHABC":
             if axis not in self.printer.axes_absolute:
                 self.printer.axes_absolute.append(axis)
