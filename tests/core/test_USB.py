@@ -1,15 +1,11 @@
 # Work in progres - ARC
-
-import pytest
-from USB import
-
-
-from Gcode import Gcode
-from mock import patch, Mock
+import unittest
+import mock # use mock.Mock etc 
+from USB import USB
 
 
-class TestUSB(TestCase):
-    def setup(self):
+class TestUSB(unittest.TestCase):
+    def setUp(self):
         testUSB=USB()
 
 

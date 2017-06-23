@@ -3,7 +3,7 @@ import mock
 
 import sys
 sys.path.insert(0, '../redeem')
-sys.path.insert(0, './TestStubs')
+sys.path.insert(0, './gcode/TestStubs')
 
 from Printer import Printer
 from USB import USB
