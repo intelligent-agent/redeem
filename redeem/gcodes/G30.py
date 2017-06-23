@@ -59,7 +59,7 @@ class G30(GCodeCommand):
         
         # Get acceleration, if present, else use value from config.
         if g.has_letter("Q"):
-            probe_accel = g.get_float_by_letter("Q")
+            probe_accel = g.get_float_by_letter("Q") / 360000
         else:
             probe_accel = self.printer.config.getfloat('Probe', 'accel')
         
