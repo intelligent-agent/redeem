@@ -1,42 +1,33 @@
 # Unit Testing
 
-To run all unit tests for Redeem, change to the `/usr/src/redeem/tests` folder and execute `pytests -v`. (The `-v` is optional.)
+Redeem was originally written in, "code first, test later" fashion. Unit testing began to be retro fitted in June 2017.
 
-Here's an example run from way back in June 2017 ...
+This test platform supports execution outside of a physical Beagle Bone Black, say on a local Linux ia64 or whatever.
+
+A virtual environment is recommended. Example set-up for testing only ...
 
 ```
-root@kamikaze:/usr/src/redeem/tests# pytest -v
-============================= test session starts ==============================
-platform linux2 -- Python 2.7.12, pytest-3.1.2, py-1.4.34, pluggy-0.4.0 -- /usr/bin/python
-cachedir: ../.cache
-rootdir: /usr/src/redeem, inifile:
-collected 24 items
+$ sudo apt install virtualenv
+$ cd <path to your cloned redeem>/tests
+tests$ virtualenv venv
+tests$ . venv/bin/activate
+(venv) tests$ pip install -r module_requirements.txt
+...
+...
+(venv) tests$ pytest
+======================== test session starts =========================
+platform linux2 -- Python 2.7.12, pytest-3.1.2, py-1.4.34, pluggy-0.4.0
+rootdir: /home/bryan/projects/redeem, inifile:
+collected 32 items 
 
-gcode/test_gcode.py::GcodeTest::test_gcode__get_cs PASSED
-gcode/test_gcode.py::GcodeTest::test_gcode_code PASSED
-gcode/test_gcode.py::GcodeTest::test_gcode_get_answer PASSED
-gcode/test_gcode.py::GcodeTest::test_gcode_get_distance_by_letter PASSED
-gcode/test_gcode.py::GcodeTest::test_gcode_get_float_by_letter PASSED
-gcode/test_gcode.py::GcodeTest::test_gcode_get_int_by_letter PASSED
-gcode/test_gcode.py::GcodeTest::test_gcode_get_message PASSED
-gcode/test_gcode.py::GcodeTest::test_gcode_get_token_index_by_letter PASSED
-gcode/test_gcode.py::GcodeTest::test_gcode_get_tokens PASSED
-gcode/test_gcode.py::GcodeTest::test_gcode_get_tokens_as_dict PASSED
-gcode/test_gcode.py::GcodeTest::test_gcode_has_letter PASSED
-gcode/test_gcode.py::GcodeTest::test_gcode_has_letter_value PASSED
-gcode/test_gcode.py::GcodeTest::test_gcode_has_value PASSED
-gcode/test_gcode.py::GcodeTest::test_gcode_is_crc PASSED
-gcode/test_gcode.py::GcodeTest::test_gcode_is_info_command PASSED
-gcode/test_gcode.py::GcodeTest::test_gcode_is_valid PASSED
-gcode/test_gcode.py::GcodeTest::test_gcode_num_tokens PASSED
-gcode/test_gcode.py::GcodeTest::test_gcode_parser PASSED
-gcode/test_gcode.py::GcodeTest::test_gcode_remove_token_by_letter PASSED
-gcode/test_gcode.py::GcodeTest::test_gcode_set_answer PASSED
-gcode/test_gcode.py::GcodeTest::test_gcode_set_tokens PASSED
-gcode/test_gcode.py::GcodeTest::test_gcode_token_distance PASSED
-gcode/test_gcode.py::GcodeTest::test_gcode_token_letter PASSED
-gcode/test_gcode.py::GcodeTest::test_token_value PASSED
+gcode/test_G1_G0.py ...
+gcode/test_G20_G21.py ..
+gcode/test_G28.py ...
+gcode/test_Gcode.py ........................
 
-========================== 24 passed in 1.02 seconds ===========================
+===================== 32 passed in 0.20 seconds ======================
+
 ```
+
+If running tests on the BeagleBone, which has limited disk space, it's probably best to skip the virtual environment and go straight to `pip install -r module_requirements.txt`.
 
