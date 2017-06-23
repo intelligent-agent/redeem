@@ -11,7 +11,7 @@ class G30_Tests(MockPrinter):
         self.printer.path_planner.get_current_pos = mock.Mock(return_value={"X": 10.0, "Y": 20.0, "Z": 35.0})
         
         """ set known offsets for X and Y, both here and within G30.execute """
-        self.printer.config.getfloat = mock.MagicMock(return_value=11.22)
+        self.printer.config.getfloat = mock.Mock(return_value=11.22)
         self.offset_x = self.printer.config.getfloat('Probe', 'offset_x')*1000
         self.offset_y = self.printer.config.getfloat('Probe', 'offset_y')*1000
 
