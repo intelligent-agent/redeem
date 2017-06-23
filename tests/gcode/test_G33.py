@@ -22,7 +22,7 @@ class G33_Tests(MockPrinter):
         mock_Gcode.assert_not_called()
         
     @mock.patch("gcodes.G33.Gcode")
-    def test_gcodes__G33_runs_G29_macro(self, mock_Gcode):
+    def test_gcodes_G33_runs_G29_macro(self, mock_Gcode):
 
         self.printer.processor.execute = mock.Mock() # prevent macro command execution
         macro_gcodes = self.printer.config.get("Macros", "G29").split("\n")

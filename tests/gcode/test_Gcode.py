@@ -120,7 +120,7 @@ class GcodeTest(unittest.TestCase):
             self.assertEqual(key, keys[i])
             self.assertEqual(t[key], vals[i])
 
-    def test_gcode__get_cs(self):
+    def test_gcode_get_cs(self):
         self.assertEqual(1, self.g._getCS("1234567890"))
 
     def test_gcode_is_crc(self):
