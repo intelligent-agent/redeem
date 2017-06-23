@@ -1,6 +1,7 @@
 from MockPrinter import MockPrinter
 from Gcode import Gcode
 import unittest
+import mock
 
 class G29_Tests(MockPrinter):
 
@@ -8,5 +9,14 @@ class G29_Tests(MockPrinter):
         g = Gcode({"message": "G29"})
         self.assertTrue(self.printer.processor.is_buffered(g))
 
-    def test_G29_skipping_becasue_macro(self):
-        raise unittest.SkipTest("Skipping full G29 test because it runs a macro containing many, random Gcodes")
+    @mock.patch("gcodes.G29.Gcode")
+    def test_gcodes_G29_runs_macro(self, mock_Gcode):
+
+        self.printer.processor.execute = mock.Mock() # prevent macro command execution
+        macro_gcodes = self.printer.config.get("Macros", "G29").split("\n")
+
+        self.execute_gcode("G29")
+        """ compare macro from config, to macro commands created using Gcode() inside G33.execute """
+        for i, v in enumerate(macro_gcodes):
+            self.assertEqual(v, mock_Gcode.call_args_list[i][0][0]["message"])
+

@@ -27,6 +27,7 @@ class MockPrinter(unittest.TestCase):
         self.printer.path_planner = mock.MagicMock()
         self.printer.send_message = mock.create_autospec(self.printer.send_message)
         self.printer.processor = GCodeProcessor(self.printer)
+        self.gcodes = self.printer.processor.gcodes
         self.printer.comms[0] = mock.create_autospec(USB)
         printer.config = CascadingConfigParser(['../configs/default.cfg'])
         printer.config.check('../configs/default.cfg')
@@ -47,10 +48,12 @@ class MockPrinter(unittest.TestCase):
         self.printer.factor = self.f = 25.4 # inches
 
         self.printer.probe_points = []
+        self.printer.replicape_key = "DUMMY_KEY"
 
-    def execute_gcode(self, gcode):
-        gcode = Gcode({"message": gcode})
-        self.printer.processor.execute(gcode)
+    """ directly calls a Gcode class's execute method, bypassing printer.processor.execute """
+    def execute_gcode(self, text):
+        g = Gcode({"message": text})
+        self.gcodes[g.gcode].execute(g)
 
     def fullpath(self, o):
       return o.__module__ + "." + o.__class__.__name__

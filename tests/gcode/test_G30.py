@@ -15,7 +15,11 @@ class G30_Tests(MockPrinter):
         self.offset_x = self.printer.config.getfloat('Probe', 'offset_x')*1000
         self.offset_y = self.printer.config.getfloat('Probe', 'offset_y')*1000
 
-        self.printer.probe_points = [{"X":10.0, "Y":20.0, "Z":30.0}]
+        self.printer.probe_points = [
+                {"X":10.0, "Y":20.0, "Z":30.0},
+                {"X":11.0, "Y":22.0, "Z":33.0}
+            ]
+        self.printer.probe_heights = [0, 0]
 
     def test_G30_is_buffered(self):
         g = Gcode({"message": "G30"})
@@ -46,7 +50,6 @@ class G30_Tests(MockPrinter):
         self.assertEqual(self.printer.probe_heights[0], 0)
 
     def test_gcodes__G30_S_with_P(self):
-        self.printer.probe_heights = [0]
-        self.execute_gcode("G30 P0 S")
+        self.execute_gcode("G30 P1 S")
         self.printer.path_planner.probe.assert_called()
-        self.assertEqual(self.printer.probe_heights[0], 12.34)
+        self.assertEqual(self.printer.probe_heights[1], 12.34)
