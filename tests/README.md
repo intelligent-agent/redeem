@@ -9,8 +9,8 @@ A virtual environment is recommended. Example set-up for testing only ...
 ```
 $ sudo apt install virtualenv
 $ cd <path to your cloned redeem>/tests
-tests$ virtualenv venv
-tests$ . venv/bin/activate
+tests$ virtualenv --no-site-packages venv
+tests$ source venv/bin/activate
 (venv) tests$ pip install -r module_requirements.txt
 ...
 ...
@@ -29,5 +29,5 @@ gcode/test_Gcode.py ........................
 
 ```
 
-If running tests on the BeagleBone, which has limited disk space, it's probably best to skip the virtual environment and go straight to `pip install -r module_requirements.txt`.
+If running tests on the BeagleBone, which has limited storage, it's probably best to skip the virtual environment and go straight to `pip install -r module_requirements.txt`.
 

@@ -29,8 +29,7 @@ class MockPrinter(unittest.TestCase):
         self.printer.processor = GCodeProcessor(self.printer)
         self.gcodes = self.printer.processor.gcodes
         self.printer.comms[0] = mock.create_autospec(USB)
-        printer.config = CascadingConfigParser(['../configs/default.cfg'])
-        printer.config.check('../configs/default.cfg')
+        printer.config = CascadingConfigParser(["../configs/default.cfg"])
 
         printer.movement = Path.ABSOLUTE
         printer.feed_rate = 0.050 # m/s

@@ -2,7 +2,6 @@ funcsigs==1.0.2
 mock==2.0.0
 numpy==1.13.0
 pbr==3.1.1
-pkg-resources==0.0.0
 py==1.4.34
 pytest==3.1.2
 pyusb==1.0.0
