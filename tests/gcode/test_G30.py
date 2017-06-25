@@ -26,13 +26,13 @@ class G30_Tests(MockPrinter):
         self.assertTrue(self.printer.processor.is_buffered(g))
 
     @mock.patch("gcodes.G30.Gcode") 
-    def test_gcodes__G30_point_0_not_set(self, mock_Gcode):
+    def test_gcodes_G30_point_0_not_set(self, mock_Gcode):
         self.printer.probe_points = []
         self.execute_gcode("G30 P0") # should abort because there is no P0 point stored yet (M557)
         self.assertFalse(mock_Gcode.called)
 
     @mock.patch("gcodes.G30.Gcode") 
-    def test_gcodes__G30_X_Y_Z_speed_accel(self, mock_Gcode):
+    def test_gcodes_G30_X_Y_Z_speed_accel(self, mock_Gcode):
         self.execute_gcode("G30 X10 Y20 Z35 D10.0 F3000 Q1000")
         expected_moveto = "G0 X{} Y{} Z{}".format(10.0+self.offset_x, 20.0+self.offset_y, 35.0) 
         gcode_packet = mock_Gcode.call_args[0][0]
@@ -43,13 +43,13 @@ class G30_Tests(MockPrinter):
                 1000.0 / 3600000    # Q1000 (acceration)
             )
 
-    def test_gcodes__G30_S_but_no_P(self):
+    def test_gcodes_G30_S_but_no_P(self):
         self.printer.probe_heights = [0]
         self.execute_gcode("G30 X10 Y10 Z10 S")
         self.printer.path_planner.probe.assert_called()
         self.assertEqual(self.printer.probe_heights[0], 0)
 
-    def test_gcodes__G30_S_with_P(self):
+    def test_gcodes_G30_S_with_P(self):
         self.execute_gcode("G30 P1 S")
         self.printer.path_planner.probe.assert_called()
         self.assertEqual(self.printer.probe_heights[1], 12.34)
