@@ -34,19 +34,20 @@ class G33_Tests(MockPrinter):
             self.assertEqual(v, mock_Gcode.call_args_list[i][0][0]["message"])
 
     def test_gcodes_G33_correct_args_to_autocalibrate_delta_printer(self):
-        offset_z = self.printer.config.set('Probe', 'offset_z', str(-0.0012))
-        self.printer.probe_points = [
+        offset_z = self.printer.config.set('Probe', 'offset_z', str(-0.0012)) # arbitrary probe offset, -1.2mm
+        self.printer.probe_points = [ # roughly 120 degree equalateral triangle, 30mm off the deck
                 { 0.080,    0.0, 0.030},
-                {-0.040,  0.069, 0.030},
-                {-0.040, -0.069, 0.030}
+                {-0.040,  0.070, 0.030},
+                {-0.040, -0.070, 0.030}
             ]
-        self.printer.probe_heights = [0.031, 0.032, 0.033]
+        self.printer.probe_heights = [0.031, 0.032, 0.033] # imoderate (arbitrary) build plate angle
 
         self.printer.processor.execute = mock.Mock() # prevent macro command execution
         self.printer.path_planner.autocalibrate_delta_printer= mock.Mock()
 
         self.execute_gcode("G33 N3")
 
+        """ retrieve args passed to autocalibrate_delta_printer and compare to expected """
         autocal_call_args = self.printer.path_planner.autocalibrate_delta_printer.call_args[0]
         self.assertEqual(autocal_call_args[0], 3)
         self.assertEqual(autocal_call_args[1], False)
@@ -54,8 +55,8 @@ class G33_Tests(MockPrinter):
                 autocal_call_args[2],
                 np.array([ 
                     set([0.0, 0.03, 0.08]), 
-                    set([-0.04, 0.069, 0.03]), 
-                    set([-0.04, -0.069, 0.03])
+                    set([-0.04, 0.070, 0.03]), 
+                    set([-0.04, -0.070, 0.03])
                 ])
             )
         np.testing.assert_array_equal(
