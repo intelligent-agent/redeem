@@ -40,7 +40,7 @@ class G30_Tests(MockPrinter):
         self.printer.path_planner.probe.assert_called_with(
                 10.0 / 1000,        # D10.0 (probe height)
                 3000.0 / 60000,     # F3000 (speed)
-                1000.0 / 360000     # Q1000 (acceration)
+                1000.0 / 3600000    # Q1000 (acceration)
             )
 
     def test_gcodes__G30_S_but_no_P(self):
