@@ -11,7 +11,7 @@ class G33_Tests(MockPrinter):
         pass
         
     def test_G33_is_buffered(self):
-        g = Gcode({"message": "G30"})
+        g = Gcode({"message": "G33"})
         self.assertTrue(self.printer.processor.is_buffered(g))
 
     @mock.patch("gcodes.G33.Gcode")

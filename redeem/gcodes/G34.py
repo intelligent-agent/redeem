@@ -32,13 +32,13 @@ class G34(GCodeCommand):
 
         # parse arguments
 
-        # Get probe length, if present, else use config value, else use 1cm
+        # Get probe length (in mm), if present, else use config value
         if g.has_letter("D"):
             probe_length = g.get_float_by_letter("D")
         else:
             probe_length = 1000. * self.printer.config.getfloat('Probe',
-                                                                'length', 0.010)
-        # Get probe speed. If not preset, use printers current speed.
+                                                                'length') # m
+        # Get probe speed. If not preset, use config value.
         if g.has_letter("F"):
             probe_speed = g.get_float_by_letter("F") / 60000.0 # mm/min -> m/s
         else:
@@ -50,9 +50,9 @@ class G34(GCodeCommand):
         else:
             probe_accel = self.printer.config.getfloat('Probe', 'accel') # m/s^2
 
-        probe_start_height = g.get_float_by_letter("Z", 5)
+        probe_start_height = g.get_float_by_letter("Z", 5.0)
 
-        # store the current z coordinate
+        # store the current Z coordinate
         point = self.printer.path_planner.get_current_pos(mm=True)
         orig_z = point["Z"]
         logging.debug("G34: orig_z = %f", orig_z)
