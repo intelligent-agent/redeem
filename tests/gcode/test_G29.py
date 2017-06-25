@@ -16,7 +16,7 @@ class G29_Tests(MockPrinter):
         macro_gcodes = self.printer.config.get("Macros", "G29").split("\n")
 
         self.execute_gcode("G29")
-        """ compare macro from config, to macro commands created using Gcode() inside G33.execute """
+        """ compare macro from config, to macro commands executed """
         for i, v in enumerate(macro_gcodes):
             self.assertEqual(v, mock_Gcode.call_args_list[i][0][0]["message"])
 

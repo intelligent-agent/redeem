@@ -12,7 +12,6 @@ from GCodeCommand import GCodeCommand
 import logging
 import time
 
-
 class G4(GCodeCommand):
 
     def execute(self, g):

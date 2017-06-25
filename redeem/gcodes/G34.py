@@ -104,6 +104,8 @@ lifts the head for Z mm, runs the G32 macro to deploy the probe, and
 then probes down until the endstop is triggered. The height difference
 is then stored as the [Probe] offset_z configuration parameter.
 
+NOTE: G20 ignored. All units in mm.
+
 Parameters:
 
 Df  Probe move maximum length

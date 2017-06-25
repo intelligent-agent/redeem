@@ -38,6 +38,7 @@ class G30(GCodeCommand):
             point = self.printer.path_planner.get_current_pos(mm=True, ideal=True)
             logging.debug("G30: current position (mm) :  X{} Y{} Z{}".format(point["X"], point["Y"], point["Z"]))
             
+        """ do not convert to SI m because used as is in gcode command, below """
         if g.has_letter("X"): # Override X
             point["X"] = g.get_float_by_letter("X")
         if g.has_letter("Y"): # Override Y
@@ -53,13 +54,13 @@ class G30(GCodeCommand):
 
         # Get probe speed, if present, else use value from config. 
         if g.has_letter("F"):
-            probe_speed = g.get_float_by_letter("F") / 60000.
+            probe_speed = g.get_float_by_letter("F") / 60000. # m/s
         else:
             probe_speed = self.printer.config.getfloat('Probe', 'speed')
         
         # Get acceleration, if present, else use value from config.
         if g.has_letter("Q"):
-            probe_accel = g.get_float_by_letter("Q") / 3600000. 
+            probe_accel = g.get_float_by_letter("Q") / 3600000. # m/s^2
         else:
             probe_accel = self.printer.config.getfloat('Probe', 'accel')
         
@@ -99,7 +100,7 @@ class G30(GCodeCommand):
 
     def get_long_description(self):
         return ("Probe the bed at the current position, or if specified, a point "
-                "previously set by M557. X, Y, and Z starting probe positions can be overridden.\n\n"
+                "previously set by M557. X, Y, and Z starting probe positions can be overridden. (G20 ignored. All units in mm.)\n\n"
                 "  D = sets the probe length (mm), or taken from config if nothing is specified. \n"
                 "  F = sets the probe speed. If not present, it's taken from the config. \n"
                 "  Q = sets the probe acceleration. If not present, it's taken from the config. \n"
@@ -195,7 +196,7 @@ class G30_1(GCodeCommand):
         return "Probes the bed at the current point, sets Z0."
 
     def get_long_description(self):
-        return ("Probe the bed at the current position."
+        return ("Probe the bed at the current position. (G20 ignored. All units in mm.)"
                 "X, Y, P and S inputs are ignored. \n"
                 "Z = sets the requested Z height at bed level, if not present, set to 0. \n"
                 "D = sets the probe length, or taken from config if nothing is specified. \n"
