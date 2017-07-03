@@ -36,6 +36,7 @@ class CascadingConfigParser(ConfigParser.SafeConfigParser):
         self.config_files = []
         for config_file in config_files:
             self.config_files.append(os.path.realpath(config_file))
+            self.config_location = os.path.dirname(os.path.realpath(config_file))
 
         # Parse all config files in list
         for config_file in self.config_files:
@@ -53,8 +54,9 @@ class CascadingConfigParser(ConfigParser.SafeConfigParser):
             if os.path.isfile(config_file):
                 ts = max(ts, os.path.getmtime(config_file))
 
-        if os.path.islink("/etc/redeem/printer.cfg"):
-            ts = max(ts, os.lstat("/etc/redeem/printer.cfg").st_mtime)
+        printer_cfg = os.path.join(self.config_location, "printer.cfg")
+        if os.path.islink(printer_cfg):
+            ts = max(ts, os.lstat(printer_cfg).st_mtime)
         return ts
 
     def parse_capes(self):
@@ -117,7 +119,7 @@ class CascadingConfigParser(ConfigParser.SafeConfigParser):
     def check(self, filename):
         """ Check the settings currently set against default.cfg """
         default = ConfigParser.SafeConfigParser()
-        default.readfp(open("/etc/redeem/default.cfg"))
+        default.readfp(open(os.path.join(self.config_location, "default.cfg")))
         local   = ConfigParser.SafeConfigParser()
         local.readfp(open(filename))
 

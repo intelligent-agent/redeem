@@ -1,6 +1,6 @@
 from MockPrinter import MockPrinter
 from mock import MagicMock
-from Path import Path
+from Path import *
 
 class G1_G0_Tests(MockPrinter):
 
@@ -15,26 +15,26 @@ class G1_G0_Tests(MockPrinter):
 
         """ specifying feed rate and acceleration """
         self.execute_gcode("G1 X10 Y10 E3.1 F3000 Q3000")
-        expected_path = self.AbsolutePath({"X":0.010*self.f, "Y":0.010*self.f, "E":0.0031*self.f}, 3000.0/60000*self.f, 3000.0*self.f/3600000)
+        expected_path = AbsolutePath({"X":0.010*self.f, "Y":0.010*self.f, "E":0.0031*self.f}, 3000.0/60000*self.f, 3000.0*self.f/3600000)
         self.printer.path_planner.add_path.called_with(expected_path)
 
         """ test that we maintain current printer feed rate and accel, when not specified """
         self.printer.feed_rate=0.100
         self.printer.accel=0.025 / 60
         self.execute_gcode("G1 X20 Y20")
-        expected_path = self.AbsolutePath({"X":0.020*self.f, "Y":0.020*self.f}, self.printer.feed_rate, self.printer.accel)
+        expected_path = AbsolutePath({"X":0.020*self.f, "Y":0.020*self.f}, self.printer.feed_rate, self.printer.accel)
         self.printer.path_planner.add_path.called_with(expected_path)
 
     def test_gcodes_G1_G0_relative(self):
         self.printer.movement = Path.RELATIVE
 
-        expected_path = self.RelativePath({"X":0.010*self.f, "Y":0.010*self.f, "E":0.010*self.f}, self.printer.feed_rate, self.printer.accel)
+        expected_path = RelativePath({"X":0.010*self.f, "Y":0.010*self.f, "E":0.010*self.f}, self.printer.feed_rate, self.printer.accel)
         self.printer.path_planner.add_path.called_with(expected_path)
 
     def test_gcodes_G1_G0_mixed(self):
         self.printer.movement = Path.MIXED
         
         self.execute_gcode("G1 X10 Y10 E10")
-        expected_path = self.MixedPath({"X":0.010*self.f, "Y":0.010*self.f, "E":0.010*self.f}, self.printer.feed_rate, self.printer.accel)
+        expected_path = MixedPath({"X":0.010*self.f, "Y":0.010*self.f, "E":0.010*self.f}, self.printer.feed_rate, self.printer.accel)
         self.printer.path_planner.add_path.called_with(expected_path)
 

@@ -2,7 +2,7 @@ from MockPrinter import MockPrinter
 import mock
 from Path import Path
 
-class G921_Tests(MockPrinter):
+class G92_Tests(MockPrinter):
 
     @mock.patch("gcodes.G92.G92Path")
     def test_gcodes_G92_with_no_args(self, mock_G92Path):
