@@ -16,7 +16,6 @@ class M104_Tests(MockPrinter):
             self.printer.heaters[n].set_target_temperature = mock.Mock()
             test_temp = round(random()*100,2)
             test_code = "M104 P"+str(i)+" S"+str(test_temp)
-            print "@#$@#%!#%$$%#!: ",test_code
             self.execute_gcode(test_code)
             self.printer.heaters[n].set_target_temperature.assert_called_with(test_temp)
 
