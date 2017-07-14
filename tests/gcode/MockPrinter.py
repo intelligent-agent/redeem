@@ -21,8 +21,6 @@ sys.modules['PruInterface'] = mock.Mock()
 sys.modules['PruFirmware'] = mock.Mock()
 sys.modules['Extruder'] = mock.Mock()
 sys.modules['HBD'] = mock.Mock()
-#sys.modules['Fan'] = mock.Mock()
-sys.modules['Cooler'] = mock.Mock()
 sys.modules['RotaryEncoder'] = mock.Mock()
 sys.modules['JoinableQueue'] = mock.Mock()
 sys.modules['USB'] = mock.Mock()
@@ -42,11 +40,6 @@ class MockPrinter(unittest.TestCase):
 
         tmp_local_cfg = open("../configs/local.cfg", "w")
         tmp_local_cfg.write("[System]\nlog_to_file = False\n")
-        tmp_local_cfg.write("""
-[Cold-ends]
-connect-therm-E-fan-0 = True
-add-fan-1-to-M106 = True
-""")
         tmp_local_cfg.close()
 
         self.R = Redeem("../configs")
