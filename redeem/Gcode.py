@@ -157,7 +157,7 @@ class Gcode:
         """ Get a float or return a default value. """
         val = default
         index = self.get_token_index_by_letter(letter)
-        if index != None:
+        if index != None and self.has_value(index):
             val = self.token_value(index)
         return val
 
