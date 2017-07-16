@@ -35,7 +35,8 @@ class M201(GCodeCommand):
 
     def get_description(self):
         return "Set print acceleration"
-    
+
+    # todo: fix the description of the units.
     def get_long_description(self):
         return ("Sets the acceleration that axes can do in units/second^2 for print moves." 
                " For consistency with the rest of G Code movement " 
