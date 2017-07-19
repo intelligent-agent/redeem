@@ -35,9 +35,12 @@ except ImportError:
 class G33(GCodeCommand):
 
     def execute(self, g):
-        num_factors = g.get_int_by_letter("F", 4)
-        if num_factors < 3 or num_factors > 9 or num_factors == 5 or num_factors == 7:
-            logging.error("G33: Invalid number of calibration factors.")
+        num_factors = g.get_int_by_letter("N", 4)
+        if num_factors not in [3,4,6,8,9]:
+            msg = "G33: Invalid number of calibration factors."
+            logging.error(msg)
+            self.printer.send_message(g.prot, msg)
+            return
 
         # we reuse the G29 macro for the autocalibration purposes
         gcodes = self.printer.config.get("Macros", "G29").split("\n")

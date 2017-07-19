@@ -49,6 +49,7 @@ from Extruder import Extruder, HBP
 from Cooler import Cooler
 from Path import Path
 from PathPlanner import PathPlanner
+from Gcode import Gcode
 from ColdEnd import ColdEnd
 from PruFirmware import PruFirmware
 from CascadingConfigParser import CascadingConfigParser
@@ -85,6 +86,7 @@ class Redeem:
         printer = Printer()
         self.printer = printer
         Path.printer = printer
+        Gcode.printer = printer
 
         printer.firmware_version = firmware_version
 

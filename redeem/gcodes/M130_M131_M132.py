@@ -29,7 +29,7 @@ class M131(GCodeCommand):
 
     def execute(self, g):
         extr = g.get_int_by_letter("P", 0)
-        value = float(g.get_value_by_letter("S"))
+        value = g.get_float_by_letter("S")
         if extr == 0:
             self.printer.heaters['E'].Ti = value
         elif extr == 1:
@@ -48,7 +48,7 @@ class M132(GCodeCommand):
 
     def execute(self, g):
         extr = g.get_int_by_letter("P", 0)
-        value = float(g.get_value_by_letter("S"))
+        value = g.get_float_by_letter("S")
         if extr == 0:
             self.printer.heaters['E'].Td = value
         elif extr == 1:

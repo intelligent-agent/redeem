@@ -24,8 +24,12 @@ class G30(GCodeCommand):
 
     def execute(self, g):
         if g.has_letter("P"): # Load point
-            index = int(g.get_value_by_letter("P"))
-            point = self.printer.probe_points[index]
+            index = g.get_int_by_letter("P")
+            try:
+                point = self.printer.probe_points[index]
+            except IndexError:
+                logging.warning("G30 point P%d not yet defined. Aborting.", index)
+                return
         else:
             # If no probe point is specified, use current pos
             # this value is in metres
@@ -34,33 +38,32 @@ class G30(GCodeCommand):
             point = self.printer.path_planner.get_current_pos(mm=True, ideal=True)
             logging.debug("G30: current position (mm) :  X{} Y{} Z{}".format(point["X"], point["Y"], point["Z"]))
             
+        """ do not convert to SI m because used as is in gcode command, below """
         if g.has_letter("X"): # Override X
-            point["X"] = float(g.get_value_by_letter("X"))
+            point["X"] = g.get_float_by_letter("X")
         if g.has_letter("Y"): # Override Y
-            point["Y"] = float(g.get_value_by_letter("Y"))
+            point["Y"] = g.get_float_by_letter("Y")
         if g.has_letter("Z"): # Override Z
-            point["Z"] = float(g.get_value_by_letter("Z"))        
+            point["Z"] = g.get_float_by_letter("Z")        
 
         # Get probe length, if present, else use value from config. 
         if g.has_letter("D"):
-            probe_length = float(g.get_value_by_letter("D")) / 1000.
+            probe_length = g.get_float_by_letter("D") / 1000.
         else:
             probe_length = self.printer.config.getfloat('Probe', 'length')
 
         # Get probe speed, if present, else use value from config. 
         if g.has_letter("F"):
-            probe_speed = float(g.get_value_by_letter("F")) / 60000.0
+            probe_speed = g.get_float_by_letter("F") / 60000. # m/s
         else:
             probe_speed = self.printer.config.getfloat('Probe', 'speed')
         
         # Get acceleration, if present, else use value from config.
-        if g.has_letter("A"):
-            probe_accel = float(g.get_value_by_letter("A"))
+        if g.has_letter("Q"):
+            probe_accel = g.get_float_by_letter("Q") / 3600000. # m/s^2
         else:
             probe_accel = self.printer.config.getfloat('Probe', 'accel')
         
-        use_bed_matrix = bool(g.get_int_by_letter("B", 0))
-
         # Find the Probe offset
         # values in config file are in metres, need to convert to millimetres
         offset_x = self.printer.config.getfloat('Probe', 'offset_x')*1000
@@ -97,13 +100,12 @@ class G30(GCodeCommand):
 
     def get_long_description(self):
         return ("Probe the bed at the current position, or if specified, a point "
-                "previously set by M557. X, Y, and Z starting probe positions can be overridden, "
-                "D = sets the probe length, or taken from config if nothing is specified. \n"
-                "F = sets the probe speed. If not present, it's taken from the config. \n"
-                "A = sets the probe acceleration. If not present, it's taken from the config. \n"
-                "B = determines if the bed marix is used or not. (0 or 1)\n"
-                "P = the point at which to probe, previously set by M557. \n"
-                "S = save the probed point distance\n"
+                "previously set by M557. X, Y, and Z starting probe positions can be overridden. (G20 ignored. All units in mm.)\n\n"
+                "  D = sets the probe length (mm), or taken from config if nothing is specified. \n"
+                "  F = sets the probe speed. If not present, it's taken from the config. \n"
+                "  Q = sets the probe acceleration. If not present, it's taken from the config. \n"
+                "  P = the point at which to probe, previously set by M557. \n"
+                "  S = save the probed point distance\n"
                 "P and S save the probed bed distance to a list that corresponds with point P")
    
     def is_buffered(self):
@@ -129,29 +131,28 @@ class G30_1(GCodeCommand):
                 g.prot,
                 "Warning: Y not supported for G30.1, proceeding as if none existed.")
         if g.has_letter("Z"): # Override Z
-            Z_new = float(g.get_value_by_letter("Z"))
+            Z_new = g.get_float_by_letter("Z")
         else:
             Z_new= 0
            
         # Usable letters listed here          
         # Get probe length, if present, else use value from config. 
         if g.has_letter("D"):
-            probe_length = float(g.get_value_by_letter("D")) / 1000.
+            probe_length = g.get_float_by_letter("D") / 1000.
         else:
             probe_length = self.printer.config.getfloat('Probe', 'length')
   
         # Get probe speed. If not preset, use printers curent speed. 
         if g.has_letter("F"):
-            probe_speed = float(g.get_value_by_letter("F")) / 60000.0
+            probe_speed = g.get_float_by_letter("F") / 60000.0
         else:
             probe_speed = self.printer.config.getfloat('Probe', 'speed')
         
         # Get acceleration. If not present, use value from config.        
-        if g.has_letter("A"):
-            probe_accel = float(g.get_value_by_letter("A"))
+        if g.has_letter("Q"):
+            probe_accel = g.get_float_by_letter("Q") / 3600000.0
         else:
             probe_accel = self.printer.config.getfloat('Probe', 'accel')
-        # what does use_bed_matrix do?
         
         point = self.printer.path_planner.get_current_pos(mm=True, ideal=True)
         logging.debug("G30.1: current position (mm) :  X{} Y{} Z{}".format(point["X"], point["Y"], point["Z"]))  
@@ -195,12 +196,12 @@ class G30_1(GCodeCommand):
         return "Probes the bed at the current point, sets Z0."
 
     def get_long_description(self):
-        return ("Probe the bed at the current position."
-                "B, P, X, Y, S inputs are ignored. \n"
+        return ("Probe the bed at the current position. (G20 ignored. All units in mm.)"
+                "X, Y, P and S inputs are ignored. \n"
                 "Z = sets the requested Z height at bed level, if not present, set to 0. \n"
                 "D = sets the probe length, or taken from config if nothing is specified. \n"
                 "F = sets the probe speed. If not present, it's taken from the config. \n"
-                "A = sets the probe acceleration. If not present, it's taken from the config. \n")
+                "Q = sets the probe acceleration. If not present, it's taken from the config. \n")
 
     def is_buffered(self):
         return True

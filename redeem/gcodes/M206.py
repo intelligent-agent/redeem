@@ -40,7 +40,7 @@ class M206(GCodeCommand):
         else:
             for axis in offset.keys():
                 if g.has_letter(axis):
-                    val = float(g.get_value_by_letter(axis))
+                    val = g.get_float_by_letter(axis)
                     g.remove_token_by_letter(axis)
                     adj = val / 1000.
                     if self.printer.axis_config == Printer.AXIS_CONFIG_DELTA:

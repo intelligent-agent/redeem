@@ -21,22 +21,22 @@ class M557(GCodeCommand):
 
     def execute(self, g):
         if g.has_letter("P"):
-            p = int(g.get_value_by_letter("P"))
+            p = g.get_int_by_letter("P")
         else:
             logging.warning("M557: Missing P-parameter")
             return         
         if g.has_letter("X"):
-            X = float(g.get_value_by_letter("X"))
+            X = g.get_float_by_letter("X", factored=False)
         else:
             logging.warning("M557: Missing X-parameter")
             return
         if g.has_letter("Y"):
-            Y = float(g.get_value_by_letter("Y"))
+            Y = g.get_float_by_letter("Y", factored=False)
         else:
             logging.warning("M557: Missing Y-parameter")
             return
         if g.has_letter("Z"):
-            Z = float(g.get_value_by_letter("Z"))
+            Z = g.get_float_by_letter("Z", factored=False)
         else:
             logging.warning("M557: Missing Z-parameter")
             Z = 0
@@ -61,4 +61,6 @@ class M557(GCodeCommand):
                 "P = Probe point number.\n"
                 "X = X-coordinate\n"
                 "Y = Y-coordinate\n"
-                "Z = Z-coordinate. If missing, set to 0\n")
+                "Z = Z-coordinate. If missing, set to 0.\n"
+                "Values for X/Y/Z are in mm, regadless of current G20/G21 status.")
+

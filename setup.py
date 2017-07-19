@@ -104,5 +104,4 @@ setup(
             'redeem = redeem.Redeem:main'
         ]
     },
-    include_package_data = True
 )

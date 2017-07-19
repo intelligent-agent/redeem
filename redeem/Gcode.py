@@ -68,13 +68,13 @@ class Gcode:
                    "".join(self.message.split()).upper()
                 )
 
-            # process line numbers and CRC, if present
+            # process line numbers and checksum, if present
             if self.tokens[0][0] == "N":  # Ok, checksum
                 line_num = re.findall(r"\d+", self.tokens[0])[0]
-                cmd = self.message.split("*")[0]  # Command
-                csc = self.message.split("*")[1]  # Command to compare with
+                cmd = packet["message"].split("*")[0]       # message
+                csc = int(packet["message"].split("*")[1].split(";")[0])  # checksum to compare with
                 if int(csc) != self._getCS(cmd):
-                    logging.error("CRC error!")
+                    raise ValueError('GCODE message failed CRC check')
                 self.line_number = int(line_num)  # Set the line number
                 Gcode.line_number += 1  # Increase the global counter
                 self.has_crc = True
@@ -105,8 +105,17 @@ class Gcode:
         return self.tokens[index][0]
 
     def token_value(self, index):
-        """ Get the value after the letter """
-        return self.tokens[index][1::]
+        """ Get the value after the letter.  By default, factor for G20/21 units for axes and F. """
+        try:
+            t = self.tokens[index]
+            val = float(t[1:])
+            return val
+        except ValueError:
+            return 0.0
+
+    def token_distance(self, index):
+        """ Return a token's value, factoring in current G20/21 unit. """
+        return self.token_value(index) * self.printer.factor
 
     def get_tokens(self):
         """ Return the tokens """
@@ -130,24 +139,39 @@ class Gcode:
                 return True
         return False
 
-    def get_value_by_letter(self, letter):
-        for token in self.tokens:
-            if token[0] == letter:
-                return token[1::]
+    def has_value(self, index):
+        try:
+            if len(self.tokens[index]) > 1:
+                return True
+        except IndexError:
+            pass
+        return False
+
+    def get_token_index_by_letter(self, letter):
+        for i in range(len(self.tokens)):
+            if self.tokens[i][0] == letter:
+                return i
         return None
 
-    def get_float_by_letter(self, letter, default):
-        if self.has_letter(letter):
-            if self.has_letter_value(letter):
-                return float(self.get_value_by_letter(letter))
-        return default
+    def get_float_by_letter(self, letter, default=0.0):
+        """ Get a float or return a default value. """
+        val = default
+        index = self.get_token_index_by_letter(letter)
+        if index != None and self.has_value(index):
+            val = self.token_value(index)
+        return val
 
-    def get_int_by_letter(self, letter, default):
-        """ Get an int or return a default value """
-        if self.has_letter(letter):
-            # Convert to float first since Cura 2.1 sends M104 as 255.0
-            return int(float(self.get_value_by_letter(letter)))
-        return int(default)
+    def get_distance_by_letter(self, letter, default=0.0):
+        """ Get a float or return a default value. Factor in curent G20/21 unit setting. """
+        val = default
+        index = self.get_token_index_by_letter(letter)
+        if index != None:
+            val = self.token_distance(index)
+        return val
+
+    def get_int_by_letter(self, letter, default=0):
+        """ Get an int or return a default value. """
+        return int(self.get_float_by_letter(letter, default=default))
 
     def has_letter_value(self, letter):
         for token in self.tokens:
@@ -165,9 +189,12 @@ class Gcode:
         return len(self.tokens)
 
     def get_tokens_as_dict(self):
-        """ Return the remaining tokans as a dict"""
-        return {t[0]: t[1:] for t in self.get_tokens()}
-
+        """ Return the remaining tokans as a dict. """
+        tad = {}
+        for i in range(self.num_tokens()):
+            tad[self.tokens[i][0]] = self.token_value(i)
+        logging.debug("Token dict = %s", tad)
+        return tad 
 
     def _getCS(self, cmd):
         """ Compute a Checksum of the letters in the command """

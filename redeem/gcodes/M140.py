@@ -15,8 +15,8 @@ import logging
 class M140(GCodeCommand):
 
     def execute(self, g):
-        temperature = float(g.token_value(0))
-        logging.debug("Setting bed temperature to " + str(temperature))
+        temperature = g.get_float_by_letter("S", 0.0)
+        logging.debug("Setting bed temperature to %.1f", temperature)
         self.printer.heaters['HBP'].set_target_temperature(temperature)
 
     def get_description(self):
