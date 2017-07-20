@@ -32,6 +32,11 @@ from Redeem import *
 MockPrinter, in combination with the many sys.module[...] = Mock() statements
 above, creates a mock Redeem instance. The mock instance has only what is
 needed for our tests and does not access any BBB hardware IOs.
+
+Redeem.py is not written with unit testing in mind. Most notably, configuration
+is partially done in ConfigParser and partially in Redeem/py. Since Redeem.py
+insists on dealling with real hardware, we currently have to cherry-pick code
+from Redeem/py and stick it here, to enable certain tests to functions.
 """
 class MockPrinter(unittest.TestCase):
 
@@ -44,6 +49,10 @@ class MockPrinter(unittest.TestCase):
 
         self.R = Redeem("../configs")
         printer = self.printer = self.R.printer
+
+        self.printer.replicape_key = "TESTING_DUMMY_KEY"
+        self.printer.replicape_revision = "0A4A" # Fake. No hardware involved in these tests (Redundant?)
+        self.printer.config.reach_revision = None # Unable to implement reach heater tests with Redeem/py in current form
 
         self.printer.path_planner = mock.MagicMock()
         self.gcodes = self.printer.processor.gcodes
@@ -64,7 +73,6 @@ class MockPrinter(unittest.TestCase):
         self.printer.factor = self.f = 25.4 # inches
 
         self.printer.probe_points = []
-        self.printer.replicape_key = "DUMMY_KEY"
 
     @classmethod
     def tearDownClass(self):

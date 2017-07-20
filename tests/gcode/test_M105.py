@@ -9,7 +9,6 @@ class M105_Tests(MockPrinter):
     def test_gcodes_M105(self):
         test_temps = {}
         test_target_temps = {}
-        print "XXXX:",self.printer.heaters
         for n in self.printer.heaters:
             prefix = self.printer.heaters[n].prefix
             test_temps[prefix] = round(random()*100, 2)

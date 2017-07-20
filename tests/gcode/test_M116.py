@@ -47,7 +47,6 @@ class M116_Tests(MockPrinter):
         global counter
         self.printer.processor.execute = mock.Mock() # block M116's call to M105
         
- 
         self.execute_gcode("M116")
 
         E = self.printer.heaters['E'].is_target_temperature_reached()
@@ -56,4 +55,3 @@ class M116_Tests(MockPrinter):
         self.assertTrue(E)
         self.assertTrue(H)
         self.assertTrue(HBP)
-        self.assertEqual(counter, 30)
