@@ -12,6 +12,8 @@ sys.modules['GPIO'] = mock.Mock()
 sys.modules['Enable'] = mock.Mock()
 sys.modules['Key_pin'] = mock.Mock()
 sys.modules['GPIO'] = mock.Mock()
+sys.modules['DAC'] = mock.Mock()
+sys.modules['ShiftRegister.py'] = mock.Mock()
 sys.modules['Adafruit_BBIO'] = mock.Mock()
 sys.modules['Adafruit_BBIO.GPIO'] = mock.Mock()
 sys.modules['StepperWatchdog'] = mock.Mock()
@@ -26,33 +28,46 @@ sys.modules['JoinableQueue'] = mock.Mock()
 sys.modules['USB'] = mock.Mock()
 sys.modules['Ethernet'] = mock.Mock()
 sys.modules['Pipe'] = mock.Mock()
+
+from CascadingConfigParser import CascadingConfigParser
 from Redeem import *
 
 """
 MockPrinter, in combination with the many sys.module[...] = Mock() statements
 above, creates a mock Redeem instance. The mock instance has only what is
 needed for our tests and does not access any BBB hardware IOs.
-
-Redeem.py is not written with unit testing in mind. Most notably, configuration
-is partially done in ConfigParser and partially in Redeem/py. Since Redeem.py
-insists on dealling with real hardware, we currently have to cherry-pick code
-from Redeem/py and stick it here, to enable certain tests to functions.
 """
 class MockPrinter(unittest.TestCase):
 
     @classmethod
-    def setUpClass(self):
+    @mock.patch("Redeem.CascadingConfigParser")
+    def setUpClass(self, wedged_config_parser):
 
-        tmp_local_cfg = open("../configs/local.cfg", "w")
-        tmp_local_cfg.write("[System]\nlog_to_file = False\n")
-        tmp_local_cfg.close()
+        """
+        Override some methods in CascadingConfigParser to prevent absence of
+        hardware limiting test ability
+        """
+        class CascadingConfigParserWedge(CascadingConfigParser):
+            def parse_capes(self):
+                self.replicape_revision = "0A4A" # Fake. No hardware involved in these tests (Redundant?)
+                self.reach_revision = "00A0" # Fake. No hardware involved in these tests (Redundant?)
 
-        self.R = Redeem("../configs")
+            def get_key(self):
+                return "TESTING_DUMMY_KEY"
+        wedged_config_parser.side_effect = CascadingConfigParserWedge
+
+        """
+        This seemed like the best way to add to or change stuff in default.cfg,
+        without actually messing with the prestine file.
+        """
+        tmp_local_cfg = tf = open("../configs/local.cfg", "w")
+        tf.write("[System]\nlog_to_file = False\n")
+        tf.write("\n[Fans]\n")
+        tf.close()
+
+
+        self.R = Redeem(config_location="../configs")
         printer = self.printer = self.R.printer
-
-        self.printer.replicape_key = "TESTING_DUMMY_KEY"
-        self.printer.replicape_revision = "0A4A" # Fake. No hardware involved in these tests (Redundant?)
-        self.printer.config.reach_revision = None # Unable to implement reach heater tests with Redeem/py in current form
 
         self.printer.path_planner = mock.MagicMock()
         self.gcodes = self.printer.processor.gcodes
@@ -81,9 +96,11 @@ class MockPrinter(unittest.TestCase):
         pass
 
     """ directly calls a Gcode class's execute method, bypassing printer.processor.execute """
+    @classmethod
     def execute_gcode(self, text):
         g = Gcode({"message": text})
         return self.printer.processor.gcodes[g.gcode].execute(g)
 
-    def fullpath(self, o):
+    @classmethod
+    def full_path(self, o):
       return o.__module__ + "." + o.__class__.__name__
