@@ -20,13 +20,13 @@ class M105_Tests(MockPrinter):
         self.printer.processor.gcodes[g.gcode].execute(g)
         
         expected_answer = "ok"
-        expected_answer += " {0}:{1:.1f}/{2:.1f}".format("T", test_temps["T1"], test_target_temps["T1"])
+        expected_answer += " {0}:{1:.1f}/{2:.1f}".format("T", test_temps["T0"], test_target_temps["T0"])
 
-        for h in self.printer.heaters:
-            prefix = self.printer.heaters[h].prefix
-            expected_answer += " {0}:{1:.1f}/{2:.1f}".format(prefix, test_temps[prefix], test_target_temps[prefix])
+        for heater, data in sorted(self.printer.heaters.iteritems(), key=lambda(k,v): (v,k)):
+            p = data.prefix
+            expected_answer += " {0}:{1:.1f}/{2:.1f}".format(p, test_temps[p], test_target_temps[p])
+        expected_answer += " @:0.0" # mosfet power unavailable due to test mocking. meh.
 
-        #        T1:64.0/30.2 T1:64.0/30.2 B:90.3/65.8"
         self.assertEqual(g.answer, expected_answer)
 
 

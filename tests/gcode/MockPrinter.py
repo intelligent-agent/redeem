@@ -21,7 +21,6 @@ sys.modules['StepperWatchdog.GPIO'] = mock.Mock()
 sys.modules['_PathPlannerNative'] = mock.Mock()
 sys.modules['PruInterface'] = mock.Mock()
 sys.modules['PruFirmware'] = mock.Mock()
-sys.modules['Extruder'] = mock.Mock()
 sys.modules['HBD'] = mock.Mock()
 sys.modules['RotaryEncoder'] = mock.Mock()
 sys.modules['JoinableQueue'] = mock.Mock()
@@ -57,6 +56,19 @@ class MockPrinter(unittest.TestCase):
         wedged_config_parser.side_effect = CascadingConfigParserWedge
 
         """
+        Allow Extruder or HBP instantiation without crashing 'cause not BBB/Replicape
+        """
+        class DisabledExtruder(Extruder):
+            def enable(self):
+                pass
+        class DisabledHBP(HBP):
+            def enable(self):
+                pass
+        mock.patch('Redeem.Extruder', side_effect=DisabledExtruder).start()
+        mock.patch('Redeem.HBP', side_effect=DisabledHBP).start()
+
+
+        """
         This seemed like the best way to add to or change stuff in default.cfg,
         without actually messing with the prestine file.
         """
@@ -65,7 +77,7 @@ class MockPrinter(unittest.TestCase):
         tf.write("\n[Fans]\n")
         tf.close()
 
-
+        
         self.R = Redeem(config_location="../configs")
         printer = self.printer = self.R.printer
 
