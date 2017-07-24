@@ -111,7 +111,8 @@ class MockPrinter(unittest.TestCase):
     @classmethod
     def execute_gcode(self, text):
         g = Gcode({"message": text})
-        return self.printer.processor.gcodes[g.gcode].execute(g)
+        self.printer.processor.gcodes[g.gcode].execute(g)
+        return g
 
     @classmethod
     def full_path(self, o):

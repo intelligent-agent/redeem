@@ -38,3 +38,12 @@ class G1_G0_Tests(MockPrinter):
         expected_path = MixedPath({"X":0.010*self.f, "Y":0.010*self.f, "E":0.010*self.f}, self.printer.feed_rate, self.printer.accel)
         self.printer.path_planner.add_path.called_with(expected_path)
 
+    def test_gcodes_G1_G0_syntax(self):
+        g = self.execute_gcode("G1X1Y2.3 z-0.456E+7.89ab c")
+        self.assertEqual(g.tokens, ['X1', 'Y2.3', 'Z-0.456', 'E+7.89', 'A', 'B', 'C'])
+
+    def test_gcodes_G1_G0_M117_exception(self):
+        g = self.execute_gcode("M117     123G1X1Y2.3 z-0.456E+7.89ab c")
+        self.assertEqual(g.gcode, 'M117')
+        self.assertEqual(g.tokens[0], "G1")
+        self.assertEqual(g.message, "M117     123G1X1Y2.3 z-0.456E+7.89ab c")

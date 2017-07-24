@@ -18,7 +18,9 @@ except ImportError:
 class M117(GCodeCommand):
     def execute(self, g):
         text = g.get_message()[len("M117"):]
-        Alarm.action_command("display_message", text)
+        if text[0] == ' ':
+            text = text[1:]
+        Alarm.action_command("display_message", text.rstrip())
 
     def get_description(self):
         return "Send a message to a connected display"

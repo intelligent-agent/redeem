@@ -33,8 +33,8 @@ class Gcode:
     def __init__(self, packet):
         """ Init; parse the token """
         try:
-            self.message = packet["message"].split(";")[0]
-            self.message = self.message.strip('\t\n\r')
+            self.message = packet["message"].strip().split(";")[0]
+            self.message = self.message.strip(' \t\n\r')
             self.parent = packet["parent"] if "parent" in packet else None
             self.prot = packet["prot"] if "prot" in packet else None
             if self.prot is None:
@@ -42,7 +42,7 @@ class Gcode:
             self.has_crc = False
             self.answer = "ok"
             #print packet
-            if len(self.message.strip()) == 0:
+            if len(self.message) == 0:
                 #print packet
                 #logging.debug("Empty message")
                 self.gcode = "No-Gcode"
@@ -59,13 +59,13 @@ class Gcode:
             charcter is not a digit (0-9) or a period (.). Example: M117this
             will work.
 
-            CRC (*nn), "(comment)"s are also removed from result.
+            CRC (*nn), "(comment)"s are also removed.
             """
             # strip gcode comments
             self.message = re.sub(r"\(.*\)", "", self.message)
             self.tokens = re.findall(
-                   r"[A-Z][-+]?[0-9]*\.?[0-9]*\??",
-                   "".join(self.message.split()).upper()
+                    r"^M117(?![A-Z])|[A-Z][-+]?[0-9]*\.?[0-9]*\??", # note syntax exception for M117
+                   self.message.replace(' ', '').upper()
                 )
 
             # process line numbers and checksum, if present
@@ -105,7 +105,7 @@ class Gcode:
         return self.tokens[index][0]
 
     def token_value(self, index):
-        """ Get the value after the letter.  By default, factor for G20/21 units for axes and F. """
+        """ Get the value after the letter """
         try:
             t = self.tokens[index]
             val = float(t[1:])
