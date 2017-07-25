@@ -5,7 +5,7 @@ import sys
 sys.path.insert(0, '../redeem')
 # sys.path.insert(0, './gcode/TestStubs')
 
-sys.modules['EndStop'] = mock.Mock()
+sys.modules['evdev'] = mock.Mock()
 sys.modules['RotaryEncoder'] = mock.Mock()
 sys.modules['Watchdog'] = mock.Mock()
 sys.modules['GPIO'] = mock.Mock()
@@ -20,6 +20,7 @@ sys.modules['StepperWatchdog'] = mock.Mock()
 sys.modules['StepperWatchdog.GPIO'] = mock.Mock()
 sys.modules['_PathPlannerNative'] = mock.Mock()
 sys.modules['PruInterface'] = mock.Mock()
+sys.modules['PruInterface'].PruInterface = mock.MagicMock() 
 sys.modules['PruFirmware'] = mock.Mock()
 sys.modules['HBD'] = mock.Mock()
 sys.modules['RotaryEncoder'] = mock.Mock()
@@ -30,6 +31,15 @@ sys.modules['Pipe'] = mock.Mock()
 
 from CascadingConfigParser import CascadingConfigParser
 from Redeem import *
+from EndStop import EndStop
+
+"""
+Override CascadingConfigParser methods to set self. variables
+"""
+class CascadingConfigParserWedge(CascadingConfigParser):
+    def parse_capes(self):
+        self.replicape_revision = "0A4A" # Fake. No hardware involved in these tests (Redundant?)
+        self.reach_revision = "00A0" # Fake. No hardware involved in these tests (Redundant?)
 
 """
 MockPrinter, in combination with the many sys.module[...] = Mock() statements
@@ -39,21 +49,12 @@ needed for our tests and does not access any BBB hardware IOs.
 class MockPrinter(unittest.TestCase):
 
     @classmethod
-    @mock.patch("Redeem.CascadingConfigParser")
-    def setUpClass(self, wedged_config_parser):
+    @mock.patch.object(EndStop, "_wait_for_event", new=None)
+    @mock.patch.object(CascadingConfigParser, "get_key")
+    @mock.patch("Redeem.CascadingConfigParser", new = CascadingConfigParserWedge)
+    def setUpClass(self, mock_get_key):
 
-        """
-        Override some methods in CascadingConfigParser to prevent absence of
-        hardware limiting test ability
-        """
-        class CascadingConfigParserWedge(CascadingConfigParser):
-            def parse_capes(self):
-                self.replicape_revision = "0A4A" # Fake. No hardware involved in these tests (Redundant?)
-                self.reach_revision = "00A0" # Fake. No hardware involved in these tests (Redundant?)
-
-            def get_key(self):
-                return "TESTING_DUMMY_KEY"
-        wedged_config_parser.side_effect = CascadingConfigParserWedge
+        mock_get_key.return_value = "TESTING_DUMMY_KEY"
 
         """
         Allow Extruder or HBP instantiation without crashing 'cause not BBB/Replicape
@@ -66,6 +67,7 @@ class MockPrinter(unittest.TestCase):
                 pass
         mock.patch('Redeem.Extruder', side_effect=DisabledExtruder).start()
         mock.patch('Redeem.HBP', side_effect=DisabledHBP).start()
+
 
 
         """

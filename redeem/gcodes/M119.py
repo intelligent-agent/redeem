@@ -21,11 +21,11 @@ class M119(GCodeCommand):
             if not es in self.printer.end_stops:
                 logging.warning("M119: Wrong end stop: "+str(es))
                 return
-            if val not in ["0", "1"]: 
-                logging.warning("M119: Wrong invert value for " \
-                    "end stop {}: {}. Use 0 or 1".format(es, val))
+            if val not in ["S0", "S1"]: 
+                logging.warning("M119: Invalid invert value for " \
+                    "end stop {}: {}. Use S0, to univert or S1, to invert".format(es, val))
                 return
-            val = bool(int(val))
+            val = bool(int(val[1]))
             logging.info("Setting end stop inversion for "+str(es)+" to "+str(val))
             self.printer.end_stops[es].invert = val
             
@@ -53,7 +53,7 @@ class M119(GCodeCommand):
         return "Get current endstops state or set invert setting"    
 
     def get_long_description(self):
-        return "Get current endstops state. "\
-                "If two tokens are supplied, the first is end stop, "\
-                "the second is invert state. "\
-                "Ex: M119 X1 1 to invert ends stop X1"
+        return "Get endstops state or set invert state of an endstop. "\
+                "If two tokens are supplied, the first must be a single end stop and "\
+                "the second either S1 or S0, to invert or un-invert that endstop, respectively."\
+                "Ex: 'M119 X1 S1', to invert end stop X1"
