@@ -108,7 +108,7 @@ log_to_file = False
     @classmethod
     def tearDownClass(self):
         self.R = self.printer = None
-#        os.remove("../configs/local.cfg")
+        os.remove("../configs/local.cfg")
         pass
 
     """ directly calls a Gcode class's execute method, bypassing printer.processor.execute """

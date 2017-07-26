@@ -5,10 +5,6 @@ import logging
 
 class M141_Tests(MockPrinter):
 
-    def setUp(self):
-        for _,v in self.printer.heaters.iteritems():
-            v.target_temp = 12.34
-
     @mock.patch.object(logging, "warning")
     def test_gcodes_M141_no_args(self, m):
         g = self.execute_gcode("M141")
