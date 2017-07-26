@@ -75,11 +75,13 @@ class MockPrinter(unittest.TestCase):
         without actually messing with the prestine file.
         """
         tmp_local_cfg = tf = open("../configs/local.cfg", "w")
-        tf.write("[System]\nlog_to_file = False\n")
-        tf.write("\n[Fans]\n")
+        lines = """
+[System]
+log_to_file = False
+"""
+        tf.write(lines)
         tf.close()
 
-        
         self.R = Redeem(config_location="../configs")
         printer = self.printer = self.R.printer
 
@@ -106,7 +108,7 @@ class MockPrinter(unittest.TestCase):
     @classmethod
     def tearDownClass(self):
         self.R = self.printer = None
-        os.remove("../configs/local.cfg")
+#        os.remove("../configs/local.cfg")
         pass
 
     """ directly calls a Gcode class's execute method, bypassing printer.processor.execute """
