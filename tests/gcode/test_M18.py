@@ -3,7 +3,7 @@ import mock
 from random import random
 from Stepper import Stepper
 
-class M17_Tests(MockPrinter):
+class M18_Tests(MockPrinter):
 
     def setUp(self):
         for name, stepper in self.printer.steppers.iteritems():
