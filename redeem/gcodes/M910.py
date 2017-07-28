@@ -17,7 +17,7 @@ class M910(GCodeCommand):
         for i in range(g.num_tokens()):
             letter = g.token_letter(i)
             if g.has_value(i):
-                val = int(g.token_value(i, factored=False))
+                val = int(g.token_value(i))
                 if letter in self.printer.steppers:
                     self.printer.steppers[letter].set_decay(val)
                     logging.debug("Stepper %s decay set to %d", letter, val)

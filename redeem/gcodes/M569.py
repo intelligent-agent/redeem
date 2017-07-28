@@ -22,7 +22,7 @@ class M569(GCodeCommand):
     def execute(self, g):
         for i in range(g.num_tokens()):  # Run through all tokens
             axis = g.token_letter(i)
-            value = int(g.token_value(i, factored=False))
+            value = int(g.token_value(i))
             if not axis in self.printer.steppers:
                 logging.warning("M569: Invalid axis key: %s", axis)
                 return
