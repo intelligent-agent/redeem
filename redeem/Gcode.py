@@ -108,8 +108,7 @@ class Gcode:
         """ Get the value after the letter """
         try:
             t = self.tokens[index]
-            val = float(t[1:])
-            return val
+            return float(t[1:])
         except ValueError:
             return 0.0
 
