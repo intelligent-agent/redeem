@@ -26,17 +26,18 @@ class M557(GCodeCommand):
             logging.warning("M557: Missing P-parameter")
             return         
         if g.has_letter("X"):
-            X = g.get_float_by_letter("X", factored=False)
+            X = g.get_float_by_letter("X")
         else:
             logging.warning("M557: Missing X-parameter")
             return
         if g.has_letter("Y"):
-            Y = g.get_float_by_letter("Y", factored=False)
+            Y = g.get_float_by_letter("Y")
         else:
             logging.warning("M557: Missing Y-parameter")
             return
+
         if g.has_letter("Z"):
-            Z = g.get_float_by_letter("Z", factored=False)
+            Z = g.get_float_by_letter("Z")
         else:
             logging.warning("M557: Missing Z-parameter")
             Z = 0

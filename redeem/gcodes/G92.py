@@ -19,7 +19,6 @@ class G92(GCodeCommand):
 
     def execute(self, g):
         AXES = self.printer.AXES[:self.printer.NUM_AXES]
-        print "##################: ", AXES
         if g.num_tokens() == 0:
             # If no token is present, do this for all steppers
             logging.debug("Adding all to G92")

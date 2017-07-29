@@ -17,7 +17,6 @@ class M104(GCodeCommand):
     def execute(self, g):
         if not g.has_letter("S"):
             logging.debug("S paramter missing")
-            return False
         target = g.get_float_by_letter("S", 0.0)
 
         if g.has_letter("P") or g.has_letter("T"):
@@ -27,17 +26,14 @@ class M104(GCodeCommand):
                 heater_index = g.get_int_by_letter("T", 0)
             if heater_index > len(self.printer.heaters)-1:
                 logging.warning("M104: heater index out of bounds: {}".format(heater_index))
-                return False
+                return
             heater_name = "EHABC"[heater_index]
-        else:  # Change hotend temperature based on the chosen tool
-            target = float(g.token_value(0))
+        else:  # Change hotend temperature based on current tool
             heater_name = self.printer.current_tool
 
         heater = self.printer.heaters[heater_name]
         logging.debug("setting temp for {} to {}".format(heater.name, target))    
         heater.set_target_temperature(target)
-        
-        return True
 
     def get_description(self):
         return "Set extruder temperature"

@@ -17,12 +17,12 @@ class Printer():
 class GcodeTest(unittest.TestCase):
 
     def setUp(self):
-        Gcode.printer = Printer() # As done in redeem.py
         packet = {
             "message": "N99  G2 8 x0 Y-0.2345 z +12.345 67 ab C(comment)*92; noise",
             "answer": "ok"
             }
         self.g = Gcode(packet)
+        self.g.printer = Printer()
 
     def tearDown(self):
         self.g = None

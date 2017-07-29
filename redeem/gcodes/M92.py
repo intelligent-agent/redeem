@@ -22,7 +22,7 @@ class M92(GCodeCommand):
     def execute(self, g):
         for i in range(g.num_tokens()):     # Run through all tokens
             axis = g.token_letter(i)        # Get the axis, X, Y, Z or E
-            value = float(g.token_value(i, factored=False))
+            value = float(g.token_value(i))
             if value > 0:
                 logging.info("Updating steps pr mm on {} to {}".format(axis, value))
                 self.printer.steppers[axis].set_steps_pr_mm(value)
