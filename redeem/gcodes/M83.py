@@ -20,13 +20,16 @@ except ImportError:
 class M83(GCodeCommand):
 
     def execute(self, g):
-        if self.printer.movement == Path.ABSOLUTE:
-            self.printer.movement = Path.MIXED
-        
-        self.printer.axes_relative = ["E", "H", "A", "B", "C"]
         for axis in "EHABC":
             if axis not in self.printer.axes_relative:
                 self.printer.axes_relative.append(axis)
+            if axis in self.printer.axes_absolute:
+                self.printer.axes_absolute.remove(axis)
+
+        if self.printer.axes_absolute == []:
+            self.printer.movement = Path.RELATIVE
+        else:
+            self.printer.movement = Path.MIXED
 
     def get_description(self):
         return "Set the extruder mode to relative"
