@@ -18,18 +18,17 @@ except ImportError:
 class M82(GCodeCommand):
 
     def execute(self, g):
-        if self.printer.movement == Path.MIXED:
-            self.printer.movement = Path.ABSOLUTE
 
-        self.printer.axes_relative = []
         for axis in "EHABC":
             if axis not in self.printer.axes_absolute:
                 self.printer.axes_absolute.append(axis)
             if axis in self.printer.axes_relative:
                 self.printer.axes_relative.remove(axis)
-        #If all axes are absolute now, change to absolute mode
+
         if self.printer.axes_relative == []:
             self.printer.movement = Path.ABSOLUTE
+        else:
+            self.printer.movement = Path.MIXED
 
     def get_description(self):
         return "Set the extruder mode to absolute"

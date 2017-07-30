@@ -17,10 +17,9 @@ except ImportError:
 class G90(GCodeCommand):
 
     def execute(self, g):
-        if self.printer.axes_relative != []:
-            self.printer.movement = Path.MIXED
-        else:
-            self.printer.movement = Path.ABSOLUTE
+        self.printer.axes_absolute = ["X", "Y", "Z", "E", "H", "A", "B", "C"]
+        self.printer.axes_relative = []
+        self.printer.movement = Path.ABSOLUTE
 
     def get_description(self):
         return "Set movement mode to absolute"
@@ -32,6 +31,8 @@ class G90(GCodeCommand):
 class G91(GCodeCommand):
 
     def execute(self, g):
+        self.printer.axes_absolute = []
+        self.printer.axes_relative = ["X", "Y", "Z", "E", "H", "A", "B", "C"]
         self.printer.movement = Path.RELATIVE
 
     def get_description(self):

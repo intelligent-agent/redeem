@@ -30,7 +30,6 @@ class M105(GCodeCommand):
 
         # Append heaters
         for heater, data in sorted(self.printer.heaters.iteritems(), key=lambda(k,v): (v,k)):
-            print "HEATER {} PREFIX: {} ".format(heater, data.prefix)
             answer += " " + format_temperature(heater, data.prefix)
 
         # Append the current tool power is using PID

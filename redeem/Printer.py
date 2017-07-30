@@ -96,6 +96,7 @@ class Printer:
         # By default, do not check for slaves
         self.has_slaves = False
 
+        self.axes_absolute = ["X", "Y", "Z", "E", "H", "A", "B", "C"]
         self.axes_relative = []
 
     def add_slave(self, master, slave):
