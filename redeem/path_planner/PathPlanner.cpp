@@ -630,7 +630,7 @@ void PathPlanner::run() {
 
 inline unsigned long long roundStepTime(FLOAT_T stepTime)
 {
-  return std::llround(stepTime * (F_CPU_FLOAT / 2000.0)) * 2000;
+  return std::llround(stepTime * (F_CPU_FLOAT / MINIMUM_STEP_INTERVAL)) * MINIMUM_STEP_INTERVAL;
 }
 
 void PathPlanner::runMove(
@@ -713,8 +713,8 @@ void PathPlanner::runMove(
 
     // set the previous delay
     assert(lastDelay != nullptr);
-    assert(stepTime > lastStepTime);
-    assert(stepTime - lastStepTime >= 2000);
+    assert(stepTime > lastStepTime || (!foundStep && stepTime == lastStepTime));
+    assert(stepTime - lastStepTime >= MINIMUM_STEP_INTERVAL || !foundStep);
     assert(stepTime - lastStepTime < F_CPU / 2);
 
     *lastDelay = stepTime - lastStepTime;

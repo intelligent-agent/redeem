@@ -50,4 +50,6 @@
 #define AXIS_CONFIG_CORE_XY 2
 #define AXIS_CONFIG_DELTA   3
 
+#define MINIMUM_STEP_INTERVAL 1000
+
 #endif
