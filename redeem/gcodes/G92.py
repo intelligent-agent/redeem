@@ -26,7 +26,8 @@ class G92(GCodeCommand):
         pos = {}
         for axis in AXES:
             if g.has_letter(axis):
-              pos[axis] = g.get_distance_by_letter(axis) / 1000.0 # SI m
+                real_axis = self.printer.movement_axis(axis)
+                pos[real_axis] = g.get_distance_by_letter(axis) / 1000.0 # SI m
 
         # Make a path segment from the axes
         path = G92Path(pos, self.printer.feed_rate)
