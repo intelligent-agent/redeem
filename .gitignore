@@ -5,6 +5,8 @@ stl/
 *~.*
 *.*~
 *.pyc
+.cache/
+__pycache__/
 libs/PyBBIO
 libs/pypruss
 images/ubuntu/linux-dev
@@ -28,7 +30,10 @@ Redeem.egg-info/
 build/
 sftp-config.json
 
+# editor temp files
+*.swp
 
-# Ignore temp directory
+# virtual env
+venv/
 *.svg
 

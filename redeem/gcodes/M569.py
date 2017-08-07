@@ -24,10 +24,10 @@ class M569(GCodeCommand):
             axis = g.token_letter(i)
             value = int(g.token_value(i))
             if not axis in self.printer.steppers:
-                logging.warning("M569: Wrong axis key: "+str(axis))
+                logging.warning("M569: Invalid axis key: %s", axis)
                 return
             if not value in [1, -1]:
-                logging.warning("M569: Wrong axis value. Use either 1 or -1: "+str(value))
+                logging.warning("M569: Invalid direction value. Use either 1 or -1: %d", value)
                 return
 
             # Update the config.

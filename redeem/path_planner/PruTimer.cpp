@@ -42,8 +42,14 @@
 
 #define DDR_MAGIC			0xbabe7175
 
+#define PRU_ICSS 0x4A300000 
+#define PRU_ICSS_LEN 512*1024
+#define SHARED_RAM_START 0x00012000
+
 PruTimer::PruTimer() {
 	ddr_mem = 0;
+	ddr_mem_end = 0;
+	shared_mem = 0;
 	mem_fd=-1;
 	ddr_addr = 0;
 	ddr_size = 0;
@@ -136,7 +142,7 @@ bool PruTimer::initPRU(const std::string &firmware_stepper, const std::string &f
 		LOG("[ERROR] Unable to find DDR address and size for PRU" << std::endl);
 		return false;
 	}
-	
+
 	LOG( "The DDR memory reserved for the PRU is 0x" << std::hex <<  ddr_size << " and has addr 0x" <<  std::hex <<  ddr_addr << std::endl);
 	
     /* open the device */
@@ -156,7 +162,17 @@ bool PruTimer::initPRU(const std::string &firmware_stepper, const std::string &f
     }
 	
 	LOG( "Mapped memory starting at 0x" << std::hex << (unsigned long)ddr_mem << std::endl << std::dec);
-	
+
+	shared_mem = (uint8_t*)mmap(0, PRU_ICSS_LEN, PROT_WRITE | PROT_READ, MAP_SHARED, mem_fd, PRU_ICSS);
+
+	if (shared_mem == nullptr)
+	{
+		LOG("Failed to map the shared memory " << strerror(errno) << std::endl);
+		close(mem_fd);
+		return false;
+	}
+
+
 	
 	
 	ddr_write_location  = ddr_mem;
@@ -262,33 +278,37 @@ void PruTimer::runThread() {
 }
 
 void PruTimer::stopThread(bool join) {
-	LOG( "Stopping PruTimer..." << std::endl);
-	stop=true;
-	
-	/* Disable PRU and close memory mapping*/
-    prussdrv_pru_disable (PRU_NUM0);
-    prussdrv_pru_disable (PRU_NUM1);
-    prussdrv_exit ();
-	
-	if(ddr_mem) {
+	{
+	  std::lock_guard<std::mutex> lk(mutex_memory);
+	  LOG("Stopping PruTimer..." << std::endl);
+	  stop = true;
+
+	  /* Disable PRU and close memory mapping*/
+	  prussdrv_pru_disable(PRU_NUM0);
+	  prussdrv_pru_disable(PRU_NUM1);
+	  prussdrv_exit();
+
+	  if (ddr_mem) {
 #ifdef DEMO_PRU
-		free(ddr_mem);
-		ddr_mem = NULL;
+	    free(ddr_mem);
+	    ddr_mem = NULL;
 #else
-		munmap(ddr_mem, ddr_size);
-		close(mem_fd);
-		ddr_mem = NULL;
-		mem_fd=-1;
+	    munmap(ddr_mem, ddr_size);
+	    close(mem_fd);
+	    ddr_mem = NULL;
+	    mem_fd = -1;
 #endif
+	  }
+
+	  LOG("PRU disabled, DDR released, FD closed." << std::endl);
+
+
+	  pruMemoryAvailable.notify_all();
 	}
-    
-	LOG( "PRU disabled, DDR released, FD closed." << std::endl);
 	
-	
-	blockAvailable.notify_all();
 	if(join && runningThread.joinable()) {
-        LOG( "Joining thread" << std::endl);
-		runningThread.join();
+	  LOG( "Joining thread" << std::endl);
+	  runningThread.join();
 	}
 	
 	LOG( "PruTimer stopped." << std::endl);
@@ -299,10 +319,9 @@ void PruTimer::stopThread(bool join) {
 blockMemory - the data. 
 blockLen - number of data bytes. 
 unit - stepSize in bytes. 
-pathID - linespos. 
 totalTime - time it takes to complete the current block, in ticks. 
 */
-void PruTimer::push_block(uint8_t* blockMemory, size_t blockLen, unsigned int unit, unsigned int pathID, unsigned long totalTime) {
+void PruTimer::push_block(uint8_t* blockMemory, size_t blockLen, unsigned int unit, unsigned long totalTime) {
 	
 	if(!ddr_write_location) 
         return;
@@ -342,9 +361,14 @@ void PruTimer::push_block(uint8_t* blockMemory, size_t blockLen, unsigned int un
 			//LOG( "Waiting for " << std::dec << currentBlockSize+12 << " bytes available. Currently: " << getFreeMemory() << std::endl);
 			
 			std::unique_lock<std::mutex> lk(mutex_memory);
-			blockAvailable.wait(lk, [this,currentBlockSize]{ return ddr_size-ddr_mem_used-8>=currentBlockSize+12 || stop; });
+			blockSizeToWaitFor = currentBlockSize;
+			pruMemoryAvailable.wait(lk, [this,currentBlockSize]{ return isPruMemoryAvailable(); });
 			
 			if(!ddr_mem || stop) return;
+
+			if (ddr_mem_used == 0) {
+				QUEUELOG("PRU DDR was empty" << std::endl);
+			}
 			
 			
 			//Copy at the right location
@@ -533,14 +557,7 @@ void PruTimer::push_block(uint8_t* blockMemory, size_t blockLen, unsigned int un
 
 void PruTimer::waitUntilFinished() {
 	std::unique_lock<std::mutex> lk(mutex_memory);
-	blockAvailable.wait(lk, [this]{
-        return ddr_mem_used==0 || stop; 
-    });
-}
-
-void PruTimer::waitUntilLowMoveTime(unsigned long lowMoveTimeTicks) {
-	std::unique_lock<std::mutex> lk(mutex_memory);
-	blockAvailable.wait(lk, [this,lowMoveTimeTicks]{ /* LOG("Current wait " << totalQueuedMovesTime << "/" << lowMoveTimeTicks <<  std::endl); */ return totalQueuedMovesTime<lowMoveTimeTicks || stop; });
+	pruMemoryEmpty.wait(lk, [this] { return isPruMemoryEmpty(); });
 }
 
 void PruTimer::run() {
@@ -600,10 +617,12 @@ void PruTimer::run() {
 				currentNbEvents++;
 			}
 			currentNbEvents = nb;
+			notifyIfPruMemoryIsAvailable();
+			notifyIfPruMemoryIsEmpty();
 		}
 //		LOG( "NB event after " << std::dec << nb << " / " << currentNbEvents << std::endl);
 //		LOG( std::dec <<ddr_mem_used << " bytes used, free: " <<std::dec <<  ddr_size-ddr_mem_used<< "." << std::endl);
-		blockAvailable.notify_all();
+
 	}
 }
 
@@ -626,4 +645,8 @@ void PruTimer::resume() {
 	//We lock it so that we are thread safe
 	std::unique_lock<std::mutex> lk(mutex_memory);
 	*pru_control = 0;
+}
+
+size_t PruTimer::getStepsRemaining() {
+	return *(volatile size_t*)(shared_mem + SHARED_RAM_START + 16);
 }

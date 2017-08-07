@@ -26,8 +26,9 @@ class G28(GCodeCommand):
                                               'has_' + axis.lower()):
                 axis_home.append(axis)     
 
-        self.printer.path_planner.wait_until_done()
-        self.printer.path_planner.home(axis_home)
+        if len(axis_home):
+            self.printer.path_planner.wait_until_done()
+            self.printer.path_planner.home(axis_home)
 
         logging.info("Homing done.")
         self.printer.send_message(g.prot, "Homing done.")

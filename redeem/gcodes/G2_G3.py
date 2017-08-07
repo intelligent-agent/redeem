@@ -17,17 +17,20 @@ import logging
 class G2(GCodeCommand):
 
     def execute_common(self, g):
-        if g.has_letter("F"):  # Get the feed rate
-            # Convert from mm/min to SI unit m/s
-            self.printer.feed_rate = float(g.get_value_by_letter("F"))
-            self.printer.feed_rate /= 60000.0
+        if g.has_letter("F"):  # Get the feed rate & convert from mm/min to SI unit m/s
+            self.printer.feed_rate = g.get_distance_by_letter("F") / 60000.
             g.remove_token_by_letter("F")
+
+        if g.has_letter("Q"):  # Get the acceration & convert from mm/min^2 to SI unit m/s^2
+            self.printer.accel = g.get_distance_by_letter("Q") / 3600000.
+            g.remove_token_by_letter("Q")
+
         smds = {}
         for i in range(g.num_tokens()):
             axis = g.token_letter(i)
             # Get the value, new position or vector
             value =  float(g.token_value(i)) / 1000.0
-            if (axis == 'E' or axis == 'H') and self.printer.extrude_factor != 1.0:
+            if axis in ('E', 'H') and self.printer.extrude_factor != 1.0:
                    value *= self.printer.extrude_factor
             smds[axis] = value        
 

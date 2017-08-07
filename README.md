@@ -123,7 +123,7 @@ A recompile of the firmware can be triggered by touching /et/redeem/local.cfg
 Elias Bakken
 Mathieu Monney
 Daryl Bond
-
+Andrew Wiley
 
 
 

@@ -30,16 +30,12 @@ for details.
 
 
 class Delta:
-    Hez = 0.0601    # Distance head extends below the effector.
     L   = 0.322     # Length of the rod
     r   = 0.175    # Radius of the columns
-    Ae  = 0.02032  # Effector offset
-    Be  = 0.02032
-    Ce  = 0.02032
 
     A_radial = 0.00            # Radius error of the named column                          
     B_radial = 0.00                                                                      
     C_radial = 0.00                                                                     
-    A_tangential = 0.00                                                                 
-    B_tangential = 0.00                                                                
-    C_tangential = 0.00
+    A_angular = 0.00                                                                 
+    B_angular = 0.00                                                                
+    C_angular = 0.00

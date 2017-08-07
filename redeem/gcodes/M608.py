@@ -24,9 +24,16 @@ class M608(GCodeCommand):
             return
 
         # Tokens present, process tokens
+        # Non-standard GCODE formatting. Recreate tokens in old style, space delimitered fashion
+        g.set_tokens(g.get_message().upper().split(" ")[1:]) # ignore the first token
         for axis in self.printer.axes_zipped:
             if g.has_letter(axis):
-                slave = g.get_value_by_letter(axis).upper()
+                slave = ""
+                # get (non-RS274) second letter from gcode word, if any
+                i = g.get_token_index_by_letter(axis)
+                t = g.get_tokens()[i]
+                if t[0] == axis and len(t)>1:
+                    slave = t[1]
                 if slave == "":
                     logging.info("Axis {} has no slaves".format(axis))
                     self.printer.send_message(g.prot, "Axis {} is now slaveless".format(axis))

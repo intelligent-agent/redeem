@@ -31,9 +31,18 @@ class M(GCodeCommand):
             else:
                 self.printer.send_message(g.prot, "Wrong formatting")            
         else:
+            highlight = ""
+            if g.has_letter("S"):
+                highlight = g.get_int_by_letter("S")
+                #print("Highlight: "+str(highlight))
             for gcode, desc in sorted(gcodes.items()):
                 if gcode[0] == "M":
-                    self.printer.send_message(g.prot, gcode+": "+desc)
+                    ret = gcode+": "+desc
+                    if highlight:
+                        if highlight in ret:
+                            self.printer.send_message(g.prot, ret)
+                    else:
+                        self.printer.send_message(g.prot, ret)        
 
     def get_description(self):
         return "List all M-codes"

@@ -15,15 +15,23 @@ except ImportError:
     from redeem.Gcode import Gcode
 
 
-
-
 class M109(GCodeCommand):
-
     def execute(self, g):
         m104 = Gcode({"message": "M104 " + " ".join(g.get_tokens()),
-                      "prot": g.prot})
+                      "parent": g})
         self.printer.processor.execute(m104)
-        m116 = Gcode({"message": "M116", "prot": g.prot})
+
+        has_parameter = g.has_letter("P") or g.has_letter("T")
+        if not has_parameter:
+            heaters = ["E", "H"]
+            if self.printer.config.reach_revision:
+                heaters.extend(["A", "B", "C"])
+
+            parameters = ["P" + str(heaters.index(self.printer.current_tool))]
+        else:
+            parameters = g.get_tokens()
+
+        m116 = Gcode({"message": "M116 " + " ".join(parameters), "parent": g})
         self.printer.processor.execute(m116)
 
     def get_description(self):

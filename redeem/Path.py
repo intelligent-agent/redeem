@@ -48,7 +48,7 @@ class Path:
     # max length of any segment in an arc
     ARC_SEGMENT_LENGTH = 1.0 / 1000  # TODO : make setting
     
-    def __init__(self, axes, speed, accel, cancelable=False, use_bed_matrix=True, use_backlash_compensation=True, enable_soft_endstops=True):
+    def __init__(self, axes, speed, accel, cancelable=False, use_bed_matrix=True, use_backlash_compensation=True, enable_soft_endstops=True, is_probe=False):
         """ The axes of evil, the feed rate in m/s and ABS or REL """
         self.axes = axes
         self.speed = speed
@@ -57,6 +57,7 @@ class Path:
         self.use_bed_matrix = int(use_bed_matrix)
         self.use_backlash_compensation = int(use_backlash_compensation)
         self.enable_soft_endstops = enable_soft_endstops
+        self.is_probe = is_probe
         self.next = None
         self.prev = None
         self.speeds = None
@@ -211,8 +212,8 @@ class Path:
 
 class AbsolutePath(Path):
     """ A path segment with absolute movement """
-    def __init__(self, axes, speed, accel, cancelable=False, use_bed_matrix=True, use_backlash_compensation=True, enable_soft_endstops=True):
-        Path.__init__(self, axes, speed, accel, cancelable, use_bed_matrix, use_backlash_compensation, enable_soft_endstops)
+    def __init__(self, axes, speed, accel, cancelable=False, use_bed_matrix=True, use_backlash_compensation=True, enable_soft_endstops=True, is_probe=False):
+        Path.__init__(self, axes, speed, accel, cancelable, use_bed_matrix, use_backlash_compensation, enable_soft_endstops, is_probe)
         self.movement = Path.ABSOLUTE
 
     def set_prev(self, prev):
@@ -242,8 +243,8 @@ class RelativePath(Path):
       (where we actually are) -> (somewhere close to = (where we think we are + our passed in vector))
       but it should be pretty close!
     """
-    def __init__(self, axes, speed, accel, cancelable=False, use_bed_matrix=True, use_backlash_compensation=True, enable_soft_endstops=True):
-        Path.__init__(self, axes, speed, accel, cancelable, use_bed_matrix, use_backlash_compensation, enable_soft_endstops)
+    def __init__(self, axes, speed, accel, cancelable=False, use_bed_matrix=True, use_backlash_compensation=True, enable_soft_endstops=True, is_probe=False):
+        Path.__init__(self, axes, speed, accel, cancelable, use_bed_matrix, use_backlash_compensation, enable_soft_endstops, is_probe)
         self.movement = Path.RELATIVE
 
     def set_prev(self, prev):
@@ -267,8 +268,8 @@ class RelativePath(Path):
 
 class MixedPath(Path):
     """ A path some mixed and some absolute movement axes """
-    def __init__(self, axes, speed, accel, cancelable=False, use_bed_matrix=True, use_backlash_compensation=True, enable_soft_endstops=True):
-        Path.__init__(self, axes, speed, accel, cancelable, use_bed_matrix, use_backlash_compensation, enable_soft_endstops)
+    def __init__(self, axes, speed, accel, cancelable=False, use_bed_matrix=True, use_backlash_compensation=True, enable_soft_endstops=True, is_probe=False):
+        Path.__init__(self, axes, speed, accel, cancelable, use_bed_matrix, use_backlash_compensation, enable_soft_endstops, is_probe)
         self.movement = Path.MIXED
 
     def set_prev(self, prev):

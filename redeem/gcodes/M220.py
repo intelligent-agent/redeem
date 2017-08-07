@@ -14,11 +14,7 @@ import logging
 class M220(GCodeCommand):
 
     def execute(self, g):
-	if g.has_letter("S"):
-            self.printer.factor = float(g.get_value_by_letter("S")) / 100
-        else:
-            self.printer.factor = 1
-
+        self.printer.factor = g.get_float_by_letter("S", 100) / 100
 	logging.debug("M220 factor " + str(self.printer.factor))
 	
     def get_description(self):

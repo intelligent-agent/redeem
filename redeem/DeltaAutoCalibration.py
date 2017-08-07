@@ -81,15 +81,18 @@ A_AXIS, B_AXIS, C_AXIS = 0, 1, 2
 class AutoCalibrationDeltaParameters:
     def __init__(self, diagonal, radius, height,
                  xstop, ystop, zstop,
-                 yadj, zadj):
+                 yangular, zangular,
+                 yradial, zradial):
         self.diagonal = diagonal
         self.radius = radius
         self.height = height
         self.xstop = xstop
         self.ystop = ystop
         self.zstop = zstop
-        self.yadj = yadj
-        self.zadj = zadj
+        self.yangular = yangular
+        self.zangular = zangular
+        self.yradial = yradial
+        self.zradial = zradial
 
         # internal parameters
 
@@ -112,11 +115,8 @@ class AutoCalibrationDeltaParameters:
 
     @classmethod
     def from_redeem_delta(cls, delta, center_offsets):
-        if delta.Ae != delta.Be or delta.Ae != delta.Ce:
-            raise ValueError("non-uniform effector offsets not supported")
-
         diagonal = 1000. * delta.L
-        radius = 1000. * (delta.r - delta.Ae)
+        radius = 1000. * delta.r
 
         # center_offsets are negative, hence the minus sign
         xstop = -1000. * center_offsets["X"]
@@ -128,38 +128,52 @@ class AutoCalibrationDeltaParameters:
         xstop -= height
         ystop -= height
         zstop -= height
-
-        yadj = 1000. * (delta.B_tangential - delta.A_tangential)
-        zadj = 1000. * (delta.C_tangential - delta.A_tangential)
+        
+        # If we rotate all three towers around by n degrees,
+        # the net effect is a no-op because all it does is rotate
+        # the entire printer. Instead, force A_angular to zero
+        # and only adjust the other two.
+        yangular = delta.B_angular + delta.A_angular
+        zangular = delta.C_angular + delta.A_angular
+        
+        # Similarly, if we increase the radial error for all towers
+        # by n mm, we've really just increased the radius. Instead,
+        # adjust the radius so A's radial error is zero and only let
+        # the optimization routine play with the other two towers.
+        radius = radius + (1000. * delta.A_radial)
+        yradial = 1000. * (delta.B_radial - delta.A_radial)
+        zradial = 1000. * (delta.C_radial - delta.A_radial)
 
         logging.debug("input delta parameters: Diagonal (L) = %f", diagonal/1000.)
         logging.debug("input delta parameters: Radius   (r) = %f", radius/1000.)
         logging.debug("input delta parameters: offset_x     = %f", center_offsets["X"])
         logging.debug("input delta parameters: offset_y     = %f", center_offsets["Y"])
         logging.debug("input delta parameters: offset_z     = %f", center_offsets["Z"])
-        logging.debug("input delta parameters: A_tangential = %f", delta.A_tangential)
-        logging.debug("input delta parameters: B_tangential = %f", delta.B_tangential)
-        logging.debug("input delta parameters: C_tangential = %f", delta.C_tangential)
-        logging.debug("input delta parameters: yadj         = %f", yadj/1000.)
-        logging.debug("input delta parameters: zadj         = %f", zadj/1000.)
+        logging.debug("input delta parameters: A_angular    = %f", delta.A_angular)
+        logging.debug("input delta parameters: B_angular    = %f", delta.B_angular)
+        logging.debug("input delta parameters: C_angular    = %f", delta.C_angular)
+        logging.debug("input delta parameters: A_radial     = %f", delta.A_radial)
+        logging.debug("input delta parameters: B_radial     = %f", delta.B_radial)
+        logging.debug("input delta parameters: C_radial     = %f", delta.C_radial)
+        logging.debug("input delta parameters: yangular     = %f", yangular)
+        logging.debug("input delta parameters: zangular     = %f", zangular)
+        logging.debug("input delta parameters: yradial      = %f", yradial)
+        logging.debug("input delta parameters: zradial      = %f", zradial)
 
         return cls(diagonal, radius, height,
                    xstop, ystop, zstop,
-                   yadj, zadj)
+                   yangular, zangular,
+                   yradial, zradial)
 
     def to_redeem_delta(self, delta, center_offsets):
-        delta.Hez = 0.
         delta.L = self.diagonal / 1000.
         delta.r = self.radius / 1000.
-        delta.Ae = 0.
-        delta.Be = 0.
-        delta.Ce = 0.
         delta.A_radial = 0.
-        delta.B_radial = 0.
-        delta.C_radial = 0.
-        delta.A_tangential = 0
-        delta.B_tangential = self.yadj / 1000.
-        delta.C_tangential = self.zadj / 1000.
+        delta.B_radial = self.yradial / 1000.
+        delta.C_radial = self.zradial / 1000.
+        delta.A_angular = 0.
+        delta.B_angular = self.yangular
+        delta.C_angular = self.zangular
 
         center_offsets["X"] = -1. * (self.height + self.xstop) / 1000.
         center_offsets["Y"] = -1. * (self.height + self.ystop) / 1000.
@@ -170,26 +184,29 @@ class AutoCalibrationDeltaParameters:
         logging.debug("output delta parameters: offset_x     = %f", center_offsets['X'])
         logging.debug("output delta parameters: offset_y     = %f", center_offsets['Y'])
         logging.debug("output delta parameters: offset_z     = %f", center_offsets['Z'])
-        logging.debug("output delta parameters: A_tangential = %f", delta.A_tangential)
-        logging.debug("output delta parameters: B_tangential = %f", delta.B_tangential)
-        logging.debug("output delta parameters: C_tangential = %f", delta.C_tangential)
-        logging.debug("output delta parameters: yadj         = %f", self.yadj)
-        logging.debug("output delta parameters: zadj         = %f", self.zadj)
+        logging.debug("output delta parameters: A_angular    = %f", delta.A_angular)
+        logging.debug("output delta parameters: B_angular    = %f", delta.B_angular)
+        logging.debug("output delta parameters: C_angular    = %f", delta.C_angular)
+        logging.debug("output delta parameters: A_radial     = %f", delta.A_radial)
+        logging.debug("output delta parameters: B_radial     = %f", delta.B_radial)
+        logging.debug("output delta parameters: C_radial     = %f", delta.C_radial)
 
     @classmethod
     def from_base_and_raw_params(cls, base, new_params):
         ret = None
 
         if len(new_params) == 3:
-            ret = cls(base.diagonal, base.radius, base.height, new_params[0], new_params[1], new_params[2], base.yadj, base.zadj)
+            ret = cls(base.diagonal, base.radius, base.height, new_params[0], new_params[1], new_params[2], base.yangular, base.zangular, base.yradial, base.zradial)
         elif len(new_params) == 4:
-            ret = cls(base.diagonal, new_params[0], base.height, new_params[1], new_params[2], new_params[3], base.yadj, base.zadj)
+            ret = cls(base.diagonal, new_params[0], base.height, new_params[1], new_params[2], new_params[3], base.yangular, base.zangular, base.yradial, base.zradial)
         elif len(new_params) == 6:
-            ret = cls(base.diagonal, new_params[0], base.height, new_params[1], new_params[2], new_params[3], new_params[4], new_params[5])
-        elif len(new_params) == 7:
-            ret = cls(new_params[0], new_params[1], base.height, new_params[2], new_params[3], new_params[4], new_params[5], new_params[6])
+            ret = cls(base.diagonal, new_params[0], base.height, new_params[1], new_params[2], new_params[3], new_params[4], new_params[5], base.yradial, base.zradial)
+        elif len(new_params) == 8:
+            ret = cls(base.diagonal, new_params[0], base.height, new_params[1], new_params[2], new_params[3], new_params[4], new_params[5], new_params[6], new_params[7])
+        elif len(new_params) == 9:
+            ret = cls(new_params[0], new_params[1], base.height, new_params[2], new_params[3], new_params[4], new_params[5], new_params[6], new_params[7], new_params[8])
         else:
-            raise ValueError("Only 3, 4, 6, or 7 parameters supported")
+            raise ValueError("Only 3, 4, 6, 8, or 9 parameters supported")
 
         ret.update_height(base)
         return ret
@@ -200,16 +217,23 @@ class AutoCalibrationDeltaParameters:
         elif num_factors == 4:
             return [self.radius, self.xstop, self.ystop, self.zstop]
         elif num_factors == 6:
-            return [self.radius, self.xstop, self.ystop, self.zstop, self.yadj, self.zadj]
-        elif num_factors == 7:
-            return [self.diagonal, self.radius, self.xstop, self.ystop, self.zstop, self.yadj, self.zadj]
+            return [self.radius, self.xstop, self.ystop, self.zstop, self.yangular, self.zangular]
+        elif num_factors == 8:
+            return [self.radius, self.xstop, self.ystop, self.zstop, self.yangular, self.zangular, self.yradial, self.zradial]
+        elif num_factors == 9:
+            return [self.diagonal, self.radius, self.xstop, self.ystop, self.zstop, self.yangular, self.zangular, self.yradial, self.zradial]
+        else:
+            raise ValueError("Only 3, 4, 6, 8, or 9 parameters supported")
 
     def to_dict(self):
         L = self.diagonal / 1000.
         r = self.radius / 1000.
-        A_tangential = 0
-        B_tangential = self.yadj / 1000.
-        C_tangential = self.zadj / 1000.
+        A_angular = 0
+        B_angular = self.yangular
+        C_angular = self.zangular
+        A_radial = 0
+        B_radial = self.yradial / 1000.
+        C_radial = self.zradial / 1000.
 
         offset_x = -1. * (self.height + self.xstop) / 1000.
         offset_y = -1. * (self.height + self.ystop) / 1000.
@@ -218,9 +242,12 @@ class AutoCalibrationDeltaParameters:
         out = {}
         out["L"] = L
         out["r"] = r
-        out["A_tangential"] = A_tangential
-        out["B_tangential"] = B_tangential
-        out["C_tangential"] = C_tangential
+        out["A_angular"] = A_angular
+        out["B_angular"] = B_angular
+        out["C_angular"] = C_angular
+        out["A_radial"] = A_radial
+        out["B_radial"] = B_radial
+        out["C_radial"] = C_radial
         out["offset_x"] = offset_x
         out["offset_y"] = offset_y
         out["offset_z"] = offset_z
@@ -232,10 +259,10 @@ class AutoCalibrationDeltaParameters:
         self.towerY = []
         self.towerX.append(self.radius * np.cos(np.radians(90.)))
         self.towerY.append(self.radius * np.sin(np.radians(90.)))
-        self.towerX.append(self.radius * np.cos(np.radians(210. + self.yadj)))
-        self.towerY.append(self.radius * np.sin(np.radians(210. + self.yadj)))
-        self.towerX.append(self.radius * np.cos(np.radians(330. + self.zadj)))
-        self.towerY.append(self.radius * np.sin(np.radians(330. + self.zadj)))
+        self.towerX.append((self.radius + self.yradial) * np.cos(np.radians(210. + self.yangular)))
+        self.towerY.append((self.radius + self.yradial) * np.sin(np.radians(210. + self.yangular)))
+        self.towerX.append((self.radius + self.zradial) * np.cos(np.radians(330. + self.zangular)))
+        self.towerY.append((self.radius + self.zradial) * np.sin(np.radians(330. + self.zangular)))
 
         self.Xbc = self.towerX[2] - self.towerX[1]
         self.Xca = self.towerX[0] - self.towerX[2]
@@ -323,8 +350,8 @@ def _calibrate_delta_parameters(pts, num_factors, delta_params):
 
     # validate the input
 
-    if num_factors < 3 or num_factors > 7 or num_factors == 5:
-        raise ValueError("{} factors requested but only 3, 4, 6, 7 supported"
+    if num_factors < 3 or num_factors > 9 or num_factors == 5 or num_factors == 7:
+        raise ValueError("{} factors requested but only 3, 4, 6, 8, 9 supported"
                          .format(num_factors))
     if num_factors > num_points:
         raise ValueError("Need at least as many points as factors")

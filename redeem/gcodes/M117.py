@@ -17,10 +17,10 @@ except ImportError:
 
 class M117(GCodeCommand):
     def execute(self, g):
-        # This G-code can be used directly
-        text = g.message.strip("M117 ")
-        Alarm.action_command("display_message", text)
-        #self.printer.comms["octoprint"].send_message(text)
+        text = g.get_message()[len("M117"):]
+        if text[0] == ' ':
+            text = text[1:]
+        Alarm.action_command("display_message", text.rstrip())
 
     def get_description(self):
         return "Send a message to a connected display"

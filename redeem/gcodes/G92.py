@@ -18,15 +18,16 @@ except ImportError:
 class G92(GCodeCommand):
 
     def execute(self, g):
+        AXES = self.printer.AXES[:self.printer.NUM_AXES]
         if g.num_tokens() == 0:
             # If no token is present, do this for all steppers
             logging.debug("Adding all to G92")
-            g.set_tokens(["X0", "Y0", "Z0", "E0", "H0"])
+            g.set_tokens([v + "0" for v in AXES]) # ["X0", "Y0", ...]
         pos = {}
-        for i in range(g.num_tokens()):
-            axis = self.printer.movement_axis(g.token_letter(i))  # Get the axis, X, Y, Z or E
-            # Get the value, new position or vector
-            pos[axis] = float(g.token_value(i)) / 1000.0
+        for axis in AXES:
+            if g.has_letter(axis):
+                real_axis = self.printer.movement_axis(axis)
+                pos[real_axis] = g.get_distance_by_letter(axis) / 1000.0 # SI m
 
         # Make a path segment from the axes
         path = G92Path(pos, self.printer.feed_rate)

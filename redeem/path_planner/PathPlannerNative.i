@@ -37,19 +37,76 @@ namespace std {
 %apply FLOAT_T *OUTPUT { FLOAT_T* X, FLOAT_T* Y , FLOAT_T* Z};
 %apply FLOAT_T *OUTPUT { FLOAT_T* Az, FLOAT_T* Bz , FLOAT_T* Cz};
 
+%typemap(in) VectorN {
+  if (!PySequence_Check($input)) {
+      PyErr_SetString(PyExc_TypeError,"Expecting a sequence");
+      return NULL;
+  }
+  if (PyObject_Length($input) != NUM_AXES) {
+      PyErr_SetString(PyExc_ValueError,"Expecting a sequence with NUM_AXES elements");
+      return NULL;
+  }
+  for (int i = 0; i < NUM_AXES; i++) {
+    PyObject *o = PySequence_GetItem($input,i);
+    if (PyFloat_Check(o)) {
+      $1.values[i] = PyFloat_AsDouble(o);
+    }
+    else if(PyLong_Check(o)) {
+      $1.values[i] = PyLong_AsDouble(o);
+    }
+    else if(PyInt_Check(o)) {
+      $1.values[i] = (double)PyInt_AsLong(o);
+    }
+    else {
+      Py_XDECREF(o);
+      PyErr_SetString(PyExc_ValueError,"Expecting a sequence of floats or longs");
+      return NULL;
+    }
+    
+    Py_DECREF(o);
+  }
+}
+
+%typemap(out) VectorN (PyObject* list, PyObject* element) {
+  list = PyList_New(NUM_AXES);
+  
+  if(!PyList_Check(list)) {
+    Py_XDECREF(list);
+    PyErr_SetString(PyExc_RuntimeError, "Failed to allocate List for VectorN");
+    return NULL;
+  }
+  
+  for(int i = 0; i < NUM_AXES; i++) {
+    element = PyFloat_FromDouble($1.values[i]);
+
+    if(!PyFloat_Check(element)) {
+      Py_XDECREF(element);
+      PyErr_SetString(PyExc_RuntimeError, "Failed to allocate PyFloat for VectorN");
+      Py_DECREF(list);
+      return NULL;
+    }
+
+    if(-1 == PyList_SetItem(list, i, element)) {
+      PyErr_SetString(PyExc_RuntimeError, "Failed to insert PyFloat into PyList for VectorN");
+      Py_DECREF(element);
+      Py_DECREF(list);
+      return NULL;
+    }
+  }
+  
+  $result = list;
+}
 
 class Delta {
  public:
   Delta();
   ~Delta();
-  void setMainDimensions(FLOAT_T Hez_in, FLOAT_T L_in, FLOAT_T r_in);
-  void setEffectorOffset(FLOAT_T Ae_in, FLOAT_T Be_in, FLOAT_T Ce_in);
+  void setMainDimensions(FLOAT_T L_in, FLOAT_T r_in);
   void setRadialError(FLOAT_T A_radial_in, FLOAT_T B_radial_in, FLOAT_T C_radial_in);
-  void setTangentError(FLOAT_T A_tangential_in, FLOAT_T B_tangential_in, FLOAT_T C_tangential_in);
-  void recalculate();
-  void inverse_kinematics(FLOAT_T X, FLOAT_T Y, FLOAT_T Z, FLOAT_T* Az, FLOAT_T* Bz, FLOAT_T* Cz);
-  void forward_kinematics(FLOAT_T Az, FLOAT_T Bz, FLOAT_T Cz, FLOAT_T* X, FLOAT_T* Y, FLOAT_T* Z);
-  void vertical_offset(FLOAT_T Az, FLOAT_T Bz, FLOAT_T Cz, FLOAT_T* offset);
+  void setAngularError(FLOAT_T A_angular_in, FLOAT_T B_angular_in, FLOAT_T C_angular_in);
+  void worldToDelta(FLOAT_T X, FLOAT_T Y, FLOAT_T Z, FLOAT_T* Az, FLOAT_T* Bz, FLOAT_T* Cz);
+  void deltaToWorld(FLOAT_T Az, FLOAT_T Bz, FLOAT_T Cz, FLOAT_T* X, FLOAT_T* Y, FLOAT_T* Z);
+  void verticalOffset(FLOAT_T Az, FLOAT_T Bz, FLOAT_T Cz, FLOAT_T* offset);
 };
 
 class PathPlanner {
@@ -60,33 +117,31 @@ class PathPlanner {
   bool queueSyncEvent(bool isBlocking = true);
   int waitUntilSyncEvent();
   void clearSyncEvent();
-  void queueMove(std::vector<FLOAT_T> startPos, std::vector<FLOAT_T> endPos, 
+  void queueMove(VectorN endPos, 
 		 FLOAT_T speed, FLOAT_T accel, 
 		 bool cancelable, bool optimize, 
 		 bool enable_soft_endstops, bool use_bed_matrix, 
-		 bool use_backlash_compensation, int tool_axis, bool virgin);
+		 bool use_backlash_compensation, bool is_probe, int tool_axis);
   void runThread();
   void stopThread(bool join);
   void waitUntilFinished();
   void setPrintMoveBufferWait(int dt);
-  void setMinBufferedMoveTime(int dt);
-  void setMaxBufferedMoveTime(int dt);
-  void setMaxSpeeds(std::vector<FLOAT_T> speeds);
-  void setMinSpeeds(std::vector<FLOAT_T> speeds);
-  void setAxisStepsPerMeter(std::vector<FLOAT_T> stepPerM);
-  void setAcceleration(std::vector<FLOAT_T> accel);
-  void setJerks(std::vector<FLOAT_T> jerks);
-  void setSoftEndstopsMin(std::vector<FLOAT_T> stops);
-  void setSoftEndstopsMax(std::vector<FLOAT_T> stops);
+  void setMaxBufferedMoveTime(long long dt);
+  void setMaxSpeeds(VectorN speeds);
+  void setAxisStepsPerMeter(VectorN stepPerM);
+  void setAcceleration(VectorN accel);
+  void setMaxSpeedJumps(VectorN speedJumps);
+  void setSoftEndstopsMin(VectorN stops);
+  void setSoftEndstopsMax(VectorN stops);
   void setBedCompensationMatrix(std::vector<FLOAT_T> matrix);
-  void setMaxPathLength(FLOAT_T maxLength);
   void setAxisConfig(int axis);
-  void setState(std::vector<FLOAT_T> set);
+  void setState(VectorN set);
   void enableSlaves(bool enable);
   void addSlave(int master_in, int slave_in);
-  void setBacklashCompensation(std::vector<FLOAT_T> set);
+  void setBacklashCompensation(VectorN set);
   void resetBacklash();
-  std::vector<FLOAT_T> getState();
+  VectorN getState();
+  FLOAT_T getLastProbeDistance();
   void suspend();
   void resume();
   void reset();

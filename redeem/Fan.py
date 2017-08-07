@@ -33,6 +33,11 @@ class Fan(PWM):
         """ Channel is the channel that the fan is on (0-7) """
         self.channel = channel
 
+    def set_PWM_frequency(self, value):
+        """ Set the amount of on-time from 0..1 """
+        self.pwm_frequency = int(value)
+        PWM.set_frequency(value)
+
     def set_value(self, value):
         """ Set the amount of on-time from 0..1 """
         self.value = value

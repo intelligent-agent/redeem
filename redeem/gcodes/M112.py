@@ -17,7 +17,7 @@ class M112(GCodeCommand):
         self.printer.path_planner.emergency_interrupt()
 
     def get_description(self):
-        return "Cancel all the planned move in emergency."
+        return "Cancel all the planned moves in emergency."
 
     def is_buffered(self):
         return False

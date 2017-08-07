@@ -56,7 +56,11 @@ class Printer:
         self.movement           = Path.ABSOLUTE
         self.axis_config        = self.AXIS_CONFIG_XY
         self.feed_rate          = 0.5
-        self.accel              = 0.5
+        # this rate is the one used at the beginning of startup for any moves without G1 F,
+        # other than homing, which obeys it's speed correctly.
+        self.accel              = 9.8
+        # this accel is the global max unless over-ridden using G1 Q, this is
+        # compared to the one listed in local.cfg, the lower one controls the printer.
         self.current_tool       = "E"
         self.running_M116       = False
         # For movement commands, whether the E axis refers to the active
@@ -64,10 +68,7 @@ class Printer:
         self.e_axis_active = True
         self.move_cache_size        = 128
         self.print_move_buffer_wait = 250
-        self.min_buffered_move_time = 100
         self.max_buffered_move_time = 1000
-
-        self.max_length = 0.001
 
         self.probe_points  = []
         self.probe_heights = [0, 0, 0]
@@ -77,8 +78,7 @@ class Printer:
         self.num_axes = 8
 
         self.max_speeds             = np.ones(self.num_axes)
-        self.min_speeds             = np.ones(self.num_axes)*0.01
-        self.jerks                  = np.ones(self.num_axes)*0.01
+        self.max_speed_jumps        = np.ones(self.num_axes)*0.01
         self.acceleration           = [0.3]*self.num_axes
         self.home_speed             = np.ones(self.num_axes)
         self.home_backoff_speed     = np.ones(self.num_axes)
@@ -107,26 +107,6 @@ class Printer:
         self.slaves[master] = slave
         self.has_slaves = True
 
-    def check_values(self):
-        """
-        make sure that values are valid
-        """
-
-        # check min speed
-        for axis in self.steppers:
-            stepper = self.steppers[axis]
-            if stepper.in_use:
-                idx = Printer.axis_to_index(axis)
-                steps_per_second = self.min_speeds[idx]*self.steps_pr_meter[idx]
-                logging.debug("Axis {0} min steps/s = {1}".format(axis, steps_per_second))
-                if steps_per_second < 1:
-                    err = "minimum speed of axis {0} is too low. Increase min_speed_{0}, microstepping_{0}, or adjust steps_pr_mm_{0}".format(axis.lower())
-                    logging.warning(err)
-                    raise RuntimeError(err)
-
-
-        return
-
     def ensure_steppers_enabled(self):
         """
         This method is called for every move, so it should be fast/cached.
@@ -142,7 +122,7 @@ class Printer:
                 if not stepper.current_enabled:
                     # Stepper does not have current enabled.
                     stepper.set_current_enabled()  # Force update
-                
+
 
     def reply(self, gcode):
         """ Send a reply through the proper channel """
@@ -223,9 +203,9 @@ class Printer:
         for axis, offset in self.path_planner.travel_length.iteritems():
             self.config.set('Geometry', "travel_{}".format(axis), str(offset))
 
-        # Save Delta shit
-        logging.debug("save_settings: setting delta shit")
-        opts = ["Hez", "L", "r", "Ae", "Be", "Ce", "A_radial", "B_radial", "C_radial", "A_tangential", "B_tangential", "C_tangential" ]
+        # Save Delta config
+        logging.debug("save_settings: setting delta config")
+        opts = ["L", "r", "A_radial", "B_radial", "C_radial", "A_angular", "B_angular", "C_angular" ]
         for opt in opts:
             self.config.set('Delta', opt, str(Delta.__dict__[opt]))
 
