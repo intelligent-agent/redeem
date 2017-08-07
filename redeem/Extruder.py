@@ -84,6 +84,8 @@ class Heater(object):
         """ Returns true if the target temperature is reached """
         if self.target_temp == 0:
             return True
+        if self.current_temp == 0:
+            self.target_temp = 0
         err = abs(self.current_temp - self.target_temp)
         reached = err < self.ok_range
         return reached
@@ -233,7 +235,7 @@ class Heater(object):
             a = Alarm(Alarm.HEATER_TOO_HOT, 
                 "Temperature beyond max ({} degrees) for {}".format(self.max_temp, self.name))                
         # Check the time diff, only warn if something is off.     
-        if self.time_diff > 2:
+        if self.time_diff > 4:
             logging.warning("Heater time update large: " +
                             self.name + " temp: " +
                             str(self.current_temp) + " time delta: " +

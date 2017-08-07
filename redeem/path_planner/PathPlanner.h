@@ -79,7 +79,7 @@ class PathPlanner {
   std::atomic_uint_fast32_t linesPos; // Position for executing line movement
   std::atomic_uint_fast32_t linesWritePos; // Position where we write the next cached line move
   std::atomic_uint_fast32_t linesCount;      ///< Number of lines cached 0 = nothing to do.
-  std::atomic<long> linesTicksCount;
+  std::atomic<long long> linesTicksCount;
 
   unsigned int moveCacheSize; // set on init
 

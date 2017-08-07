@@ -50,14 +50,15 @@ class Printer:
         self.cold_ends   = []
         self.coolers     = []
         self.comms       = {}  # Communication channels
-        self.path_planner   = None
-        self.factor         = 1.0
-        self.extrude_factor = 1.0
-        self.movement       = Path.ABSOLUTE
-        self.axis_config    = self.AXIS_CONFIG_XY
-        self.feed_rate      = 0.5
-        self.accel          = 0.5
-        self.current_tool   = "E"
+        self.path_planner       = None
+        self.factor             = 1.0
+        self.extrude_factor     = 1.0
+        self.movement           = Path.ABSOLUTE
+        self.axis_config        = self.AXIS_CONFIG_XY
+        self.feed_rate          = 0.5
+        self.accel              = 0.5
+        self.current_tool       = "E"
+        self.running_M116       = False
         # For movement commands, whether the E axis refers to the active
         # tool (more common with other firmwares), or only the actual E axis
         self.e_axis_active = True
@@ -95,17 +96,16 @@ class Printer:
         # By default, do not check for slaves
         self.has_slaves = False
 
-        # Arc
+        self.axes_absolute = ["X", "Y", "Z", "E", "H", "A", "B", "C"]
         self.arc_plane = Path.X_Y_ARC_PLANE
 
-        return
+        self.axes_relative = []
 
     def add_slave(self, master, slave):
         ''' Make an axis copy the movement of another.
         the slave will get the same position as the axis'''
         self.slaves[master] = slave
         self.has_slaves = True
-        return
 
     def check_values(self):
         """
@@ -135,9 +135,14 @@ class Printer:
         self.swd.reset()
         # Enabe steppers
         for name, stepper in self.steppers.iteritems():
-            if stepper.in_use and not stepper.enabled:
-                # Stepper should be enabled, but is not.
-                stepper.set_enabled(True)  # Force update
+            if stepper.in_use:
+                if not stepper.enabled:
+                    # Stepper should be enabled, but is not.
+                    stepper.set_enabled(True)  # Force update
+                if not stepper.current_enabled:
+                    # Stepper does not have current enabled.
+                    stepper.set_current_enabled()  # Force update
+                
 
     def reply(self, gcode):
         """ Send a reply through the proper channel """
@@ -212,8 +217,11 @@ class Printer:
         # Offsets
         logging.debug("save_settings: setting offsets")
         for axis, offset in self.path_planner.center_offset.iteritems():
-            if self.config.has_option("Geometry", "offset_{}".format(axis)):
-                self.config.set('Geometry', "offset_{}".format(axis), str(offset))
+            self.config.set('Geometry', "offset_{}".format(axis), str(offset))
+        # Travel length
+        logging.debug("save_settings: travel length")
+        for axis, offset in self.path_planner.travel_length.iteritems():
+            self.config.set('Geometry', "travel_{}".format(axis), str(offset))
 
         # Save Delta shit
         logging.debug("save_settings: setting delta shit")

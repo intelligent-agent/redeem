@@ -10,9 +10,9 @@ License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 
 from GCodeCommand import GCodeCommand
 try:
-    from Path import Path, RelativePath, AbsolutePath
+    from Path import Path, RelativePath, AbsolutePath, MixedPath
 except ImportError:
-    from redeem.Path import Path, RelativePath, AbsolutePath
+    from redeem.Path import Path, RelativePath, AbsolutePath, MixedPath
 
 import logging
 
@@ -28,7 +28,7 @@ class G0(GCodeCommand):
         if  g.has_letter("Q"):  # Get the Accel
             # Convert from mm/min^2 to SI unit m/s^2
             self.printer.accel = float(g.get_value_by_letter("Q"))
-            self.printer.feed_rate /= 3600000.0
+            self.printer.accel /= 3600000.0
             g.remove_token_by_letter("Q")
         smds = {}
         for i in range(g.num_tokens()):
@@ -39,15 +39,17 @@ class G0(GCodeCommand):
             if axis in ('E', 'H', 'A', 'B', 'C') and self.printer.extrude_factor != 1.0:
                 value *= self.printer.extrude_factor
             smds[axis] = value
-
+    
         if self.printer.movement == Path.ABSOLUTE:
             path = AbsolutePath(smds, self.printer.feed_rate * self.printer.factor, self.printer.accel)
         elif self.printer.movement == Path.RELATIVE:
             path = RelativePath(smds, self.printer.feed_rate * self.printer.factor, self.printer.accel)
+        elif self.printer.movement == Path.MIXED:
+            path = MixedPath(smds, self.printer.feed_rate * self.printer.factor, self.printer.accel)
         else:
             logging.error("invalid movement: " + str(self.printer.movement))
             return
-    
+        
         # Add the path. This blocks until the path planner has capacity
         self.printer.path_planner.add_path(path)
 

@@ -174,6 +174,16 @@ void PathPlanner::queueMove(std::vector<FLOAT_T> startPos, std::vector<FLOAT_T> 
     return;
   }
 
+  // Calculate the distance in world space and use it to convert the user's world-speed into a desired move time
+  FLOAT_T worldDistance = 0;
+  for (int i = 0; i < NUM_AXES; i++) {
+    worldDistance += vec[i] * vec[i];
+  }
+
+  worldDistance = std::sqrt(worldDistance);
+
+  FLOAT_T desiredTime = worldDistance / speed; // m / (m/s) = s
+
   // Transform the vector according to the movement style of the robot.
   transformVector(vec, state);
     
@@ -265,6 +275,9 @@ void PathPlanner::queueMove(std::vector<FLOAT_T> startPos, std::vector<FLOAT_T> 
   }
 
   distance = sqrt(distance);
+
+  // Use the desired move time to calculate the machine-speed that matches the user's world-speed
+  FLOAT_T machineSpeed = distance / desiredTime;
 
   p->initialize(stepperStartPos, stepperEndPos, distance, speed, accel, cancelable);
 
@@ -382,41 +395,18 @@ void PathPlanner::updateTrapezoids(){
   //LOG("UpdateTRapezoids:: done"<<std::endl);
 }
 
-// TODO: Remove dependency on Extruder. 
-/*void PathPlanner::computeMaxJunctionSpeed(Path *previous, Path *current){
+void PathPlanner::computeMaxJunctionSpeed(Path *previous, Path *current){
   FLOAT_T factor = 1;
     
   LOG("PathPlanner::computeMaxJunctionSpeed()"<<std::endl);
 
   for(int i=0; i<NUM_AXES; i++){
-    FLOAT_T jerk = std::fabs(current->getSpeeds()[i] - previous->getSpeeds()[i]);
+    FLOAT_T jerk = std::fabs(current->getSpeeds()[i] - previous->getSpeeds()[i]) * F_CPU; // m/tick * ticks/s = m/s
 
     if (jerk > maxJerks[i]){
       factor = std::min(factor, maxJerks[i] / jerk);
     }
   }
-
-  previous->setMaxJunctionSpeed(std::min(previous->getFullSpeed() * factor, current->getFullSpeed()));
-  LOG("PathPlanner::computeMaxJunctionSpeed: Max junction speed = "<<previous->getMaxJunctionSpeed()<<std::endl);
-}*/
-
-
-// TODO: Remove dependency on Extruder. 
-void PathPlanner::computeMaxJunctionSpeed(Path *previous, Path *current){
-  std::vector<FLOAT_T> d(NUM_AXES);
-  FLOAT_T jerk = 0; 
-  FLOAT_T factor = 1;
-    
-  LOG("PathPlanner::computeMaxJunctionSpeed()"<<std::endl);
-    
-  for(int i=0; i<NUM_AXES; i++){
-    d[i] = std::fabs(current->getSpeeds()[i] - previous->getSpeeds()[i])*F_CPU;
-    jerk += d[i]*d[i];
-  }
-
-  jerk = sqrt(jerk);
-  if(jerk>maxJerks[0])
-    factor = maxJerks[0] / jerk;
 
   previous->setMaxJunctionSpeed(std::min(previous->getFullSpeed() * factor, current->getFullSpeed()));
   LOG("PathPlanner::computeMaxJunctionSpeed: Max junction speed = "<<previous->getMaxJunctionSpeed()<<std::endl);

@@ -129,16 +129,19 @@ class AutoCalibrationDeltaParameters:
         ystop -= height
         zstop -= height
 
-        yadj = delta.B_tangential - delta.A_tangential
-        zadj = delta.C_tangential - delta.A_tangential
+        yadj = 1000. * (delta.B_tangential - delta.A_tangential)
+        zadj = 1000. * (delta.C_tangential - delta.A_tangential)
 
-        logging.debug("input delta parameters: diagonal = %f", diagonal)
-        logging.debug("input delta parameters: radius = %f", radius)
-        logging.debug("input delta parameters: xstop = %f", xstop)
-        logging.debug("input delta parameters: ystop = %f", ystop)
-        logging.debug("input delta parameters: zstop = %f", zstop)
-        logging.debug("input delta parameters: yadj = %f", yadj)
-        logging.debug("input delta parameters: zadj = %f", zadj)
+        logging.debug("input delta parameters: Diagonal (L) = %f", diagonal/1000.)
+        logging.debug("input delta parameters: Radius   (r) = %f", radius/1000.)
+        logging.debug("input delta parameters: offset_x     = %f", center_offsets["X"])
+        logging.debug("input delta parameters: offset_y     = %f", center_offsets["Y"])
+        logging.debug("input delta parameters: offset_z     = %f", center_offsets["Z"])
+        logging.debug("input delta parameters: A_tangential = %f", delta.A_tangential)
+        logging.debug("input delta parameters: B_tangential = %f", delta.B_tangential)
+        logging.debug("input delta parameters: C_tangential = %f", delta.C_tangential)
+        logging.debug("input delta parameters: yadj         = %f", yadj/1000.)
+        logging.debug("input delta parameters: zadj         = %f", zadj/1000.)
 
         return cls(diagonal, radius, height,
                    xstop, ystop, zstop,
@@ -155,27 +158,23 @@ class AutoCalibrationDeltaParameters:
         delta.B_radial = 0.
         delta.C_radial = 0.
         delta.A_tangential = 0
-        delta.B_tangential = self.yadj
-        delta.C_tangential = self.zadj
+        delta.B_tangential = self.yadj / 1000.
+        delta.C_tangential = self.zadj / 1000.
 
         center_offsets["X"] = -1. * (self.height + self.xstop) / 1000.
         center_offsets["Y"] = -1. * (self.height + self.ystop) / 1000.
         center_offsets["Z"] = -1. * (self.height + self.zstop) / 1000.
 
-        logging.debug("output delta parameters: L = %f", delta.L)
-        logging.debug("output delta parameters: r = %f", delta.r)
-        logging.debug("output delta parameters: A_tangential = %f",
-                      delta.A_tangential)
-        logging.debug("output delta parameters: B_tangential = %f",
-                      delta.B_tangential)
-        logging.debug("output delta parameters: C_tangential = %f",
-                      delta.C_tangential)
-        logging.debug("output delta parameters: center_offsets['X'] = %f",
-                      center_offsets['X'])
-        logging.debug("output delta parameters: center_offsets['Y'] = %f",
-                      center_offsets['Y'])
-        logging.debug("output delta parameters: center_offsets['Z'] = %f",
-                      center_offsets['Z'])
+        logging.debug("output delta parameters: Diagonal (L) = %f", delta.L)
+        logging.debug("output delta parameters: Radius   (r) = %f", delta.r)
+        logging.debug("output delta parameters: offset_x     = %f", center_offsets['X'])
+        logging.debug("output delta parameters: offset_y     = %f", center_offsets['Y'])
+        logging.debug("output delta parameters: offset_z     = %f", center_offsets['Z'])
+        logging.debug("output delta parameters: A_tangential = %f", delta.A_tangential)
+        logging.debug("output delta parameters: B_tangential = %f", delta.B_tangential)
+        logging.debug("output delta parameters: C_tangential = %f", delta.C_tangential)
+        logging.debug("output delta parameters: yadj         = %f", self.yadj)
+        logging.debug("output delta parameters: zadj         = %f", self.zadj)
 
     @classmethod
     def from_base_and_raw_params(cls, base, new_params):
@@ -209,8 +208,8 @@ class AutoCalibrationDeltaParameters:
         L = self.diagonal / 1000.
         r = self.radius / 1000.
         A_tangential = 0
-        B_tangential = self.yadj
-        C_tangential = self.zadj
+        B_tangential = self.yadj / 1000.
+        C_tangential = self.zadj / 1000.
 
         offset_x = -1. * (self.height + self.xstop) / 1000.
         offset_y = -1. * (self.height + self.ystop) / 1000.
@@ -345,7 +344,7 @@ def _calibrate_delta_parameters(pts, num_factors, delta_params):
 
     raw_params = delta_params.to_raw_params(num_factors)
 
-    new_raw_params = least_squares(_expected_residuals, raw_params, args=(pts, delta_params, probe_motor_positions)).x
+    new_raw_params = least_squares(_expected_residuals, raw_params, args=(pts, delta_params, probe_motor_positions))[0]
 
     return AutoCalibrationDeltaParameters.from_base_and_raw_params(delta_params, new_raw_params)
 

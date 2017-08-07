@@ -40,20 +40,26 @@ class VCNL4000(object):
             logging.info("Found VCNL4000")
         else:
             logging.warning("VCNL4000 error, found revision number "+str(rev))
-
+        self.i2c.write8(0x84, 0x0F)
+        self.i2c.write8(0x83, 20) 
+        self.i2c.write8(0x89, 2)
+        self.i2c.write8(0x8A, 0x81)
 
     def get_distance(self):
         val = 0
         i = 0
+        state = self.i2c.readU8(0x80)
+        print state
         self.i2c.write8(0x80, (1<<3))
         while True:
             state = self.i2c.readU8(0x80)
+            print state
             if (state & (1 << 5)) or i > 100:
                 val |= (self.i2c.readU8(0x87) << 8)
                 val |= (self.i2c.readU8(0x88) << 0)
                 return val
             i += 1
-            time.sleep(0.1)
+            time.sleep(0.01)
         return val
 
     def get_ambient(self):
@@ -67,7 +73,7 @@ class VCNL4000(object):
                 val |= (self.i2c.readU8(0x86) << 0)
                 return val
             i += 1
-            time.sleep(0.1)
+            time.sleep(0.01)
         return val
 
 if __name__ == '__main__':
@@ -83,4 +89,4 @@ if __name__ == '__main__':
     for i in range(100):
         print prox.get_distance()
         #print prox.get_ambient()
-        time.sleep(0.1)
+        #time.sleep(0.1)

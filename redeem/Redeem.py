@@ -79,7 +79,7 @@ class Redeem:
          - default is installed directory
          - allows for running in a local directory when debugging
         """
-        firmware_version = "1.2.7~Predator"
+        firmware_version = "1.2.8~Predator"
         logging.info("Redeem initializing "+firmware_version)
 
         printer = Printer()
@@ -324,9 +324,9 @@ class Redeem:
             self.printer.fans.append(Fan(15))
             self.printer.fans.append(Fan(7))
 
-        # Disable all fans
-        for f in self.printer.fans:
-            f.set_value(0)
+        # Set default value for all fans
+        for i, f in enumerate(self.printer.fans):
+            f.set_value(self.printer.config.getfloat('Fans', "default-fan-{}-value".format(i)))
 
         # Init the servos
         printer.servos = []

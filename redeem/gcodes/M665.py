@@ -39,21 +39,3 @@ class M665(GCodeCommand):
                 "try increasing the radius")
 
 
-class M666(GCodeCommand):
-    """
-    GCode M666
-    Set endstop adjustment
-
-    M666 X+0.0 Y-0.0 Z+0.0
-    """
-    def execute(self, g):
-        offset = self.printer.path_planner.center_offset
-        for axis in ("X", "Y", "Z"):
-            if g.has_letter(axis):
-                offset[axis] += float(g.get_value_by_letter(axis)) / 1000.
-                logging.info("M666: Set axis %s offset to %f",
-                             axis, offset[axis])
-
-    def get_description(self):
-        return "Set axis offset values"
-

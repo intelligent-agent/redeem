@@ -24,6 +24,7 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
 import time
 import subprocess
 import os
+import logging
 
 """ 
 """
@@ -64,6 +65,7 @@ class PWM_pin:
         period = int( (1.0/float(freq))*(10**9) )
         self.period = period
         path = self.base+"/period"
+        logging.debug("Setting period to "+str(period))
         with open(path, "w") as f:
             f.write(str(period))
 
@@ -71,6 +73,7 @@ class PWM_pin:
         """ Set the amount of on-time from 0..1 """
         duty_cycle = int(self.period*float(value))
         path = self.base+"/duty_cycle"
+        #logging.debug("Setting duty_cycle to "+str(duty_cycle))
         with open(path, "w") as f:
             f.write(str(duty_cycle))
 

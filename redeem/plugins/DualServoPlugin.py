@@ -50,6 +50,7 @@ class DualServoPlugin(AbstractPlugin):
 
         logging.debug('Activating '+__PLUGIN_NAME__+' plugin...')
 
+        
         # Add the servo
         channel     = self.printer.config.get(type(self).__name__, 'servo_channel')
         pulse_min   = self.printer.config.getfloat(type(self).__name__, 'pulse_min')
@@ -57,6 +58,14 @@ class DualServoPlugin(AbstractPlugin):
         angle_min = self.printer.config.getfloat(type(self).__name__, 'angle_min')
         angle_max = self.printer.config.getfloat(type(self).__name__, 'angle_max')
         angle_init = self.printer.config.getfloat(type(self).__name__, 'extruder_0_angle')
+
+        # Disable the end-stop on this channel
+        if channel == "P9_14":
+            self.printer.end_stops["X2"].active = False
+            self.printer.end_stops["X2"].stop()
+        elif channel == "P9_16":
+            self.printer.end_stops["Y2"].active = False
+            self.printer.end_stops["Y2"].stop()
 
         self.head_servo = Servo(channel, pulse_min, pulse_max, angle_min, angle_max, angle_init)
 

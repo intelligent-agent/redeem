@@ -55,10 +55,10 @@ class PathPlanner:
 
         self.printer.path_planner = self
 
-        self.travel_length  = {"X": 0, "Y": 0, "Z": 0, "E": 0, "H": 0, "A": 0, "B": 0, "C": 0}
-        self.center_offset  = {"X": 0, "Y": 0, "Z": 0, "E": 0, "H": 0, "A": 0, "B": 0, "C": 0}
-        self.home_pos       = {"X": 0, "Y": 0, "Z": 0, "E": 0, "H": 0, "A": 0, "B": 0, "C": 0}
-        self.prev   = G92Path({"X": 0, "Y": 0, "Z": 0, "E": 0, "H": 0, "A": 0, "B": 0, "C": 0}, 0)
+        self.travel_length  = {"X": 0.0, "Y": 0.0, "Z": 0.0, "E": 0.0, "H": 0.0, "A": 0.0, "B": 0.0, "C": 0.0}
+        self.center_offset  = {"X": 0.0, "Y": 0.0, "Z": 0.0, "E": 0.0, "H": 0.0, "A": 0.0, "B": 0.0, "C": 0.0}
+        self.home_pos       = {"X": 0.0, "Y": 0.0, "Z": 0.0, "E": 0.0, "H": 0.0, "A": 0.0, "B": 0.0, "C": 0.0}
+        self.prev   = G92Path({"X": 0.0, "Y": 0.0, "Z": 0.0, "E": 0.0, "H": 0.0, "A": 0.0, "B": 0.0, "C": 0.0}, 0)
         self.prev.set_prev(None)
 
         if pru_firmware:

@@ -50,12 +50,12 @@ class G33(GCodeCommand):
         # adjust probe heights
         probe_z_coords = np.array(self.printer.probe_heights[:len(self.printer.probe_points)])
         offset_z = self.printer.config.getfloat('Probe', 'offset_z')*1000.
-        logging.info("adjusting by " + str(offset_z))
+        logging.info("G33: adjusting offset using Z-probe offset by " + str(offset_z))
         # this is where the print head was when the probe was triggered
         print_head_zs = probe_z_coords - offset_z
 
         # Log the found heights
-        logging.info("Found heights: "+str(np.round(print_head_zs, 2)))
+        logging.info("G33: Found heights: "+str(np.round(print_head_zs, 2)))
 
         simulate_only = g.has_letter("S")
 
@@ -63,7 +63,7 @@ class G33(GCodeCommand):
         params = self.printer.path_planner.autocalibrate_delta_printer(
                     num_factors, simulate_only,
                     self.printer.probe_points, print_head_zs)
-        logging.info("Finished printer autocalibration\n")
+        logging.info("G33: Finished printer autocalibration\n")
 
         if g.has_letter("P"):
             # dump the dictionary to log file
@@ -94,11 +94,11 @@ Parameters:
 
 Fn  Number of factors to optimize:
     3 factors (endstop corrections only)
-    4 factors (endstop corrections and delta radius)
+    4 factors (endstop corrections and delta radius) (Default)
     6 factors (endstop corrections, delta radius, and two tower
-              angular position corrections)
+                angular position corrections)
     7 factors (endstop corrections, delta radius, two tower angular
-              position corrections, and diagonal rod length)
+                position corrections, and diagonal rod length)
 
 S   Do NOT update the printer configuration.
 

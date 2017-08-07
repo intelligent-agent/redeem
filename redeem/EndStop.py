@@ -26,6 +26,7 @@ from threading import Thread
 import re
 from PruInterface import *
 from evdev import InputDevice, ecodes
+from select import select
 
 class EndStop:
     def __init__(self, printer, pin, key_code, name, invert=False):
@@ -53,30 +54,35 @@ class EndStop:
 
     def stop(self):
         self.running = False
+        logging.debug("End stop {} stopping".format(self.name))
         self.t.join()
 
     def get_pin(self):
         return self.pin
 
     def _wait_for_event(self):
-        for event in self.dev.read_loop():
-            if event.type == ecodes.EV_KEY:
-                if event.code == self.key_code:
-                    if self.invert: 
-                        if int(event.value):
-                            self.hit = True 
-                            self.callback()
-                        else:
-                            self.hit = False
-                    elif not self.invert:
-                        if not int(event.value):
-                            self.hit = True 
-                            self.callback()
-                        else:
-                            self.hit = False
-            if not self.running:
-                break
-
+        while self.running:
+            #logging.debug("End stop {} waiting".format(self.name))
+            r, w, x = select([self.dev], [], [], 3)
+            if r:
+                #logging.debug("End stop {} event".format(self.name))
+                for event in self.dev.read():
+                    if event.type == ecodes.EV_KEY:
+                        if event.code == self.key_code:
+                            if self.invert: 
+                                if int(event.value):
+                                    self.hit = True 
+                                    self.callback()
+                                else:
+                                    self.hit = False
+                            elif not self.invert:
+                                if not int(event.value):
+                                    self.hit = True 
+                                    self.callback()
+                                else:
+                                    self.hit = False
+            #else:
+            #    logging.debug("End stop {} timeout".format(self.name))
     def read_value(self):
         """ Read the current endstop value from GPIO using PRU1 """
         state = PruInterface.get_shared_long(0)

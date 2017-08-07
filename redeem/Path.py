@@ -32,9 +32,10 @@ class Path:
     # Different types of paths
     ABSOLUTE = 0
     RELATIVE = 1
-    G92 = 2
-    G2 = 3
-    G3 = 4
+    MIXED = 2
+    G92 = 3
+    G2 = 4
+    G3 = 5
 
     # Numpy array type used throughout    
     DTYPE = np.float64
@@ -263,6 +264,35 @@ class RelativePath(Path):
         
         self.end_pos = self.start_pos + vec
         
+
+class MixedPath(Path):
+    """ A path some mixed and some absolute movement axes """
+    def __init__(self, axes, speed, accel, cancelable=False, use_bed_matrix=True, use_backlash_compensation=True, enable_soft_endstops=True):
+        Path.__init__(self, axes, speed, accel, cancelable, use_bed_matrix, use_backlash_compensation, enable_soft_endstops)
+        self.movement = Path.MIXED
+
+    def set_prev(self, prev):
+        """ Set the previous path element """
+        self.prev = prev
+        prev.next = self
+        self.start_pos = prev.end_pos
+
+        # Make the start, end and path vectors. 
+        self.ideal_end_pos = np.copy(prev.ideal_end_pos)
+        for axis in self.axes:
+            index = self.printer.axis_to_index(axis)
+            if (axis in self.printer.axes_relative):
+                self.ideal_end_pos[index] += self.axes[axis]
+            elif (axis in self.printer.axes_absolute):
+                self.ideal_end_pos[index] = self.axes[axis]
+
+        # Store the ideal end pos, so the target 
+        # coordinates are pushed forward
+        self.end_pos = np.copy(self.ideal_end_pos)
+        if self.use_bed_matrix:
+            self.end_pos[:3] = self.end_pos[:3].dot(self.printer.matrix_bed_comp)
+
+
 
 class G92Path(Path):
     """ A reset axes path segment. No movement occurs, only global position
