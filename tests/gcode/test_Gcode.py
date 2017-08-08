@@ -1,8 +1,4 @@
-import unittest
-
-import sys
-sys.path.insert(0, '../redeem')
-
+from MockPrinter import MockPrinter
 from Gcode import Gcode
 
 """ 
@@ -14,7 +10,7 @@ of Printer's methods.
 class Printer():
     factor = 1.0
 
-class GcodeTest(unittest.TestCase):
+class GcodeTest(MockPrinter):
 
     def setUp(self):
         packet = {
@@ -22,7 +18,7 @@ class GcodeTest(unittest.TestCase):
             "answer": "ok"
             }
         self.g = Gcode(packet)
-        self.g.printer = Printer()
+        self.g.printer.unit_factor = 1.0
 
     def tearDown(self):
         self.g = None
@@ -55,7 +51,7 @@ class GcodeTest(unittest.TestCase):
     def test_gcode_token_distance(self):
         self.assertEqual(self.g.token_distance(2), 12.34567)
 
-        self.g.printer.factor = 2.54
+        self.g.printer.unit_factor = 2.54
         self.assertEqual(self.g.token_distance(2), 12.34567 * 2.54)
 
     def test_gcode_get_tokens(self):
@@ -95,7 +91,7 @@ class GcodeTest(unittest.TestCase):
         self.assertEqual(self.g.get_float_by_letter("Y"), -0.2345)
 
     def test_gcode_get_distance_by_letter(self):
-        self.g.printer.factor = 2.54
+        self.g.printer.unit_factor = 2.54
         self.assertEqual(self.g.get_distance_by_letter("Y"), -0.2345 * 2.54)
 
     def test_gcode_get_int_by_letter(self):
