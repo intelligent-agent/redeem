@@ -71,7 +71,7 @@ class MockPrinter(unittest.TestCase):
 
 
         """
-        This seemed like the best way to add to or change stuff in default.cfg,
+        This seems like the best way to add to or change stuff in default.cfg,
         without actually messing with the prestine file.
         """
         tmp_local_cfg = tf = open("../configs/local.cfg", "w")
@@ -96,12 +96,13 @@ log_to_file = False
         Gcode.printer = printer
         Path.printer = printer
 
+        self.printer.speed_factor = 1.0
         """ 
         We want to ensure that printer.factor is always obeyed correctly
         For convenience, we'll set it to mm/inch and check that resulting 
         paths have the correct meter values, converted from inch input.
         """
-        self.printer.factor = self.f = 25.4 # inches
+        self.printer.unit_factor = self.f = 25.4 # inches
 
         self.printer.probe_points = []
 

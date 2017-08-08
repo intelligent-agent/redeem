@@ -51,7 +51,8 @@ class Printer:
         self.coolers     = []
         self.comms       = {}  # Communication channels
         self.path_planner       = None
-        self.factor             = 1.0
+        self.speed_factor       = 1.0
+        self.unit_factor        = 1.0
         self.extrude_factor     = 1.0
         self.movement           = Path.ABSOLUTE
         self.axis_config        = self.AXIS_CONFIG_XY

@@ -114,7 +114,7 @@ class Gcode:
 
     def token_distance(self, index):
         """ Return a token's value, factoring in current G20/21 unit. """
-        return self.token_value(index) * self.printer.factor
+        return self.token_value(index) * self.printer.unit_factor
 
     def get_tokens(self):
         """ Return the tokens """

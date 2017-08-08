@@ -7,7 +7,7 @@ class M201_Tests(MockPrinter):
     def setUp(self):
         self.printer.path_planner.native_planner.setAcceleration = mock.Mock()
         self.printer.axis_config = self.printer.AXIS_CONFIG_XY
-        self.printer.factor = 1.0
+        self.printer.speed_factor = 1.0
 
     def exercise(self):
         values = {}
