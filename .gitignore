@@ -35,3 +35,5 @@ sftp-config.json
 
 # virtual env
 venv/
+*.svg
+

@@ -428,11 +428,9 @@ class PathPlanner:
             self.native_planner.setAxisConfig(int(self.printer.axis_config))
             self.native_planner.setState(tuple(new.end_pos))
         elif new.needs_splitting():
-            #TODO: move this to C++
-            # this branch splits up any G2 or G3 movements (arcs)
-            # should be moved to C++ as it is math heavy
-            # need to convert it to linear segments before feeding to the queue
-            # as we want to keep the queue only dealing with linear stuff for simplicity
+            # G2 or G3 movements (arc movements ) need to convert it to linear segments before feeding to the queue
+            # These movements seem only to be used by CNC mills/lathes which have lower gcode throughput
+            # Performance may be acceptable. If it is an issue, move `Path` functionality into `PathPlannerNative`
             for seg in new.get_segments():
                 self.add_path(seg)
             

@@ -22,7 +22,7 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
 """
 
 import numpy as np
-import math
+import sympy as sp
 import logging
 
 class Path:
@@ -39,6 +39,14 @@ class Path:
 
     # Numpy array type used throughout    
     DTYPE = np.float64
+
+    # http://www.manufacturinget.org/2011/12/cnc-g-code-g17-g18-and-g19/
+    X_Y_ARC_PLANE = 0
+    X_Z_ARC_PLANE = 1
+    Y_Z_ARC_PLANE = 2
+
+    # max length of any segment in an arc
+    ARC_SEGMENT_LENGTH = 1.0 / 1000  # TODO : make setting
     
     def __init__(self, axes, speed, accel, cancelable=False, use_bed_matrix=True, use_backlash_compensation=True, enable_soft_endstops=True, is_probe=False):
         """ The axes of evil, the feed rate in m/s and ABS or REL """
@@ -56,21 +64,10 @@ class Path:
         self.start_pos = None
         self.end_pos = None
         self.ideal_end_post = None
-        self.arc_tolerance = 2E-6 # meters = 2 microns. TODO: FFF processes do not need this precision. Should probably be user configurable
-        self.axis_0 = None
-        self.axis_1 = None
-        self.axis_linear = None
 
     def is_G92(self):
         """ Special path, only set the global position on this """
         return self.movement == Path.G92
-
-    def set_arc_plane(self, axis_0, axis_1):
-        self.axis_0 = axis_0
-        self.axis_1 = axis_1
-
-    def set_arc_linear(self, axis):
-        self.axis_linear = axis
 
     def set_homing_feedrate(self):
         """ The feed rate is set to the lowest axis in the set """
@@ -89,148 +86,123 @@ class Path:
         return
 
     def needs_splitting(self):
-        #return False
-        """ Return true if this is a radius """
-        if self.movement == Path.G2 or self.movement == Path.G3:
-            return True
+        """ Return true if this is a arc movement"""
+        return self.movement == Path.G2 or self.movement == Path.G3
 
     def get_segments(self):
         """ Returns split segments for delta or arcs """
         if self.movement == Path.G2 or self.movement == Path.G3:
             return self.get_arc_segments()
 
-    def get_arc_segments(self): 
-        # Based on optimized code from Grbl - https://github.com/grbl/grbl/blob/master/grbl/gcode.c
-        # Parameter should first be validated sane, in gcode/G2_G3.py
+    def _get_point_on_plane(self, point):
+        """ Returns the two dimensions that are relevant for the active arc plane """
+        if self.printer.arc_plane == Path.X_Y_ARC_PLANE:
+            return point[0], point[1]
+        if self.printer.arc_plane == Path.X_Z_ARC_PLANE:
+            return point[0], point[2]
+        # if Path.Y_Z_ARC_PLANE
+        return point[1], point[2]
 
-        start_point = self.prev.ideal_end_pos
-        end_point   = self.ideal_end_pos
-        axis_0 = self.axis_0
-        axis_1 = self.axis_1
-        axis_linear = self.axis_linear
-        is_clockwise_arc = True if self.movement == Path.G2 else False
-   
-        """
-        Check if we can achieve the requested arc. From Grbl code comments ... 
-            "[It is an error if] the radius to the current point and the radius to the
-            target point differs more than 0.002mm (EMC def. 0.5mm OR 0.005mm and 0.1% radius)."
-        """
-        offset = np.array([
-                self.axes.get('I',  0.0),
-                self.axes.get('J',  0.0),
-                self.axes.get('K',  0.0)
-            ]) 
-        d0 = end_point[axis_0] - start_point[axis_0] - offset[axis_0] # delta axis_0 between circle center and target
-        d1 = end_point[axis_1] - start_point[axis_1] - offset[axis_1] # delta ax0s_1 between circle center and target
-        target_r = math.sqrt(d0**2 + d1**2)
-        radius = math.sqrt(offset[axis_0]**2 + offset[axis_1]**2) # between start_point and circle center
-        delta_radius = abs(target_r - radius)
-        if delta_radius > 0.005E-3:
-            if delta_radius > 0.5E-3:
-                logging.error("ARC definition error: >0.5mm (%fmm)", delta_radius/1000)
-                return []
-            if delta_radius > (0.001 * radius):
-                logging.error("ARC definition error: > 0.005mm and 0.1% (%fmm)", delta_radius/1000)
-                return []
+    def _get_axes_point(self, point):
+        """ Identifies the point as dimensions along the active arc plane"""
+        if self.printer.arc_plane == Path.X_Y_ARC_PLANE:
+            return {'X': point[0], 'Y': point[1]}
+        if self.printer.arc_plane == Path.X_Z_ARC_PLANE:
+            return {'X': point[0], 'Z': point[1]}
+        # ifPath.Y_Z_ARC_PLANE
+        return {'Y': point[0], 'Z': point[1]}
 
-        """
-        Execute an arc in offset mode format. position == current xyz, target == target xyz, 
-        offset == offset from current xyz, axis_X defines circle plane in tool space, axis_linear is
-        the direction of helical travel, radius == circle radius, isclockwise boolean. Used
-        for vector transformation direction.
-        The arc is approximated by generating a huge number of tiny, linear segments. The chordal tolerance
-        of each segment is configured in settings.arc_tolerance, which is defined to be the maximum normal
-        distance from segment to the circle when the end points both lie on the circle.
-        """
-        center_axis0 = start_point[axis_0] + offset[axis_0] 
-        center_axis1 = start_point[axis_1] + offset[axis_1]
-        r_axis0 = -offset[axis_0]  # Radius vector from center to current location
-        r_axis1 = -offset[axis_1]
-        rt_axis0 = end_point[axis_0] - center_axis0
-        rt_axis1 = end_point[axis_1] - center_axis1
-             
-        # CCW angle between position and target from circle center. Only one atan2() trig computation required.
-        angular_travel = math.atan2(r_axis0 * rt_axis1 - r_axis1 * rt_axis0, r_axis0 * rt_axis0 + r_axis1 * rt_axis1);
-        if is_clockwise_arc: # Correct atan2 output per direction
-            if angular_travel >= -5.0E-7:
-                angular_travel -= 2 * math.pi
+    def _get_offset_on_plane(self):
+        """ Returns the two offset dimensions that are relevant for the active arc plane """
+        if self.printer.arc_plane == Path.X_Y_ARC_PLANE:
+            return self.I, self.J
+        if self.printer.arc_plane == Path.X_Z_ARC_PLANE:
+            return self.I, self.K
+        # Path.Y_Z_ARC_PLANE
+        return self.J, self.K
+
+    def _find_circle_center(self, start0, start1, end0, end1, radius):
+        """each circle defines all possible coordinates the arc center could be
+        the two circles intersect at the possible centers of the arc radius"""
+        c1 = sp.Circle(sp.Point(start0, start1), abs(radius))
+        c2 = sp.Circle(sp.Point(end0, end1), abs(radius))
+
+        intersection = c1.intersection(c2)
+
+        if len(intersection) < 1:
+            raise Exception("radius circles do not intersect")  # TODO : proper way of handling GCode error (?)
+        if len(intersection) < 2 or r > 0:  # single intersection or "positive" radius center point
+            return intersection[0].x, intersection[0].y
+        return intersection[1].x, intersection[1].y  # "negative" radius center point
+
+    # Performance may not be a concern; G2/G3 seem only to be used by CNC mills/lathes which have lower gcode throughput
+    # If performance is an issue, move functionality to `PathPlannerNative`
+    def get_arc_segments(self):
+        """Returns paths that approximated an arc."""
+        #  reference : http://www.manufacturinget.org/2011/12/cnc-g-code-g02-and-g03/
+
+        # isolate dimensions relevant for the active plane (eg X,Y for XY plane)
+        start0, start1 = self._get_point_on_plane(self.prev.ideal_end_pos)
+        end0, end1 = self._get_point_on_plane(self.ideal_end_pos)
+        logging.debug("end pos: {}".format(self.ideal_end_pos))
+        logging.debug("start point: {}, end point: {}".format([start0, start1], [end0, end1]))
+
+
+        # 'R' variant gives radius, need to calculate circle center
+        if hasattr(self, 'R'):
+            radius = self.R
+            circle0, circle1 = self._find_circle_center(start0, start1, end0, end1, radius)
+        # I/J/K gives offset, need to calculate radius and circle center
         else:
-            if angular_travel <= 5.0E-7:
-                angular_travel += 2 * math.pi
+            offset0, offset1 = self._get_offset_on_plane()
+            radius = np.sqrt(offset0 ** 2 + offset1 ** 2)
 
-        num_segments = int(
-                math.floor( 
-                    abs(0.5 * angular_travel * radius) 
-                  / math.sqrt(self.arc_tolerance * ( 2 * radius - self.arc_tolerance))
-                )
-            )
+            # calculate the arc center
+            circle0, circle1 = start0 + offset0, start1 + offset1
 
-        if num_segments > 0:
+        # arctan2 defined with center of circle at 0,0. adjust other dimensions to match
+        origin1 = (start1-circle1, end1-circle1)
+        origin0 = (start0-circle0, end0-circle0)
 
-            theta_per_segment = angular_travel / num_segments
-            linear_per_segment = (end_point[axis_linear] - start_point[axis_linear]) / num_segments
+        # determine the start and end angle (in radians)
+        start_theta, end_theta = np.arctan2(origin1, origin0)
 
-            """
-            Vector rotation by transformation matrix: r is the original vector, r_T
-            is the rotated vector, and phi is the angle of rotation. Solution
-            approach by Jens Geisler.
+        # clockwise angles are always increasing, adjust for +/- pi modulus
+        if start_theta <= end_theta and self.movement is Path.G2:
+            start_theta = np.pi + abs(-np.pi - start_theta)
 
-                r_T = [cos(phi) -sin(phi);
-                       sin(phi)  cos(phi)] * r
-                                                                   
-            For arc generation, the center of the circle is the axis of rotation
-            and the radius vector is defined from the circle center to the initial
-            position. Each line segment is formed by successive vector rotations.
-            Single precision values can accumulate error greater than tool
-            precision in rare cases.  So, exact arc path correction is implemented.
-            This approach avoids the problem of too many very expensive trig
-            operations [sin(),cos(),tan()] which can take 100-200 usec each to
-            compute.
-            ... [see grbl:motion_control.c for more]
+        # counter-clockwise anges are always decreasing, adjust for +/- modulus
+        if start_theta >= end_theta and self.movement is Path.G3:
+            start_theta = -np.pi - abs(np.pi - start_theta)
 
-            """
+        logging.debug("start theta: {}, end theta: {}".format(start_theta, end_theta))
 
-            cos_T = 1 - theta_per_segment**2 / 2
-            sin_T = theta_per_segment - theta_per_segment**3 / 6
-            
-            # construct the arc from num_segments vectors
-            path_segments = []
-            segment = np.copy(start_point)
-            count = 0
-            for index in range(0, num_segments):
-                """
-                For a small performacne gain, we just rotate the previous
-                vector three times, then correct any small drift on the forth
-                """
-                if (count < 4):
-                    # Apply vector rotation matrix. ~40 usec
-                    r_axisi = r_axis0 * sin_T + r_axis1 * cos_T
-                    r_axis0 = r_axis0 * cos_T - r_axis1 * sin_T
-                    r_axis1 = r_axisi
-                    count += 1
-                else:
-                    """
-                    Compute exact location by applying transformation matrix
-                    from initial radius vector(=-offset)
-                    """
-                    cos_Ti = math.cos( (index+1) * theta_per_segment )
-                    sin_Ti = math.sin( (index+1) * theta_per_segment )
-                    r_axis0 = -offset[axis_0] * cos_Ti + offset[axis_1] * sin_Ti
-                    r_axis1 = -offset[axis_0] * sin_Ti - offset[axis_1] * cos_Ti
-                    count = 0
+        # determine the length of the arc in order to determine how many segments to split into
+        arc_length = radius * abs(end_theta - start_theta)
+        num_segments = int(arc_length / self.ARC_SEGMENT_LENGTH)
 
-                segment[axis_0] = center_axis0 + r_axis0
-                segment[axis_1] = center_axis1 + r_axis1
-                segment[axis_linear] += linear_per_segment
+        # create equally spaced angles (in radians) from start to end
+        arc_thetas = np.linspace(start_theta + 2 * np.pi, end_theta + 2 * np.pi, num_segments)
 
-                vector = dict(zip(self.printer.AXES, segment))
-                path = AbsolutePath(vector, self.speed, self.accel, self.cancelable, self.use_bed_matrix, False)
-                if index is not 0:
-                    path.set_prev(path_segments[-1])
-                else:
-                    path.set_prev(self.prev)
+        # calculate all the points along the arc
+        arc_0 = circle0 + radius * np.cos(arc_thetas)
+        arc_1 = circle1 + radius * np.sin(arc_thetas)
 
-                path_segments.append(path)
+        path_segments = []
+
+        # for each coordinate along the arc, create a segment
+        for index, segment in enumerate(zip(arc_0, arc_1)):
+            segment_end = self._get_axes_point(segment)
+            logging.debug("segment point: {}".format(segment_end))
+            path = AbsolutePath(segment_end, self.speed, self.accel, self.cancelable, self.use_bed_matrix, False)
+            # in order to set previous, printer attribute needs to be set based on the original path's printer
+            path.printer = self.printer
+            if index is not 0:
+                path.set_prev(path_segments[-1])
+            else:
+                path.set_prev(self.prev)
+
+            path_segments.append(path)
 
         return path_segments
 
