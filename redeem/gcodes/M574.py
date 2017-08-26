@@ -12,13 +12,14 @@ class M574(GCodeCommand):
 
     def execute(self, g):
         tokens = g.get_message()[len("M574"):].strip().split(" ")
-        if len(tokens) > 0: # 1st token could be ''
+        if len(tokens) > 0 and tokens[0] != '': # 1st token could be ''
             es = tokens[0].upper()
             config = ""
             for word in tokens[1:]: config += word.replace(",", ", ").lower()
 
             if not es in self.printer.end_stops:
                 logging.warning("M574: Invalid end stop: '%s'", es)
+                logging.debug("M574: tokens = "+str(tokens))
                 return
             
             logging.debug("Setting end stop config for %s to '%s'", es, config)
