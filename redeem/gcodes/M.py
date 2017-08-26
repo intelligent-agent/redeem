@@ -51,4 +51,5 @@ class M(GCodeCommand):
         return ("Lists all the M-codes implemented by this firmware. "
                 "To get a long description of each code use '?' "
                 "after the code name, for instance, M92? will give a decription of M92. "
-                "To get all g-codes with wiki formatting, add token 'F0'.") 
+                "To get all g-codes with wiki formatting, add token 'F0'.\n"
+                "To search for a phrase add S<phrase>") 
