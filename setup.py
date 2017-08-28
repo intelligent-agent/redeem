@@ -62,7 +62,7 @@ pathplanner = Extension(
 
 setup(
     name = "Redeem",
-    version = "1.3.1",
+    version = "2.0.0",
     packages = find_packages(exclude=["redeem/path_planner"]),
     data_files=[
         ('redeem/firmware', [
