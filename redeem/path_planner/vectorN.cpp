@@ -1,7 +1,9 @@
 // vectorN.cpp
 
 #include "vectorN.h"
+#include "vector3.h"
 #include <math.h>
+#include <cmath>
 
 VectorN::VectorN()
 {
@@ -89,6 +91,22 @@ FLOAT_T& VectorN::operator[](int i)
 const FLOAT_T& VectorN::operator[](int i) const
 {
   return values[i];
+}
+
+Vector3 VectorN::toVector3() const
+{
+  return Vector3(values[0], values[1], values[2]);
+}
+
+IntVectorN VectorN::round() const
+{
+  IntVectorN result;
+  for (int i = 0; i < NUM_AXES; i++)
+  {
+    result[i] = std::llround(values[i]);
+  }
+
+  return result;
 }
 
 // Helper functions for the VectorN class.
@@ -180,4 +198,145 @@ FLOAT_T dot(const VectorN &v1, const VectorN &v2)
   }
 
   return result;
+}
+
+VectorN operator/(const VectorN& v1, const VectorN& v2)
+{
+  VectorN v3;
+  for (int i = 0; i < NUM_AXES; i++)
+  {
+    v3[i] = v1[i] / v2[i];
+  }
+  return v3;
+}
+
+VectorN operator*(const VectorN& v1, const VectorN& v2)
+{
+  VectorN v3;
+  for (int i = 0; i < NUM_AXES; i++)
+  {
+    v3[i] = v1[i] * v2[i];
+  }
+  return v3;
+}
+
+IntVectorN::IntVectorN()
+{
+  zero();
+}
+
+void IntVectorN::zero()
+{
+  for (int i = 0; i < NUM_AXES; i++)
+  {
+    values[i] = 0;
+  }
+}
+
+IntVectorN& IntVectorN::operator=(const IntVectorN &v)
+{
+  for (int i = 0; i < NUM_AXES; i++)
+  {
+    values[i] = v[i];
+  }
+
+  return *this;
+}
+
+IntVectorN& IntVectorN::operator+=(const IntVectorN &v)
+{
+  for (int i = 0; i < NUM_AXES; i++)
+  {
+    values[i] += v[i];
+  }
+
+  return *this;
+}
+
+IntVectorN& IntVectorN::operator-=(const IntVectorN &v)
+{
+  for (int i = 0; i < NUM_AXES; i++)
+  {
+    values[i] -= v[i];
+  }
+
+  return *this;
+}
+
+IntVectorN& IntVectorN::operator*=(long long v)
+{
+  for (int i = 0; i < NUM_AXES; i++)
+  {
+    values[i] *= v;
+  }
+
+  return *this;
+}
+
+long long& IntVectorN::operator[](int i)
+{
+  return values[i];
+}
+
+const long long& IntVectorN::operator[](int i) const
+{
+  return values[i];
+}
+
+VectorN IntVectorN::toVectorN() const
+{
+  VectorN result;
+  for (int i = 0; i < NUM_AXES; i++)
+  {
+    result[i] = values[i];
+  }
+
+  return result;
+}
+
+IntVector3 IntVectorN::toIntVector3() const
+{
+  return IntVector3(values[0], values[1], values[2]);
+}
+
+IntVectorN operator+(const IntVectorN& v1, const IntVectorN &v2)
+{
+  IntVectorN result;
+
+  for (int i = 0; i < NUM_AXES; i++)
+  {
+    result[i] = v1[i] + v2[i];
+  }
+
+  return result;
+}
+
+IntVectorN operator-(const IntVectorN& v1, const IntVectorN &v2)
+{
+  IntVectorN result;
+
+  for (int i = 0; i < NUM_AXES; i++)
+  {
+    result[i] = v1[i] - v2[i];
+  }
+
+  return result;
+}
+
+bool operator==(const IntVectorN &v1, const IntVectorN &v2)
+{
+  for (int i = 0; i < NUM_AXES; i++)
+  {
+    if(v1[i] != v2[i])
+    {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+bool operator!=(const IntVectorN &v1, const IntVectorN &v2)
+{
+  return !(v1 == v2);
 }

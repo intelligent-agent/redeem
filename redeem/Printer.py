@@ -51,12 +51,17 @@ class Printer:
         self.coolers     = []
         self.comms       = {}  # Communication channels
         self.path_planner       = None
-        self.factor             = 1.0
+        self.speed_factor       = 1.0
+        self.unit_factor        = 1.0
         self.extrude_factor     = 1.0
         self.movement           = Path.ABSOLUTE
         self.axis_config        = self.AXIS_CONFIG_XY
         self.feed_rate          = 0.5
-        self.accel              = 0.5
+        # this rate is the one used at the beginning of startup for any moves without G1 F,
+        # other than homing, which obeys it's speed correctly.
+        self.accel              = 9.8
+        # this accel is the global max unless over-ridden using G1 Q, this is
+        # compared to the one listed in local.cfg, the lower one controls the printer.
         self.current_tool       = "E"
         self.running_M116       = False
         # For movement commands, whether the E axis refers to the active
@@ -66,8 +71,6 @@ class Printer:
         self.print_move_buffer_wait = 250
         self.max_buffered_move_time = 1000
 
-        self.max_length = 0.001
-
         self.probe_points  = []
         self.probe_heights = [0, 0, 0]
         self.probe_type = 0 # Servo
@@ -76,8 +79,7 @@ class Printer:
         self.num_axes = 8
 
         self.max_speeds             = np.ones(self.num_axes)
-        self.min_speeds             = np.ones(self.num_axes)*0.01
-        self.jerks                  = np.ones(self.num_axes)*0.01
+        self.max_speed_jumps        = np.ones(self.num_axes)*0.01
         self.acceleration           = [0.3]*self.num_axes
         self.home_speed             = np.ones(self.num_axes)
         self.home_backoff_speed     = np.ones(self.num_axes)
@@ -96,6 +98,8 @@ class Printer:
         self.has_slaves = False
 
         self.axes_absolute = ["X", "Y", "Z", "E", "H", "A", "B", "C"]
+        self.arc_plane = Path.X_Y_ARC_PLANE
+
         self.axes_relative = []
 
     def add_slave(self, master, slave):
@@ -103,26 +107,6 @@ class Printer:
         the slave will get the same position as the axis'''
         self.slaves[master] = slave
         self.has_slaves = True
-
-    def check_values(self):
-        """
-        make sure that values are valid
-        """
-
-        # check min speed
-        for axis in self.steppers:
-            stepper = self.steppers[axis]
-            if stepper.in_use:
-                idx = Printer.axis_to_index(axis)
-                steps_per_second = self.min_speeds[idx]*self.steps_pr_meter[idx]
-                logging.debug("Axis {0} min steps/s = {1}".format(axis, steps_per_second))
-                if steps_per_second < 1:
-                    err = "minimum speed of axis {0} is too low. Increase min_speed_{0}, microstepping_{0}, or adjust steps_pr_mm_{0}".format(axis.lower())
-                    logging.warning(err)
-                    raise RuntimeError(err)
-
-
-        return
 
     def ensure_steppers_enabled(self):
         """
@@ -139,7 +123,7 @@ class Printer:
                 if not stepper.current_enabled:
                     # Stepper does not have current enabled.
                     stepper.set_current_enabled()  # Force update
-                
+
 
     def reply(self, gcode):
         """ Send a reply through the proper channel """
@@ -222,7 +206,7 @@ class Printer:
 
         # Save Delta config
         logging.debug("save_settings: setting delta config")
-        opts = ["Hez", "L", "r", "A_radial", "B_radial", "C_radial", "A_angular", "B_angular", "C_angular" ]
+        opts = ["L", "r", "A_radial", "B_radial", "C_radial", "A_angular", "B_angular", "C_angular" ]
         for opt in opts:
             self.config.set('Delta', opt, str(Delta.__dict__[opt]))
 

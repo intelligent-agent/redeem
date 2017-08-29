@@ -49,6 +49,7 @@ from Extruder import Extruder, HBP
 from Cooler import Cooler
 from Path import Path
 from PathPlanner import PathPlanner
+from Gcode import Gcode
 from ColdEnd import ColdEnd
 from PruFirmware import PruFirmware
 from CascadingConfigParser import CascadingConfigParser
@@ -79,12 +80,13 @@ class Redeem:
          - default is installed directory
          - allows for running in a local directory when debugging
         """
-        firmware_version = "1.3.1~The Running Man"
+        firmware_version = "2.0.0~Red Heat"
         logging.info("Redeem initializing "+firmware_version)
 
         printer = Printer()
         self.printer = printer
         Path.printer = printer
+        Gcode.printer = printer
 
         printer.firmware_version = firmware_version
 
@@ -251,7 +253,7 @@ class Redeem:
 
         # Delta printer setup
         if printer.axis_config == Printer.AXIS_CONFIG_DELTA:
-            opts = ["Hez", "L", "r", "A_radial", "B_radial", "C_radial", "A_angular", "B_angular", "C_angular" ]
+            opts = ["L", "r", "A_radial", "B_radial", "C_radial", "A_angular", "B_angular", "C_angular" ]
             for opt in opts:
                 Delta.__dict__[opt] = printer.config.getfloat('Delta', opt)
 
@@ -432,8 +434,7 @@ class Redeem:
         for axis in printer.steppers.keys():
             i = Printer.axis_to_index(axis)
             printer.max_speeds[i] = printer.config.getfloat('Planner', 'max_speed_'+axis.lower())
-            printer.min_speeds[i] = printer.config.getfloat('Planner', 'min_speed_'+axis.lower())
-            printer.jerks[i] = printer.config.getfloat('Planner', 'max_jerk_'+axis.lower())
+            printer.max_speed_jumps[i] = printer.config.getfloat('Planner', 'max_jerk_'+axis.lower())
             printer.home_speed[i] = printer.config.getfloat('Homing', 'home_speed_'+axis.lower())
             printer.home_backoff_speed[i] = printer.config.getfloat('Homing', 'home_backoff_speed_'+axis.lower())
             printer.home_backoff_offset[i] = printer.config.getfloat('Homing', 'home_backoff_offset_'+axis.lower())
@@ -448,7 +449,7 @@ class Redeem:
         pru_firmware = PruFirmware(
             dirname + "/firmware/firmware_runtime.c",
             dirname + "/firmware/firmware_runtime.bin",
-            dirname + "/firmware/firmware_endstops.p",
+            dirname + "/firmware/firmware_endstops.c",
             dirname + "/firmware/firmware_endstops.bin",
             self.printer, "/usr/bin/clpru", "/usr/bin/pasm",
             dirname + "/firmware/AM335x_PRU.cmd",
@@ -458,8 +459,6 @@ class Redeem:
         printer.move_cache_size = printer.config.getfloat('Planner', 'move_cache_size')
         printer.print_move_buffer_wait = printer.config.getfloat('Planner', 'print_move_buffer_wait')
         printer.max_buffered_move_time = printer.config.getfloat('Planner', 'max_buffered_move_time')
-
-        printer.max_length = printer.config.getfloat('Planner', 'max_length')
 
         self.printer.processor = GCodeProcessor(self.printer)
         self.printer.plugins = PluginsController(self.printer)

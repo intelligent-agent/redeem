@@ -74,6 +74,8 @@ int main(void) {
 	*GPIO2_CLEARDATAOUT = gpio2;
 	*GPIO3_CLEARDATAOUT = gpio3;
 
+	g_stepsRemaining = 0;
+
 	while(1)
 	{
 		volatile uint32_t* ddr_addr = *ddr_start;
@@ -140,7 +142,7 @@ int main(void) {
 				{
 					// All of the steppers in cancellableMask aren't allowed to move - this means
 					// we need to cancel the move.
-					g_stepsRemaining = numCommands;
+					g_stepsRemaining += numCommands;
 					curCommand += numCommands;
 					numCommands = 0;
 
@@ -151,6 +153,7 @@ int main(void) {
 					ddr_addr = (uint32_t*)curCommand;
 					break;
 				}
+                g_stepsRemaining = 0;
 
 				// TODO This is carried over from the original assembly, but it's unclear
 				// whether it's actually used anywhere.

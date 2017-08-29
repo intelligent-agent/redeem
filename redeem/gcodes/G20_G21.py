@@ -9,13 +9,22 @@ License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 """
 
 from GCodeCommand import GCodeCommand
+import logging
 
+class G20(GCodeCommand):
+
+    def execute(self,g):
+        self.printer.unit_factor = 25.4
+        logging.debug("Set unit_factor to 25.4 (inches)")
+
+    def get_description(self):
+        return "Set units to inches"
 
 class G21(GCodeCommand):
 
     def execute(self,g):
-        #FIXME: This is not used anywhere.
-        self.printer.factor = 1.0
+        self.printer.unit_factor = 1.0
+        logging.debug("Set unit_factor to 1.0 (millimeters)")
 
     def get_description(self):
         return "Set units to millimeters"

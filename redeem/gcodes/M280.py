@@ -14,17 +14,17 @@ class M280(GCodeCommand):
 
     def execute(self, g):
         if g.has_letter("S"): # Angle
-            angle = int(g.get_value_by_letter("S"))
+            angle = g.get_int_by_letter("S")
         else:
             logging.warning("M280: Missing S-parameter")
             return 
         if g.has_letter("P"):
-            index = int(g.get_value_by_letter("P"))
+            index = g.get_int_by_letter("P")
         else:
             logging.warning("M280: Missing P-parameter")
             return 
         if g.has_letter("F"):
-            speed = float(g.get_value_by_letter("F"))
+            speed = g.get_float_by_letter("F")
         else:
             speed = 100
         # If "R" is present, be synchronous

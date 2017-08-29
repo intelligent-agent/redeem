@@ -101,7 +101,7 @@ class Delta {
  public:
   Delta();
   ~Delta();
-  void setMainDimensions(FLOAT_T Hez_in, FLOAT_T L_in, FLOAT_T r_in);
+  void setMainDimensions(FLOAT_T L_in, FLOAT_T r_in);
   void setRadialError(FLOAT_T A_radial_in, FLOAT_T B_radial_in, FLOAT_T C_radial_in);
   void setAngularError(FLOAT_T A_angular_in, FLOAT_T B_angular_in, FLOAT_T C_angular_in);
   void worldToDelta(FLOAT_T X, FLOAT_T Y, FLOAT_T Z, FLOAT_T* Az, FLOAT_T* Bz, FLOAT_T* Cz);
@@ -117,25 +117,23 @@ class PathPlanner {
   bool queueSyncEvent(bool isBlocking = true);
   int waitUntilSyncEvent();
   void clearSyncEvent();
-  void queueMove(VectorN startPos, VectorN endPos, 
+  void queueMove(VectorN endPos, 
 		 FLOAT_T speed, FLOAT_T accel, 
 		 bool cancelable, bool optimize, 
 		 bool enable_soft_endstops, bool use_bed_matrix, 
-		 bool use_backlash_compensation, int tool_axis, bool virgin);
+		 bool use_backlash_compensation, bool is_probe, int tool_axis);
   void runThread();
   void stopThread(bool join);
   void waitUntilFinished();
   void setPrintMoveBufferWait(int dt);
   void setMaxBufferedMoveTime(long long dt);
   void setMaxSpeeds(VectorN speeds);
-  void setMinSpeeds(VectorN speeds);
   void setAxisStepsPerMeter(VectorN stepPerM);
   void setAcceleration(VectorN accel);
-  void setJerks(VectorN jerks);
+  void setMaxSpeedJumps(VectorN speedJumps);
   void setSoftEndstopsMin(VectorN stops);
   void setSoftEndstopsMax(VectorN stops);
   void setBedCompensationMatrix(std::vector<FLOAT_T> matrix);
-  void setMaxPathLength(FLOAT_T maxLength);
   void setAxisConfig(int axis);
   void setState(VectorN set);
   void enableSlaves(bool enable);
@@ -143,6 +141,7 @@ class PathPlanner {
   void setBacklashCompensation(VectorN set);
   void resetBacklash();
   VectorN getState();
+  FLOAT_T getLastProbeDistance();
   void suspend();
   void resume();
   void reset();

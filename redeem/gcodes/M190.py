@@ -17,7 +17,7 @@ except ImportError:
 
 class M190(GCodeCommand):
     def execute(self, g):
-        temperature = float(g.get_value_by_letter("S"))
+        temperature = g.get_float_by_letter("S")
         self.printer.heaters['HBP'].set_target_temperature(temperature)
         self.printer.processor.execute(Gcode({"message": "M116 P-1",  # P-1 = HBP
                                               "parent": g}))

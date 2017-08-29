@@ -33,6 +33,8 @@
 #include <atomic>
 #include <vector>
 #include <string>
+#include <array>
+#include <vector>
 #include "config.h"
 #include "StepperCommand.h"
 #include "vectorN.h"
@@ -45,6 +47,7 @@
 #define FLAG_SYNC                  (1 << 5)
 #define FLAG_SYNC_WAIT             (1 << 6)
 #define FLAG_USE_PRESSURE_ADVANCE  (1 << 7)
+#define FLAG_PROBE                 (1 << 8)
 
 /** Are the step parameter computed */
 #define FLAG_JOIN_STEPPARAMS_COMPUTED (1 << 0)
@@ -71,97 +74,57 @@
 #endif
 #endif
 
+class Delta;
+
+struct Step {
+  FLOAT_T time;
+  unsigned char axis;
+  bool direction;
+
+  Step(FLOAT_T time, unsigned char axis, bool direction)
+    : time(time),
+    axis(axis),
+    direction(direction)
+  {}
+
+  bool operator<(Step const& o) const {
+    return time > o.time;
+  }
+};
+
 struct StepperPathParameters {
-  VectorN accelStartSpeeds;        /// Starting speed for the primary axis in the acceleration phase in steps/s
-  VectorN accelDeltas;
-  FLOAT_T accelTime;
+  FLOAT_T baseSpeed;
+  FLOAT_T startSpeed;
+  FLOAT_T cruiseSpeed;
+  FLOAT_T endSpeed;
+  FLOAT_T accel;
+  FLOAT_T distance;
 
+  FLOAT_T baseAccelEnd;
+  FLOAT_T baseCruiseEnd;
+  FLOAT_T baseMoveEnd;
 
-  VectorN cruiseDeltas;
-  FLOAT_T cruiseTime;
+  FLOAT_T moveEnd;
 
-  VectorN decelEndSpeeds;    /// Ending speed for primary axis in the deceleration phase in steps/s
-  VectorN decelDeltas;
-  FLOAT_T decelTime;
+  mutable unsigned long long accelSteps;
+  mutable unsigned long long cruiseSteps;
+  mutable unsigned long long decelSteps;
 
   inline void zero() {
-    accelStartSpeeds.zero();
-    accelDeltas.zero();
-    accelTime = 0;
+    startSpeed = 0;
+    cruiseSpeed = 0;
+    endSpeed = 0;
+    accel = 0;
+    distance = 0;
 
-    cruiseDeltas.zero();
-    cruiseTime = 0;
-    
-    decelEndSpeeds.zero();
-    decelDeltas.zero();
-    decelTime = 0;
+    accelSteps = 0;
+    cruiseSteps = 0;
+    decelSteps = 0;
   }
-};
 
-struct StepperPathState {
-  int currentPhase;
-  FLOAT_T currentPhaseStartStep;
-  FLOAT_T lastStepTime;
-  FLOAT_T currentPhaseStartTime;
+  FLOAT_T dilateTime(FLOAT_T t) const;
 
-  StepperPathState()
-  : currentPhase(0),
-  currentPhaseStartStep(0),
-  lastStepTime(0),
-  currentPhaseStartTime(0) {
-  }
-};
-
-enum class StepDirection {
-  None,
-  Forward,
-  Backward
-};
-
-/*
- * A StepperPath represents the path of a single axis during a move. It can be composed
- * of any number of phases, but currently has accelerate, cruise, and decelerate (or some subset thereof).
- * The phases themselves are described in terms of acceleration ramps - see calculateDelayAfterStep
- * for more detail.
- */
-class StepperPath {
-private:
-  enum class PrimarySpeed {
-    Start,
-    End,
-    None
-  };
-  struct PathPhase {
-    PrimarySpeed primarySpeed;
-    bool constant;
-    bool rampDir;
-    StepDirection direction;
-    FLOAT_T initialDelay;
-    FLOAT_T firstRampStep;
-    FLOAT_T numSteps;
-    FLOAT_T startSpeed;
-    FLOAT_T endSpeed;
-    FLOAT_T time;
-  };
-
-  std::vector<PathPhase> phases;
-  int numSteps;
-
-  void calculatePhase(const PrimarySpeed type, const FLOAT_T startSpeed, const FLOAT_T endSpeed, const FLOAT_T time, const FLOAT_T accel, const FLOAT_T distance);
-  void calculatePhaseFromStartSpeed(const FLOAT_T startSpeed, const FLOAT_T distance, const FLOAT_T time);
-  void calculateCruisePhase(const FLOAT_T distance, const FLOAT_T time);
-  void calculatePhaseFromEndSpeed(const FLOAT_T endSpeed, const FLOAT_T distance, const FLOAT_T time);
-  FLOAT_T calculateDelayAfterStep(const PathPhase& phase, FLOAT_T stepWithinPhase, FLOAT_T stepLength) const;
-
-public:
-  StepperPath();
-  StepperPath(const StepperPathParameters& params, int axis);
-  StepperPathState calculateNextStep(StepperPathState state, FLOAT_T currentStep, FLOAT_T stepLength) const;
-  StepDirection stepDirection(StepperPathState& state) const;
-  std::string toString() const;
-  bool isInFinalPhase(const StepperPathState& state, FLOAT_T stepNumber) const;
-  int getNumSteps() const;
-
+  FLOAT_T finalTime() const;
 };
 
 class Path {
@@ -169,44 +132,47 @@ private:
   // These fields change throughout the lifecycle of a Path
   unsigned int joinFlags;
   std::atomic_uint_fast32_t flags;
+  FLOAT_T maxJunctionSpeed;       /// Max. junction speed between this and next segment
 
   // These fields are constant after initialization
   FLOAT_T distance;               /// Total distance of the move in NUM_AXIS-dimensional space in meters
-  unsigned int dir;               /// Direction of movement (1 = X+, 2 = Y+, 4= Z+) and whether an axis moves at all (256 = X+, 512 = Y+, 1024 = Z+)
-  std::vector<int> deltas;        /// Steps we want to move (absolute value)
-
-  // These fields are calculated
-  unsigned long long timeInTicks; /// Time for completing a move.
-  VectorN speeds;    /// Speeds for each axis in steps/s
-  VectorN accels;    /// Accelerations for each axis in steps/s²
+  unsigned char moveMask;
+  unsigned long long timeInTicks; /// Time for completing a move (optimistically assuming it runs full speed the whole time)
+  VectorN speeds;
   FLOAT_T fullSpeed;              /// Cruising speed in m/s
-  FLOAT_T maxJunctionSpeed;       /// Max. junction speed between this and next segment
   FLOAT_T startSpeed;             /// Starting speed in m/s
   FLOAT_T endSpeed;               /// Exit speed in m/s
   FLOAT_T minSpeed;               /// Minimum allowable speed for the move
   FLOAT_T accel;                  /// Acceleration in m/s^2
+  IntVectorN startMachinePos;     /// Starting position of the machine
 
   StepperPathParameters stepperPath;
+  std::array<std::vector<Step>, NUM_AXES> steps;
 
-  FLOAT_T calculateSafeSpeed(const VectorN& minSpeeds);
-  FLOAT_T calculateStepsForMixedPath(FLOAT_T startSpeed, FLOAT_T endSpeed, FLOAT_T time);
+  FLOAT_T calculateSafeSpeed(const VectorN& worldMove, const VectorN& maxSpeedJumps);
 
 public:
   Path();
   Path(const Path& path);
   Path& operator=(const Path&);
+  Path& operator=(Path&&);
 
-  void initialize(const VectorN& start,
-		  const VectorN& end,
-		  FLOAT_T distance,
-		  bool cancelable);
+  void initialize(const IntVectorN& machineStart,
+    const IntVectorN& machineEnd,
+    const VectorN& worldStart,
+    const VectorN& worldEnd,
+    const VectorN& stepsPerM,
+    const VectorN& maxSpeedJumps, /// Maximum allowable speed jumps in m/s
+    const VectorN& maxSpeeds, /// Maximum allowable speeds in m/s
+    const VectorN& maxAccelMPerSquareSecond,
+    FLOAT_T requestedSpeed,
+    FLOAT_T requestedAccel,
+    int axisConfig,
+    const Delta& delta,
+    bool cancelable,
+    bool is_probe);
 
-  void calculate(const VectorN& axis_diff,
-		 const VectorN& minSpeeds,
-		 const VectorN& maxSpeeds,
-		 const VectorN& maxAccelStepsPerSquareSecond,
-		 FLOAT_T requestedTime,
-                 FLOAT_T requestedAccel);
+  FLOAT_T runFinalStepCalculations();
 
   void zero();
 
@@ -287,28 +253,24 @@ public:
     return flags & FLAG_USE_PRESSURE_ADVANCE;
   }
 
+  inline bool isProbeMove() {
+    return flags & FLAG_PROBE;
+  }
+
   inline bool isNoMove() {
-    return (dir & (255 << 8)) == 0;
+    return (moveMask & 255) == 0;
   }
 
   inline bool isAxisMove(unsigned int axis) {
-    return (dir & (256 << axis)) != 0;
-  }
-
-  inline bool isAxisNegativeMove(unsigned int axis) {
-    return (dir & ((256 << axis) + (1 << axis))) == (unsigned int)(256 << axis);
-  }
-
-  inline bool isAxisPositiveMove(unsigned int axis) {
-    return (dir & ((256 << axis) + (1 << axis))) == (unsigned int)((256 << axis) + (1 << axis));
+    return (moveMask & (1 << axis)) != 0;
   }
 
   inline bool isAxisOnlyMove(unsigned int axis) {
-    return ((dir & (255 << 8)) == (unsigned int)(256 << axis));
+    return (moveMask & 255) == (unsigned int)(1 << axis);
   }
 
   inline unsigned char getAxisMoveMask() {
-    return (dir >> 8) & 255;
+    return moveMask & 255;
   }
 
   inline unsigned long getTimeInTicks() {
@@ -321,10 +283,6 @@ public:
 
   inline const VectorN& getSpeeds() {
     return speeds;
-  }
-
-  inline const std::vector<int>& getDeltas() {
-    return deltas;
   }
 
   inline FLOAT_T getMaxJunctionSpeed() {
@@ -373,9 +331,12 @@ public:
     return 2.0 * distance * accel;
   }
 
-  StepperPathParameters getStepperPathParameters() {
-    assert(areParameterUpToDate());
-    return stepperPath;
+  const IntVectorN& getStartMachinePos() {
+    return startMachinePos;
+  }
+
+  std::array<std::vector<Step>, NUM_AXES>& getSteps() {
+    return steps;
   }
 
   void updateStepperPathParameters();

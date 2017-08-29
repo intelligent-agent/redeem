@@ -27,7 +27,7 @@ class M115(GCodeCommand):
             "REPLICAPE_KEY:{} "\
             "FIRMWARE_URL:{} "\
             "MACHINE_TYPE:{} "\
-            "EXTRUDER_COUNT: {}".format(
+            "EXTRUDER_COUNT:{}".format(
                 protocol_version,
                 firmware_name,
                 firmware_version,

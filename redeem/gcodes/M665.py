@@ -23,11 +23,11 @@ class M665(GCodeCommand):
              g.set_answer("ok R: {}, L: {}".format(Delta.r, Delta.L))
         else:
             if g.has_letter("L"):
-                Delta.L = float(g.get_value_by_letter("L"))
+                Delta.L = g.get_float_by_letter("L")
             if g.has_letter("R"):
-                Delta.r = float(g.get_value_by_letter("R"))
+                Delta.r = g.get_float_by_letter("R")
                 
-            self.printer.path_planner.native_planner.delta_bot.setMainDimensions(Delta.Hez, Delta.L, Delta.r)
+            self.printer.path_planner.native_planner.delta_bot.setMainDimensions(Delta.L, Delta.r)
             #self.printer.path_planner.native_planner.delta_bot.recalculate()
 
     def get_description(self):

@@ -263,6 +263,15 @@ class Stepper_00B2(Stepper_00B1):
 
 class Stepper_00B3(Stepper_00B2):
 
+    @classmethod
+    def set_stepper_power_down(self, pd):
+        ''' Enables stepper low current mode on all steppers '''
+        logging.debug("Setting pwerdown to  "+str(pd))
+        if pd:
+            ShiftRegister.registers[4].add_state(0x1)
+        else:
+            ShiftRegister.registers[4].remove_state(0x1)
+                    
     def __init__(self, stepPin, dirPin, faultPin, dac_channel, shiftreg_nr, name):
         Stepper_00B1.__init__(self, stepPin, dirPin, faultPin, dac_channel, shiftreg_nr, name)
         self.dac    = PWM_DAC(dac_channel)
@@ -296,14 +305,6 @@ class Stepper_00B3(Stepper_00B2):
 
         self.enabled = True
 
-    def set_stepper_power_down(self, pd):
-        ''' Enables stepper low current mode on all steppers '''
-        logging.debug("Setting pwerdown to  "+str(pd))
-        if pd:
-            ShiftRegister.registers[4].add_state(0x1)
-        else:
-            ShiftRegister.registers[4].remove_state(0x1)
-                    
     def set_current_disabled(self):
         ''' Set the stepper in lowest current mode '''
         if not self.current_enabled:

@@ -9,17 +9,20 @@ License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 """
 
 from GCodeCommand import GCodeCommand
-
+import logging
 
 class M141(GCodeCommand):
 
     def execute(self, g):
-        fan = self.printer.fans[int(g.get_value_by_letter("P"))]
-        fan.set_PWM_frequency(int(g.get_value_by_letter("F")))
-        fan.set_value(float(g.get_value_by_letter("S")))
+        if not (g.has_letter("P") and g.has_letter("I") and g.has_letter("S")):
+            logging.warning("M141 supplied invalid arguments. P, I and S are required")
+            return
+        fan = self.printer.fans[g.get_int_by_letter("P")]
+        fan.set_PWM_frequency(g.get_int_by_letter("I"))
+        fan.set_value(g.get_float_by_letter("S"))
 
     def get_description(self):
-        return "Set fan power and PWM frequency"
+        return "Set fan P, to power S (1.0 = 100%) and PWM frequency I (in Hz).\nex. M141 P0 I1000 S0.5"
 
     def is_buffered(self):
         return True

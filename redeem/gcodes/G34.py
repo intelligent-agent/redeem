@@ -32,28 +32,27 @@ class G34(GCodeCommand):
 
         # parse arguments
 
-        # Get probe length, if present, else use 1 cm.
+        # Get probe length (in mm), if present, else use config value
         if g.has_letter("D"):
-            probe_length = float(g.get_value_by_letter("D"))
+            probe_length = g.get_float_by_letter("D")
         else:
             probe_length = 1000. * self.printer.config.getfloat('Probe',
-                                                                'length')
-
-        # Get probe speed. If not preset, use printers current speed.
+                                                                'length') # m
+        # Get probe speed. If not preset, use config value.
         if g.has_letter("F"):
-            probe_speed = float(g.get_value_by_letter("F")) / 60000.0
+            probe_speed = g.get_float_by_letter("F") / 60000.0 # mm/min -> m/s
         else:
-            probe_speed = self.printer.config.getfloat('Probe', 'speed')
+            probe_speed = self.printer.config.getfloat('Probe', 'speed') # m/s
 
         # Get acceleration. If not present, use value from config.
-        if g.has_letter("A"):
-            probe_accel = float(g.get_value_by_letter("A"))
+        if g.has_letter("Q"):
+            probe_accel = g.get_float_by_letter("Q") / 3600000 # mm/min^2 -> m/s^2
         else:
-            probe_accel = self.printer.config.getfloat('Probe', 'accel')
+            probe_accel = self.printer.config.getfloat('Probe', 'accel') # m/s^2
 
-        probe_start_height = g.get_float_by_letter("Z", 5)
+        probe_start_height = g.get_float_by_letter("Z", 5.0)
 
-        # store the current z coordinate
+        # store the current Z coordinate
         point = self.printer.path_planner.get_current_pos(mm=True)
         orig_z = point["Z"]
         logging.debug("G34: orig_z = %f", orig_z)
@@ -104,6 +103,8 @@ and the print head. Once the print head is moved to touch the bed, this command
 lifts the head for Z mm, runs the G32 macro to deploy the probe, and
 then probes down until the endstop is triggered. The height difference
 is then stored as the [Probe] offset_z configuration parameter.
+
+NOTE: G20 ignored. All units in mm.
 
 Parameters:
 
