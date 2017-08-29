@@ -24,7 +24,9 @@
  
 */
 
+#include "AlarmCallback.h"
 #include "PathPlanner.h"
+#include <Python.h>
 
 void PathPlanner::setPrintMoveBufferWait(int dt) {
   printMoveBufferWait = dt;
@@ -84,6 +86,17 @@ void PathPlanner::setAxisConfig(int axis)
 
     setState(stateBefore);
   }
+}
+
+void PathPlanner::pruAlarmCallback()
+{
+  LOG("PRU fired endstop alarm - disabling path planner and firing alarm" << std::endl);
+  acceptingPaths = false;
+
+  PyGILState_STATE gstate;
+  gstate = PyGILState_Ensure();
+  alarmCallback.call(7, "Endstop hit", "Endstop hit");
+  PyGILState_Release(gstate);
 }
 
 // the state of the machine

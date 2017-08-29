@@ -25,6 +25,7 @@
 */
 
 #include "PathPlanner.h"
+#include "AlarmCallback.h"
 #include <cmath>
 #include <assert.h>
 #include <thread>
@@ -32,7 +33,10 @@
 #include <Python.h>
 
 
-PathPlanner::PathPlanner(unsigned int cacheSize) {
+PathPlanner::PathPlanner(unsigned int cacheSize, AlarmCallback& alarmCallback)
+  : alarmCallback(alarmCallback),
+  pru([this](){this->pruAlarmCallback();})
+{
   linesPos = 0;
   linesWritePos = 0;
   LOG( "PathPlanner " << std::endl);
@@ -43,6 +47,7 @@ PathPlanner::PathPlanner(unsigned int cacheSize) {
   linesCount = 0;
   linesTicksCount = 0;
   stop = false;
+  acceptingPaths = true;
 	
   axis_config = AXIS_CONFIG_XY;
   has_slaves = false;
@@ -116,7 +121,13 @@ void PathPlanner::queueMove(VectorN endWorldPos,
   ////////////////////////////////////////////////////////////////////
   // PRE-PROCESSING
   ////////////////////////////////////////////////////////////////////
-	
+
+  if (!acceptingPaths)
+  {
+    LOG("Rejecting path because path planner is suspended" << std::endl);
+    return;
+  }
+
   LOG("NEW MOVE:\n");
   // for (int i = 0; i<NUM_AXES; ++i) {
   //   LOG("AXIS " << i << ": start = " << startPos[i] << "(" << state[i] << "), end = " << endPos[i] << "\n");
@@ -127,6 +138,9 @@ void PathPlanner::queueMove(VectorN endWorldPos,
   // Cap the end position based on soft end stops
   if (enable_soft_endstops) {
     if (softEndStopApply(endWorldPos)) {
+      LOG("soft endstop triggered - suspending path planner and triggering alarm" << std::endl);
+      acceptingPaths = false;
+      alarmCallback.call(7, "Soft endstop hit", "Soft endstop hit");
       return;
     }
   }
@@ -141,7 +155,16 @@ void PathPlanner::queueMove(VectorN endWorldPos,
   handleSlaves(startWorldPos, endWorldPos);
 	
   // Get the vector to move us from where we are, to where we ideally want to be.
-  IntVectorN endPos = worldToMachine(endWorldPos);
+  bool possibleMove = true;
+  IntVectorN endPos = worldToMachine(endWorldPos, &possibleMove);
+
+  if (!possibleMove)
+  {
+    LOG("attempted move to impossible position - suspending path planner and triggering alarm" << std::endl);
+    acceptingPaths = false;
+    alarmCallback.call(7, "Move to unreachable position requested", "Move to unreachable position requested");
+    return;
+  }
 
   // This is only useful for debugging purposes - the motion platform may not move
   // directly from start to end, but the net total of steps should equal this.
@@ -519,7 +542,9 @@ void PathPlanner::waitUntilFinished() {
     }
 
 void PathPlanner::reset() {
+  LOG("path planner resetting" << std::endl);
   pru.reset();
+  acceptingPaths = true;
 }
 
 void PathPlanner::run() {
@@ -895,9 +920,14 @@ VectorN PathPlanner::getState()
   return machineToWorld(state);
 }
 
-IntVectorN PathPlanner::worldToMachine(const VectorN& worldPos)
+IntVectorN PathPlanner::worldToMachine(const VectorN& worldPos, bool* possible)
 {
   IntVectorN output = (worldPos * axisStepsPerM).round();
+  
+  if (possible)
+  {
+    *possible = true;
+  }
 
   switch (axis_config)
   {
@@ -910,6 +940,12 @@ IntVectorN PathPlanner::worldToMachine(const VectorN& worldPos)
     output[0] = endMotionPos[0];
     output[1] = endMotionPos[1];
     output[2] = endMotionPos[2];
+
+    if (possible)
+    {
+      // If any of the tower positions are NaN, the move is impossible
+      *possible = !deltaEnd.hasNan();
+    }
     break;
   }
   case AXIS_CONFIG_CORE_XY:
@@ -945,3 +981,10 @@ IntVectorN PathPlanner::worldToMachine(const VectorN& worldPos)
 
   return output;
 }
+void AlarmCallback::call(int alarmType, std::string message, std::string shortMessage)
+{
+  assert(0); // this method will be overridden by child classes - SWIG takes care of it
+}
+
+AlarmCallback::~AlarmCallback()
+{}

@@ -51,6 +51,8 @@ class PruTimer {
 	uint32_t* pru_control;
 	
 	uint32_t currentNbEvents;
+
+	std::function<void()> endstopAlarmCallback;
 	
 	std::mutex mutex_memory;
 	
@@ -89,7 +91,7 @@ class PruTimer {
 	void initalizePRURegisters();
 	
 public:
-	PruTimer();
+	PruTimer(std::function<void()> endstopAlarmCallback);
 	virtual ~PruTimer();
 	bool initPRU(const std::string& firmware_stepper, const std::string& firmware_endstops);
 	
