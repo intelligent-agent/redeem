@@ -277,24 +277,21 @@ class G2G3ExtrusionTests(MockPrinter):
         next(b, None)
         return itertools.izip(a, b)
 
-    def test_linear_extrustion(self):
+    def _test_linear_dimensions(self, gcodes, dim, start, end):
 
-        for gcode in ['G17', 'G1 Y-2.0 X7.0 E2.0', 'G3 Y-6.0 X-7.0 I-9.0 J5.0 E3.5']:
+        for gcode in gcodes:
             self.execute_gcode(gcode)
 
         queue_mock = self.printer.path_planner.native_planner.queueMove
         queued_points = [args[0][0] for args in queue_mock.call_args_list]
 
-        for point in queued_points:
-            print(point)
-
-        extrusion_points = [point[self.printer.axes_absolute.index('E')] for point in queued_points]
+        extrusion_points = [point[self.printer.axes_absolute.index(dim)] for point in queued_points]
 
         extrusion_point_pairs = self.pairwise(extrusion_points)
 
         # assert start and end
-        self.assertEqual(extrusion_points[0], 2.0/1000)
-        self.assertEqual(extrusion_points[-1], 3.5/1000)
+        self.assertEqual(extrusion_points[0], start)
+        self.assertEqual(extrusion_points[-1], end)
 
         # assert equal distance between the points
         diff = None
@@ -304,6 +301,39 @@ class G2G3ExtrusionTests(MockPrinter):
                 self.assertCloseTo(diff, d)
             diff = d
 
+        queue_mock.reset_mock()
 
+    def test_linear_e_extrusion(self):
 
+        gcodes = ['G17', 'G1 Y-2.0 X7.0 E2.0', 'G3 Y-6.0 X-7.0 I-9.0 J5.0 E3.5']
+        self._test_linear_dimensions(gcodes, 'E', 2.0/1000, 3.5/1000)
 
+    def test_z_helical(self):
+
+        gcodes = ['G17', 'G1 Y-2.0 X7.0 Z2.0', 'G3 Y-6.0 X-7.0 I-9.0 J5.0 Z3.5']
+        self._test_linear_dimensions(gcodes, 'Z', 2.0/1000, 3.5/1000)
+
+    def test_neg_z_helical(self):
+
+        gcodes = ['G17', 'G1 Y-2.0 X7.0 Z-2.0', 'G3 Y-6.0 X-7.0 I-9.0 J5.0 Z-3.5']
+        self._test_linear_dimensions(gcodes, 'Z', -2.0/1000, -3.5/1000)
+
+    def test_z_helical_cross_zero_up(self):
+
+        gcodes = ['G17', 'G1 Y-2.0 X7.0 Z-15.1', 'G3 Y-6.0 X-7.0 I-9.0 J5.0 Z3.5']
+        self._test_linear_dimensions(gcodes, 'Z', -15.1 / 1000, 3.5 / 1000)
+
+    def test_z_helical_cross_zero_down(self):
+
+        gcodes = ['G17', 'G1 Y-2.0 X7.0 Z2.0', 'G3 Y-6.0 X-7.0 I-9.0 J5.0 Z-13.5']
+        self._test_linear_dimensions(gcodes, 'Z', 2.0 / 1000, -13.5 / 1000)
+
+    def test_helical_and_extrusion(self):
+
+        gcodes = ['G17', 'G1 Y-2.0 X7.0 Z2.0 E1.25', 'G3 Y-6.0 X-7.0 I-9.0 J5.0 Z-13.5 E2.55']
+        self._test_linear_dimensions(gcodes, 'Z', 2.0 / 1000, -13.5 / 1000)
+        self._test_linear_dimensions(gcodes, 'E', 1.25/1000, 2.55/1000)
+
+    def test_linear_h_extrusion(self):
+        gcodes = ['G17', 'G1 Y-2.0 X7.0 H2.0', 'G3 Y-6.0 X-7.0 I-9.0 J5.0 H3.5']
+        self._test_linear_dimensions(gcodes, 'H', 2.0 / 1000, 3.5 / 1000)
