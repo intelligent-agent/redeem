@@ -135,3 +135,10 @@ log_to_file = False
     @classmethod
     def full_path(cls, o):
         return o.__module__ + "." + o.__class__.__name__
+
+    def assertCloseTo(self, a, b, msg=''):
+        """test to the nearest thousandth of a millimeter"""
+        match = np.isclose(a, b, rtol=1e-6, atol=1e-6)
+        if not match:
+            exception = self._formatMessage(msg, "{} is not close to {}: {}".format(a, b, msg))
+            raise self.failureException(exception)

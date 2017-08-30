@@ -25,6 +25,7 @@ import numpy as np
 import sympy as sp
 import logging
 
+
 class Path:
     
     printer = None
@@ -45,9 +46,6 @@ class Path:
     X_Z_ARC_PLANE = 1
     Y_Z_ARC_PLANE = 2
 
-    # max length of any segment in an arc
-    ARC_SEGMENT_LENGTH = 0.1 / 1000  # TODO : make setting
-    
     def __init__(self, axes, speed, accel, cancelable=False, use_bed_matrix=True, use_backlash_compensation=True, enable_soft_endstops=True, is_probe=False):
         """ The axes of evil, the feed rate in m/s and ABS or REL """
         self.axes = axes
@@ -63,7 +61,7 @@ class Path:
         self.speeds = None
         self.start_pos = None
         self.end_pos = None
-        self.ideal_end_post = None
+        self.ideal_end_pos = None
 
     def is_G92(self):
         """ Special path, only set the global position on this """
@@ -121,18 +119,18 @@ class Path:
         # Path.Y_Z_ARC_PLANE
         return self.J, self.K
 
-    def _get_linear_dimensions(self):
+    def _get_linear_dimensions(self, point):
         linears = {}
         if 'E' in self.axes:
-            linears['E'] = self.axes['E']
+            linears['E'] = point[self.printer.axes_absolute.index('E')]
         if 'H' in self.axes:
-            linears['H'] = self.axes['H']
+            linears['H'] = point[self.printer.axes_absolute.index('H')]
         if self.printer.arc_plane == Path.X_Y_ARC_PLANE and 'Z' in self.axes:
-            linears['Z'] = self.axes['Z']
+            linears['Z'] = point[self.printer.axes_absolute.index('Z')]
         elif self.printer.arc_plane == Path.X_Z_ARC_PLANE and 'Y' in self.axes:
-            linears['Y'] = self.axes['Y']
+            linears['Y'] = point[self.printer.axes_absolute.index('Y')]
         elif self.printer.arc_plane == Path.Y_Z_ARC_PLANE and 'X' in self.axes:
-            linears['X'] = self.axes['X']
+            linears['X'] = point[self.printer.axes_absolute.index('X')]
 
         return linears
 
@@ -202,18 +200,28 @@ class Path:
         arc_1 = circle1 + radius * np.sin(arc_thetas)
 
         # handle non-arc (linear) dimensional movements
-        linears = self._get_linear_dimensions()
+        start_linears = self._get_linear_dimensions(self.prev.ideal_end_pos)
+        end_linears = self._get_linear_dimensions(self.ideal_end_pos)
 
-        np.linearspace(0, )
+        things_to_zip = [arc_0, arc_1]
 
+        linear_dims = {}
 
+        for key in start_linears.keys():
+            linear_dims[key] = np.linspace(start_linears[key], end_linears[key], num_segments)
 
+        zipped_dim_dicts = zip(*[[{key: value} for value in values] for key, values in linear_dims.items()])
+
+        # zipped_dict = [{k: v for d in L for k, v in d.items()} for L in zipped_dicts]
 
         path_segments = []
 
         # for each coordinate along the arc, create a segment
         for index, segment in enumerate(zip(arc_0, arc_1)):
             segment_end = self._get_axes_point(segment)
+            if len(zipped_dim_dicts):
+                for dim in zipped_dim_dicts[index]:
+                    segment_end.update(dim)
             logging.debug("segment point: {}".format(segment_end))
             path = AbsolutePath(segment_end, self.speed, self.accel, self.cancelable, self.use_bed_matrix, False)
             # in order to set previous, printer attribute needs to be set based on the original path's printer

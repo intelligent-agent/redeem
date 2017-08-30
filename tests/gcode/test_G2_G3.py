@@ -1,5 +1,6 @@
 import os
 import logging
+import itertools
 import numpy as np
 from mock import Mock
 
@@ -14,7 +15,7 @@ except:
 base_dir = os.path.dirname(os.path.dirname(__file__))
 
 
-class G2_G3_Tests(MockPrinter):
+class G2G3CircleTests(MockPrinter):
 
     CW = 1
     CCW = 2
@@ -60,12 +61,6 @@ class G2_G3_Tests(MockPrinter):
 
         return gcode
 
-    def assertCloseTo(self, a, b, msg=''):
-        match = np.isclose(a, b, rtol=1e-6, atol=1e-6)
-        if not match:
-            exception = self._formatMessage(msg, "{} is not close to {}: {}".format(a, b, msg))
-            raise self.failureException(exception)
-
     def _test_arc(self, start, finish, center, direction, title):
 
         offset = {'I': center['X'] - start['X'], 'J': center['Y'] - start['Y']}
@@ -86,7 +81,6 @@ class G2_G3_Tests(MockPrinter):
         queued_points = [args[0][0] for args in queue_mock.call_args_list]
 
         for point in queued_points:
-            print(point)
             logging.debug("queued point: {}".format(point))
 
         # pop the G1 positioning command (start point)
@@ -265,3 +259,51 @@ class G2_G3_Tests(MockPrinter):
     # def test_pos_radius_variant_ccw
     # def test_neg_radius_variant_cw
     # def test_neg_radius_variant_ccw
+
+
+class G2G3ExtrusionTests(MockPrinter):
+
+    @classmethod
+    def setUpPatch(cls):
+        cls.printer.path_planner.native_planner = Mock()
+        cls.printer.ensure_steppers_enabled = Mock()
+
+    def setUp(self):
+        self.printer.unit_factor = self.f = 1
+
+    def pairwise(self, iterable):
+        """s -> (s0,s1), (s1,s2), (s2, s3), ..."""
+        a, b = itertools.tee(iterable)
+        next(b, None)
+        return itertools.izip(a, b)
+
+    def test_linear_extrustion(self):
+
+        for gcode in ['G17', 'G1 Y-2.0 X7.0 E2.0', 'G3 Y-6.0 X-7.0 I-9.0 J5.0 E3.5']:
+            self.execute_gcode(gcode)
+
+        queue_mock = self.printer.path_planner.native_planner.queueMove
+        queued_points = [args[0][0] for args in queue_mock.call_args_list]
+
+        for point in queued_points:
+            print(point)
+
+        extrusion_points = [point[self.printer.axes_absolute.index('E')] for point in queued_points]
+
+        extrusion_point_pairs = self.pairwise(extrusion_points)
+
+        # assert start and end
+        self.assertEqual(extrusion_points[0], 2.0/1000)
+        self.assertEqual(extrusion_points[-1], 3.5/1000)
+
+        # assert equal distance between the points
+        diff = None
+        for pair in extrusion_point_pairs:
+            d = pair[1] - pair[0]
+            if diff:
+                self.assertCloseTo(diff, d)
+            diff = d
+
+
+
+
