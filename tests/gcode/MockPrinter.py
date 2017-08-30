@@ -33,6 +33,7 @@ from CascadingConfigParser import CascadingConfigParser
 from Redeem import *
 from EndStop import EndStop
 
+
 """
 Override CascadingConfigParser methods to set self. variables
 """
@@ -41,18 +42,29 @@ class CascadingConfigParserWedge(CascadingConfigParser):
         self.replicape_revision = "0A4A" # Fake. No hardware involved in these tests (Redundant?)
         self.reach_revision = "00A0" # Fake. No hardware involved in these tests (Redundant?)
 
-"""
-MockPrinter, in combination with the many sys.module[...] = Mock() statements
-above, creates a mock Redeem instance. The mock instance has only what is
-needed for our tests and does not access any BBB hardware IOs.
-"""
+
 class MockPrinter(unittest.TestCase):
+
+    """
+    MockPrinter, in combination with the many sys.module[...] = Mock() statements
+    above, creates a mock Redeem instance. The mock instance has only what is
+    needed for our tests and does not access any BBB hardware IOs.
+    """
+
+    @classmethod
+    def setUpPatch(cls):
+        """"
+        Override this method for mocking something other than the path planner
+        """
+        cls.printer.path_planner = mock.MagicMock()
+
+
 
     @classmethod
     @mock.patch.object(EndStop, "_wait_for_event", new=None)
     @mock.patch.object(CascadingConfigParser, "get_key")
-    @mock.patch("Redeem.CascadingConfigParser", new = CascadingConfigParserWedge)
-    def setUpClass(self, mock_get_key):
+    @mock.patch("Redeem.CascadingConfigParser", new=CascadingConfigParserWedge)
+    def setUpClass(cls, mock_get_key):
 
         mock_get_key.return_value = "TESTING_DUMMY_KEY"
 
@@ -74,7 +86,7 @@ class MockPrinter(unittest.TestCase):
         This seems like the best way to add to or change stuff in default.cfg,
         without actually messing with the prestine file.
         """
-        tmp_local_cfg = tf = open("../configs/local.cfg", "w")
+        tf = open("../configs/local.cfg", "w")
         lines = """
 [System]
 log_to_file = False
@@ -82,43 +94,44 @@ log_to_file = False
         tf.write(lines)
         tf.close()
 
-        self.R = Redeem(config_location="../configs")
-        printer = self.printer = self.R.printer
+        cls.R = Redeem(config_location="../configs")
+        cls.printer = cls.R.printer
 
-        self.printer.path_planner = mock.MagicMock()
-        self.gcodes = self.printer.processor.gcodes
-        self.printer.send_message = mock.create_autospec(self.printer.send_message)
+        cls.setUpPatch()
 
-        self.printer.movement = Path.ABSOLUTE
-        self.printer.feed_rate = 0.050 # m/s
-        self.printer.accel = 0.050 / 60 # m/s/s
+        cls.gcodes = cls.printer.processor.gcodes
+        cls.printer.send_message = mock.create_autospec(cls.printer.send_message)
 
-        Gcode.printer = printer
-        Path.printer = printer
+        cls.printer.movement = Path.ABSOLUTE
+        cls.printer.feed_rate = 0.050  # m/s
+        cls.printer.accel = 0.050 / 60  # m/s/s
 
-        self.printer.speed_factor = 1.0
+        Gcode.printer = cls.printer
+        Path.printer = cls.printer
+
+        cls.printer.speed_factor = 1.0
         """ 
         We want to ensure that printer.factor is always obeyed correctly
         For convenience, we'll set it to mm/inch and check that resulting 
         paths have the correct meter values, converted from inch input.
         """
-        self.printer.unit_factor = self.f = 25.4 # inches
+        cls.printer.unit_factor = cls.f = 25.4  # inches
 
-        self.printer.probe_points = []
+        cls.printer.probe_points = []
 
     @classmethod
-    def tearDownClass(self):
-        self.R = self.printer = None
+    def tearDownClass(cls):
+        cls.R = cls.printer = None
         os.remove("../configs/local.cfg")
         pass
 
     """ directly calls a Gcode class's execute method, bypassing printer.processor.execute """
     @classmethod
-    def execute_gcode(self, text):
+    def execute_gcode(cls, text):
         g = Gcode({"message": text})
-        self.printer.processor.gcodes[g.gcode].execute(g)
+        cls.printer.processor.gcodes[g.gcode].execute(g)
         return g
 
     @classmethod
-    def full_path(self, o):
-      return o.__module__ + "." + o.__class__.__name__
+    def full_path(cls, o):
+        return o.__module__ + "." + o.__class__.__name__

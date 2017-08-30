@@ -46,7 +46,7 @@ class Path:
     Y_Z_ARC_PLANE = 2
 
     # max length of any segment in an arc
-    ARC_SEGMENT_LENGTH = 1.0 / 1000  # TODO : make setting
+    ARC_SEGMENT_LENGTH = 0.1 / 1000  # TODO : make setting
     
     def __init__(self, axes, speed, accel, cancelable=False, use_bed_matrix=True, use_backlash_compensation=True, enable_soft_endstops=True, is_probe=False):
         """ The axes of evil, the feed rate in m/s and ABS or REL """
@@ -179,7 +179,7 @@ class Path:
 
         # determine the length of the arc in order to determine how many segments to split into
         arc_length = radius * abs(end_theta - start_theta)
-        num_segments = int(arc_length / self.ARC_SEGMENT_LENGTH)
+        num_segments = int(arc_length / self.printer.config.getfloat('Planner', 'arc_segment_length'))
 
         # create equally spaced angles (in radians) from start to end
         arc_thetas = np.linspace(start_theta + 2 * np.pi, end_theta + 2 * np.pi, num_segments)
