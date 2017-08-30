@@ -109,7 +109,7 @@ class Path:
             return {'X': point[0], 'Y': point[1]}
         if self.printer.arc_plane == Path.X_Z_ARC_PLANE:
             return {'X': point[0], 'Z': point[1]}
-        # ifPath.Y_Z_ARC_PLANE
+        # if Path.Y_Z_ARC_PLANE
         return {'Y': point[0], 'Z': point[1]}
 
     def _get_offset_on_plane(self):
@@ -131,7 +131,7 @@ class Path:
 
         if len(intersection) < 1:
             raise Exception("radius circles do not intersect")  # TODO : proper way of handling GCode error (?)
-        if len(intersection) < 2 or r > 0:  # single intersection or "positive" radius center point
+        if len(intersection) < 2 or radius > 0:  # single intersection or "positive" radius center point
             return intersection[0].x, intersection[0].y
         return intersection[1].x, intersection[1].y  # "negative" radius center point
 
@@ -146,7 +146,6 @@ class Path:
         end0, end1 = self._get_point_on_plane(self.ideal_end_pos)
         logging.debug("end pos: {}".format(self.ideal_end_pos))
         logging.debug("start point: {}, end point: {}".format([start0, start1], [end0, end1]))
-
 
         # 'R' variant gives radius, need to calculate circle center
         if hasattr(self, 'R'):
@@ -167,11 +166,11 @@ class Path:
         # determine the start and end angle (in radians)
         start_theta, end_theta = np.arctan2(origin1, origin0)
 
-        # clockwise angles are always increasing, adjust for +/- pi modulus
+        # clockwise angles are always increasing, adjust for using +/- pi modulus
         if start_theta <= end_theta and self.movement is Path.G2:
             start_theta = np.pi + abs(-np.pi - start_theta)
 
-        # counter-clockwise anges are always decreasing, adjust for +/- modulus
+        # counter-clockwise angles are always decreasing, adjust for using +/- pi modulus
         if start_theta >= end_theta and self.movement is Path.G3:
             start_theta = -np.pi - abs(np.pi - start_theta)
 
