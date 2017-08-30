@@ -300,6 +300,9 @@ class PathPlanner:
         """ Home the given axis using endstops (min) """
         logging.debug("homing " + str(axis))
         
+        # Reset babystepping
+        self.printer.offset_z = 0.0
+
         # allow for endstops that may only be active during homing
         self.printer.homing(True)
 
@@ -355,6 +358,9 @@ class PathPlanner:
     def probe(self, z, speed, accel):
         self.wait_until_done()
         
+        # Reset babystepping
+        self.printer.offset_z = 0.0
+
         self.printer.ensure_steppers_enabled()
         
         # save the starting position
@@ -438,6 +444,10 @@ class PathPlanner:
         # NOTE: printing the added path slows things down SIGNIFICANTLY
         #logging.debug("path added: "+ str(new))
         
+        # Add babystepping
+        new.end_pos[2] += self.printer.offset_z
+
+
         if new.is_G92():
             self.native_planner.setAxisConfig(int(self.printer.axis_config))
             self.native_planner.setState(tuple(new.end_pos))

@@ -57,6 +57,7 @@ class Printer:
         self.movement           = Path.ABSOLUTE
         self.axis_config        = self.AXIS_CONFIG_XY
         self.feed_rate          = 0.5
+        self.offset_z           = 0.0 # For babystepping. 
         # this rate is the one used at the beginning of startup for any moves without G1 F,
         # other than homing, which obeys it's speed correctly.
         self.accel              = 9.8
