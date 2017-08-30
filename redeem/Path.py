@@ -121,6 +121,21 @@ class Path:
         # Path.Y_Z_ARC_PLANE
         return self.J, self.K
 
+    def _get_linear_dimensions(self):
+        linears = {}
+        if 'E' in self.axes:
+            linears['E'] = self.axes['E']
+        if 'H' in self.axes:
+            linears['H'] = self.axes['H']
+        if self.printer.arc_plane == Path.X_Y_ARC_PLANE and 'Z' in self.axes:
+            linears['Z'] = self.axes['Z']
+        elif self.printer.arc_plane == Path.X_Z_ARC_PLANE and 'Y' in self.axes:
+            linears['Y'] = self.axes['Y']
+        elif self.printer.arc_plane == Path.Y_Z_ARC_PLANE and 'X' in self.axes:
+            linears['X'] = self.axes['X']
+
+        return linears
+
     def _find_circle_center(self, start0, start1, end0, end1, radius):
         """each circle defines all possible coordinates the arc center could be
         the two circles intersect at the possible centers of the arc radius"""
@@ -135,7 +150,6 @@ class Path:
             return intersection[0].x, intersection[0].y
         return intersection[1].x, intersection[1].y  # "negative" radius center point
 
-    # Performance may not be a concern; G2/G3 seem only to be used by CNC mills/lathes which have lower gcode throughput
     # If performance is an issue, move functionality to `PathPlannerNative`
     def get_arc_segments(self):
         """Returns paths that approximated an arc."""
@@ -186,6 +200,14 @@ class Path:
         # calculate all the points along the arc
         arc_0 = circle0 + radius * np.cos(arc_thetas)
         arc_1 = circle1 + radius * np.sin(arc_thetas)
+
+        # handle non-arc (linear) dimensional movements
+        linears = self._get_linear_dimensions()
+
+        np.linearspace(0, )
+
+
+
 
         path_segments = []
 
