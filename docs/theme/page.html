@@ -49,6 +49,14 @@
                       <li class="nav-item nav-item-{{ loop.index }}"><a href="{{ parent.link|e }}" {% if loop.last %}{{ accesskey("U") }}{% endif %}>{{ parent.title }}</a>{{ reldelim1 }}</li>
                     {%- endfor %}
                 </ol>
+                <div class="current-version">
+                    <h3>Version: {{ current_version }}</h3>
+                    {%- if scv_is_recent_ref -%}
+                        <h4 class="latest">Latest Release</h4>
+                    {%- else %-}
+                        <h4 class="previous">Previous Release</h4>
+                    {%- endif -%}
+                </div>
             </div><!--//container-->
         </header><!--//header-->
         <div class="doc-wrapper">
@@ -62,13 +70,14 @@
                     <div class="doc-sidebar hidden-xs">
                         <nav id="doc-nav">
                             {{ toctree(maxdepth=3, includehidden=True) }}
+                            <dl>
+                                <dt>Tags</dt>
+                                {%- for name, url in versions.tags %}
+                                <dd><a href="{{ url }}">{{ name }}</a></dd>
+                                {%- endfor %}
+                            </dl>
                         </nav>
-                        <dl>
-                            <dt>Tags</dt>
-                            {%- for name, url in versions.tags %}
-                            <dd><a href="{{ url }}">{{ name }}</a></dd>
-                            {%- endfor %}
-                        </dl>
+
                     </div><!--//doc-sidebar-->
                 </div><!--//doc-body-->              
             </div><!--//container-->
