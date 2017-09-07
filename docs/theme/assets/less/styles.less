@@ -1,0 +1,220 @@
+/*   
+ * Template Name: PrettyDocs - Responsive Website Template for documentations
+ * Version: 1.0
+ * Author: Xiaoying Riley
+ * License: Creative Commons Attribution 3.0 License - https://creativecommons.org/licenses/by/3.0/
+ * Twitter: @3rdwave_themes
+ * Website: http://themes.3rdwavemedia.com/
+*/
+@import "mixins.less";
+@import "theme-default.less";
+@import "base.less";
+@import "doc.less";
+@import "landing.less";
+
+@import (reference) "../plugins/font-awesome/less/font-awesome.less";
+
+
+h1.logo {
+  .icon {
+    width:30px;
+  }
+}
+
+.rubric {
+  font-size:22px;
+  font-weight:600;
+}
+
+.section {
+  &:extend(.doc-section);
+}
+
+.section h1 {
+  &:extend(.doc-section .section-title);
+}
+
+.section h2 {
+  &:extend(.doc-section h3);
+}
+
+.section h3 {
+  &:extend(.doc-section h4);
+}
+
+.section h4 {
+  &:extend(.doc-section h5);
+}
+
+.section h5 {
+  &:extend(.doc-section h6);
+}
+
+.section {
+  a.toc-backref, a.toc-backref:hover {
+    color: @text-color;
+    text-decoration: none;
+  }
+
+  a.headerlink {
+    padding-left:10px;
+    visibility:hidden;
+  }
+  a.headerlink:before {
+    visibility:visible;
+    .fa;
+    content: @fa-var-link;
+  }
+}
+
+table.docutils {
+  border:none;
+  width:100%;
+  margin-bottom:15px;
+
+  td, th {
+    padding: 8px 0px;
+    border: none;
+    border-bottom: 1px @light-grey solid;
+  }
+
+}
+
+table.docutils > thead > tr > th {
+    border-bottom-color: lighten(@color-primary, 20%);
+    border-width:2px;
+    .body-green & {
+        border-bottom-color: lighten(@color-green, 20%);
+    }
+    .body-blue & {
+        border-bottom-color: lighten(@color-blue, 20%);
+    }
+    .body-orange & {
+        border-bottom-color: lighten(@color-orange, 20%);
+    }
+    .body-pink & {
+        border-bottom-color: lighten(@color-pink, 20%);
+    }
+    .body-purple & {
+
+        border-bottom-color: lighten(@color-purple, 20%);
+    }
+}
+
+.admonition {
+  .callout-block;
+
+  .admonition-title {
+    .callout-title;
+    font-size: 18px;
+    font-weight: bold;
+  }
+
+  .first:before {
+    .fa;
+    .icon-holder;
+    left:25px;
+    top: 25px;
+  }
+
+  .first, .last {
+    padding-left:60px;
+  }
+
+  cite {
+    &:extend(code);
+    border-radius: 4px;
+  }
+  
+  &.attention {
+    .callout-info;
+    .first:before {
+      content: @fa-var-info-circle;
+    }
+  }
+  &.caution {
+    .callout-warning;
+    .first:before {
+      content: @fa-var-bug;
+    }
+  }
+  &.danger {
+    .callout-danger;
+    .first:before {
+      content: @fa-var-bullhorn;
+    }
+  }
+  &.error { .callout-danger;
+    .first:before {
+      content: @fa-var-exclamation-triangle;
+    }
+  }
+  &.hint {
+    .callout-info;
+    .first:before {
+      content: @fa-var-info-circle;
+    }
+  }
+  &.important {
+    .callout-success;
+    .first:before {
+      content: @fa-var-thumbs-up;
+    }
+  }
+  &.note {
+    .callout-info;
+    .first:before {
+      content: @fa-var-check-circle;
+    }
+  }
+  &.tip {
+    .callout-info;
+    .first:before {
+      content: @fa-var-pencil;
+    }
+  }
+  &.warning {
+    .callout-warning;
+    .first-before {
+      content: @fa-var-meh-o;
+    }
+  }
+  &.admonition-and-by-the-way {
+    .callout-success;
+    .first:before {
+      content: @fa-var-search-plus;
+    }
+  }
+}
+
+#doc-nav {
+  & > ul {
+    &:extend(nav);
+    .doc-menu;
+    li {
+      list-style:none;
+    }
+    ul > li {
+      a {
+        color: @dark-grey;
+      }
+      ul {
+        display:none;
+      }
+    }
+    ul > li.active {
+      border-left:1px solid @color-green;
+      padding-left:9px;
+      margin-left:-10px;
+
+      & > a {
+        color: @color-green;
+
+      }
+      ul {
+        display:block;
+        font-size:12px;
+      }
+    }
+  }
+}
