@@ -63,6 +63,12 @@
                         <nav id="doc-nav">
                             {{ toctree(maxdepth=3, includehidden=True) }}
                         </nav>
+                        <dl>
+                            <dt>Tags</dt>
+                            {%- for name, url in versions.tags %}
+                            <dd><a href="{{ url }}">{{ name }}</a></dd>
+                            {%- endfor %}
+                        </dl>
                     </div><!--//doc-sidebar-->
                 </div><!--//doc-body-->              
             </div><!--//container-->

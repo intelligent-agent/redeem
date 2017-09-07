@@ -104,7 +104,9 @@ html_static_path = ['theme/assets']
 # Custom sidebar templates, must be a dictionary that maps document names
 # to template names.
 #
-# html_sidebars = {}
+html_sidebars = {
+   '**': ['versions.html'],
+}
 
 
 # -- Options for HTMLHelp output ------------------------------------------
@@ -164,4 +166,6 @@ texinfo_documents = [
 ]
 
 
+
+scv_root_ref = '0.0.0'
 
