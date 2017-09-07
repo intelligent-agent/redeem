@@ -1,11 +1,15 @@
-
+===============
 Getting Started
 ===============
 
+..  toctree::
+    :maxdepth: 4
+    :hidden:
 
+    ./wiring.rst
+    ./installation.rst
+    ./configuration.rst
 
-Required items
-~~~~~~~~~~~~~~
 
 -  `Replicape
    Board <https://www.thing-printer.com/product/replicape/>`__
@@ -18,19 +22,9 @@ Required items
 -  Monitor with microHDMI to HDMI cable (for troubleshooting)
 -  Keyboard (for troubleshooting)
 
-Setting up Redeem with endstops
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-In case you missed it, check Elias' `youtube video on
-endstops <https://www.youtube.com/watch?v=5LEjdQtIYe4>`__.
+In case you missed it, check Elias' `youtube video on endstops <https://www.youtube.com/watch?v=5LEjdQtIYe4>`__.
 
 
 
-.. toctree::
-   :maxdepth: 1
-   :hidden:
-
-   ./wiring.rst
-   ./installation.rst
-   ./configuration.rst
 

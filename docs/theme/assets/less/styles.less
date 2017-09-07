@@ -217,6 +217,15 @@ a.reference.external:after {
 }
 
 #doc-nav {
+
+  ul.current > li.current > a {
+    &:extend(.body-green #doc-nav > ul > li.active > a);
+  }
+
+  li.current > ul {
+    display: block;
+  }
+
   & > ul {
     &:extend(nav);
     .doc-menu;
@@ -231,6 +240,7 @@ a.reference.external:after {
         display:none;
       }
     }
+
     ul > li.active {
       //border-left:1px solid @color-green;
       padding-left:9px;
@@ -253,12 +263,14 @@ img {
   max-width: 300px;
 }
 
-.figure img {
-  max-height: none;
-  max-width: none;
-}
+.figure{
+  &.inline img {
+    max-width: none;
+    max-height: none;
+  }
 
-.ekko-lightbox-container img {
-  max-height: none;
-  max-width: none;
+  p.caption {
+    font-style:italic;
+    font-size:11px;
+  }
 }

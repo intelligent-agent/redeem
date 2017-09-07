@@ -43,14 +43,13 @@ $(document).ready(function() {
     /* Ref: http://ashleydw.github.io/lightbox/ */
 
     $('img')
-        .not(".figure img")
-        .not(".ekko-lightbox-container img")
-        .on("click", function(e){
-       e.preventDefault();
-        $(this).ekkoLightbox({
-            remote:$(this).attr('src'),
-            width:'100%'
-        });
+        .magnificPopup({
+        type:'image',
+        callbacks: {
+            elementParse: function(item) {
+                item.src = item.el[0].src;
+            }
+        }
     });
 
     // $(document).delegate('img', 'click', function(e) {

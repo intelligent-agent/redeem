@@ -122,16 +122,13 @@ Images
 
 An image is shown as a thumbnail; full size is viewable by clicking on it:
 
-..  image:: images/replicapelogo.svg
+..  image:: images/replicapelogo.png
 
-Diagrams which are discussed in the paragraph can be made full-width:
+Figures have other options, including using a caption:
 
-..  figure:: images/replicapelogo.svg
+..  figure:: images/replicapelogo.png
 
-    A caption describing this full-sized images.
-
-
-
+    A caption describing this figure.
 
 ~~~~~~~~~~~~~~~~
 Footnotes: notes

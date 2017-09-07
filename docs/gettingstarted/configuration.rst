@@ -1,3 +1,4 @@
+=============
 Configuration
 =============
 
@@ -17,8 +18,13 @@ the username **ubuntu** and the password **temppwd**. Once logged in,
 enter **ipconfig eth0** and you will see the IP address in the
 information. Use that IP to connect via web browser to get to OctoPrint.
 
+
+
+
+
+-------------------
 Basic configuration
-~~~~~~~~~~~~~~~~~~~
+-------------------
 
 For physical wiring of the board `go
 here <http://wiki.thing-printer.com/index.php?title=Replicape_rev_B>`__.

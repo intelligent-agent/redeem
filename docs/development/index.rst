@@ -2,6 +2,12 @@
 Development
 ===========
 
+.. toctree::
+   :maxdepth: 4
+   :hidden:
+
+   ./documentation.rst
+
 Here are the resources to guide for development of redeem, replicape and umikaze.
 
 - Learn more on how to add to this :doc:`documentation`.
@@ -10,8 +16,4 @@ Here are the resources to guide for development of redeem, replicape and umikaze
 
 
 
-.. toctree::
-   :maxdepth: 4
-   :hidden:
 
-   ./documentation.rst
