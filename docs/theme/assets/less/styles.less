@@ -12,7 +12,9 @@
 @import "doc.less";
 @import "landing.less";
 
-@import (reference) "../plugins/font-awesome/less/font-awesome.less";
+@import (reference) "../plugins/font-awesome/less/font-awesome";
+@import (reference) "../plugins/bootstrap/less/variables";
+@import (reference) "../plugins/bootstrap/less/code";
 
 
 h1.logo {
@@ -77,7 +79,14 @@ table.docutils {
     border: none;
     border-bottom: 1px @light-grey solid;
   }
+}
 
+code.literal {
+  &:extend(pre);
+  display:inline-block;
+  padding:0 4px;
+  margin:0 2px;
+  font-weight:normal;
 }
 
 table.docutils > thead > tr > th {
@@ -101,8 +110,21 @@ table.docutils > thead > tr > th {
     }
 }
 
+a.reference.external:after {
+  .fa;
+  content:@fa-var-external-link;
+  font-size:0.8em;
+  margin-right:4px;
+  vertical-align:top;
+  margin-top:2px;
+}
+
+
+
 .admonition {
   .callout-block;
+  padding: 8px;
+  margin-bottom: 5px;
 
   .admonition-title {
     .callout-title;
@@ -125,9 +147,9 @@ table.docutils > thead > tr > th {
     &:extend(code);
     border-radius: 4px;
   }
-  
-  &.attention {
-    .callout-info;
+
+  &.important {
+    .callout-success;
     .first:before {
       content: @fa-var-info-circle;
     }
@@ -141,10 +163,11 @@ table.docutils > thead > tr > th {
   &.danger {
     .callout-danger;
     .first:before {
-      content: @fa-var-bullhorn;
+      content: @fa-var-ban;
     }
   }
-  &.error { .callout-danger;
+  &.error {
+    .callout-danger;
     .first:before {
       content: @fa-var-exclamation-triangle;
     }
@@ -155,7 +178,7 @@ table.docutils > thead > tr > th {
       content: @fa-var-info-circle;
     }
   }
-  &.important {
+  &.attention {
     .callout-success;
     .first:before {
       content: @fa-var-thumbs-up;
@@ -175,8 +198,8 @@ table.docutils > thead > tr > th {
   }
   &.warning {
     .callout-warning;
-    .first-before {
-      content: @fa-var-meh-o;
+    .first:before {
+      content: @fa-var-exclamation-triangle;
     }
   }
   &.admonition-and-by-the-way {
@@ -185,6 +208,12 @@ table.docutils > thead > tr > th {
       content: @fa-var-search-plus;
     }
   }
+}
+
+.versionadded {
+  background:@color-yellow;
+  border-radius:4px;
+  padding:6px 6px 2px 6px;
 }
 
 #doc-nav {
@@ -203,7 +232,7 @@ table.docutils > thead > tr > th {
       }
     }
     ul > li.active {
-      border-left:1px solid @color-green;
+      //border-left:1px solid @color-green;
       padding-left:9px;
       margin-left:-10px;
 
@@ -217,4 +246,19 @@ table.docutils > thead > tr > th {
       }
     }
   }
+}
+
+img {
+  max-height: 100px;
+  max-width: 300px;
+}
+
+.figure img {
+  max-height: none;
+  max-width: none;
+}
+
+.ekko-lightbox-container img {
+  max-height: none;
+  max-width: none;
 }

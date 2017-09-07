@@ -1,7 +1,7 @@
 Ecosystem
 ======================
 
-Hardware and software for 3D printer or CNC mill, lathe and router.
+Hardware and software for 3D printers or CNC mills, lathes and routers.
 
 
 

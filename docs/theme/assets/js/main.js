@@ -42,10 +42,27 @@ $(document).ready(function() {
     /* Bootstrap lightbox */
     /* Ref: http://ashleydw.github.io/lightbox/ */
 
-    $(document).delegate('*[data-toggle="lightbox"]', 'click', function(e) {
-        e.preventDefault();
-        $(this).ekkoLightbox();
-    });    
+    $('img')
+        .not(".figure img")
+        .not(".ekko-lightbox-container img")
+        .on("click", function(e){
+       e.preventDefault();
+        $(this).ekkoLightbox({
+            remote:$(this).attr('src'),
+            width:'100%'
+        });
+    });
+
+    // $(document).delegate('img', 'click', function(e) {
+    //     e.preventDefault();
+    //
+    // });
+
+    $("a.reference.external").on("click",function(e){
+         window.open($(this).attr('href'),'_blank');
+         e.preventDefault();
+         return false;
+     });
 
 
 });
