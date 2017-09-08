@@ -1,22 +1,18 @@
-=======
-Umikaze
-=======
-
-Umikaze is a complete Linux distribution based on Ubuntu and contains
-all the necessary software for running or 3D printer or CNC device with
-a `Replicape <Replicape>`__.
-
-..  note:: this distribution was formerly called `Kamikaze`
+========
+Kamikaze
+========
 
 
-Previous versions of Kamikaze/Umikaze in this branch:
+Kamikaze 2.1 is a complete Linux distribution based on Ubuntu 16.04.1
+LTS. It has all the necessary software for running
+`Replicape <Replicape>`__ to control your 3D printer.
+
+Previous versions of Kamikaze:
 
 -  `Kamikaze 1.1.0 (based on Debian Jessie IoT
    image) <http://wiki.thing-printer.com/index.php?title=Kamikaze_1_1>`__
 -  `Kamikaze 2.0.8 (based on Debian Jessie upgraded to Stretch IoT
    image) <http://wiki.thing-printer.com/index.php?title=Kamikaze>`__
--  `Kamikaze 2.1.0 (based on Ubuntu 16.04.1 LTS, first community
-   release) <http://wiki.thing-printer.com/index.php?title=Kamikaze_2_1>`__
 
 The way this works is you download an image file, extract that onto a
 mico SD card and place that SD card in your BeagleBone Black. After some
@@ -31,53 +27,27 @@ which will display a welcome wizard with instructions about how to set
 up your Octoprint instance. The rest of the documentation is included in
 the `Redeem <Redeem>`__ page or below.
 
+--------------
+Kamikaze 2.1.0
+--------------
 
-Umikaze 2.1.1
--------------
-
-| Umikaze 2.1.1 is now available for download. With version 2.1, the way
-  the image is created has changed. The image is now made starting from
-  the Ubuntu 16.04.2 LTS release for BeagleBone, and altered to be great
-  for 3D-printing. Redeem, Toggle and OctoPrint is now installed by
-  forking the git repository and installing from source. This makes
+| Kamikaze 2.1.0 is now available for download. With version 2.1, the
+  way the image is created has changed. The image is now made starting
+  from the Ubuntu 16.04.1 LTS release for BeagleBone, and altered to be
+  great for 3D-printing. Redeem, Toggle and OctoPrint is now installed
+  by forking the git repository and installing from source. This makes
   hacking very easy, and also enables updates to be monitored from
   within OctoPrints own software update system.
+| `Kamikaze
+  2.1.0 <https://github.com/goeland86/Kamikaze2/releases/tag/2.1.0>`__
 
-**Download at:**
-----------------
+| The size is 425 MB compressed, but expands to a 1.6 GB partition,
+  suitable for a 2GB or bigger SD card. The total disk space used by
+  Kamikaze is 1.3GB - so if you have one of the older rev C BeagleBone
+  Black with only 2GB eMMC, you should still have plenty of space to
+  work with.
 
-`` ``\ ```Umikaze``\ `` ``\ ``2.1.1`` <https://github.com/goeland86/Umikaze2/releases/tag/v2.1.1>`__
-
-
-Release notes
--------------
-
-`Umikaze 2.1.1 <release_notes_Umikaze_2.1.1>`__
-
-Release notes for previous versions:
-
-`Release notes for Kamikaze
-2.1.0 <https://github.com/goeland86/Umikaze2/releases/tag/2.1.0>`__
-
-| The size is 835 MB compressed, but expands to a 3.6GB partition,
-  suitable for a 4GB or bigger SD card. If you have one of the older rev
-  C BeagleBone Black with only 2GB eMMC, you will not be able to flash
-  it, and will need to run from the SD card..
-
-
-Bugs
-----
-
-Follow the Umikaze development here: `Umikaze
-github <https://github.com/goeland86/Umikaze2/>`__
-
-There are always bugs, and we're hard at work squashing them. If you run
-into a bug, please check the `Umikaze github
-bugtracker <https://github.com/goeland86/Umikaze2/issues>`__ to see if
-it's been reported, and if not, please add it there so it can be tracked
-by other users also.
-
-
+-----------------
 Username/password
 -----------------
 
@@ -87,7 +57,7 @@ For SSH:
 
     root: kamikaze
 
-|
+| 
 | There is another user existing, which is
 
 ::
@@ -104,7 +74,7 @@ to change the password of and running the command
 Note that these user passwords are completely separated from the
 octoprint users you setup during the setup wizard for access control!
 
-
+----------
 Burn image
 ----------
 
@@ -113,9 +83,9 @@ Burn image
 | Go to `http://www.etcher.io/ <http://www.etcher.io/>`__ and download
   the app for your OS.
 
-
+~~~~~
 Linux
------
+~~~~~
 
 For Linux, make sure you make the app executable and start it as root:
 
@@ -126,52 +96,53 @@ For Linux, make sure you make the app executable and start it as root:
     sudo ./Etcher-linux-x64.AppImage
 
 
+~~~~~~~
 Windows
 ~~~~~~~
 
 It's a normal program installer. Install it and run it.
 
-
+~~~~
 OS X
 ~~~~
 
 It's a normal installer, just drag the app into the application folder.
 
-
+-----------
 Starting up
 -----------
 
 You should see the app appear, similar to this:
 
-.. raw:: html
+..  image:: images/etcher.png
 
-   <div style="position: relative;">
+Follow the instructions from the app, briefly:
 
-.. raw:: html
+1. Hit “select image” and find the image you previously downloaded called " BBB-eMMC-flasher-kamikaze-YYYY-MM-DD-4gb.img.xz".
 
-   </div>
+2. Insert a 2GB micro SD card (or larger) in your SD card reader slot. The card should be detected by the app.
 
-| Follow the instructions from the app, briefly:
-| 1) Hit “select image” and find the image you previously downloaded
-  called " Umikaze-2.1.1.img.xz".
-| 2) Insert a 4GB micro SD card (or larger) in your SD card reader slot.
-  The card should be detected by the app.
-| 3) Hit flash, and wait for it to finish.
-| Elias also made a quick video on how to do this procedure:
-| {{#evt: service=youtube
-  \|id=\ https://www.youtube.com/watch?v=23Id20_8hWs \|alignment=center
-  }}
+3. Hit flash, and wait for it to finish.
 
+Elias also made a quick video on how to do this procedure:
+
+..  raw:: html
+
+    <iframe width="560" height="315" src="https://www.youtube.com/embed/23Id20_8hWs" frameborder="0" allowfullscreen></iframe>
+
+
+~~~~~~~~~~~~~~~~~~~~
 Running from SD card
 ~~~~~~~~~~~~~~~~~~~~
 
 If you want to run the image from the SD card and not overwrite the on
 board flash, you need to place the SD card in a computer running Linux
 (Windows and MacOS cannot read the card as yet) and edit the file on the
-SD card with the path /boot/uEnv.txt. from the partition called Umikaze.
-Comment out the last line of the file with a #, the line that starts the
-flasher instead of systemd.
+SD card with the path /boot/uEnv.txt. from the partition called
+Kamikaze. Comment out the last line of the file with a #, the line that
+starts the flasher instead of systemd.
 
+~~~~~~~~~~~~~~~~~~
 Flashing procedure
 ~~~~~~~~~~~~~~~~~~
 
@@ -185,6 +156,7 @@ SDcard and re-apply power. The first time the BBB boots up after
 removing the SD card, it will run a script to compile the device tree
 overlays into the kernel and then it will reboot.
 
+---------------
 Troubleshooting
 ---------------
 
@@ -200,15 +172,19 @@ Troubleshooting
    wifi following the instructions in
    `Kamikaze\_2\_1#Wifi <Kamikaze_2_1#Wifi>`__
 
+---------------
 Getting started
 ---------------
 
-Elias made a quick video to show how to get started with Kamikaze 2.0.8
-- it will be updated for Kamikaze 2.1.0: {{#evt: service=youtube
-\|id=\ https://www.youtube.com/watch?v=BKb28fJx26I \|alignment=center }}
+Elias made a quick video to show how to get started with Kamikaze 2.0.8 - it will be updated for Kamikaze 2.1.0:
 
+..  raw:: html
+
+    <iframe width="560" height="315" src="https://www.youtube.com/embed/BKb28fJx26I" frameborder="0" allowfullscreen></iframe>
+
+---------------
 Ways to connect
-~~~~~~~~~~~~~~~
+---------------
 
 There are several ways to connect your computer to the BeagleBone Black.
 If you have a router or switch, simply use a network cable and connect
@@ -230,7 +206,7 @@ address of 192.168.7.2. You can then log in with ssh:
 
 ::
 
-    ssh root@192.168.7.2
+    ssh root@192.168.7.2 
 
 and check your BBBs assigned IP address with ifconfig. Note that if your
 computer may recognize the ethernet but not automatically set an IP that
@@ -244,10 +220,11 @@ the network, if your router/modem doesn't do DNS assignment (or if
 you're using USB). Furthermore, for ssh on windows, it is recommended to
 use `PuTTY <http://www.putty.org/>`__
 
+------
 Quirks
 ------
 
-The first time Umikaze boots, the index file for the kernel objects is
+The first time Kamikaze boots, the index file for the kernel objects is
 recreated and the necessary permissions for Octoprint are run. It can
 take a while, please be patient.
 
@@ -257,6 +234,7 @@ line of BeagleBone. Disable console cursor:
 
 `` echo 0 > /sys/class/graphics/fbcon/cursor_blink``
 
+------------------
 Upgrading packages
 ------------------
 
@@ -278,8 +256,9 @@ SSH back in, and continue the process:
 Most users will want to update the latest version of redeem or toggle
 periodically.
 
+~~~~~~~~~~~~~~~~
 To update redeem
-----------------
+~~~~~~~~~~~~~~~~
 
 The octoprint\_redeem plugin should provide a prompt when there is a
 redeem update available, and the wizard should work in almost all cases.
@@ -296,6 +275,7 @@ login as root and execute these commands:
     cp configs/* /etc/redeem
     systemctl restart redeem
 
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 To switch to the develop branch
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -310,12 +290,15 @@ To do so, follow these instructions:
 
     cd /usr/src
     rm -r redeem
+    rm -r /usr/local/lib/python2.7/dist-packages/Redeem*
     git clone https://bitbucket.org/intelligentagent/redeem.git
     cd redeem
     git checkout develop
-    make clean install
+    python setup.py install
+    cp configs/* /etc/redeem
     systemctl restart redeem
 
+~~~~~~~~~~~~~~~~
 To update toggle
 ~~~~~~~~~~~~~~~~
 
@@ -334,10 +317,11 @@ login as root and execute these commands:
     cp configs/* /etc/toggle
     systemctl restart toggle
 
+----
 Wifi
 ----
 
-Umikaze 2.1 uses NetworkManager for handling connections, instead of
+Kamikaze 2.1 uses NetworkManager for handling connections, instead of
 connman.
 
 Basically plug in your wifi dongle, boot (or reboot), connect to the BBB
@@ -351,6 +335,7 @@ The wizard should be pretty self-explanatory, but reach out to the
 community on Google+ or the #support channel on Slack should you need
 help.
 
+------
 Webcam
 ------
 
@@ -358,7 +343,7 @@ Webcam streaming has been tested with Logitech C270. Most of this is
 from:
 https://github.com/foosel/OctoPrint/wiki/Setup-on-BeagleBone-Black-running-%C3%85ngstr%C3%B6m#webcam
 
-mjpg-streamer is shipped with Umikaze 2.1 by default. It is on and if
+mjpg-streamer is shipped with Kamikaze 2.1 by default. It is on and if
 you have a webcam plugged in before powering up, the streams should
 return video if your webcam is supported.
 
@@ -379,6 +364,7 @@ already:
 
 Restart octoprint
 
+---------------
 System commands
 ---------------
 
@@ -394,6 +380,7 @@ in these commands for the entries:
     Shutdown:
     sudo shutdown -h now
 
+--------------
 Known problems
 --------------
 
@@ -424,6 +411,7 @@ and
 they should be somewhere in /usr/local/lib/python2.7 and you can find
 them with sudo find \| grep firmware\_runtime in that directory.
 
+-----------------------------------
 Manual installation of package feed
 -----------------------------------
 
@@ -440,14 +428,15 @@ support.
 Efforts are ongoing to try and use the 4.4 LTS branch for the new
 Wireless version of the BeagleBoneBlack.
 
+------------
 Source files
 ------------
 
-Umikaze 2.1.x is a distribution building on top of the wonderful Ubuntu
+Kamikaze 2.1.x is a distribution building on top of the wonderful Ubuntu
 LTS console distribution for BeagleBone. It is merely adding the
 necessary packages and overlays necessary as in 1.x and 2.0.x versions
 did on top of Debian. Kamikaze 2 source files are available here
-`Source files <https://github.com/goeland86/Umikaze2>`_
+`source files <https://github.com/goeland86/Kamikaze2>`_
 
 Kamikaze 1.x and 2.0.x is a fork of Robert C Nelsons wonderful Debian
 distribution for BeagleBone. It tries to follow his branch closely, but
@@ -457,6 +446,7 @@ making that work. Here are the source files:
 
 `` ``\ ````https://github.com/eliasbakken/kamikaze`` <https://github.com/eliasbakken/kamikaze>`__ <https://github.com/eliasbakken/kamikaze>`__
 
+------------
 Attributions
 ------------
 

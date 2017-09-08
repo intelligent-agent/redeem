@@ -1,3 +1,4 @@
+var path = require('path');
 var gulp = require('gulp');
 var shell = require('gulp-shell');
 var less = require('gulp-less');
@@ -28,5 +29,12 @@ gulp.task('build_and_watch', ['less_to_css', 'sphinx_to_html'],function() {
        './theme/**/*.js'
    ], ['less_to_css','sphinx_to_html']);
 });
+
+gulp.task('build-versions',
+    shell.task(
+        'sphinx-versioning build docs docs/_build/html',
+        { 'cwd': path.join(process.cwd(), '../') }
+        )
+);
 
 gulp.task('default', [ 'build_and_watch' ]);

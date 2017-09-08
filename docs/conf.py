@@ -35,7 +35,9 @@ extensions = ['sphinx.ext.autodoc',
     'sphinx.ext.todo',
     'sphinx.ext.imgmath',
     'sphinx.ext.viewcode',
-    'sphinx.ext.githubpages']
+    'sphinx.ext.githubpages'
+]
+
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -168,6 +170,6 @@ texinfo_documents = [
 import re
 scv_sort = ('semver',)
 scv_recent_tag = True
-cv_whitelist_tags = (re.compile(r'^v\d+\.\d+\.\d+$'),)
-
+scv_whitelist_tags = (re.compile(r'^\d+\.\d+\.\d+$'),)
+scv_whitelist_branches = (re.compile(r'$^'), )
 

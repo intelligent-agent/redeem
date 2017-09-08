@@ -34,13 +34,15 @@ the Replicape and MagnaScreen. It also includes OctoPrint, an open source projec
 a browser.
 
 
-.. toctree::
-   :maxdepth: 1
-   :hidden:
+..  toctree::
+    :maxdepth: 1
+    :hidden:
 
-   ./gettingstarted/index.rst
-   ./replicape/index.rst
-   ./development/index.rst
+    ./gettingstarted/index.rst
+    ./replicape/index.rst
+    ./kamikaze/index.rst
+    ./development/index.rst
+    ./support/index.rst
 
 
 

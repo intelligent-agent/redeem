@@ -1316,6 +1316,9 @@ select {
 .logo .icon {
   width: 30px;
 }
+.affix-top {
+  width: 230px;
+}
 .rubric {
   font-size: 22px;
   font-weight: 600;
