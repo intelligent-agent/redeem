@@ -5,6 +5,7 @@ Getting Support
     :hidden:
 
     ./troubleshooting.rst
+    ./knownproblems.rst
     ./howto/imageburn.rst
     ./howto/beginlinux.rst
 

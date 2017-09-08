@@ -35,14 +35,16 @@ a browser.
 
 
 ..  toctree::
-    :maxdepth: 1
+    :maxdepth: 4
     :hidden:
 
     ./gettingstarted/index.rst
     ./replicape/index.rst
-    ./kamikaze/index.rst
+    ./umikaze/index.rst
+    ./magnascreen/index.rst
     ./development/index.rst
     ./support/index.rst
+    ./attribution.rst
 
 
 

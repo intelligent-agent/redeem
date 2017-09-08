@@ -1,4 +1,4 @@
-=============
+
 Configuration
 =============
 
@@ -19,12 +19,8 @@ enter **ipconfig eth0** and you will see the IP address in the
 information. Use that IP to connect via web browser to get to OctoPrint.
 
 
-
-
-
--------------------
-Basic configuration
--------------------
+Basic
+-----
 
 For physical wiring of the board `go
 here <http://wiki.thing-printer.com/index.php?title=Replicape_rev_B>`__.
@@ -45,3 +41,9 @@ To start with, go look at Elias' `video on getting
 started <https://www.youtube.com/watch?v=BKb28fJx26I>`__. The redeem
 repository he's talking about in the video is found
 `here <https://bitbucket.org/intelligentagent/redeem>`__
+
+
+End Stops
+---------
+
+In case you missed it, check Elias' `youtube video on endstops <https://www.youtube.com/watch?v=5LEjdQtIYe4>`__.
