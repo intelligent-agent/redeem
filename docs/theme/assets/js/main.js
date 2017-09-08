@@ -16,6 +16,7 @@ $(document).ready(function() {
         $(window).trigger('scroll'); 
     });
 
+    /* add class to sphinx output so it's bootstrap compliant */
     $('#doc-nav  > ul').addClass('nav');
 
     /* Activate scrollspy menu */
@@ -35,12 +36,11 @@ $(document).ready(function() {
     
     /* ======= jQuery Responsive equal heights plugin ======= */
     /* Ref: https://github.com/liabru/jquery-match-height */
-    
+
      $('#cards-wrapper .item-inner').matchHeight();
      $('#showcase .card').matchHeight();
      
-    /* Bootstrap lightbox */
-    /* Ref: http://ashleydw.github.io/lightbox/ */
+    /* Magnific Popup */
 
     $('img')
         .magnificPopup({
@@ -52,11 +52,7 @@ $(document).ready(function() {
         }
     });
 
-    // $(document).delegate('img', 'click', function(e) {
-    //     e.preventDefault();
-    //
-    // });
-
+    /* open external references in new tab (or window) */
     $("a.reference.external").on("click",function(e){
          window.open($(this).attr('href'),'_blank');
          e.preventDefault();

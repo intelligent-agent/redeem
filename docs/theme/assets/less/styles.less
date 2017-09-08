@@ -6,18 +6,22 @@
  * Twitter: @3rdwave_themes
  * Website: http://themes.3rdwavemedia.com/
 */
+
+
+@import (reference) "../plugins/font-awesome/less/font-awesome";
+@import (reference) "../plugins/bootstrap/less/variables";
+@import (reference) "../plugins/bootstrap/less/mixins";
+@import (reference) "../plugins/bootstrap/less/code";
+@import (reference) "../plugins/bootstrap/less/mixins/buttons";
+
 @import "mixins.less";
 @import "theme-default.less";
 @import "base.less";
 @import "doc.less";
 @import "landing.less";
 
-@import (reference) "../plugins/font-awesome/less/font-awesome";
-@import (reference) "../plugins/bootstrap/less/variables";
-@import (reference) "../plugins/bootstrap/less/code";
-
-
-h1.logo {
+.logo {
+  display:inline-block;
   .icon {
     width:30px;
   }
@@ -273,4 +277,30 @@ img {
     font-style:italic;
     font-size:11px;
   }
+}
+
+.btn-version {
+  .button-variant(@light-grey; @text-color; @text-color-secondary);
+  font-size:12px;
+  padding:4px;
+}
+
+.version-select {
+  display:inline-block;
+  margin-left: 20px;
+  text-transform: none;
+
+  .version-num, .version-msg {
+    font-size:12px;
+    color: @light-grey;
+    text-transform: none;
+  }
+
+  .version-latest {
+    color: @color-green;
+  }
+  .version-previous {
+    color: @color-red;
+  }
+
 }

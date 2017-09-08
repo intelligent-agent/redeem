@@ -36,12 +36,43 @@
         <header id="header" class="header">
             <div class="container">
                 <div class="branding">
-                    <h1 class="logo">
+                    <div class="logo">
                         <a href="index.html">
                             <img class="icon" src="{{ pathto('_static/images/thingprinter_logo.svg',1) }}" />
                             <span class="text-highlight">ThingPrinter</span><span class="text-bold">Docs</span>
                         </a>
-                    </h1>
+                    </div>
+                    <div class="version-select">
+                        <div class="dropdown">
+                          <button class="btn btn-version dropdown-toggle" type="button" id="dropdownMenu1" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+                              {%- if current_version -%}
+                                version {{ current_version}}
+                              {%- else -%}
+                                version 0.0.0
+                              {%- endif -%}
+                              &nbsp;
+                              <span class="caret"></span>
+                          </button>
+                          <ul class="dropdown-menu" aria-labelledby="dropdownMenu1">
+                              {%- if versions -%}
+                                {%- for name, url in versions.tags %}
+                                    <li><a href="{{ url }}">v {{ name }}</a></li>
+                                {%- endfor -%}
+                              {%- else -%}
+                                <li><a href="#">development mode</a></li>
+                              {%- endif %}
+                          </ul>
+                            {%- if current_version -%}
+                                {%- if scv_is_recent_ref -%}
+                                    <span class="version-msg version-latest">&nbsp; ( development )</span>
+                                {%- else -%}
+                                    <span class="version-msg version-previous">&nbsp; ( development )</span>
+                                {%- endif -%}
+                            {%- else -%}
+                                <span class="version-msg">&nbsp; ( development )</span>
+                            {%- endif -%}
+                        </div>
+                    </div>
                 </div><!--//branding-->
                 <ol class="breadcrumb">
                     <li class="nav-item nav-item-0"><a href="{{ pathto(master_doc) }}">Docs</a>{{ reldelim1 }}</li>
@@ -49,14 +80,6 @@
                       <li class="nav-item nav-item-{{ loop.index }}"><a href="{{ parent.link|e }}" {% if loop.last %}{{ accesskey("U") }}{% endif %}>{{ parent.title }}</a>{{ reldelim1 }}</li>
                     {%- endfor %}
                 </ol>
-                <div class="current-version">
-                    <h3>Version: {{ current_version }}</h3>
-                    {%- if scv_is_recent_ref -%}
-                        <h4 class="latest">Latest Release</h4>
-                    {%- else -%}
-                        <h4 class="previous">Previous Release</h4>
-                    {%- endif -%}
-                </div>
             </div><!--//container-->
         </header><!--//header-->
         <div class="doc-wrapper">
@@ -70,14 +93,7 @@
                     <div class="doc-sidebar hidden-xs">
                         <nav id="doc-nav">
                             {{ toctree(maxdepth=3, includehidden=True) }}
-                            <dl>
-                                <dt>Tags</dt>
-                                {%- for name, url in versions.tags %}
-                                <dd><a href="{{ url }}">{{ name }}</a></dd>
-                                {%- endfor -%}
-                            </dl>
                         </nav>
-
                     </div><!--//doc-sidebar-->
                 </div><!--//doc-body-->              
             </div><!--//container-->
@@ -86,13 +102,11 @@
     
     <footer id="footer" class="footer text-center">
         <div class="container">
-            <!--/* This template is released under the Creative Commons Attribution 3.0 License. Please keep the attribution link below when using for your own project. Thank you for your support. :) If you'd like to use the template without the attribution, you can check out other license options via our website: themes.3rdwavemedia.com */-->
-            <small class="copyright">Sphinx theme based on <a href="https://themes.3rdwavemedia.com/demo/prettydocs/">Pretty Docs</a>design.</small>
-            
+            <small class="copyright">&copy 2017, Replicape, ThingPrinter</small></small>
+            <small class="copyright">Sphinx theme based on the <a href="https://themes.3rdwavemedia.com/demo/prettydocs/">Pretty Docs</a> design.</small>
         </div><!--//container-->
     </footer><!--//footer-->
-    
-     
+
     <!-- Main Javascript -->          
     <script type="text/javascript" src="{{ pathto('_static/plugins/jquery-1.12.3.min.js', 1) }}"></script>
     <script type="text/javascript" src="{{ pathto('_static/plugins/bootstrap/js/bootstrap.min.js', 1) }}"></script>

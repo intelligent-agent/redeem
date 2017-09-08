@@ -165,7 +165,9 @@ texinfo_documents = [
      'Miscellaneous'),
 ]
 
+import re
+scv_sort = ('semver',)
+scv_recent_tag = True
+cv_whitelist_tags = (re.compile(r'^v\d+\.\d+\.\d+$'),)
 
-
-scv_root_ref = '0.0.0'
 
