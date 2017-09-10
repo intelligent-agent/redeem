@@ -70,12 +70,12 @@
                           </ul>
                             {%- if current_version -%}
                                 {%- if scv_is_recent_ref -%}
-                                    <span class="version-msg version-latest">&nbsp; ( development )</span>
+                                    <span class="version-msg version-latest">&nbsp; ( release )</span>
                                 {%- else -%}
-                                    <span class="version-msg version-previous">&nbsp; ( development )</span>
+                                    <span class="version-msg version-previous">&nbsp; ( previous )</span>
                                 {%- endif -%}
                             {%- else -%}
-                                <span class="version-msg">&nbsp; ( development )</span>
+                                <span class="version-msg">&nbsp; ( development mode )</span>
                             {%- endif -%}
                         </div>
                     </div>
