@@ -226,7 +226,7 @@ a.reference.external:after {
 #doc-nav {
 
   ul.current > li.current > a {
-    &:extend(.body-green #doc-nav > ul > li.active > a);
+    &:extend(.body-blue #doc-nav > ul > li.active > a);
   }
 
   li.current > ul {
@@ -254,7 +254,7 @@ a.reference.external:after {
       margin-left:-10px;
 
       & > a {
-        color: @color-green;
+        color: @color-blue;
 
       }
       ul {
@@ -272,7 +272,7 @@ img {
 
 .figure{
   &.inline img {
-    max-width: none;
+    max-width: 100%;
     max-height: none;
   }
 
@@ -300,10 +300,15 @@ img {
   }
 
   .version-latest {
-    color: @color-green;
+    color: @color-blue;
   }
   .version-previous {
     color: @color-red;
   }
 
+}
+
+.topic-title.first {
+  font-size:24px;
+  font-weight:600;
 }
