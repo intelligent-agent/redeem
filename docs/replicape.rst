@@ -40,7 +40,7 @@ Mounting the Replicape on the BeagleBone
 As the name suggests, Replicape is a cape. Capes are one of the defining
 things about BeagleBone black/white/green, where the main development
 board acts as a base unit, and then accepts different add-on hardware
-through the two 48 pin headers, which in turn define some of the pin
+through the two 48 pin headers, which in turn define some of the pinat
 behaviors during Linux kernel startup. This is similar to “shields” on
 Arduino and “HAT”s on Raspberry Pi. Mounting the Replicape on BeagleBone
 should be pretty straight forward, just make sure the notch in the cape

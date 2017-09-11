@@ -43,9 +43,9 @@
             <div class="container">
                 <div class="branding">
                     <div class="logo">
-                        <a href="index.html">
+                        <a href="{{ pathto(master_doc) }}">
                             <img class="icon" src="{{ pathto('_static/images/thingprinter_logo.svg',1) }}" />
-                            <span class="text-highlight">ThingPrinter</span><span class="text-bold">Docs</span>
+                            <span class="text-highlight">Replicape</span><span class="text-bold">Docs</span>
                         </a>
                     </div>
                     <div class="version-select">
@@ -70,9 +70,9 @@
                           </ul>
                             {%- if current_version -%}
                                 {%- if scv_is_recent_ref -%}
-                                    <span class="version-msg version-latest">&nbsp; ( release )</span>
+                                    <span class="version-msg version-latest">&nbsp; ( stable release )</span>
                                 {%- else -%}
-                                    <span class="version-msg version-previous">&nbsp; ( previous )</span>
+                                    <span class="version-msg version-previous">&nbsp; ( previous release )</span>
                                 {%- endif -%}
                             {%- else -%}
                                 <span class="version-msg">&nbsp; ( development mode )</span>
