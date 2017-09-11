@@ -14,6 +14,8 @@ Documentation on installation: :doc:`/kamikaze`.
 
 Documentation on controller hardware: :doc:`/replicape`.
 
+Documentation on controller software: :doc:`/redeem`.
+
 Documentation on display: :doc:`/magnascreen`.
 
 Documentation on display software: :doc:`/toggle`.
@@ -24,6 +26,7 @@ Documentation on display software: :doc:`/toggle`.
 
     ./kamikaze.rst
     ./replicape.rst
+    ./redeem.rst
     ./magnascreen.rst
     ./toggle.rst
 

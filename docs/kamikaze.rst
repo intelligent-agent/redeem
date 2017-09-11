@@ -381,6 +381,8 @@ Known problems
 -  Blinking cursor over Toggle
 -  The Kamikaze logo does not show up during eMMC flashing. Purely cosmetic.
 
+.. _ManualInstallationOfPackageFeed:
+
 Manual installation of package feed
 -----------------------------------
 
