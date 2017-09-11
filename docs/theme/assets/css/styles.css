@@ -1310,6 +1310,10 @@ select {
 /* Small devices (tablets, 768px and up) */
 /* Medium devices (desktops, 992px and up) */
 /* Large devices (large desktops, 1200px and up) */
+p {
+  margin-top: 6px;
+  margin-bottom: 6px;
+}
 .logo {
   display: inline-block;
 }

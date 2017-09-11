@@ -22,11 +22,11 @@ mico SD card and place that SD card in your BeagleBone Black. After some
 5 minutes of looking at the logo and drinking coffee, the flashing
 procedure is over, you remove power from the BeagleBone, eject the SD
 card and re-apply power to the board. If you have :doc:`/magnascreen`,
- you should see :doc:`/toggle` appear on the LCD. You should also be able to point your browser to
+you should see :doc:`/toggle` appear on the LCD. You should also be able to point your browser to
 `http://kamikaze.local <http://kamikaze.local_http://kamikaze.local>`_
 which will display a welcome wizard with instructions about how to set
 up your Octoprint instance. The rest of the documentation is included in
-the :doc:`/redeen` page or below.
+the :doc:`/redeem` page or below.
 
 Background
 ----------

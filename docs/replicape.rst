@@ -8,70 +8,228 @@ Replicape
     :depth: 2
     :local:
 
-
 Replicape is a high end 3D-printer electronics package in the form of a
-Cape that can be placed on a BeagleBone Black. It has five high power
-stepper motors with cool running MosFets and it has been designed to fit
-in small spaces without active cooling.
+Cape that can be placed on a BeagleBone Black.
 
-This page is about the hardware. When you have the hardware mounted,
-take a look a the flow diagram to determine what linux distro and host
-software you want to use:
+This page is about the major revision B. For documentation on previous version: `Revision A </2.0.8/replicape.html>`_.
 
-..  image:: ./images/replicape_flow_chart.svg
+It has five high power and low noise stepper motors
+with cool running MosFets and it has been designed to fit in small
+spaces without active cooling and without the need for physical access
+to the board once installed. That means no potentiometers to trim or
+switches to flip.
+
+This page is about the hardware. It explains how to install the board
+and wire everything up. If you are looking for software that will run,
+have a look at the :doc:`/kamikaze` CNC image. There are other
+options as well, but that is the standard that will work for most
+people.
 
 Availability
 ------------
 
-Replicape can be ordered from the thing-printer web store: http://www.thing-printer.com/product/replicape/
+There has been a `Kickstarter for Replicape Rev B`__.
+Since the Kickstarter is done, Replicape Rev B can be ordered from the `thing-printer web`__ shop.
+
+__ https://www.kickstarter.com/projects/1924187374/replicape-a-smart-and-quiet-3d-printer-control-boa
+__ http://www.thing-printer.com/product/replicape/
 
 Mounting the Replicape on the BeagleBone
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+----------------------------------------
 
-This should be pretty straight forward, just make sure the notch in the
-cape goes around the Ethernet connector so it makes a.. cape!
+As the name suggests, Replicape is a cape. Capes are one of the defining
+things about BeagleBone black/white/green, where the main development
+board acts as a base unit, and then accepts different add-on hardware
+through the two 48 pin headers, which in turn define some of the pin
+behaviors during Linux kernel startup. This is similar to “shields” on
+Arduino and “HAT”s on Raspberry Pi. Mounting the Replicape on BeagleBone
+should be pretty straight forward, just make sure the notch in the cape
+goes around the Ethernet connector so it makes a.. cape!
 
 How to wire up the board
 ------------------------
 
-The below image shows how to wire up the board. Notice that pin 1 and
-3 on the thermistor connectors are used. This gives the lowest noise
-level from the heater cables which usually runs parallel with the
-thermistor cables. Up to ten Dallas 1-wire sensors can be connected on
-the same bus. If you want to use hall effect sensors, make sure they
-can handle 3.3V VCC. BeagleBone does not handle 5V on the inputs and
-the board might be destroyed by it.
+Fritzing example
+~~~~~~~~~~~~~~~~
 
-..  figure:: ./images/replicape_wire_diagram.svg
-    :figclass: inline
+The Fritzing board below shows the most basic setup for connecting the board.
 
+..  figure:: ./images/replicape_b3.png
 
+Connector overview
+~~~~~~~~~~~~~~~~~~
 
-With the board oriented as in the above image, the wires for the steppers are:  A1, A2, B2, B1
+..  figure:: ./images/replicape_bla.png
 
-This is different from previous designs, but keeps the wires from crossing on the PCB.
+Steppers
+--------
+
+Bipolar and hybrid stepper motors are supported with these stepper motor
+drivers (SMD). Some smaller stepper motors are known to produce a high
+pitch noise and get very warm even with a low current setting. They will
+appear to work, but they may very well burn do to the large heat being
+produced.
+
+| With the board oriented as in the above image, the wires for the
+  steppers are:
+| Rev B2: **1, 2, 3, 4 = OB1, OA1, OA2, OB2**\ <- Not so standard
+| Rev B3: **1, 2, 3, 4 = OA2, OA1, OB1, OB2**\ <- Pretty standard
+
+Noise
+-----
+
+The TMC2100 stepper drivers are designed to be very quiet. However, if
+the coil resistance on the steppers are too high, the current limit on
+the stepper drivers are never reached, and this makes the steppers give
+off a very high pitch sound. If you are experiencing high pitch noise,
+you might want to experiment with the “stealth mode” which will silence
+all steppers. This is micro stepping level 7 and 8. Stealth mode might
+make the steppers somewhat less powerful, but should work for most
+printers. To calculate if the current limit is reached or not, you can
+calculate the maximum coil resistance for a given input voltage. If the
+input voltage is 12V and you want to run your steppers on 1A current
+limit, the maximum coil resistance can be 12 ohm.
+
+Heaters
+-------
+
+The heater output on the Replicape have rugged connectors, with the heat
+bed having double connectors for redundancy (in case one wire comes
+loose) and for handling the power load. These are brand Molex connectors
+that have both screw terminals for easy fitting and slot in connectors
+for easy disassembly. All the heaters are controlled with PWM. The power
+MOSFETs controlling the output are AON6758 that are rated at 30V, 32A.
+For a 12V PSU, this means that the maximum power that can be used on the
+heated bed is 32 A x 12 V = 384 W. Please remember that there is a 20 A
+fuse preventing such a large power use on the heated bed. The 20 A fuse
+is installed to keep the traces on the PCB from over heating.
+
+Thermistors
+-----------
+
+The thermistor inputs on Replicape have been designed for 100 K NTC
+thermistors. These are the typical type used for desktop 3D-printers.
+10K thermistors can also be used, however the voltage divider setup
+makes the 100 K thermistors more ideal since the area of most change
+will be around 100 degrees. TODO: add charts for 10 K and 100 K
+thermistors showing their ideal temperature for most significant bit
+change.
+
+Thermocouple
+------------
+
+Thermocouple is not supported out of the box, but instead requires some
+extra care in order to work. Most importantly is to use a `voltage
+divider <https://en.wikipedia.org/wiki/Voltage_divider>`__ on the signal
+so it is converted to a value that the analog input on the BeagleBone
+can handle: 1.8V. Secondly, the input needs to be sent in on AIN0..AIN3,
+which are pins P9\_37...P9\_40. Then, the analog input used needs to be
+enabled by a device tree overlay, ideally by editing the current DTO.
+That can be found here: https://github.com/eliasbakken/bb.org-overlays.
+Finally, the software needs to be hacked to make use of the new analog
+input and conversion.
+
+Inductive sensors
+-----------------
+
+Inductive sensors are typically mounted on the end stop marked Z2. If
+you have an NPN (sinking) sensor, you can mount it directly on there.
+
+Typically
+| Brown: 12V (pin 4)
+| Blue: GND (Pin 2)
+| Black: Sig (Pin 1, square)
+
+If you have a PNP (sourcing) type, you need to add a pull-down
+resistor externally between the signal and ground on the sensor. The
+value is not important, as long as it can comfortably pull a 4.7K
+resistor low. 1K should be fine.
+
+DS18B20 temperature sensors
+---------------------------
+
+The connector marked Dallas W1 can be used for connecting temperature
+sensors of the type DS18B20. These are relatively low temperature
+sensors that can handle up to 125 degrees Celsius and are typically used
+for monitoring the cold end of the extruder which should never reach
+more than around 60 degrees when printing with PLA. The great thing
+about using a cold end monitor is that the temperature measurements can
+be used to regulate the fan on the extruder. That way, the noise level
+can be lowered further than when using the thermistor as a trigger for
+enabling the extruder fan.
+
+Switches as end stops
+---------------------
+
+All the end stops have 4.7K (47K on Rev B3) pull-up resistors on the
+signal lines. Therefore, the best way to connect switches is between the
+signal and ground pins on the connectors. If the switches have can be
+connected as normally closed (NC), that is preferable since it will act
+as a pressed in switch if a cable has been destroyed or removed.
+
+The signals on the end stops as as follows:
+| pin 1, square, signal (yellow wire in Fritzing diagram above)
+| pin 2, round, GND (black wire in Fritzing diagram above)
+| pin 3, round, VCC (red wire in Fritzing diagram above)(5V)
+
+Connectors
+----------
+
+Replicape comes with Molex screw terminals for the heaters, hot bed
+and power input. Most stepper motors comes with the 4 pin Molex 2.54 mm (0.1")
+female connector attached. Fans and end stops sometimes
+comes with the right connector, but not always, it depends on the
+manufacturer. The white 2, 3 and 4 pin connectors on Replicape used
+for thermistors, end stops and steppers are the MTA-100 series from TE
+connectivity:
+
+| **2 pin**
+| For the 2 pin thermistor inputs and fan outputs:
+| https://www.digikey.com/product-detail/en/640455-2/A19450-ND/258997
+| Here is a couple of good mating products:
+| http://www.digikey.com/product-detail/en/1375820-2/A99613-ND/1864915
+| http://www.digikey.com/product-search/en?keywords=952-2227-ND
+
+| **3 pin**
+| For the 3 pin end stop and Dallas 1W inputs:
+| https://www.digikey.com/product-detail/en/640455-3/A19451-ND/258998
+| Mating alternatives:
+| https://www.digikey.com/product-detail/en/1375820-3/A99614-ND/1864916
+| http://www.digikey.com/product-search/en?keywords=952-2228-ND
+
+| **4 pin**
+| For the 4 pin stepper motor connectors, and the inductive sensor input:
+| https://www.digikey.com/product-detail/en/640455-4/A19452-ND/258999
+| Mating alternatives:
+| http://www.digikey.com/product-detail/en/1375820-4/A99615-ND/634994
+| http://www.digikey.com/product-search/en?keywords=%09952-2229-ND
+
+Power
+-----
+
+Replicape is powered through a single 12 to 24 V power supply. This
+powers the BeagleBone as well, through a 5V step down converter. It also
+supplies 12V for fans and the inductive sensor. If the USB device
+connector is used, no power is drawn through the connector.
+
+**Note** that if you do not power the Replicape, the BBB will not be
+able to properly communicate with it, and you will get an error such as
+
+``kamikaze redeem[675]: Error accessing 0x70: Check your I2C address``
 
 Hardware source files
 ---------------------
 
-If you want to extend, build or modify Replicape, for the repository: https://bitbucket.org/intelligentagent/replicape
-
-**Replicape Revision A4A**
-
-The schematic and layout has been done in Eagle V6. The changes from Rev A4 are these:
-
-- Re-did the layout so top layer is vertical and bottom is horizontal
-
--  Swapped B1 and B2 on all the steppers so they do not cross in the layout.
+If you want to extend, build or modify Replicape, for the repository:
+https://bitbucket.org/intelligentagent/replicape
 
 **Routing and noise**
 
-The top layer is mostly vertical traces and the bottom layer is mostly
-horizontal. Since the board is only two layers, it's important to try
-to keep with this rule so that both layers can have good ground
-return. Early designs were troubled by high levels of noise, probably
-due to insufficient ground return paths, but also due to bad DC-DC
-converter layout.
+The Rev B PCB is a four layer PCB. The top layer is mostly vertical
+traces and the bottom layer is mostly horizontal. The uppermost inner
+layer is a ground layer with no signal traces. The lower inner layer
+is the voltage plane layer. There are in total 4 voltage planes:
+12..24V, 12V, 5V and 1.8V. In addition, there is a 3.3 V trace routed.
 
 **Component placement**
 
@@ -81,14 +239,10 @@ and place placement of components.
 
 **Board extensions**
 
-Revision A4A introduced an extension header for adding more extruders.
-An extension board would then stack on top of the Replicape. No
-extension board has been made as of this writing, but the header is
-kept for future expansions. A total of 3 additional extruders should
-be possible in addition to three more fans. There is also the MOSI pin
-from the last serial to parallel converter to enable programming of
-microstepping etc. for the second board. Look at the schematic to
-determine the pin-out.
+Revision B does not have a dedicated extension header like the one
+that was introduced in rev A4A. There should still be possible to add
+an extension board on top of the current version that can add up to
+three more extruders. This is being developed.
 
 Hardware details
 ----------------
@@ -97,196 +251,82 @@ Hardware details
 
 Below is a diagram of the pins that have been used on the BeagleBone.
 
-..  figure:: ./images/replicape_pinout_rev_a4.png
+..  figure:: ./images/replicape_pinout_rev_b3.png
     :figclass: inline
 
-Stepper Motor Controllers
-~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Replicape has 5 stepper motor controllers of the type DRV8825. These
-can handle up to 2.5A peak current and 1.75 RMS. They are also very
-immune to short circuit and over heating compared to the A4988 which
-is much used for 3D printer electronics.
+**Stepper Motor Controllers**
 
-High power MOSFETs
-~~~~~~~~~~~~~~~~~~
+There are 5 Stepper Motor Controllers (SMDs) of the type `TMC2100 datasheet`__
+on Replicape. With the right stepper motors, they reduce the noise
+level a lot compared to other, similar type SMDs. The peak current is
+rated at 2.5 A, with an RMS current pr phase of 1.2 A. TMC2100 has
+over temperature protection. If skipped steps occur, it might be due
+to over heating. To distribute heat better, there are exposed areas
+directly under the stepper drivers where heat sinks can be mounted. In
+that case, you may want to consider adding active cooling to lead the
+air flow away from the gap between the BeagleBone and the cape.
 
-There are also 3 high power MOSFETs for controlling two heater
-cartridges and one hot bed. The MOSFETs are of the type AON6758 which
-can handle up to 30V and 32A. The MOSFETs are driven by MOSFET drivers
-MCP1402 to ensure they are running cool. For a (somewhat dated)
-discussion, look here: http://hipstercircuits.com/switching-it-up-using-a-comparator-as-a-level-shifter/
-A blue LED is mounted next to each of the MOSFETs to indicate when
-they are on or off. All mosfets on the board are controlled with a
-single PWM driver of type PCA9685PW.
+__  http://www.trinamic.com/products/integrated-circuits/stepper-power-driver/tmc2100
 
-Low Power MOSFETs
-~~~~~~~~~~~~~~~~~
+**High power MOSFETs**
 
-There are 3 low power MOSFETs of the type NIF5002 that can be used for
-either fans or LED strips etc. The NIF5002s can handle ~4A each at
-12V. There is however a limitation in the DC-DC buck converter
-(RT8268) of 2A.
+3 X `SIRA34DP-T1-GE3 <http://media.digikey.com/pdf/Data%20Sheets/Vishay%20Siliconix%20PDFs/sira34dp.pdf>`_
+| Maximum voltage: 30V
+| Maximum current: 40A
 
-Thermistor inputs
-~~~~~~~~~~~~~~~~~
+**Low Power MOSFETs**
 
-There are 3 inputs for NTC thermistors. Each input has a filter to
-suppress high voltage noise spikes coming from the MOSFETs. There is
-also a separate pin to ground for shielding the cables of the ADCs.
-All the thermistor inputs have low pass filters for removing noise so
-normally, there should not be a need for using a shielded cable, but
-in particularly noisy environments, it might help. Here is a
-discussion of the problem:
-http://hipstercircuits.com/noise-on-the-analog-pins-causes-the-adc-sampler-to-go-out-of-whack/
-
-Power management
-~~~~~~~~~~~~~~~~
-
-There are two voltage converters on the Replicape rev A2. Both are of
-the type DC-DC buck step down converter. One of the converters is
-based on MCP16321 and is used to supply the 5V necessary for the
-BeagleBone to function properly. Below is an image of the 5V startup
-sequence:
-
-..  image:: ./images/5v-startup.jpg
-
-On the Rev A3A design, the switching noise on the buck step down
-regulator can get quite high. If the noise is too high the under voltage
-protection of the TPS2051 kicks in and disables power on the USB. A
-quick-fix to this is to add a large value electrolytic capacitor across
-VDD\_5V and ground. Depending on the input voltage (12..24V) anything
-from 0.1uF up to 1000uF has been tested and worked with 12V input. A
-somewhat more elaborate, but better approach is to add a ~100R resistor
-in series with the boost capacitor (C51). This limits the slew rate of
-the internal N-MOS and lowers the efficiency with approximately 1%. This
-workaround has been done on the A4 revision.
-
-The 12V step down converter is used to supply 12V to the fans/LED
-strips.
-
-There is thus no need for any additional power sources beyond a single
-12..24V power supply. Below is an image of what the 12V startup
-sequence looks like:
-
-..  image:: ./images/12v-startup.jpg
-
-LC power spikes
----------------
-
-This has reportedly been a problem for some stepper motor drivers that
-use low ESR capacitors as decoupeling capacitors. See pololus
-discussion of the topic: http://www.pololu.com/docs/0J16/all
-
-Replicape has a high quality electrolytic capacitor mounted on the
-board to remedy this problem. Here is what the startup looks like. One
-of the two power pads were probed:
-
-..  image:: ./images/stepper-startup.jpg
+| 4X AO7400
+| Maximum voltage: 30 V
+| Maximum current: 1.7 A
 
 
-Stepper motor max speed
-~~~~~~~~~~~~~~~~~~~~~~~
+**Thermistor inputs**
 
-Todo: measure this.
+The thermistor inputs have a first order low pass filter with a cut
+off frequency of 3.4 Hz. Since only slow moving signals are measured,
+this cuts out all capacitive influence from the high power heater
+cables that typically run in parallel with the thermistor cables.
 
-Power consumption
-~~~~~~~~~~~~~~~~~
-
-The following are some sample values for power use with Replicape mounted:
-
-- Board booting @24V: 80..130mA
-- Board running with replicape @24V (5% CPU) 110..120mA
-- Board booting @12V 110..190mA
-- Board running with replicape @12V (5% CPU) 150..160mA
-
-MOSFET rise and fall times
-~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Power MOSFET with a standard 40 W heater element (Hexagon hot end).
-
-rise time: ~60 ns
-
-Fall time: ~250 ns
-
-Troubleshooting
----------------
-
-Failed to load slot-0
-~~~~~~~~~~~~~~~~~~~~~
-
-Depending on which image and kernel you have on your BB, you might see
-something like this in dmesg::
-
-    [   63.652815] bone-capemgr bone_capemgr.9: loader: failed to load slot-0 BB-BONE-REPLICAP:00A4 (prio 0)
-
-That means there is no device tree overlay for Replicape in
-``/lib/firmware``. You can fix this by installing the replicape-devicetree
-package::
-
-    opkg install replicape-devicetree
-
-This should put the right device tree overlay in your /libs/firmware
-folder. You need to reboot after that.
+**Power management**
+Replicape has two step down voltage regulators or 5V and 12V, both
+built using Richtec RT8268GFP.
 
 Update EEPROM
-~~~~~~~~~~~~~
+-------------
 
-The EEPROM on the Replicape should be updated when it arrives. If not,
-here are the instructions on how to update it.
+The EEPROM on the Replicape should be updated when it arrives. If not, here are the instructions on how to update it.
 
-Angstrom
-^^^^^^^^
-
-If starting from the Thing image, you need to install nodejs::
-
-    opkg install nodejs
-
-You also need these files::
-
-     wget --no-check-certificate https://bitbucket.org/intelligentagent/replicape/raw/a2b195880014c7c27aabd7c0a8d140c5564007ad/eeprom/replicape_00A4.json
-     wget --no-check-certificate https://bitbucket.org/intelligentagent/replicape/raw/a2b195880014c7c27aabd7c0a8d140c5564007ad/eeprom/eeprom.js
-     wget --no-check-certificate https://bitbucket.org/intelligentagent/replicape/raw/a2b195880014c7c27aabd7c0a8d140c5564007ad/eeprom/bone.js
-
-Then, make the eeprom content::
-
-    node ./eeprom.js -w replicape_00A4.json
-
-Finally upload the content to the eeprom::
-
-    cat Replicape.eeprom > /sys/bus/i2c/drivers/at24/1-0054/eeprom
+.. _EEPromFlash:
 
 Debian
-^^^^^^
+~~~~~~
 
 On the Debian/kamikaze image::
 
-    sudo apt-get install nodejs-legacy
-    wget https://bitbucket.org/intelligentagent/replicape/raw/f623a0304134b3effcc427a82de1ebbf7cee82bb/eeprom/replicape_0A4A.json
-    wget https://bitbucket.org/intelligentagent/replicape/raw/a2b195880014c7c27aabd7c0a8d140c5564007ad/eeprom/eeprom.js
-    wget https://bitbucket.org/intelligentagent/replicape/raw/a2b195880014c7c27aabd7c0a8d140c5564007ad/eeprom/bone.js
-    node ./eeprom.js -w replicape_0A4A.json
-    cat Replicape.eeprom > /sys/bus/i2c/drivers/at24/2-0054/nvmem/at24-1/nvmem
+    sudo -s
+    wget https://bitbucket.org/intelligentagent/replicape/raw/bf08295bbb5e98ce6bff60097fe9b78d96002654/eeprom/Replicape_00B3.eeprom
+    cat Replicape_00B3.eeprom > /sys/bus/i2c/drivers/at24/2-0054/at24-1/nvmem
+    exit
 
-Please note the address on the I2C bus, it might be 55, 56 or 57 depending on your settings.
+Errata
+------
 
-Testing Replicape
------------------
+Rev B3
+~~~~~~
 
-A script is available for testing the board. This is inteded for
-manufacturers, but could be useful for end-users as well. To install the
-test script do the following. Install the test script package::
+The first batch revision is Rev B3
 
-    opkg install replicape-test
+- Power save mode is not implemented correctly. Therefore there will be some 3 seconds of noise from the steppers until u-boot can configure the SPI registers correctly.
+- Some boards have shipped without the EEPROM flashed. To fix that: :ref:`EEPromFlash`
 
-Use the “testing” config file for Redeem::
+Rev B2
+~~~~~~
 
-    cd /etc/redeem
-    ln -s Testing.cfg printer.cfg
-
-Finally, since the boards to test/flash do not have eeprom when plugged
-in, it must be enabled through the command line::
-
-    mkdir /media/mmc1
-    mount /dev/mmcblk0p1 /media/mmc1/
-    echo "optargs=drm.debug=7 capemgr.enable_partno=BB-SGX,BB-BONE-REPLICAP:0A4A consoleblank=0 vt.global_cursor_default=0" > /media/mmc1/uEnv.txt
+Replicape Revision B2 has a hardware error. This board was only
+manufactured for beta testing and has “developer edition” clearly shown
+on the board. The error is that 470K resistors were mounted instead of
+4.7K for the thermistor voltage divider. The resistors were manually
+changed to 5.1K resistors. The thermistor voltage divider resistance
+value is changed in software to reflect this.
