@@ -155,6 +155,8 @@ DualServoPlugin, example config:
     # Extruder 1 angle to set the servo when extruder 1 is selected, in degree
     extruder_1_angle = 175
 
+.. _ConfigGeometry:
+
 Geometry
 ~~~~~~~~
 
@@ -647,12 +649,14 @@ Linear v/deg Scale Thermocouple Boards
 | Tboard   | 0.005 Volts pr degree   |
 +----------+-------------------------+
 
-|
-| Config section
-| Below is what the configuration for the E looks like. The most
-  important thing to change should be the sensor name matching the
-  thermistor. The Kp, Ti and Td values will be set by the M303 auto-tune
-  and the rest of the values are for advanced tuning or special cases.
+
+Config section
+~~~~~~~~~~~~~~~~
+
+Below is what the configuration for the E looks like. The most
+important thing to change should be the sensor name matching the
+thermistor. The Kp, Ti and Td values will be set by the M303 auto-tune
+and the rest of the values are for advanced tuning or special cases.
 
 ::
 
@@ -681,8 +685,7 @@ With version 1.2.6 and beyond, the PID autotune algorithm is fairly
 stable. To run an auto-tune, use the M-code M303. You should see the
 hot-end or heated bed temperature oscillate for a few cycles before
 completing. To set temperature, number of oscillations, which hot end to
-calibrate etc, try running “M303?” or see the description of the `M303
-M-code <http://wiki.thing-printer.com/index.php?title=Redeem#M303:_Run_PID_tuning>`__.
+calibrate etc, try running “M303?” or see the description of the :ref:`M303`.
 
 Endstops
 ~~~~~~~~
@@ -702,9 +705,9 @@ Z-axis and a different input to probe the bed with G20/G30.
 If you are not seeing any movement even though no end stop has been hit,
 try inverting the end stop.
 
-See also this `blog post and
-video <http://www.thing-printer.com/end-stop-configuration-for-redeem/>`__
-for a more thorough explanation
+See also this `blog post and video`__ for a more thorough explanation.
+
+__ http://www.thing-printer.com/end-stop-configuration-for-redeem/
 
 Soft end stops
 ^^^^^^^^^^^^^^
@@ -801,10 +804,10 @@ Homing
 
 This section has to do with the speed of the homing and how much the
 stepper should back away for each axis to do fine search. Please note
-that there are two other variables in `#Geometry <#Geometry>`__ section
-that are related to the homing routine: travel\_\* and offset\_\*. The
-offset\_\* values will move the print head immediately after homing,
-while the home\_\* settings found in this section can be used to set an
+that there are two other variables in :ref:`ConfigGeometry` section
+that are related to the homing routine: travel_* and offset_*. The
+offset_* values will move the print head immediately after homing,
+while the home_* settings found in this section can be used to set an
 offset to delta printers, so the head is kept by the end stops.
 
 ::
@@ -864,8 +867,7 @@ Endstop X2 and Y2.
 -  Servo 0 is on pin P9\_14
 -  Servo 1 is on pin P9\_16
 
-Use `G-code
-M280 <http://reprap.org/wiki/G-code#M280:_Set_servo_position>`__ to set
+Use :ref:`m280` to set
 the servo position. Note that multiple servos can be present, the init
 script will continue to initialize servos as long as there are higher
 indexes, so keep the indexes increasing for multiple servos.
@@ -955,9 +957,9 @@ until your sure it works correctly. Test and happy probing!
 Rotary-encoders
 ~~~~~~~~~~~~~~~
 
-| Note: work in progress.
-| Meanwhile, see this blog post:
-  `http://www.thing-printer.com/filament-sensor-3d-printer-replicape/ <http://www.thing-printer.com/filament-sensor-3d-printer-replicape/>`__
+..  warning::
+
+    work in progress. See the blog post `Filament Sensor <http://www.thing-printer.com/filament-sensor-3d-printer-replicape/>`_.
 
 ::
 
@@ -970,7 +972,9 @@ Rotary-encoders
 Filament-Sensors
 ~~~~~~~~~~~~~~~~
 
-TODO: Write this section Note: work in progress.
+.. warning::
+
+    work in progress.
 
 ::
 
@@ -981,16 +985,16 @@ TODO: Write this section Note: work in progress.
 Watchdog
 ~~~~~~~~
 
-| The watchdog is a time-out alarm that will kick in if the
-  /dev/watchdog file is not written at least once pr. minute. This is a
-  safety issue that will cause the BeagleBone to issue a hard reset if
-  the Redeem daemon were to enter a faulty state and not be able to
-  regulate the heater elements. For the watchdog to start, it requires
-  the watchdog to be resettable, with the proper kernel command line:
-  omap\_wdt.nowayout=0
-| This should be left on at all time as a safety precauchion, but can be
-  disabled for development purposes. This is not the same as the stepper
-  watchdog which only disables the steppers.
+The watchdog is a time-out alarm that will kick in if the
+/dev/watchdog file is not written at least once pr. minute. This is a
+safety issue that will cause the BeagleBone to issue a hard reset if
+the Redeem daemon were to enter a faulty state and not be able to
+regulate the heater elements. For the watchdog to start, it requires
+the watchdog to be resettable, with the proper kernel command line ``omap\_wdt.nowayout=0``.
+
+This should be left on at all time as a safety precauchion, but can be
+disabled for development purposes. This is not the same as the stepper
+watchdog which only disables the steppers.
 
 ::
 
@@ -1006,35 +1010,35 @@ a new macro, you need to also define the actual g-code file for it. That
 is beyond this wiki, but look at G29 in the repository, for instance:
 `2 <https://bitbucket.org/intelligentagent/redeem/src/73c21486b1e294570a125e9fac6c9cef9b4f273b/redeem/gcodes/G29.py?at=develop>`__
 
-Tips: Each line in macros section needs to be spaced the same or you may
-not be able to connect in octoprint. Most Inductive sensors don't need
-probe type defined to work. To simply turn an inductive sensor on and
-off change the example macro with the g31/g32 macro's i have listed
-here. The g32 may need adjusting to match your z1 endstop settings.
-Undock turns probe on, Dock turns it off. Check your Macro and setup
-carefully, in the g29 example, at the end of each probe point it docks
-your probe then homes z before the start of the next point, which in
-some printers can crash your probe into the bed possibly causing damage.
+..  note::
 
--
+    Each line in macros section needs to be spaced the same or you may
+    not be able to connect in octoprint. Most Inductive sensors don't need
+    probe type defined to work. To simply turn an inductive sensor on and
+    off change the example macro with the g31/g32 macro's i have listed
+    here. The g32 may need adjusting to match your z1 endstop settings.
+    Undock turns probe on, Dock turns it off. Check your Macro and setup
+    carefully, in the g29 example, at the end of each probe point it docks
+    your probe then homes z before the start of the next point, which in
+    some printers can crash your probe into the bed possibly causing damage.
 
-   -  If you find that your probe routine is probing the air, your z
-      axis is most likely moving in the wrong direction for the probing
-      to work. It seems redeem only probes in one direction and this
-      can't be changed in the probing settings. So, You will need to
-      swap your z direction, in the [steppers] section using
-      direction\_z = -1 or direction\_z = +1, then confirm your z
-      stops/homing, ect work make corrections as required. You will also
-      most likely need to change under [Geometry] travel\_z direction.
-      This should trick the probe into moving in the correct direction.
+If you find that your probe routine is probing the air, your z
+axis is most likely moving in the wrong direction for the probing
+to work. It seems redeem only probes in one direction and this
+can't be changed in the probing settings. So, You will need to
+swap your z direction, in the [steppers] section using
+direction\_z = -1 or direction\_z = +1, then confirm your z
+stops/homing, ect work make corrections as required. You will also
+most likely need to change under [Geometry] travel\_z direction.
+This should trick the probe into moving in the correct direction.
 
-g31 =
+**G31**::
 
-``   M574 Z2  ; Probe up (Dock sled)``
+    M574 Z2  ; Probe up (Dock sled)
 
-g32 =
+**G32**::
 
-``   M574 Z2 z_ccw, h_ccw  ; Probe down (Undock sled)``
+    M574 Z2 z_ccw, h_ccw  ; Probe down (Undock sled)
 
 ::
 
@@ -1084,8 +1088,11 @@ g32 =
     G32 =
         M280 P0 S-60 F3000  ; Probe down (Undock sled)
 
-On the latest Thing-image, there is a configuration page where you can
-choose what printer.cfg links to and edit local.cfg.
+
+
+..  important::
+
+    There is a configuration page where you can choose what ``printer.cfg`` links to and edit ``local.cfg``.
 
 Implemented Gcodes
 ------------------
@@ -1093,9 +1100,9 @@ Implemented Gcodes
 You can always get the updated list of implemented gcodes by writing “G”
 or “M” in the terminal on Octoprint. For a longer description of each
 gcode write the code + “?” in the terminal. So to get a description of
-G1, write
+G1, write::
 
-`` G1?``
+    G1?
 
 The list on the reprap wiki has been used a starting point for the
 implementation, but some codes, such as stepper decay etc. has been
@@ -1115,8 +1122,8 @@ Lists all the G-codes implemented by this firmware. To get a long
 description of each code use '?' after the code name, for instance, G0?
 will give a long description of G0
 
-G0: Control the printer head position as well as the currently selected tool.
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+G0: Control the printer head position as well as the currently selected tool
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 | Move each axis by the amount and direction depicted.
 | X = X-axis (mm)
@@ -1129,9 +1136,12 @@ G0: Control the printer head position as well as the currently selected tool.
 | C = C-axis (mm) - only if axis present
 | F = move speed (mm/min) - stored until daemon reset
 | Q = move acceleration (mm/min^2) - stored until daemon reset
-| ====G1: Control the printer head position as well as the currently
-  selected tool.==== Move each axis by the amount and direction
-  depicted.
+
+
+G1: Control the printer head position as well as the currently selected tool
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Move each axis by the amount and direction depicted.
 | X = X-axis (mm)
 | Y = Y-axis (mm)
 | Z = Z-axis (mm)
@@ -1142,8 +1152,17 @@ G0: Control the printer head position as well as the currently selected tool.
 | C = C-axis (mm) - only if axis present
 | F = move speed (mm/min) - stored until daemon reset
 | Q = move acceleration (mm/min^2) - stored until daemon reset
-| ====G2: Clockwise arc (experimental, not tested) ==== Clockwise arc
-  (experimental, not tested)
+
+
+G2: Clockwise arc
+^^^^^^^^^^^^^^^^^
+
+Clockwise arc
+
+G3: Counter-clockwise arc
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Counter-clockwise arc
 
 G21: Set units to millimeters
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1178,23 +1197,28 @@ G29C: Generate a circular probe pattern
 | S = probe\_start\_height, default: 6.0
 | Z = add\_zero, default = 1
 | K = probe\_speed, default: 3000.0
-| ====G29S: Generate a square probe pattern for G29==== Generate a
-  square G29 Probing pattern
+
+
+G29S: Generate a square probe pattern for G29
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Generate a square G29 Probing pattern
+
 | W = bed depth mm, default: 200.0
 | D = bed depth mm, default: 200.0
 | P = points in total, default: 16
 | S = probe start height, default: 6.0
 | K = probe\_speed, default: 3000.0
-| ====G3: Counter-clockwise arc (experimental, not tested) ====
-  Counter-clockwise arc (experimental, not tested)
+
 
 G30: Probe the bed at current point
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-| Probe the bed at the current position, or if specified, a
-  pointpreviously set by M557. X, Y, and Z starting probe positions can
-  be overridden, D sets the probe length, or taken from config if
-  nothing is specified.
+Probe the bed at the current position, or if specified, a
+pointpreviously set by M557. X, Y, and Z starting probe positions can
+be overridden, D sets the probe length, or taken from config if
+nothing is specified.
+
 | F sets the probe speed. If not present, it's taken from the config.
 | A sets the probe acceleration. If not present, it's taken from the
   config.
@@ -1220,39 +1244,40 @@ Undock sled
 G33: Autocalibrate a delta printer
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-|
-| Do delta printer autocalibration by probing the points defined in
-| the G29 macro and then performing a linear least squares optimization
-  to
-| minimize the regression residuals.
-| Parameters:
-| Fn Number of factors to optimize:
-| 3 factors (endstop corrections only)
-| 4 factors (endstop corrections and delta radius)
-| 6 factors (endstop corrections, delta radius, and two tower
-| angular position corrections)
-| 7 factors (endstop corrections, delta radius, two tower angular
-| position corrections, and diagonal rod length)
-| S Do NOT update the printer configuration.
-| P Print the calculated variables
+Do delta printer autocalibration by probing the points defined in
+the G29 macro and then performing a linear least squares optimization
+to minimize the regression residuals.
+
+Fn Number of factors to optimize, parameters::
+
+    3 factors (endstop corrections only)
+    4 factors (endstop corrections and delta radius)
+    6 factors (endstop corrections, delta radius, and two tower angular position corrections)
+    7 factors (endstop corrections, delta radius, two tower angular position corrections, and diagonal rod length)
+
+::
+
+    S Do NOT update the printer configuration.
+    P Print the calculated variables
 
 G34: Measure probe tip Z offset (height distance from print head)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-|
-| Measure the probe tip Z offset, i.e., the height difference of probe
-  tip
-| and the print head. Once the print head is moved to touch the bed,
-  this command
-| lifts the head for Z mm, runs the G32 macro to deploy the probe, and
-| then probes down until the endstop is triggered. The height difference
-| is then stored as the [Probe] offset\_z configuration parameter.
-| Parameters:
-| Df Probe move maximum length
-| Ff Probing speed
-| Af Probing acceleration
-| Zf Upward move distance before probing (default: 5 mm)
-| S Simulate only (do not store the results)
+Measure the probe tip Z offset, i.e., the height difference of probe
+tip and the print head. Once the print head is moved to touch the bed,
+this command lifts the head for Z mm, runs the G32 macro to deploy the probe, and
+then probes down until the endstop is triggered. The height difference
+is then stored as the [Probe] offset\_z configuration parameter.
+
+Parameters:
+
+====== ====================================================
+``Df`` Probe move maximum length
+``Ff`` Probing speed
+``Af`` Probing acceleration
+``Zf`` Upward move distance before probing (default: 5 mm)
+``S``  Simulate only (do not store the results)
+====== ====================================================
 
 G4: Dwell for P (milliseconds) or S (seconds)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1444,11 +1469,11 @@ in units/(minute^2) Example: M201 X1000 Y1000 Z100 E2000
 M206: Set or get end stop offsets
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-|
-| If no parameters are given, get the current end stop offsets.
-| To set the offset, provide the axes and their offset relative to
-| the current value. All values are in mm.
-| Example: M206 X0.1 Y-0.05 Z0.03
+If no parameters are given, get the current end stop offsets.
+To set the offset, provide the axes and their offset relative to
+the current value. All values are in mm.
+
+Example: ``M206 X0.1 Y-0.05 Z0.03``
 
 M21: Deprecated
 ^^^^^^^^^^^^^^^
@@ -1481,6 +1506,8 @@ M270: Set coordinate system
 Set coordinate system. Parameter S set the type, which is 0 = Cartesian,
 1 = H-belt, 2 = CoreXY, 3 = Delta
 
+..  _m280:
+
 M280: Set servo position
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -1494,21 +1521,25 @@ Set P, I and D values, Format (M301 E0 P0.1 I100.0 D5.0)P = Kp, default
 = 0.0I = Ti, default = 0.0D = Td, default = 0.0E = Extruder, -1=Bed,
 0=E, 1=H, 2=A, 3=B, 4=C, default = 0
 
+.. _m303:
+
 M303: Run PID tuning
 ^^^^^^^^^^^^^^^^^^^^
 
-| PID Tuning refers to a control algorithm used in some repraps to tune
-  heating behavior for hot ends and heated beds. This command generates
-  Proportional (Kp), Integral (Ki), and Derivative (Kd) values for the
-  hotend or bed (E-1). Send the appropriate code and wait for the output
-  to update the firmware. E<0 or 1> overrides the extruder. Use E-1 for
-  heated bed.
-| Default is the 'E' extruder with index 0.
-| S overrides the temperature to calibrate for. Default is 200.
-| C overrides the number of cycles to run, default is 4
-| P (0,1) Enable pre-calibration. Useful for systems with very high
-  power
-| Q Tuning algorithm. 0 = Tyreus-Luyben, 1 = Zieger-Nichols classic
+PID Tuning refers to a control algorithm used in some repraps to tune
+heating behavior for hot ends and heated beds. This command generates
+Proportional (Kp), Integral (Ki), and Derivative (Kd) values for the
+hotend or bed (E-1). Send the appropriate code and wait for the output
+to update the firmware. E<0 or 1> overrides the extruder. Use E-1 for
+heated bed.
+
+=========== ===============================================================
+``E``       Extruder with index 0 (default)
+``S``       overrides the temperature to calibrate for. Default is 200.
+``C``       overrides the number of cycles to run, default is 4
+``P (0,1)`` Enable pre-calibration. Useful for systems with very high power
+``Q``       Tuning algorithm. 0 = Tyreus-Luyben, 1 = Zieger-Nichols classic
+=========== ===============================================================
 
 M308: Set or get direction and search length for end stops
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
