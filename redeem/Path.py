@@ -212,8 +212,6 @@ class Path:
 
         zipped_dim_dicts = zip(*[[{key: value} for value in values] for key, values in linear_dims.items()])
 
-        # zipped_dict = [{k: v for d in L for k, v in d.items()} for L in zipped_dicts]
-
         path_segments = []
 
         # for each coordinate along the arc, create a segment

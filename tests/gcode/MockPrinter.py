@@ -58,7 +58,24 @@ class MockPrinter(unittest.TestCase):
         """
         cls.printer.path_planner = mock.MagicMock()
 
+    @classmethod
+    def setUpConfigFiles(cls, path):
+        """
+        This seems like the best way to add to or change stuff in default.cfg,
+        without actually messing with the prestine file. Overwrite if you want
+        different printer.cfg and/or local.cfg files. For example, copy example filles...
 
+        copyfile(os.path.join(os.path.dirname(__file__), "my_test_local.cfg"), os.path.join(path, 'local.cfg'))
+        copyfile(os.path.join(os.path.dirname(__file__), "my_test_printer.cfg"), os.path.join(path, 'printer.cfg'))
+
+        """
+        tf = open("../configs/local.cfg", "w")
+        lines = """
+        [System]
+        log_to_file = False
+        """
+        tf.write(lines)
+        tf.close()
 
     @classmethod
     @mock.patch.object(EndStop, "_wait_for_event", new=None)
@@ -73,6 +90,8 @@ class MockPrinter(unittest.TestCase):
         """
         class DisabledExtruder(Extruder):
             def enable(self):
+                self.avg = 1
+                self.temperatures = [100]
                 pass
         class DisabledHBP(HBP):
             def enable(self):
@@ -80,21 +99,10 @@ class MockPrinter(unittest.TestCase):
         mock.patch('Redeem.Extruder', side_effect=DisabledExtruder).start()
         mock.patch('Redeem.HBP', side_effect=DisabledHBP).start()
 
+        cfg_path = "../configs"
+        cls.setUpConfigFiles(cfg_path)
 
-
-        """
-        This seems like the best way to add to or change stuff in default.cfg,
-        without actually messing with the prestine file.
-        """
-        tf = open("../configs/local.cfg", "w")
-        lines = """
-[System]
-log_to_file = False
-"""
-        tf.write(lines)
-        tf.close()
-
-        cls.R = Redeem(config_location="../configs")
+        cls.R = Redeem(config_location=cfg_path)
         cls.printer = cls.R.printer
 
         cls.setUpPatch()
@@ -122,8 +130,10 @@ log_to_file = False
     @classmethod
     def tearDownClass(cls):
         cls.R = cls.printer = None
-        os.remove("../configs/local.cfg")
-        pass
+        if os.path.exists("../configs/local.cfg"):
+            os.remove("../configs/local.cfg")
+        if os.path.exists("../configs/printer.cfg"):
+            os.remove("../configs/printer.cfg")
 
     """ directly calls a Gcode class's execute method, bypassing printer.processor.execute """
     @classmethod
