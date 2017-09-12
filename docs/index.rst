@@ -1,31 +1,52 @@
-=========
-Ecosystem
-=========
-
-A BeagleBone-based platform of hardware and software to control 3D printers and CNC machines, such as routers, lathes and mills.
+.. image:: ./images/replicape_logo.png
 
 
+Hardware and software to control 3D printers and CNC machines, such as routers, lathes and mills.
 
 
+..  image:: ./images/replicape_colorized.png
 
 
+Features
+--------
 
-A development platform for electronics and software made possible by Intelligent Agent and the Replicape community.
+The Replicape is **blazing fast**. It runs on with a BeagleBone Black, with a 1GHz CPU and two 200MHz PRUs.
 
-All software is free and open source.
+The Replicape is **extremely versatile**. Control up to five 2 amp stepper motors, two servos and four fans.
 
-The hardware is also open source, but can be conveniently purchased in the store.
+The Replicape is **stealthly silent**. Uses industry leading TMC 2100 stepper motor drivers, which have incredible low noise.
+
+The Replicape is **smart and connected**. Interact with your printer via browser while simultaneously printing.
+
+Documentation
+-------------
+
+Looking to purchase? You can find the Replicape from `ThingPrinter`__ or at `Seeed Studio`__.
+
+__ https://www.thing-printer.com/product/replicape/
+
+__ https://www.seeedstudio.com/Replicape-Rev-B-3D-printer-controller-board-p-2942.html
+
+Once you've purchased your Replicape and Beaglebone Black, you're ready to get started! Check out the :doc:`/gettingstarted/index` guide.
 
 
-Documentation on installation: :doc:`/kamikaze`.
+Ecosystem Terminology
+---------------------
 
-Documentation on controller hardware: :doc:`/replicape`.
+There are several different projects that contribute to this platform.
 
-Documentation on controller software: :doc:`/redeem`.
+**Replicape** the hardware add-on to a BeagleBone Black that controls 3D printers and CNC machines
 
-Documentation on display: :doc:`/magnascreen`.
+**Redeem** the software that communicates with the replicape and converts g-codes into motion
 
-Documentation on display software: :doc:`/toggle`.
+**Umikaze** the BeagleBone Black operating system which includes everything necessary for operation, based on Ubuntu
+
+**Kamikaze** the predecessor to Umikaze, based on Debian
+
+**MagnaScreen** a compact, high-definition touch screen
+
+**Toggle** software to build interactive applications with MagnaScreen
+
 
 ..  toctree::
     :maxdepth: 4
