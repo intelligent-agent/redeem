@@ -202,11 +202,6 @@ allows it to talk to the BBB - in which case you should setup a manual
 IP on that interface with the address 1.92.168.7.1 and netmask
 255.255.255.0
 
-**Note for Windows users:** you'll need to install Apple's `bonjour
-service <http://bonjour.en.softonic.com/>`__ to autodiscover the BBB on
-the network, if your router/modem doesn't do DNS assignment (or if
-you're using USB). Furthermore, for ssh on windows, it is recommended to
-use `PuTTY <http://www.putty.org/>`__
 
 Quirks
 ------

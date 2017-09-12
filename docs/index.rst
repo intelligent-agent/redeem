@@ -1,4 +1,5 @@
-.. image:: ./images/replicape_logo.png
+..  figure:: ./images/replicape_logo.png
+    :figclass: noborder
 
 
 Hardware and software to control 3D printers and CNC machines, such as routers, lathes and mills.

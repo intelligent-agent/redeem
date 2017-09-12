@@ -1,5 +1,12 @@
-Linux Beginner?
-===============
+Linux Beginner Guide
+====================
+
+Windows Users
+-------------
+
+To ``ssh`` on Windows, it is recommended to use `PuTTY`__
+
+__ http://www.putty.org/
 
 
 To those of you new to the Linux environment, here are a few steps I
@@ -11,3 +18,15 @@ obvious in the log you get out of octoprint, that might mean there's a
 typo in one of your config files. To see where, run **systemctl status
 -n 100 redeem** on your BBB, it should point you straight to what you
 need to change.
+
+.. _ChangePassword:
+
+Changing Password
+-----------------
+
+
+Do this by SSH-ing in as the user you want to change the password of and running the command::
+
+    passwd
+
+

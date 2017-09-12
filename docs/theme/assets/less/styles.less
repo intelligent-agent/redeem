@@ -282,12 +282,22 @@ img {
   max-width: 400px;
   border: 1px solid @light-grey;
   border-radius: 4px;
+
+  &.noborder {
+    border:none;
+    border-radius:0;
+  }
 }
 
 .figure{
   &.inline img {
     max-width: 100%;
     max-height: none;
+  }
+
+  &.noborder > img {
+    border: none;
+    border-radius: 0;
   }
 
   &.thumbnail {

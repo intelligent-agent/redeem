@@ -1688,9 +1688,17 @@ img {
   border: 1px solid #c3c3c3;
   border-radius: 4px;
 }
+img.noborder {
+  border: none;
+  border-radius: 0;
+}
 .figure.inline img {
   max-width: 100%;
   max-height: none;
+}
+.figure.noborder > img {
+  border: none;
+  border-radius: 0;
 }
 .figure.thumbnail {
   background: none;
