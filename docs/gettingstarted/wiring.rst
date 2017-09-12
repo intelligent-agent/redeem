@@ -4,28 +4,28 @@ Wiring
 ..  figure:: ./media/replicape_connectors.png
     :figclass: inline
 
-Connectors
-----------
 
-There are two types of connectors used on the replicape:
+Screw Terminal Connectors
+-------------------------
 
-Screw Terminal
-~~~~~~~~~~~~~~
-
-These are included with the replicape for: power in, hot ends and heat bed.
+The Molex screw terminals are included when purchasing Replicape for the  power in, hot ends and heat bed connections.
 
 Pin Connectors
-~~~~~~~~~~~~~~
+--------------
 
-The remaining connectors have the standard 0.100" (2.54mm) separation distance between pins. There are many varieties that
-are compatible, each coming in a range of pin configurations; two common ones:
+The remaining connectors have the standard 0.100" (2.54mm) separation distance between pins.
+
+There are many varieties that are compatible, each coming in a range of pin configurations; two common ones:
 
 **KF2510**
 
-..  image:: media/kf2510_connector.jpg
+..  figure:: media/kf2510_connector.jpg
+    :figclass: thumbnail
 
-Assortment sets can be purchased on `amazon`__ or any number of `other retailers`__. The connectors can also
-be purchased individually from places like digikey in the `2 pin`__, `3 pin`__ and `4 pin`__ varieties that are needed.
+Assortment sets can be purchased on `amazon`__ or any number of `other retailers`__.
+
+The connectors can also be purchased individually from places like digikey in
+the `2 pin`__, `3 pin`__ and `4 pin`__ varieties that are needed.
 
 
 __ http://a.co/9ciLxms
@@ -40,9 +40,11 @@ __ https://www.digikey.com/short/qchntf
 
 **Dupont**
 
-..  image:: media/dupont_connector.jpg
+..  figure:: media/dupont_connector.jpg
+    :figclass: thumbnail
 
 Assortment sets can be purchased `amazon`__ or many `other retailers`__.
+
 Or be purchased individually in `2 pin`__, `3 pin`__ and `4 pin`__ varieties.
 
 __ https://www.amazon.com/GeeBat-Connector-Assortment-Connectors-Terminals/dp/B01M7V1X88
@@ -56,10 +58,6 @@ __ https://www.digikey.com/short/qchwvv
 __ https://www.digikey.com/short/qchw1t
 
 .. note:: dupont connectors are non-polarized connectors so care should be taken when connecting to the replicape
-
-
-
-
 
 Power In
 --------
@@ -103,21 +101,28 @@ The thermistors are non-polarized.
 End Stop
 --------
 
-Each end stop requires a ground (black) and 5V (red) connection as well as the signal (yellow) for the replicape to monitor.
+Each end stop requires a ground (black) and 5V (red) connection as
+well as the signal (yellow) for the Replicape to monitor.
 
 Inductive Sensor
 ----------------
 
-Inductive sensors require ground (black), a 5V supply (red), a 12V supply (orange) and the signal (yellow) for the replicape to monitor.
+Inductive sensors require ground (black), a 5V supply (red), a 12V supply (orange)
+and the signal (yellow) for the replicape to monitor.
 
 Hot Ends
 --------
 
-While there is a positive and negative pin for each, the ``heater e`` and ``heater h`` are resistive loads and polarity does not matter.
+While there is a positive and negative pin for each, the ``heater e``
+and ``heater h`` are resistive loads and polarity does not matter.
 
 
 Heatbed
 -------
 
-Since the hotbed is also a resistive load, polarity does not matter. Similar to the power in connector, there are double connections
+Since the hotbed is also a resistive load, polarity does not matter.
+
+Similar to the power in connector, there are double connections
 to safely carry the current needed for the hotbed.
+
+For more detailed information, please see Replicape's :doc:`replicape/hardwaredetail`.

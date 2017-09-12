@@ -1327,6 +1327,12 @@ p {
   font-size: 22px;
   font-weight: 600;
 }
+.section h1 {
+  margin-bottom: 4px;
+}
+.section {
+  padding: 10px 0;
+}
 .section a.toc-backref,
 .section a.toc-backref:hover {
   color: #494d55;
@@ -1357,6 +1363,11 @@ p {
 }
 .section a.headerlink:before.pull-right {
   margin-left: .3em;
+}
+h2,
+h3,
+h4 {
+  margin-top: 0;
 }
 table.docutils {
   border: none;
@@ -1674,10 +1685,19 @@ a.reference.external:after.pull-right {
 img {
   max-height: 400px;
   max-width: 400px;
+  border: 1px solid #c3c3c3;
+  border-radius: 4px;
 }
 .figure.inline img {
   max-width: 100%;
   max-height: none;
+}
+.figure.thumbnail {
+  background: none;
+  border-radius: 0;
+  border: none;
+  max-height: 200px;
+  max-width: 200px;
 }
 .figure p.caption {
   font-style: italic;
@@ -1762,4 +1782,8 @@ fieldset[disabled] .btn-version.focus {
 .topic-title.first {
   font-size: 24px;
   font-weight: 600;
+}
+.todo {
+  background: yellow;
+  color: red;
 }
