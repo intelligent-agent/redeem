@@ -8,7 +8,13 @@ configured to pull docstrings directly from the code base. `Sphinx <http://www.s
 is a python-based document generator which converts RST into HTML docs for browsing
 and searching. Gulp is used as a makefile and to convert LESS stylesheets into CSS.
 
-To begin, you'll need to install a few node-based tools: `Node Package Manager <https://www.npmjs.com/>`_ and `Yarn <https://yarnpkg.com/en/>`_.
+To beign, you'll need to install a few python modules (assuming you're building locally and not on a BeagleBone).
+This is required because Sphinx reads docstrings from the code base and adds them to the documentation::
+
+    pip install tests/modules.rst
+    pip install docs/requirements.rst
+
+Next you'll need to install a few node-based tools which are used to process the visual theme: `Node Package Manager <https://www.npmjs.com/>`_ and `Yarn <https://yarnpkg.com/en/>`_.
 
 ``brew install npm yarn`` (for mac osx) or ``apt-get install npm yarn`` (for linux)
 
@@ -19,25 +25,61 @@ Assuming you have the redeem git repo already cloned, install the remainder of t
     $ cd redeem/docs
     $ yarn
 
-To build the docs use ``gulp docs``. Or if you'd like it to build every time a change is made, use ``gulp watch``.
+To build the docs::
 
----------------------
+    ``$ gulp docs``
+
+Or if you'd like it to build every time a change is made to code or docs, use ``gulp watch``.
+
+The output is placed in the `/docs/_build/html` directory and, since it's static, can be opened
+directly from a browser.
+
+Mediawiki to RST
+----------------
+
+`Pandoc`__ is a tool that converts between multiple different markup and markdown formats. When converting from
+mediawiki to restructured text, it converts about 90% of the formatting without need for manual refactoring.
+
+__ https://pandoc.org/
+
+To install: ``brew install pandoc``
+
+To convert from mediawiki:
+
+#. go to the mediawiki page and click `Edit`
+
+#. copy and paste the content into a text file. eg. mywikipage.mw
+
+#. run pandoc: ``pandoc -r mediawiki -w rst mywikipage.mw > mywikipage.rst``
+
+#. edit as needed
+
+Release Build (Versions)
+------------------------
+
+The build process which produces the current and past versions of the documentation requires
+that all files are committed, pushed and have a tag with the format of `X.X` or `X.X.X`. There
+is a gulp command that handles all of the configuration::
+
+    $ gulp build-versions
+
+
 Example section title
 ---------------------
 
 Example section title
 
-~~~~~~~~~~~~~~~~~~~~~~~~~
+
 Example sub-section title
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Example sub-section title.
 
---------------------
+
 Commonly Used Syntax
 --------------------
 
-~~~~~~~~
+
 Emphasis
 ~~~~~~~~
 
@@ -45,7 +87,7 @@ Emphasis
 
 **strong emphasis** is rendered as bold
 
-~~~~
+
 Code
 ~~~~
 
@@ -57,7 +99,7 @@ Code
         return a + b
 
 
-~~~~~~~~~~
+
 Hyperlinks
 ~~~~~~~~~~
 
@@ -67,7 +109,7 @@ Hyperlinks
 
 Or it can be used to name the link to something different :doc:`Go to Replicape </replicape/index>` uses an alternative displayed name.
 
-~~~~~
+
 Lists
 ~~~~~
 
@@ -83,13 +125,13 @@ Lists
 4. ordered
 5. things
 
-~~~~~~~~~~~~~~~~~~~~~
+
 Footnotes : reference
 ~~~~~~~~~~~~~~~~~~~~~
 
 Here is a paragraph that has two footnotes [#f1]_; the actual footnote is displayed at the end of this document [#f2]_
 
-~~~~~
+
 Table
 ~~~~~
 
@@ -102,7 +144,7 @@ Item 3  k      l  m    n   o
 Item 4  p      q  r    s   t
 ======  =====  == ==== === =======
 
-~~~~~~~~~~~~
+
 Highlighting
 ~~~~~~~~~~~~
 
@@ -116,7 +158,7 @@ Highlighting
 
 ..  versionadded:: X.Y.Z
 
-~~~~~~
+
 Images
 ~~~~~~
 
@@ -130,7 +172,7 @@ Figures have other options, including using a caption:
 
     A caption describing this figure.
 
-~~~~~~~~~~~~~~~~
+
 Footnotes: notes
 ~~~~~~~~~~~~~~~~
 

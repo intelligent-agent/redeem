@@ -30,8 +30,6 @@ allows it to talk to the BBB - in which case you should setup a manual
 IP on that interface with the address 1.92.168.7.1 and netmask
 255.255.255.0
 
-
-..
 If you have your BeagleBone plugged into the network, you can connect a
 monitor and keyboard to get the IP address assigned to the board when it
 boots. When the stack boots, you will see the Toggle interface (you will

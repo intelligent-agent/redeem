@@ -1,5 +1,5 @@
 Plugins
 =======
 
-
-..  autoclass:: redeem.plugins.AbstractPlugins
+..  autoclass:: redeem.plugins.AbstractPlugin.AbstractPlugin
+    :members:

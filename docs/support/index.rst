@@ -7,6 +7,10 @@ Getting Support
     ./troubleshooting.rst
     ./knownproblems.rst
     ./howto/imageburn.rst
+    ./howto/deltacalibration.rst
+    ./howto/zprobes.rst
+    ./howto/endstops.rst
+    ./howto/homing.rst
     ./howto/beginlinux.rst
     ./howto/linklocal.rst
 
@@ -28,14 +32,14 @@ reading sort of a “where do I find information about specific topics?”
 
 The answer is:
 
--  `Replicape's <Replicape_rev_B>`__ page for anything to do with
+-  `Replicape's <#>`__ page for anything to do with
    hardware connections (wiring, outputs, etc.)
--  `Redeem <Redeem>`__'s page for anything to do with what features the
+-  `Redeem <#>`__'s page for anything to do with what features the
    software holds, and what G and M-codes do
--  `Kamikaze <Kamikaze>`__'s page for anything regarding the Kamikaze
+-  `Kamikaze <#>`__'s page for anything regarding the Kamikaze
    image, including the latest release link for Kamikaze (network,
    updates, etc).
--  `The Marlin to Redeem <Marlin_to_redeem>`__ guide, helping those of
+-  `The Marlin to Redeem <#>`__ guide, helping those of
    you coming from Marlin appreciate what the differences in Redeem are
    and why.
 

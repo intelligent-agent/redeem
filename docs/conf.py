@@ -18,8 +18,33 @@
 #
 import os
 import sys
-sys.path.insert(0, os.path.abspath('..'))
+import mock
 
+sys.path.insert(0, os.path.abspath('..'))
+sys.modules['evdev'] = mock.Mock()
+sys.modules['RotaryEncoder'] = mock.Mock()
+sys.modules['Watchdog'] = mock.Mock()
+sys.modules['GPIO'] = mock.Mock()
+sys.modules['Enable'] = mock.Mock()
+sys.modules['Key_pin'] = mock.Mock()
+sys.modules['GPIO'] = mock.Mock()
+sys.modules['DAC'] = mock.Mock()
+sys.modules['ShiftRegister.py'] = mock.Mock()
+sys.modules['Adafruit_BBIO'] = mock.Mock()
+sys.modules['Adafruit_BBIO.GPIO'] = mock.Mock()
+sys.modules['Adafruit_I2C'] = mock.Mock()
+sys.modules['StepperWatchdog'] = mock.Mock()
+sys.modules['StepperWatchdog.GPIO'] = mock.Mock()
+sys.modules['_PathPlannerNative'] = mock.Mock()
+sys.modules['PruInterface'] = mock.Mock()
+sys.modules['PruInterface'].PruInterface = mock.MagicMock()
+sys.modules['PruFirmware'] = mock.Mock()
+sys.modules['HBD'] = mock.Mock()
+sys.modules['RotaryEncoder'] = mock.Mock()
+sys.modules['JoinableQueue'] = mock.Mock()
+sys.modules['USB'] = mock.Mock()
+sys.modules['Ethernet'] = mock.Mock()
+sys.modules['Pipe'] = mock.Mock()
 
 # -- General configuration ------------------------------------------------
 
