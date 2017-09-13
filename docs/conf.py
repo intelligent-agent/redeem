@@ -19,6 +19,7 @@
 import os
 import sys
 import mock
+from sphinx.errors import SphinxError
 
 sys.path.insert(0, os.path.abspath('..'))
 sys.modules['evdev'] = mock.Mock()
@@ -60,8 +61,10 @@ extensions = ['sphinx.ext.autodoc',
               'sphinx.ext.todo',
               'sphinx.ext.mathjax',
               'sphinx.ext.viewcode',
-              'sphinx.ext.githubpages',
-              'ext.gcodes']
+              'sphinx.ext.githubpages']
+
+# wip
+# extensions += 'ext.gcodes'
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
