@@ -19,7 +19,7 @@ class M666(GCodeCommand):
         else:
             for axis in self.printer.path_planner.center_offset.keys():
                 if g.has_letter(axis):
-                    offset[axis] = float(g.get_value_by_letter(axis)) / 1000.
+                    offset[axis] = g.get_float_by_letter(axis) / 1000.
                     logging.info("M666: Set axis %s offset to %f",
                                  axis, offset[axis])
 

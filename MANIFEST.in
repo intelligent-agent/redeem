@@ -1,4 +1,6 @@
 include redeem/firmware/*.p
+include redeem/firmware/*.c
+include redeem/firmware/*.cmd
 include configs/*.cfg
 include data/*.cht
 include redeem/path_planner/*.h

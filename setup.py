@@ -24,10 +24,12 @@ os.environ['OPT'] = " ".join(
 # Requirements for our application
 # Note: WIP, not a complete list
 INSTALL_REQUIRES = [
-	"spidev==3.2.0", 
+    "spidev==3.2.0",
     "scipy",
     "numpy",
-    "python-smbus"
+    "sympy",
+    "python-smbus",
+    "mock"
 ]
 
 
@@ -40,6 +42,7 @@ pathplanner = Extension(
         'redeem/path_planner/Path.cpp',
         'redeem/path_planner/Delta.cpp',
         'redeem/path_planner/vector3.cpp',
+        'redeem/path_planner/vectorN.cpp',
         'redeem/path_planner/PruTimer.cpp',
         'redeem/path_planner/prussdrv.c',
         'redeem/path_planner/Logger.cpp'],
@@ -48,22 +51,25 @@ pathplanner = Extension(
     extra_compile_args = [
         '-std=c++0x',
         '-g',
-        '-Ofast',
+        '-O3',
         '-fpermissive',
         '-D_GLIBCXX_USE_NANOSLEEP',
         '-DBUILD_PYTHON_EXT=1',
         '-Wno-write-strings',
-        '-Wno-maybe-uninitialized']
+        '-Wno-maybe-uninitialized',
+        '-UNDEBUG']
 )
 
 setup(
     name = "Redeem",
-    version = "1.2.8",
+    version = "2.0.1",
     packages = find_packages(exclude=["redeem/path_planner"]),
     data_files=[
         ('redeem/firmware', [
-            'redeem/firmware/firmware_runtime.p',
-            'redeem/firmware/firmware_endstops.p']),
+            'redeem/firmware/firmware_runtime.c',
+            'redeem/firmware/firmware_endstops.c',
+            'redeem/firmware/AM335x_PRU.cmd',
+            'redeem/firmware/image.cmd']),
         ('redeem/configs', [
             'configs/default.cfg',
             'configs/thing.cfg',
@@ -100,5 +106,4 @@ setup(
             'redeem = redeem.Redeem:main'
         ]
     },
-    include_package_data = True
 )

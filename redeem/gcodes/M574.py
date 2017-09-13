@@ -11,15 +11,18 @@ import os
 class M574(GCodeCommand):
 
     def execute(self, g):
-        tokens = g.get_tokens()
-        if len(tokens) > 0:
-            es = tokens[0]
-            config = tokens[1] if len(tokens) > 1 else ""
+        tokens = g.get_message()[len("M574"):].strip().split(" ")
+        if len(tokens) > 0 and tokens[0] != '': # 1st token could be ''
+            es = tokens[0].upper()
+            config = ""
+            for word in tokens[1:]: config += word.replace(",", ", ").lower()
 
             if not es in self.printer.end_stops:
-                logging.warning("M574: Wrong end stop: "+str(es))
+                logging.warning("M574: Invalid end stop: '%s'", es)
+                logging.debug("M574: tokens = "+str(tokens))
+                return
             
-            logging.debug("Setting end stop config for "+str(es)+" to "+str(config))
+            logging.debug("Setting end stop config for %s to '%s'", es, config)
         
             self.printer.path_planner.wait_until_done()
 
@@ -45,10 +48,13 @@ class M574(GCodeCommand):
         return "Set or get end stop config"
 
     def get_long_description(self):
-        return ("If not tokens are given, return the current end stop config. "
-                "To set the end stop config: "
+        return ("If no tokens are given, return the current end stop config. "
+                "To set the end stop config: \n"
                 "This G-code takes one end stop, and one configuration "
                 "where the configuration is which stepper motors to stop and "
-                "the direction in which to stop it. Example: M574 X1 x_ccw "
+                "the direction in which to stop it.\n \n Example:\n"
+                "    M574 X1 x_ccw\n"
+                "    (The single space separators are required.)\n \n"
                 "This will cause the X axis to stop moving in the counter clock wise "
-                "direction. Note that this recompiles and restarts the firmware")
+                "direction.\n \n"
+                "Note that this recompiles and restarts the firmware.")

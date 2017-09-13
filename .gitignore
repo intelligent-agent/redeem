@@ -5,6 +5,8 @@ stl/
 *~.*
 *.*~
 *.pyc
+.cache/
+__pycache__/
 libs/PyBBIO
 libs/pypruss
 images/ubuntu/linux-dev
@@ -30,3 +32,9 @@ sftp-config.json
 
 _build
 node_modules
+# editor temp files
+*.swp
+
+# virtual env
+venv/
+*.svg

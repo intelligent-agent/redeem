@@ -25,52 +25,40 @@
 */
 
 #include "PathPlanner.h"
+#include "AlarmCallback.h"
 #include <cmath>
 #include <assert.h>
 #include <thread>
+#include <array>
 #include <Python.h>
 
 
-PathPlanner::PathPlanner(unsigned int cacheSize) {
+PathPlanner::PathPlanner(unsigned int cacheSize, AlarmCallback& alarmCallback)
+  : alarmCallback(alarmCallback),
+  pru([this](){this->pruAlarmCallback();})
+{
   linesPos = 0;
   linesWritePos = 0;
-  LOG( "PathPlanner " << PATH_PLANNER_VERSION << std::endl);
+  LOG( "PathPlanner " << std::endl);
   moveCacheSize = cacheSize;
   lines.resize(moveCacheSize);
   printMoveBufferWait = 250;
-  minBufferedMoveTime = 100;
   maxBufferedMoveTime = 6 * printMoveBufferWait;
   linesCount = 0;
   linesTicksCount = 0;
   stop = false;
-  hasEndABC = false;
+  acceptingPaths = true;
 	
-  max_path_length = 1e6;
   axis_config = AXIS_CONFIG_XY;
   has_slaves = false;
+  state.zero();
+  lastProbeDistance = 0;
 
-  maxSpeeds.resize(NUM_AXES, 0);
-  minSpeeds.resize(NUM_AXES, 0);
-  maxJerks.resize(NUM_AXES, 0);
-  maxAccelerationStepsPerSquareSecond.resize(NUM_AXES, 0);
-  maxAccelerationMPerSquareSecond.resize(NUM_AXES, 0);
-  axisStepsPerM.resize(NUM_AXES, 0);
-	
-  soft_endstops_min.resize(NUM_AXES, 0);
-  soft_endstops_max.resize(NUM_AXES, 0);
-  state.resize(NUM_AXES, 0);
-  backlash_compensation.resize(NUM_AXES, 0);
-  backlash_state.resize(NUM_AXES, 0);
-	
   // set bed compensation matrix to identity
   matrix_bed_comp.resize(9, 0);
   matrix_bed_comp[0] = 1.0;
   matrix_bed_comp[4] = 1.0;
   matrix_bed_comp[8] = 1.0;
-	
-  
-  startABC.resize(3, 0);
-  endABC.resize(3, 0);
 
   recomputeParameters();
 
@@ -123,134 +111,152 @@ void PathPlanner::clearSyncEvent(){
   PyEval_RestoreThread(_save);
 }
 
-void PathPlanner::queueMove(std::vector<FLOAT_T> startPos, std::vector<FLOAT_T> endPos, 
+void PathPlanner::queueMove(VectorN endWorldPos,
 			    FLOAT_T speed, FLOAT_T accel, 
 			    bool cancelable, bool optimize, 
 			    bool enable_soft_endstops, bool use_bed_matrix, 
-			    bool use_backlash_compensation, int tool_axis,
-			    bool virgin) 
+			    bool use_backlash_compensation, bool is_probe,
+			    int tool_axis)
 {
-
-  
-  if ( startPos.size() != NUM_AXES ) {throw InputSizeError();}
-  if ( endPos.size() != NUM_AXES ) {throw InputSizeError();}
-
   ////////////////////////////////////////////////////////////////////
   // PRE-PROCESSING
   ////////////////////////////////////////////////////////////////////
-	
-  LOG("PP: queueMove()\n");
+
+  if (!acceptingPaths)
+  {
+    LOG("Rejecting path because path planner is suspended" << std::endl);
+    return;
+  }
+
+  LOG("NEW MOVE:\n");
   // for (int i = 0; i<NUM_AXES; ++i) {
   //   LOG("AXIS " << i << ": start = " << startPos[i] << "(" << state[i] << "), end = " << endPos[i] << "\n");
   // }
-	
-  // If this is a virgin path then we need to perform all 
-  // necessary modifications to the end position
-  if (virgin) {
-    // Cap the end position based on soft end stops
-    if ( enable_soft_endstops) {
-      if (softEndStopApply(startPos, endPos)) {
-        return;
-      }
-    }
-    // Calculate the position to reach, with bed levelling
-    if (use_bed_matrix) {
-      LOG("Before matrix X: "<<endPos[0]<<" Y: "<<endPos[1]<<" Z: "<<endPos[2]<<"\n");  
-      applyBedCompensation(endPos);
-      LOG("After matrix X: "<<endPos[0]<<" Y: "<<endPos[1]<<" Z: "<<endPos[2]<<"\n");  
+
+  VectorN startWorldPos = getState();
+
+  // Cap the end position based on soft end stops
+  if (enable_soft_endstops) {
+    if (softEndStopApply(endWorldPos)) {
+      LOG("soft endstop triggered - suspending path planner and triggering alarm" << std::endl);
+      acceptingPaths = false;
+      alarmCallback.call(7, "Soft endstop hit", "Soft endstop hit");
+      return;
     }
   }
-	
-  // Get the vector to move us from where we are, to where we ideally want to be. 
-    
-  std::vector<FLOAT_T> vec(NUM_AXES, 0);
-    
-  for (size_t i = 0; i<vec.size(); ++i) {
-    vec[i] = endPos[i] - state[i];
+  // Calculate the position to reach, with bed levelling
+  if (use_bed_matrix) {
+    LOG("Before matrix X: "<< endWorldPos[0]<<" Y: "<< endWorldPos[1]<<" Z: "<< endWorldPos[2]<<"\n");
+    applyBedCompensation(endWorldPos);
+    LOG("After matrix X: "<< endWorldPos[0]<<" Y: "<< endWorldPos[1]<<" Z: "<< endWorldPos[2]<<"\n");
   }
+
+  // handle any slaving activity
+  handleSlaves(startWorldPos, endWorldPos);
 	
-  // Check if the path needs to be split
-  if( splitInput(state, vec, speed, accel, cancelable, optimize, use_backlash_compensation, tool_axis) ) {
+  // Get the vector to move us from where we are, to where we ideally want to be.
+  bool possibleMove = true;
+  IntVectorN endPos = worldToMachine(endWorldPos, &possibleMove);
+
+  if (!possibleMove)
+  {
+    LOG("attempted move to impossible position - suspending path planner and triggering alarm" << std::endl);
+    acceptingPaths = false;
+    alarmCallback.call(7, "Move to unreachable position requested", "Move to unreachable position requested");
     return;
   }
 
-  // Calculate the distance in world space and use it to convert the user's world-speed into a desired move time
-  FLOAT_T worldDistance = 0;
+  // This is only useful for debugging purposes - the motion platform may not move
+  // directly from start to end, but the net total of steps should equal this.
+  const IntVectorN rawDeltas = endPos - state;
+
+  LOG("startWorldPos (m): " << startWorldPos[0] << " " << startWorldPos[1] << " " << startWorldPos[2] << std::endl);
+  LOG("endWorldPos (m): " << endWorldPos[0] << " " << endWorldPos[1] << " " << endWorldPos[2] << std::endl);
+  LOG("state (steps): " << state[0] << " " << state[1] << " " << state[2] << std::endl);
+  LOG("endPos (steps): " << endPos[0] << " " << endPos[1] << " " << endPos[2] << std::endl);
+  LOG("rawDeltas: " << rawDeltas[0] << " " << rawDeltas[1] << " " << rawDeltas[2] << std::endl);
+
+  bool move = false;
+
   for (int i = 0; i < NUM_AXES; i++) {
-    worldDistance += vec[i] * vec[i];
+    if (rawDeltas[i] != 0)
+    {
+      move = true;
+      break;
+    }
   }
-
-  worldDistance = std::sqrt(worldDistance);
-
-  FLOAT_T desiredTime = worldDistance / speed; // m / (m/s) = s
-
-  // Transform the vector according to the movement style of the robot.
-  transformVector(vec, state);
-    
-  // Compute stepper translation, yielding the discrete/rounded distance.
-  FLOAT_T num_steps;
-  std::vector<FLOAT_T> delta(NUM_AXES, 0);
-  FLOAT_T sum_delta = 0.0;
-  for (int i = 0; i<NUM_AXES; ++i) {
-    num_steps = round(fabs(vec[i])*axisStepsPerM[i]);
-    delta[i] = sgn(vec[i])*num_steps/axisStepsPerM[i];
-    vec[i] = delta[i];
-    sum_delta += fabs(delta[i]);
-  }
-
 
   // check for a no-move
-  if (sum_delta == 0.0) {
+  if (!move) {
+    LOG("no move" << std::endl);
     return;
   }
-	
-  // 'vec' now contains the actual distance travelled, by the motors, 
-  // after taking into account the discrete nature of the stepper motors
-	
-  reverseTransformVector(vec);
-	
-  // and now vec is back in physical space
-	
+
+  IntVectorN tweakedEndPos = endPos;
+
   // backlash compensation
   if (use_backlash_compensation) {
-    backlashCompensation(delta);
+    IntVectorN adjustedDeltas = rawDeltas;
+    backlashCompensation(adjustedDeltas);
+
+    tweakedEndPos = state + adjustedDeltas;
   }
 
-  // change startPos and endPos to give the change in position using machine coordinates
-  // also update the state of the machine, i.e. where the effector really is in physical space
-  for (int i = 0; i<NUM_AXES; ++i) {
-    startPos[i] = state[i]; // the real starting position
-    endPos[i] =   state[i] + delta[i]; // the real ending position
-    state[i] += vec[i]; // update the new state of the machine
-  }
-    
-  // handle any slaving activity
-  handleSlaves(startPos, endPos);
-
-  // LOG("MOVE COMMAND:\n");
-  // for (int i = 0; i<NUM_AXES; ++i) {
-  //   LOG("AXIS " << i << ": start = " << startPos[i] << ", end = " << state[i] << "\n");
-  // }
-    	
   ////////////////////////////////////////////////////////////////////
   // LOAD INTO QUEUE
   ////////////////////////////////////////////////////////////////////
-    
-    
-  std::vector<FLOAT_T> axis_diff(NUM_AXES, 0);        // Axis movement in m
+  
   PyThreadState *_save; 
   _save = PyEval_SaveThread();
 
-  unsigned int linesQueued = 0;
-  unsigned int linesCacheRemaining = 0;
-  long long linesTicksRemaining = 0;
-  long long linesTicksQueued = 0;
+  Path p;
+
+  p.initialize(state, tweakedEndPos, startWorldPos, endWorldPos, axisStepsPerM,
+    maxSpeedJumps, maxSpeeds, maxAccelerationMPerSquareSecond,
+    speed, accel, axis_config, delta_bot, cancelable, is_probe);
+
+  if (p.isNoMove()) {
+    LOG("Warning: no move path" << std::endl);
+    assert(0); /// TODO We should have bailed before now
+    PyEval_RestoreThread(_save);
+    return; // No steps included
+  }
+
+  LOG("checking deltas...");
+  std::cout.flush();
+  {
+    IntVectorN realDeltas;
+
+    for (const auto& axisSteps : p.getSteps())
+    {
+      FLOAT_T lastTime = 0;
+      for (const auto& step : axisSteps)
+      {
+        realDeltas[step.axis] += step.direction ? 1 : -1;
+	assert(step.time > lastTime);
+	lastTime = step.time;
+      }
+    }
+
+    for (int i = 0; i < NUM_AXES; i++)
+    {
+      if (state[i] + realDeltas[i] != endPos[i])
+      {
+	LOG("step count sanity check failed on axis " << i << " because " << state[i] << " + " << realDeltas[i] << " != " << endPos[i] << std::endl);
+	assert(0);
+      }
+    }
+  }
+  LOG("done!" << std::endl);
+
+  unsigned int linesCacheRemaining = moveCacheSize - linesCount;
+  long long linesTicksRemaining = maxBufferedMoveTime - linesTicksCount;
 
   // wait for the worker
-  if(linesCacheRemaining == 0 || linesTicksRemaining == 0){
+  if(!doesPathQueueHaveSpace()){
     std::unique_lock<std::mutex> lk(line_mutex);
-    //LOG( "Waiting for free move command space... Current: " << moveCacheSize - linesCount << std::endl);
-    lineAvailable.wait(lk, [this]{return stop || (linesCount < moveCacheSize && !isLinesBufferFilled());});
+    QUEUELOG( "Waiting for free move command space... Current: " << linesCount << " lines that take " << linesTicksCount / F_CPU_FLOAT << " seconds"  << std::endl);
+    pathQueueHasSpace.wait(lk, [this] { return this->doesPathQueueHaveSpace(); });
     linesCacheRemaining = moveCacheSize - linesCount;
     linesTicksRemaining = maxBufferedMoveTime - linesTicksCount;
   }	
@@ -260,46 +266,36 @@ void PathPlanner::queueMove(std::vector<FLOAT_T> startPos, std::vector<FLOAT_T> 
     return;
   }
 
-  Path *p = &lines[linesWritePos];
-  std::vector<FLOAT_T> stepperStartPos(NUM_AXES, 0);
-  std::vector<FLOAT_T> stepperEndPos(NUM_AXES, 0);
-  FLOAT_T distance = 0;
+  Path& qp = lines[linesWritePos];
 
-  for (int axis = 0; axis < NUM_AXES; axis++) {
-    stepperStartPos[axis] = round(startPos[axis] * axisStepsPerM[axis]);
-    stepperEndPos[axis] = round(endPos[axis] * axisStepsPerM[axis]);
-    axis_diff[axis] = (stepperEndPos[axis] - stepperStartPos[axis]) / axisStepsPerM[axis];
-    //LOG("Axis " << axis << " length is " << axis_diff[axis] << std::endl);
-
-    distance += axis_diff[axis] * axis_diff[axis];
+  // Now swap p into the path queue - note that we shouldn't refer to p after this because it won't contain anything useful
+  qp = std::move(p);
+  
+  // capture state so we can check it after a probe
+  const IntVectorN startPos = state;
+  
+  if(!is_probe)
+  {
+    state = endPos; // update the new state of the machine
+    LOG("new state: " << state[0] << " " << state[1] << " " << state[2] << std::endl);
+  }
+  else
+  {
+    LOG("probe move - not updating state" << std::endl);
   }
 
-  distance = sqrt(distance);
-
-  // Use the desired move time to calculate the machine-speed that matches the user's world-speed
-  FLOAT_T machineSpeed = distance / desiredTime;
-
-  p->initialize(stepperStartPos, stepperEndPos, distance, speed, accel, cancelable);
-
-  if(p->isNoMove()){
-    LOG( "PathPlanner::queueMove: Warning: no move path" << std::endl);
-    PyEval_RestoreThread(_save);
-    return; // No steps included
-  }
+  
 
   ////////////////////////////////////////////////////////////////////
   // PERFORM PLANNING
   ////////////////////////////////////////////////////////////////////
-
-  p->calculate(axis_diff, minSpeeds, maxSpeeds, maxAccelerationStepsPerSquareSecond);
+  
   updateTrapezoids();
   linesWritePos++;
-  linesQueued++;
   linesCacheRemaining--;
-  linesTicksQueued += p->getTimeInTicks();
-  linesTicksRemaining -= p->getTimeInTicks();
+  linesTicksRemaining -= qp.getTimeInTicks();
 
-  LOG("PathPlanner::queueMove: Move queued for the worker" << std::endl);
+  QUEUELOG("Move queued for the worker" << std::endl);
 
   if(linesWritePos>=moveCacheSize)
     linesWritePos = 0;
@@ -308,14 +304,22 @@ void PathPlanner::queueMove(std::vector<FLOAT_T> startPos, std::vector<FLOAT_T> 
   if((linesCacheRemaining == 0) || linesTicksRemaining <= 0){
     {
       std::lock_guard<std::mutex> lk(line_mutex);
-      linesCount += linesQueued;
-      linesTicksCount += linesTicksQueued;
+      linesCount++;
+      linesTicksCount += qp.getTimeInTicks();
     }
-    linesQueued = 0;
-    linesTicksQueued = 0;
-    lineAvailable.notify_all();
-    LOG("PathPlanner::queueMove: Poked the worker" << std::endl);
+    notifyIfPathQueueIsReadyToPrint();
   }
+
+  if(is_probe)
+  {
+    LOG("Probe Move - waiting for the queue to empty");
+    std::unique_lock<std::mutex> lk(line_mutex);
+    pathQueueHasSpace.wait(lk, [this] { return linesCount==0 || stop; });
+
+    assert(state != startPos);
+  }
+
+  
 
   PyEval_RestoreThread(_save);
 }
@@ -324,7 +328,7 @@ void PathPlanner::queueMove(std::vector<FLOAT_T> startPos, std::vector<FLOAT_T> 
 /**
    This is the path planner.
  
-   It goes from the last entry and tries to increase the end speed of previous moves in a fashion that the maximum jerk
+   It goes from the last entry and tries to increase the end speed of previous moves in a fashion that the maximum speed jump
    is never exceeded. If a segment with reached maximum speed is met, the planner stops. Everything left from this
    is already optimal from previous updates.
    The first 2 entries in the queue are not checked. The first is the one that is already in print and the following will likely become active.
@@ -342,17 +346,16 @@ void PathPlanner::updateTrapezoids(){
   // Search last fixed element
   while(first != maxfirst && !lines[first].isEndSpeedFixed()){
     //LOG("caling previousPlannerIndex"<<std::endl);
-    previousPlannerIndex(first);
+    first = previousPlannerIndex(first);
   }
   if(first != linesWritePos && lines[first].isEndSpeedFixed()){
     //LOG("caling nextPlannerIndex"<<std::endl);
-    nextPlannerIndex(first);
+    first = nextPlannerIndex(first);
   }
   if(first == linesWritePos){   // Nothing to plan
     //LOG("Nothing to plan"<<std::endl);
     act->block();
     act->setStartSpeedFixed(true);
-    act->updateStepperPathParameters();
     act->unblock();
     return;
   }
@@ -362,15 +365,14 @@ void PathPlanner::updateTrapezoids(){
   // anyhow, the start speed of first is fixed
   firstLine = &lines[first];
   firstLine->block(); // don't let printer touch this or following segments during update
-  unsigned int previousIndex = linesWritePos;
-  previousPlannerIndex(previousIndex);
+  unsigned int previousIndex = previousPlannerIndex(linesWritePos);
   Path *previous = &lines[previousIndex];
 
   //LOG("UpdateTRapezoids:: computeMAxJunctionSpeed"<<std::endl);
 
 
   computeMaxJunctionSpeed(previous,act); // Set maximum junction speed if we have a real move before
-  if(previous->isAxisOnlyMove(E_AXIS) != act->isAxisOnlyMove(E_AXIS)){
+  if((previous->getAxisMoveMask() & act->getAxisMoveMask()) == 0){ // if no axes move in both moves, there's nothing to optimize
     previous->setEndSpeedFixed(true);
     act->setStartSpeedFixed(true);
     act->updateStepperPathParameters();
@@ -383,13 +385,11 @@ void PathPlanner::updateTrapezoids(){
 	
   // Update precomputed data
   do{
-    lines[first].updateStepperPathParameters();
     lines[first].unblock();  // Flying block to release next used segment as early as possible
-    nextPlannerIndex(first);
+    first = nextPlannerIndex(first);
     lines[first].block();
   }
   while(first!=linesWritePos);
-  act->updateStepperPathParameters();
   act->unblock();
 
   //LOG("UpdateTRapezoids:: done"<<std::endl);
@@ -398,13 +398,13 @@ void PathPlanner::updateTrapezoids(){
 void PathPlanner::computeMaxJunctionSpeed(Path *previous, Path *current){
   FLOAT_T factor = 1;
     
-  LOG("PathPlanner::computeMaxJunctionSpeed()"<<std::endl);
+  LOG("Computing Max junction speed"<<std::endl);
 
   for(int i=0; i<NUM_AXES; i++){
-    FLOAT_T jerk = std::fabs(current->getSpeeds()[i] - previous->getSpeeds()[i]) * F_CPU; // m/tick * ticks/s = m/s
+    FLOAT_T speedJump = std::fabs(current->getSpeeds()[i] - previous->getSpeeds()[i]);
 
-    if (jerk > maxJerks[i]){
-      factor = std::min(factor, maxJerks[i] / jerk);
+    if (speedJump > maxSpeedJumps[i]){
+      factor = std::min(factor, maxSpeedJumps[i] / speedJump);
     }
   }
 
@@ -425,7 +425,7 @@ void PathPlanner::backwardPlanner(unsigned int start, unsigned int last){
 	
   // Last element is already fixed in start speed
   while(start != last){
-    previousPlannerIndex(start);
+    start = previousPlannerIndex(start);
     previous = &lines[start];
 		
     // Avoid speed calcs if we know we can accelerate within the line
@@ -464,7 +464,7 @@ void PathPlanner::forwardPlanner(unsigned int first){
   FLOAT_T leftSpeed = next->getStartSpeed();
   while(first != linesWritePos){   // All except last segment, which has fixed end speed
     act = next;
-    nextPlannerIndex(first);
+    first = nextPlannerIndex(first);
     next = &lines[first];
 		
     // Avoid speed calcs if we know we can accelerate within the line.
@@ -514,8 +514,9 @@ void PathPlanner::runThread() {
 void PathPlanner::stopThread(bool join) {
   Py_BEGIN_ALLOW_THREADS
     pru.stopThread(join);	
-  stop=true;
-  lineAvailable.notify_all();
+  stop = true;
+  notifyIfPathQueueIsReadyToPrint();
+
   if(join && runningThread.joinable()) {
     runningThread.join();
   }
@@ -531,9 +532,7 @@ PathPlanner::~PathPlanner() {
 void PathPlanner::waitUntilFinished() {
   Py_BEGIN_ALLOW_THREADS    
     std::unique_lock<std::mutex> lk(line_mutex);
-  lineAvailable.wait(lk, [this]{
-      return linesCount==0 || stop;
-    });
+  pathQueueHasSpace.wait(lk, [this] { return linesCount==0 || stop; });
 	
   //Wait for PruTimer then
   if(!stop) {
@@ -543,175 +542,449 @@ void PathPlanner::waitUntilFinished() {
     }
 
 void PathPlanner::reset() {
+  LOG("path planner resetting" << std::endl);
   pru.reset();
+  acceptingPaths = true;
 }
 
 void PathPlanner::run() {
   bool waitUntilFilledUp = true;
-  LOG("PathPLanner::run(): loop starting" << std::endl);
+  LOG("PathPlanner loop starting" << std::endl);
+
+  const unsigned int maxCommandsPerBlock = pru.getMaxBytesPerBlock() / sizeof(SteppersCommand);
+  std::unique_ptr<SteppersCommand[]> commandBlock(new SteppersCommand[maxCommandsPerBlock]);
 	
   while(!stop) {		
-    std::unique_lock<std::mutex> lk(line_mutex);		
-    lineAvailable.wait(lk, [this]{return linesCount>0 || stop;});		
+    std::unique_lock<std::mutex> lk(line_mutex);
+    if (!isPathQueueReadyToPrint()) {
+      pathQueueReadyToPrint.wait(lk, [this] { return this->isPathQueueReadyToPrint(); });
+    }
     Path* cur = &lines[linesPos];
-    assert(cur);
-    std::vector<SteppersCommand> commands(cur->getPrimaryAxisSteps());
-    std::vector<int> error = cur->getInitialErrors();
+
+    IntVectorN probeDistanceTraveled;
 
     // If the buffer is half or more empty and the line to print is an optimized one, 
     // wait for 500 ms again so that we can get some other path in the path planner buffer, 
     // and we do that until the buffer is not anymore half empty.
-    if(!isLinesBufferFilled() && cur->getTimeInTicks() > 0 && waitUntilFilledUp) {
+    if(waitUntilFilledUp && !isLinesBufferFilled() && cur->getTimeInTicks() > 0) {
       unsigned lastCount = 0;
-      LOG("PathPLanner::run(): Waiting for buffer to fill up. " << linesCount  << " lines pending, lastCount is " << lastCount << std::endl);
+      QUEUELOG("Waiting for buffer to fill up. " << linesCount  << " lines pending, lastCount is " << lastCount << std::endl);
       do {
-	lastCount = linesCount;				
-	lineAvailable.wait_for(lk,  std::chrono::milliseconds(printMoveBufferWait), [this,lastCount]{
-	    return linesCount>lastCount || stop;
-	  });				
+	lastCount = linesCount;
+	if (lastCount == 0) { // if there are no lines in the queue, we can wait indefinitely
+	  pathQueueReadyToPrint.wait(lk, [this, lastCount] { return linesCount > lastCount || stop; });
+	}
+	else { // if there are lines in the queue, we need to cap the wait at printMoveBufferWait
+	  pathQueueReadyToPrint.wait_for(lk, std::chrono::milliseconds(printMoveBufferWait), [this, lastCount] {
+	    return linesCount > lastCount || stop;
+	  });
+	}
       } while(lastCount<linesCount && linesCount<moveCacheSize && !stop);
-      LOG("PathPLanner::run(): Done waiting for buffer to fill up... " << linesCount  << " lines ready. " << lastCount << std::endl);			
+      QUEUELOG("Done waiting for buffer to fill up... " << linesCount  << " lines ready. " << lastCount << std::endl);			
       waitUntilFilledUp = false;
     }
 		
     //The buffer is empty, we enable again the "wait until buffer is enough full" timing procedure.
     if(linesCount<=1) {
       waitUntilFilledUp = true;
-      LOG("PathPLanner::run(): ### Move Command Buffer Empty ###" << std::endl);
+      QUEUELOG("### Move Command Buffer Empty ###" << std::endl);
     }
-		
+
     lk.unlock();
-		
+
     if(!linesCount || stop){
       continue;
     }
-		
-    long cur_errupd = 0;
-    int directionMask = 0;      //0bCBAHEZYX
-    int cancellableMask = 0;
-    unsigned int vMaxReached;
-    unsigned int timer_accel = 0;
-    unsigned int timer_decel = 0;
-    unsigned int interval = 0;
-		
+
     if(cur->isBlocked()){   // This step is in computation - shouldn't happen
       cur = NULL;
-      LOG( "PathPLanner::run():  thread: path " <<  std::dec << linesPos<< " is blocked, waiting... " << std::endl);
+      QUEUELOG( "Path planner thread: path " <<  std::dec << linesPos<< " is blocked, waiting... " << std::endl);
       std::this_thread::sleep_for( std::chrono::milliseconds(100) );
       continue;
     }
 		
     // Only enable axes that are moving. If the axis doesn't need to move then it can stay disabled depending on configuration.
     cur->fixStartAndEndSpeed();
-    cur_errupd = cur->getDeltas()[cur->getPrimaryAxis()];
     if(!cur->areParameterUpToDate()){  // should never happen, but with bad timings???
-      LOG("PathPLanner::run(): Path planner thread: Need to update paramters! This should not happen!" << std::endl);
       cur->updateStepperPathParameters();
     }
 
-    StepperPathParameters stepperPath = cur->getStepperPathParameters();
-    unsigned long long fPrimaryAxisAcceleration = 262144.0 * cur->getPrimaryAxisAcceleration() / F_CPU; // (2^18)
-		
-    vMaxReached = stepperPath.vStart;
-
-    directionMask = 0;
-    cancellableMask = 0;
+    int moveMask = 0;
+    int cancellableMask = 0;
     for(int i=0; i<NUM_AXES; i++){
-      //LOG("Direction for axis " << i << " is " << cur->isAxisPositiveMove(i) << std::endl);
-      directionMask |= (cur->isAxisPositiveMove(i) << i);
+      moveMask |= (cur->isAxisMove(i) << i);
     }
+
     if(cur->isCancelable()) {
       for(int i=0; i<NUM_AXES; i++)
 	cancellableMask |= (cur->isAxisMove(i) << i);
-    }		
-    LOG("PathPLanner::run(): Direction mask: " << directionMask << std::endl);
-    LOG("PathPLanner::run(): Cancel    mask: " << cancellableMask << std::endl);
-    LOG("PathPLanner::run(): startSpeed:   " << cur->getStartSpeed() << std::endl);
-    LOG("PathPLanner::run(): fullSpeed:    " << cur->getFullSpeed() << std::endl);
-    LOG("PathPLanner::run(): endSpeed:     " << cur->getEndSpeed() << std::endl);
-    LOG("PathPLanner::run(): acceleration: " << cur->getAcceleration() << std::endl);
-    LOG("PathPLanner::run(): accelTime:    " << ((cur->getFullSpeed() - cur->getStartSpeed())/cur->getAcceleration()) << std::endl);
-        
-        
-
-    for(unsigned int stepNumber=0; stepNumber<cur->getPrimaryAxisSteps(); stepNumber++){
-      SteppersCommand& cmd = commands.at(stepNumber);
-      cmd.direction = (uint8_t) directionMask;
-      cmd.cancellableMask = (uint8_t) cancellableMask;
-			
-      if((stepNumber == cur->getPrimaryAxisSteps() - 1) && cur->isSyncEvent()){
-	if(cur->isSyncWaitEvent())
-	  cmd.options = STEPPER_COMMAND_OPTION_SYNCWAIT_EVENT;
-	else
-	  cmd.options = STEPPER_COMMAND_OPTION_SYNC_EVENT;
-      }
-      else 
-	cmd.options = 0;
-
-      //LOG( "Doing step " << stepNumber << " of "<<cur->getPrimaryAxisSteps() <<std::endl);
-
-      cmd.step = 0;
-      for(int i=0; i<NUM_AXES; i++){
-	if(cur->isAxisMove(i)){
-	  if((error[i] -= cur->getDeltas()[i]) < 0){
-	    cmd.step |= (1 << i);
-	    error[i] += cur_errupd;
-	  }
-	}
-      }
-
-      //If acceleration is enabled on this move and we are in the acceleration segment, calculate the current interval
-      if (stepNumber <= stepperPath.accelSteps){   // we are accelerating
-	//LOG( "Acceleration" << std::endl);
-	vMaxReached = ComputeV(timer_accel, fPrimaryAxisAcceleration) + stepperPath.vStart;
-	if(vMaxReached>stepperPath.vMax)
-	  vMaxReached = stepperPath.vMax;
-	unsigned long v = vMaxReached;
-	if (v > 0)
-	  interval = F_CPU/(v);
-	timer_accel+=interval;
-      }
-      else if (cur->getPrimaryAxisSteps() - stepNumber <= stepperPath.decelSteps){     // time to slow down
-	//LOG( "Decelleration "<<std::endl);
-	unsigned long v = ComputeV(timer_decel, fPrimaryAxisAcceleration);
-	if (v > vMaxReached)   // if deceleration goes too far it can become too large
-	  v = stepperPath.vEnd;
-	else{
-	  v=vMaxReached - v;
-	  if (v < stepperPath.vEnd)
-	    v = stepperPath.vEnd; // extra steps at the end of desceleration due to rounding erros
-	}
-	if (v > 0)
-	  interval = F_CPU/(v);
-	timer_decel += interval;
-      }
-      else{ // full speed reached
-	//LOG( "Cruising "<<std::endl);
-	interval = cur->getFullInterval();
-      }
-
-      //LOG("Interval: " << interval << std::endl);
-      assert(interval < F_CPU*4);
-      cmd.delay = (uint32_t)interval;
     }
-		
+
+    LOG("Cancel    mask: " << cancellableMask << std::endl);
+
+    LOG("startSpeed:   " << cur->getStartSpeed() << std::endl);
+    LOG("fullSpeed:    " << cur->getFullSpeed() << std::endl);
+    LOG("acceleration: " << cur->getAcceleration() << std::endl);
+
+    const FLOAT_T moveEndTime = cur->runFinalStepCalculations();
+
+    LOG("Sending " << std::dec << linesPos << ", Start speed=" << cur->getStartSpeed() << ", end speed=" << cur->getEndSpeed() << std::endl);
+
+    runMove(moveMask, cancellableMask, cur->isSyncEvent(), cur->isSyncWaitEvent(), moveEndTime, cur->getSteps(), commandBlock, maxCommandsPerBlock,
+      cur->isProbeMove() ? &probeDistanceTraveled : nullptr);
+
+    if (cur->isProbeMove())
+    {
+      const VectorN startPos = machineToWorld(cur->getStartMachinePos());
+
+      assert(state == cur->getStartMachinePos());
+      state = cur->getStartMachinePos() + probeDistanceTraveled;
+      const VectorN endPos = getState();
+
+      lastProbeDistance = vabs(endPos - startPos);
+    }
 
     //LOG("Current move time " << pru.getTotalQueuedMovesTime() / (double) F_CPU << std::endl);
-		
-    //Wait until we need to push some lines so that the path planner can fill up
-    pru.waitUntilLowMoveTime((F_CPU/1000)*minBufferedMoveTime); //in seconds
-		
-    LOG( "PathPLanner::run(): Sending " << std::dec << linesPos << ", Start speed=" << cur->getStartSpeed() << ", end speed="<<cur->getEndSpeed() << ", nb steps = " << cur->getPrimaryAxisSteps() << std::endl);
-		
-    pru.push_block((uint8_t*)commands.data(), sizeof(SteppersCommand)*cur->getPrimaryAxisSteps(), sizeof(SteppersCommand), linesPos, cur->getTimeInTicks());
-    LOG( "PathPLanner::run(): Done sending with " << std::dec << linesPos << std::endl);
+
+    LOG( "Done sending with " << std::dec << linesPos << std::endl);
 		
     removeCurrentLine();
-    lineAvailable.notify_all();
+    notifyIfPathQueueHasSpace();
   }
 }
 
-std::vector<FLOAT_T> PathPlanner::getState()
+inline unsigned long long roundStepTime(FLOAT_T stepTime)
 {
-  return state;
+  return std::llround(stepTime * (F_CPU_FLOAT / MINIMUM_STEP_INTERVAL)) * MINIMUM_STEP_INTERVAL;
 }
+
+void PathPlanner::runMove(
+  const int moveMask,
+  const int cancellableMask,
+  const bool sync,
+  const bool wait,
+  const FLOAT_T moveEndTime,
+  std::array<std::vector<Step>, NUM_AXES>& steps,
+  std::unique_ptr<SteppersCommand[]> const &commands,
+  const size_t commandsLength,
+  IntVectorN* probeDistanceTraveled) {
+
+  std::array<unsigned long long, NUM_AXES> finalStepTimes;
+  std::array<size_t, NUM_AXES> stepIndex;
+  size_t commandsIndex = 0;
+  std::vector<SteppersCommand> probeSteps;
+  unsigned long long totalSteps = 0;
+
+  finalStepTimes.fill(0);
+  stepIndex.fill(0);
+
+  for (size_t i = 0; i < commandsLength; i++) {
+    commands[i] = {};
+  }
+  
+  unsigned long long lastStepTime = 0;
+
+  // sanity check - are there any steps at all?
+  {
+    bool haveSteps = false;
+    for (const auto& axisSteps : steps)
+    {
+      if (!axisSteps.empty())
+      {
+        haveSteps = true;
+      }
+    }
+
+    if (!haveSteps)
+    {
+      assert(0);
+      return;
+    }
+  }
+
+  // reserve a command to be an opening delay with no steps
+  uint32_t* lastDelay = &commands[commandsIndex].delay;
+  commandsIndex++;
+  totalSteps++;
+
+  // Note that this opening delay doesn't have cancellableMask set - this is intentional because
+  // a command that doesn't step anything shouldn't count towards the number of cancelled commands.
+
+  bool foundStep = true;
+  while (foundStep)
+  {
+    foundStep = false;
+
+    // find a step time
+    unsigned long long stepTime = UINT64_MAX;
+
+    for (int i = 0; i < NUM_AXES; i++)
+    {
+      const auto& axisSteps = steps[i];
+      const auto axisStepIndex = stepIndex[i];
+
+      if (axisSteps.size() > axisStepIndex)
+      {
+        stepTime = std::min(stepTime, roundStepTime(axisSteps[axisStepIndex].time));
+        foundStep = true;
+      }
+    }
+
+    if (!foundStep)
+    {
+      assert(stepTime == UINT64_MAX);
+      stepTime = roundStepTime(moveEndTime);
+    }
+
+    // set the previous delay
+    assert(lastDelay != nullptr);
+    assert(stepTime > lastStepTime || (!foundStep && stepTime == lastStepTime));
+    assert(stepTime - lastStepTime >= MINIMUM_STEP_INTERVAL || !foundStep);
+    assert(stepTime - lastStepTime < F_CPU / 2);
+
+    *lastDelay = stepTime - lastStepTime;
+
+    if (!foundStep)
+    {
+      QUEUELOG("last step at " << lastStepTime / F_CPU_FLOAT << " and final time at " << roundedStepTime / F_CPU_FLOAT
+        << " for a final delay of " << *lastDelay << std::endl);
+      break;
+    }
+
+    SteppersCommand& cmd = commands[commandsIndex];
+    commandsIndex++;
+    totalSteps++;
+
+    cmd.cancellableMask = cancellableMask;
+
+    lastDelay = &cmd.delay;
+    lastStepTime = stepTime;
+
+    // add all the axes that can step at this time
+    for (int i = 0; i < NUM_AXES; i++)
+    {
+      const auto& axisSteps = steps[i];
+      const auto axisStepIndex = stepIndex[i];
+
+      if (axisSteps.size() > axisStepIndex && roundStepTime(axisSteps[axisStepIndex].time) == stepTime)
+      {
+	const auto& step = axisSteps[axisStepIndex];
+
+	assert(!(cmd.step & (1 << i)));
+	assert(step.axis == i);
+
+	cmd.step |= 1 << i;
+	cmd.direction |= ((unsigned char)step.direction) << i;
+
+	stepIndex[i]++;
+	finalStepTimes[i] = stepTime;
+      }
+    }
+
+    assert(cmd.step != 0);
+
+    if (commandsIndex == commandsLength) {
+      pru.push_block((uint8_t*)&commands[0], sizeof(SteppersCommand)*commandsIndex, sizeof(SteppersCommand), commandsIndex);
+
+      if (probeDistanceTraveled)
+      {
+	probeSteps.reserve(probeSteps.size() + commandsIndex);
+
+	for (size_t i = 0; i < commandsIndex; i++)
+	{
+	  probeSteps.push_back(commands[i]);
+	}
+      }
+
+      commandsIndex = 0;
+
+      for (size_t i = 0; i < commandsLength; i++) {
+	commands[i] = {};
+      }
+    }
+  }
+
+  if (sync) {
+    if (commandsIndex == 0) {
+      commandsIndex = 1;
+      totalSteps++;
+      LOG("needed a dummy step for synchronization" << std::endl);
+      assert(commandsIndex < commandsLength);
+      assert(commands[commandsIndex].step == 0 && commands[commandsIndex].delay == 0);
+    }
+
+    assert(commandsIndex > 0 && commandsIndex <= commandsLength);
+
+    SteppersCommand& cmd = commands[commandsIndex - 1];
+    if (wait) cmd.options = STEPPER_COMMAND_OPTION_SYNCWAIT_EVENT;
+    else cmd.options = STEPPER_COMMAND_OPTION_SYNC_EVENT;
+  }
+
+  if (commandsIndex != 0) {
+    pru.push_block((uint8_t*)&commands[0], sizeof(SteppersCommand)*commandsIndex, sizeof(SteppersCommand), commandsIndex);
+
+    if (probeDistanceTraveled)
+    {
+      probeSteps.reserve(probeSteps.size() + commandsIndex);
+
+      for (size_t i = 0; i < commandsIndex; i++)
+      {
+	probeSteps.push_back(commands[i]);
+      }
+    }
+  }
+
+  {
+    unsigned long long earliestFinishTime = ULLONG_MAX;
+    unsigned long long latestFinishTime = 0;
+    for (int i = 0; i < NUM_AXES; i++) {
+
+      if (moveMask & (1 << i)) {
+	LOG("axis " << i << " finished at " << finalStepTimes[i] / F_CPU_FLOAT << std::endl);
+	if (finalStepTimes[i] != 0) {
+	  earliestFinishTime = std::min(earliestFinishTime, finalStepTimes[i]);
+	  latestFinishTime = std::max(latestFinishTime, finalStepTimes[i]);
+	}
+      }
+    }
+    LOG("finish times ranged from " << earliestFinishTime << " to " << latestFinishTime << ", which is "
+      << latestFinishTime - earliestFinishTime << " ticks or " << (latestFinishTime - earliestFinishTime) / F_CPU_FLOAT << " seconds"
+      << std::endl);
+
+    //assert((latestFinishTime - earliestFinishTime) / F_CPU_FLOAT < 10 * CPU_CYCLE_LENGTH); // all axes should finish within 10 PRU cycles
+  }
+
+  LOG("move needed " << totalSteps << " steps" << std::endl);
+
+  for (int i = 0; i < NUM_AXES; i++)
+  {
+    assert(stepIndex[i] == steps[i].size());
+  }
+
+  if (probeDistanceTraveled)
+  {
+    pru.waitUntilFinished();
+    const size_t stepsRemaining = pru.getStepsRemaining();
+    const size_t stepsTraveled = probeSteps.size() - stepsRemaining;
+
+    assert(stepsRemaining < probeSteps.size());
+    IntVectorN deltasTraveled;
+
+    for (size_t i = 0; i < stepsTraveled; i++)
+    {
+      for (int axis = 0; axis < NUM_AXES; axis++)
+      {
+	const SteppersCommand& command = probeSteps[i];
+	if (command.step & (1 << axis))
+	{
+	  deltasTraveled[axis] += (command.direction & (1 << axis)) ? 1 : -1;
+	}
+      }
+    }
+    
+    *probeDistanceTraveled = deltasTraveled;
+  }
+}
+
+VectorN PathPlanner::machineToWorld(const IntVectorN& machinePos)
+{
+  VectorN output = machinePos.toVectorN() / axisStepsPerM;
+  Vector3 motionPos;
+  switch (axis_config)
+  {
+  case AXIS_CONFIG_XY:
+    motionPos = output.toVector3();
+    break;
+  case AXIS_CONFIG_H_BELT:
+    motionPos = hBeltToWorld(machinePos.toVectorN().toVector3() / axisStepsPerM.toVector3());
+    break;
+  case AXIS_CONFIG_CORE_XY:
+    motionPos = coreXYToWorld(machinePos.toVectorN().toVector3() / axisStepsPerM.toVector3());
+    break;
+  case AXIS_CONFIG_DELTA:
+    motionPos = delta_bot.deltaToWorld(machinePos.toVectorN().toVector3() / axisStepsPerM.toVector3());
+    break;
+  default:
+    assert(0);
+  }
+
+  output[0] = motionPos.x;
+  output[1] = motionPos.y;
+  output[2] = motionPos.z;
+
+  return output;
+}
+
+VectorN PathPlanner::getState()
+{
+  return machineToWorld(state);
+}
+
+IntVectorN PathPlanner::worldToMachine(const VectorN& worldPos, bool* possible)
+{
+  IntVectorN output = (worldPos * axisStepsPerM).round();
+  
+  if (possible)
+  {
+    *possible = true;
+  }
+
+  switch (axis_config)
+  {
+  case AXIS_CONFIG_DELTA:
+  {
+    const Vector3 deltaEnd = delta_bot.worldToDelta(worldPos.toVector3());
+    LOG("Delta end: X: " << deltaEnd[0] << " Y: " << deltaEnd[1] << " Z: " << deltaEnd[2] << std::endl);
+    const IntVector3 endMotionPos = (deltaEnd * axisStepsPerM.toVector3()).round();
+    LOG("Delta end motors: X: " << endMotionPos[0] << " Y: " << endMotionPos[1] << " Z: " << endMotionPos[2] << std::endl);
+    output[0] = endMotionPos[0];
+    output[1] = endMotionPos[1];
+    output[2] = endMotionPos[2];
+
+    if (possible)
+    {
+      // If any of the tower positions are NaN, the move is impossible
+      *possible = !deltaEnd.hasNan();
+    }
+    break;
+  }
+  case AXIS_CONFIG_CORE_XY:
+  {
+    const Vector3 coreXYEnd = worldToCoreXY(worldPos.toVector3());
+    const IntVector3 endMotionPos = (coreXYEnd * axisStepsPerM.toVector3()).round();
+
+    output[0] = endMotionPos[0];
+    output[1] = endMotionPos[1];
+    assert(output[2] == endMotionPos[2]);
+    output[2] = endMotionPos[2];
+    break;
+  }
+  case AXIS_CONFIG_H_BELT:
+  {
+    const Vector3 hBeltEnd = worldToHBelt(worldPos.toVector3());
+    const IntVector3 endMotionPos = (hBeltEnd * axisStepsPerM.toVector3()).round();
+
+    output[0] = endMotionPos[0];
+    output[1] = endMotionPos[1];
+    assert(output[2] == endMotionPos[2]);
+    output[2] = endMotionPos[2];
+    break;
+  }
+  case AXIS_CONFIG_XY:
+  break;
+  default:
+    output.zero();
+    LOG("don't know what to do for axis config: " << axis_config << std::endl);
+    assert(0);
+    break;
+  }
+
+  return output;
+}
+void AlarmCallback::call(int alarmType, std::string message, std::string shortMessage)
+{
+  assert(0); // this method will be overridden by child classes - SWIG takes care of it
+}
+
+AlarmCallback::~AlarmCallback()
+{}

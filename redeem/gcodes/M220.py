@@ -14,18 +14,14 @@ import logging
 class M220(GCodeCommand):
 
     def execute(self, g):
-	if g.has_letter("S"):
-            self.printer.factor = float(g.get_value_by_letter("S")) / 100
-        else:
-            self.printer.factor = 1
-
-	logging.debug("M220 factor " + str(self.printer.factor))
+        self.printer.speed_factor = g.get_float_by_letter("S", 100) / 100
+	logging.debug("M220 speed factor " + str(self.printer.speed_factor))
 	
     def get_description(self):
         return "Set speed override percentage"
 
     def get_long_description(self):
-        return "M220 S<factor in percent> - set speed factor override percentage"
+        return "M220 S<speed factor in percent> - set speed factor override percentage"
 
     def is_buffered(self):
         return False

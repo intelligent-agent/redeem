@@ -15,6 +15,7 @@ class M19(GCodeCommand):
 
     def execute(self, g):
         self.printer.path_planner.wait_until_done()
+        self.printer.path_planner.native_planner.reset()
         for name, stepper in self.printer.steppers.iteritems():
             stepper.reset()
 

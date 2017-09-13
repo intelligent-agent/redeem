@@ -19,7 +19,7 @@ class M270(GCodeCommand):
 
     def execute(self, g):
         if g.has_letter("S"):
-            axis_config = int(g.get_value_by_letter("S"))
+            axis_config = g.get_int_by_letter("S")
             if axis_config in [0, 1, 2, 3]:
                 self.printer.axis_config = axis_config
                 logging.info("Coordinate system set to " + str(self.printer.axis_config))

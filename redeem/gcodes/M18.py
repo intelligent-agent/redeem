@@ -22,7 +22,7 @@ class M18(GCodeCommand):
         self.printer.path_planner.wait_until_done()
         if g.has_letter("D"):
             pd = bool(g.get_int_by_letter("D", 0))
-            self.printer.steppers["X"].set_stepper_power_down(pd)
+            Stepper.set_stepper_power_down(pd)
         else:
             # If no token is present, disable all steppers
             if g.num_tokens() == 0:

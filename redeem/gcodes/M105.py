@@ -29,9 +29,8 @@ class M105(GCodeCommand):
         answer = "ok " + format_temperature(current_tool, "T")
 
         # Append heaters
-        for h in self.printer.heaters:
-            prefix = self.printer.heaters[h].prefix
-            answer += " " + format_temperature(h, prefix)
+        for heater, data in sorted(self.printer.heaters.iteritems(), key=lambda(k,v): (v,k)):
+            answer += " " + format_temperature(heater, data.prefix)
 
         # Append the current tool power is using PID
         if not self.printer.heaters[current_tool].onoff_control:

@@ -53,7 +53,8 @@ class GCodeProcessor:
                 self.load_classes_in_module(obj)
             elif inspect.isclass(obj) and \
                     issubclass(obj, GCodeCommand.GCodeCommand) and \
-                    module_name != 'GCodeCommand':
+                    module_name != 'GCodeCommand' and \
+                    module_name != 'ToolChange':
                 logging.debug("Loading GCode handler " + module_name + "...")
                 self.gcodes[module_name] = obj(self.printer)
 
@@ -143,7 +144,7 @@ class GCodeProcessor:
         
 
     def peek(self, gcode):
-        if self.printer.running_M116 and gcode.code() in ["M108", "M104", "140"]:
+        if self.printer.running_M116 and gcode.code() in ["M108", "M104", "M140"]:
             self.execute(gcode)
             return True
         return False

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-This is an implementation of the PWM DAC
+This is an implementation of the PWM pin for servos
 
 Author: Elias Bakken
 email: elias(dot)bakken(at)gmail(dot)com

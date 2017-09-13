@@ -17,7 +17,8 @@ except ImportError:
 class G90(GCodeCommand):
 
     def execute(self, g):
-        self.printer.path_planner.wait_until_done()
+        self.printer.axes_absolute = ["X", "Y", "Z", "E", "H", "A", "B", "C"]
+        self.printer.axes_relative = []
         self.printer.movement = Path.ABSOLUTE
 
     def get_description(self):
@@ -30,7 +31,8 @@ class G90(GCodeCommand):
 class G91(GCodeCommand):
 
     def execute(self, g):
-        self.printer.path_planner.wait_until_done()
+        self.printer.axes_absolute = []
+        self.printer.axes_relative = ["X", "Y", "Z", "E", "H", "A", "B", "C"]
         self.printer.movement = Path.RELATIVE
 
     def get_description(self):

@@ -28,7 +28,7 @@ class M221(GCodeCommand):
 
 	# apply new extrude factor
 	if g.has_letter("S"):
-            self.printer.extrude_factor = float(g.get_value_by_letter("S")) / 100
+            self.printer.extrude_factor = g.get_float_by_letter("S") / 100
         else:
             self.printer.extrude_factor = 1.0
 

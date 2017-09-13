@@ -34,7 +34,12 @@ class Cooler:
         self.target_temp = 0.0             # Target temperature (Ts). Start off. 
         self.P = 1.0                      # Proportional 
         self.onoff_control = onoff_control # If we use PID or ON/OFF control
+        self.max_speed = 1.0
         self.ok_range = 4.0
+
+    def set_max_speed(self, speed):
+        """ Set the desired max speed of the fan """
+        self.max_speed = speed
 
     def set_target_temperature(self, temp):
         """ Set the desired temperature of the extruder """
@@ -86,6 +91,8 @@ class Cooler:
 
             # Invert the control since it'a a cooler
             power = 1.0 - power
+            # Clamp the max speed
+            power = min(power, self.max_speed)
             #logging.info("Err: {}, Pwr: {}".format(error, power))
             self.fan.set_value(power)            		 
             time.sleep(1)
