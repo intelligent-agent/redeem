@@ -264,7 +264,8 @@ class RelativePath(Path):
         self.ideal_end_pos = np.copy(prev.ideal_end_pos) + vec
         
         self.end_pos = self.start_pos + vec
-        
+        if self.use_bed_matrix:
+            self.end_pos[:3] = self.end_pos[:3].dot(self.printer.matrix_bed_comp)        
 
 class MixedPath(Path):
     """ A path some mixed and some absolute movement axes """

@@ -296,7 +296,7 @@ class PathPlanner:
 
         return
 
-    def home(self, axis):
+    def home(self, axis, use_matrix=False):
         """ Home the given axis using endstops (min) """
         logging.debug("homing " + str(axis))
         

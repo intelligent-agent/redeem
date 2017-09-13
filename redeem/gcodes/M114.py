@@ -13,7 +13,10 @@ from GCodeCommand import GCodeCommand
 
 class M114(GCodeCommand):
     def execute(self, g):
-        pos = self.printer.path_planner.get_current_pos(mm=True)
+        if g.has_letter("M"):
+            pos = self.printer.path_planner.get_current_pos(mm=True, ideal=False)
+        else:
+            pos = self.printer.path_planner.get_current_pos(mm=True, ideal=True)            
         axis_order = ['X', 'Y', 'Z', 'E']
         pos_ordered = [(i, pos[i]) for i in axis_order if i in pos]
         pos_ordered.extend(sorted(i for i in pos.iteritems() if i[0] not in axis_order))
@@ -24,7 +27,9 @@ class M114(GCodeCommand):
 
     def get_long_description(self):
         return ("Get current printer head position. "
-            "The returned value is in millimeters.")
+            "This is the ideal positition, without bed compensation. "
+            "The returned value is in millimeters.\n"
+            "M = Return the position seen with the bed matix enabled " )
 
     def get_test_gcodes(self):
         return ["M114"]
