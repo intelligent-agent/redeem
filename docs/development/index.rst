@@ -7,6 +7,7 @@ Development
     :hidden:
 
     ./replicape.rst
+    ./plugins.rst
     ./documentation.rst
 
 Here are the resources to guide for development of redeem, replicape and umikaze.

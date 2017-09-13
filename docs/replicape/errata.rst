@@ -18,5 +18,3 @@ on the board. The error is that 470K resistors were mounted instead of
 4.7K for the thermistor voltage divider. The resistors were manually
 changed to 5.1K resistors. The thermistor voltage divider resistance
 value is changed in software to reflect this.
-
-..  gcodes::

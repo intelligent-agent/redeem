@@ -125,4 +125,4 @@ Since the hotbed is also a resistive load, polarity does not matter.
 Similar to the power in connector, there are double connections
 to safely carry the current needed for the hotbed.
 
-For more detailed information, please see Replicape's :doc:`/replicape/hardwaredetail`.
+For more detailed information, please see Replicape's :doc:`/replicape/techspecs`.

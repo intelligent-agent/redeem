@@ -6,6 +6,10 @@ Replicape
     :hidden:
 
     ./techspecs.rst
+    ./configuration.rst
+    ./gcodes.rst
+    ./mcodes.rst
+    ./redeem.rst
     ./errata.rst
 
 Replicape is a high-end 3D-printer electronics package built on the BeagleBone Black platform. Similar

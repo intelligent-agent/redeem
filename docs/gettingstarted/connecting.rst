@@ -12,6 +12,17 @@ __ http://kamikaze.local
 
 If you cannot connect, read the section on :doc:`/support/howto/linklocal`.
 
+Once you connect to the OctoPrint interface, you will need to step
+through setup the first time. As you step through the setup:
+
+-  Set a username and password for OctoPrint
+-  It's recommended that you keep Access Control Enabled for security
+   reasons.
+-  Set your print bed dimensions
+-  Axis speeds can be left at the defaults, as they only control the
+   manual movements that you make through OctoPrint.
+
+
 Terminal
 --------
 
@@ -36,6 +47,7 @@ address of 192.168.7.2. Connect your host computer to the device and then
 log in with::
 
     ssh root@192.168.7.2
+
 
 Access Control
 --------------

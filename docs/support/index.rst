@@ -8,6 +8,7 @@ Getting Support
     ./knownproblems.rst
     ./howto/imageburn.rst
     ./howto/beginlinux.rst
+    ./howto/linklocal.rst
 
 
 

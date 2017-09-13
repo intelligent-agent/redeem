@@ -26,7 +26,7 @@ class GCodeDirective(rst.Directive):
 
         node = self.node_class()
 
-        from redeem import gcodes
-        inspect.getmembers(gcodes, inspect.isclass)
+        # from redeem import gcodes
+        # inspect.getmembers(gcodes, inspect.isclass)
 
         return [node,]

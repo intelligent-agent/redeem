@@ -16,15 +16,6 @@ a `Replicape <Replicape>`__.
   within OctoPrints own software update system.
 
 
-Previous versions of Kamikaze/Umikaze:
-
-
--  `Kamikaze 2.1.0 (based on Ubuntu 16.04.1 LTS, first community release) </2.1.0/kamikaze/index.html>`_
-
--  `Kamikaze 1.1.0 (based on Debian Jessie IoT image) </2.1.0/kamikaze/index.html>`_
--  `Kamikaze 2.0.8 (based on Debian Jessie upgraded to Stretch IoT
-   image) <http://wiki.thing-printer.com/index.php?title=Kamikaze>`__
-
 **Download** can be found at `Umikaze 2.1.1 <https://github.com/goeland86/Umikaze2/releases/tag/v2.1.1>`_
 
 **Features**
