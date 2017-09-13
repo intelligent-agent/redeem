@@ -1,5 +1,5 @@
-Hardware Detail
-===============
+Tech Specs
+==========
 
 .. role:: todo
 

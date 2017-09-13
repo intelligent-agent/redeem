@@ -5,8 +5,7 @@ Replicape
     :maxdepth: 4
     :hidden:
 
-    ./hardwaredetail.rst
-    ./hardwaredevelopment.rst
+    ./techspecs.rst
     ./errata.rst
 
 Replicape is a high-end 3D-printer electronics package built on the BeagleBone Black platform. Similar
@@ -36,7 +35,7 @@ __ https://www.seeedstudio.com/Replicape-Rev-B-3D-printer-controller-board-p-294
 Details on connecting the Replicape to 3D printer or other CNC machines
 can be found at :doc:`/gettingstarted/wiring` in the :doc:`/gettingstarted/index` guide.
 
-:doc:`hardwaredetail` has additional information and specifications on the Replicape.
+:doc:`techspecs` has additional information and specifications on the Replicape.
 
 As Replicape - both hardware and software - is an open-source project, board design
-and schematics can be found on the :doc:`hardwaredevelopment` page.
+and schematics can be found on the :doc:`/development/replicape` page.

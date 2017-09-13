@@ -1,6 +1,6 @@
 
-Hardware Development
-====================
+Replicape Development
+=====================
 
 .. role:: todo
 
