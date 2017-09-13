@@ -2,8 +2,6 @@
 
 Redeem was originally written in, "code first, test later" fashion. Unit testing began to be retro fitted in June 2017.
 
-In order to run this test module, run `python -m unittest discover tests` from parent directory.
-
 This test platform supports execution outside of a physical Beagle Bone Black, say on a local Linux ia64 or whatever.
 
 A virtual environment is recommended. Example set-up for testing only ...

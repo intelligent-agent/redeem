@@ -29,32 +29,32 @@ class G2(GCodeCommand):
         for i in range(g.num_tokens()):
             axis = g.token_letter(i)
             # Get the value, new position or vector
-            value =  float(g.token_value(i)) / 1000.0
+            value = float(g.token_value(i)) / 1000.0
             if axis in ('E', 'H') and self.printer.extrude_factor != 1.0:
-                   value *= self.printer.extrude_factor
+                value *= self.printer.extrude_factor
             smds[axis] = value        
 
         if self.printer.movement == Path.ABSOLUTE:
-            path = AbsolutePath(smds, self.printer.feed_rate * self.printer.factor, self.printer.accel)
+            path = AbsolutePath(smds, self.printer.feed_rate * self.printer.speed_factor, self.printer.accel)
         elif self.printer.movement == Path.RELATIVE:
-            path = RelativePath(smds, self.printer.feed_rate * self.printer.factor, self.printer.accel)
+            path = RelativePath(smds, self.printer.feed_rate * self.printer.speed_factor, self.printer.accel)
         else:
             logging.error("invalid movement: " + str(self.printer.movement))
             return
 
         # http://www.manufacturinget.org/2011/12/cnc-g-code-g02-and-g03/
         if g.has_letter('R'):
-            path.R = float(g.get_value_by_letter("R")) / 1000.0
+            path.R = float(g.get_float_by_letter("R")) / 1000.0
             return path
 
         if self.printer.arc_plane in [Path.X_Y_ARC_PLANE, Path.X_Z_ARC_PLANE]:
-            path.I = float(g.get_value_by_letter("I"))/1000.0 if g.has_letter("I") else 0.0
+            path.I = float(g.get_float_by_letter("I"))/1000.0 if g.has_letter("I") else 0.0
 
         if self.printer.arc_plane in [Path.X_Y_ARC_PLANE, Path.Y_Z_ARC_PLANE]:
-            path.J = float(g.get_value_by_letter("J"))/1000.0 if g.has_letter("J") else 0.0
+            path.J = float(g.get_float_by_letter("J"))/1000.0 if g.has_letter("J") else 0.0
 
         if self.printer.arc_plane in [Path.X_Z_ARC_PLANE, Path.Y_Z_ARC_PLANE]:
-            path.K = float(g.get_value_by_letter("K")) / 1000.0 if g.has_letter("K") else 0.0
+            path.K = float(g.get_float_by_letter("K")) / 1000.0 if g.has_letter("K") else 0.0
 
         return path
 
