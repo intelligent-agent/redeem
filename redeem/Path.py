@@ -290,7 +290,7 @@ class RelativePath(Path):
         # In an ideal world, this is where we want to go. 
         self.ideal_end_pos = np.copy(prev.ideal_end_pos) + vec
         
-        self.end_pos = self.start_pos + vec
+        self.end_pos = np.copy(self.ideal_end_pos)
         if self.use_bed_matrix:
             self.end_pos[:3] = self.end_pos[:3].dot(self.printer.matrix_bed_comp)        
 
