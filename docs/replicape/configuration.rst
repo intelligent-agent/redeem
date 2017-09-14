@@ -300,13 +300,17 @@ Current
 
 ..  danger::
 
-  **Never run the Replicape with the steppers running above 0.5A without cooling**.
+  Never run the Replicape with the steppers running above 0.5A without cooling.
   Never exceed 1.2A of regular use either - the TMC2100 drivers aren't
   rated higher. If you need more current to drive two motors off the
-  same stepper, use slave mode with a second driver (usually H). Yes, it
+  same stepper, use slave mode with a second driver (usually H). While it
   means splitting off your wiring of the stepper motors you had going to
   a single driver, but it also means you avoid overheating your drivers.
 
+Ratios
+~~~~~~
+
+::
 
     # steps per mm:
     #   Defined how many stepper full steps needed to move 1mm.
@@ -331,6 +335,10 @@ Current
     backlash_b = 0.0
     backlash_c = 0.0
 
+Enable / Disable
+~~~~~~~~~~~~~~~~
+
+::
 
     # Which steppers are enabled
     in_use_x = True
@@ -342,6 +350,11 @@ Current
     in_use_b = False
     in_use_c = False
 
+Direction
+~~~~~~~~~
+
+::
+
     # Set to -1 if axis is inverted
     direction_x =  1
     direction_y =  1
@@ -351,6 +364,54 @@ Current
     direction_a =  1
     direction_b =  1
     direction_c =  1
+
+..  _ConfigurationDecay:
+
+Decay
+~~~~~
+
+The decay mode affects the way the stepper motor controllers
+decays the current. Basically slow decay will give more of a hissing
+sound while standing still and fast decay will cause the steppers to
+be silent when stationary, but loud when stepping. The microstepping_
+settings is :math:`2^x`, so ``microstepping_x = 2`` means :math:`2^2 = 4`.
+``3`` then is :math:`2^3 = 8` or one-eighth.
+
+On Replicape Rev B, there are 8 levels of decay. Please consult the `data sheet for TMC2100`__ on the different options.
+
+__ http://www.trinamic.com/_scripts/download.php?file=_articles%2Fproducts%2Fintegrated-circuits%2Ftmc2100%2F_datasheet%2FTMC2100_datasheet.pdf
+
+
+There are three settings that are controlled on the TMC2100 by the decay mode or rather “chopper configuration”: CFG0,
+CFG4 and CFG5 in the TMC2100 data sheet.
+
+**CFG0:** Sets chopper off time (Duration of slow decay phase)
+
+| DIS - 140 Tclk (recommended, most universal choice)
+| EN - 236 Tclk (medium)
+
+**CFG4:** Sets chopper hysteresis (Tuning of zero crossing precision)
+
+| DIS: (recommended most universal choice): low hysteresis with ≈4% offull scale current.
+| EN: high setting with ≈6% of full scale current at sense resistor.
+
+
+**CFG5:** Sets chopper blank time ( Duration of blanking of switching spike )
+
+| Blank time (in number of clock cycles)
+| DIS - 16 (best performance for StealthChop)
+| EN - 24 (recommended, most universal choice)
+|
+| 0 - DIS\_CFG0 \| DIS\_CFG4 \| DIS\_CFG5
+| 1 - DIS\_CFG0 \| DIS\_CFG4 \| EN\_CFG5
+| 2 - DIS\_CFG0 \| EN\_CFG4 \| DIS\_CFG5
+| 3 - DIS\_CFG0 \| EN\_CFG4 \| EN\_CFG5
+| 4 - EN\_CFG0 \| DIS\_CFG4 \| DIS\_CFG5
+| 5 - EN\_CFG0 \| DIS\_CFG4 \| EN\_CFG5
+| 6 - EN\_CFG0 \| EN\_CFG4 \| DIS\_CFG5
+| 7 - EN\_CFG0 \| EN\_CFG4 \| EN\_CFG5
+
+::
 
     # Set to True if slow decay mode is needed
     slow_decay_x = 0
@@ -384,57 +445,6 @@ Slave
     use_timeout = True
     timeout_seconds = 500
 
-
-
-
-
-The decay mode affects the way the stepper motor controllers
-decays the current. Basically slow decay will give more of a hissing
-sound while standing still and fast decay will cause the steppers to
-be silent when stationary, but loud when stepping. The microstepping\_
-settings is (2^x), so microstepping\_x = 2 means 2^2 = 4. 3 is then
-2^3 = 8. (One eighth to be precise)
-
-Replicape Rev B
-^^^^^^^^^^^^^^^
-
-On Replicape Rev B, there are 8 levels of decay. Please consult the `data sheet for TMC2100`__ on the different options.
-
-__ http://www.trinamic.com/_scripts/download.php?file=_articles%2Fproducts%2Fintegrated-circuits%2Ftmc2100%2F_datasheet%2FTMC2100_datasheet.pdf
-
-..  _ConfigurationDecay:
-
-Decay
-~~~~~
-
-There are three settings that are controlled on the TMC2100 by the decay mode or rather “chopper configuration”: CFG0,
-CFG4 and CFG5 in the TMC2100 data sheet.
-
-**CFG0:** Sets chopper off time (Duration of slow decay phase)
-
-| DIS - 140 Tclk (recommended, most universal choice)
-| EN - 236 Tclk (medium)
-
-**CFG4:** Sets chopper hysteresis (Tuning of zero crossing precision)
-
-| DIS: (recommended most universal choice): low hysteresis with ≈4% offull scale current.
-| EN: high setting with ≈6% of full scale current at sense resistor.
-
-
-**CFG5:** Sets chopper blank time ( Duration of blanking of switching spike )
-
-| Blank time (in number of clock cycles)
-| DIS - 16 (best performance for StealthChop)
-| EN - 24 (recommended, most universal choice)
-|
-| 0 - DIS\_CFG0 \| DIS\_CFG4 \| DIS\_CFG5
-| 1 - DIS\_CFG0 \| DIS\_CFG4 \| EN\_CFG5
-| 2 - DIS\_CFG0 \| EN\_CFG4 \| DIS\_CFG5
-| 3 - DIS\_CFG0 \| EN\_CFG4 \| EN\_CFG5
-| 4 - EN\_CFG0 \| DIS\_CFG4 \| DIS\_CFG5
-| 5 - EN\_CFG0 \| DIS\_CFG4 \| EN\_CFG5
-| 6 - EN\_CFG0 \| EN\_CFG4 \| DIS\_CFG5
-| 7 - EN\_CFG0 \| EN\_CFG4 \| EN\_CFG5
 
 Slave mode
 ~~~~~~~~~~

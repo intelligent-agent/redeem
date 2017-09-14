@@ -178,3 +178,20 @@ Footnotes: notes
 
 ..  [#f1] Text of the first footnote.
 ..  [#f2] Text of the second footnote.
+
+
+Code Documentation
+------------------
+
+Docstrings should use the NumPY format. Source code for these examples can be found at :doc:`examplepy`
+
+..  autofunction:: example.function_with_types_in_docstring
+
+..  autofunction:: example.module_level_function
+
+..  autofunction:: example.example_generator
+
+..  autoexception:: example.ExampleError
+
+..  autoclass:: example.ExampleClass
+    :members:

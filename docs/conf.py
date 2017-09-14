@@ -22,6 +22,7 @@ import mock
 from sphinx.errors import SphinxError
 
 sys.path.insert(0, os.path.abspath('..'))
+sys.path.insert(0, os.path.abspath('.'))
 sys.modules['evdev'] = mock.Mock()
 sys.modules['RotaryEncoder'] = mock.Mock()
 sys.modules['Watchdog'] = mock.Mock()
@@ -60,11 +61,12 @@ extensions = ['sphinx.ext.autodoc',
               'sphinx.ext.doctest',
               'sphinx.ext.todo',
               'sphinx.ext.mathjax',
-              'sphinx.ext.viewcode',
-              'sphinx.ext.githubpages']
+              # 'sphinx.ext.viewcode',
+              'sphinx.ext.githubpages',
+              'sphinx.ext.napoleon']
 
 # wip
-# extensions += 'ext.gcodes'
+extensions += ['ext.gcodes',]
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -199,4 +201,6 @@ scv_sort = ('semver',)
 scv_recent_tag = True
 scv_whitelist_tags = (re.compile(r'^\d+\.\d+(\.\d+)?$'),)
 scv_whitelist_branches = (re.compile(r'$^'), )
+
+autoclass_content = "both"
 

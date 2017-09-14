@@ -19,6 +19,8 @@
 @import "base.less";
 @import "doc.less";
 @import "landing.less";
+@import "pygments";
+
 
 p {
   margin-top:6px;
@@ -100,13 +102,50 @@ table.docutils {
   }
 }
 
-code.literal {
-  &:extend(pre);
-  display:inline-block;
-  padding:0 4px;
-  margin:0 2px;
-  font-weight:normal;
+code {
+
+  &.literal {
+    &:extend(pre);
+    display:inline-block;
+    padding:0 4px;
+    margin:0 2px;
+    font-weight:normal;
+  }
+  &.descclassname {
+    background:none;
+    color: @light-grey;
+    padding:0;
+  }
+
+  &.descname {
+    background:none;
+    color: @color-primary;
+    padding:0;
+  }
 }
+
+dl.class, dl.function, dl.exception {
+
+  & > dt {
+    padding-bottom:10px;
+  }
+  .sig-paren {
+    padding: 0 2px;
+  }
+
+  dl.method, dl.staticmethod, & > dd {
+    padding-left: 20px;
+  }
+}
+
+table.docutils.field-list {
+  tr, th, td {
+    border: none;
+    padding: 0;
+  }
+}
+
+
 
 table.docutils > thead > tr > th {
     border-bottom-color: lighten(@color-primary, 20%);

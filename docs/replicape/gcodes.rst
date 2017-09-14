@@ -1,6 +1,27 @@
 G-Code Reference
 ================
 
+
+..  gcodes::
+
+
+---------------------------------
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 You can always get the updated list of implemented gcodes by writing “G”
 or “M” in the terminal on Octoprint. For a longer description of each
 gcode write the code + “?” in the terminal. So to get a description of
@@ -38,6 +59,8 @@ G0: Control the printer head position as well as the currently selected tool
 | Q = move acceleration (mm/min^2) - stored until daemon reset
 
 
+.. _mybestgcode:
+
 G1: Control the printer head position as well as the currently selected tool
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -53,6 +76,7 @@ Move each axis by the amount and direction depicted.
 | F = move speed (mm/min) - stored until daemon reset
 | Q = move acceleration (mm/min^2) - stored until daemon reset
 
+i am referencing it this way :ref:`abc`
 
 G2: Clockwise arc
 ^^^^^^^^^^^^^^^^^
