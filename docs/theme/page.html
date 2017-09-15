@@ -49,36 +49,22 @@
                         </a>
                     </div>
                     <div class="version-select">
-                        <div class="dropdown">
-                          <button class="btn btn-version dropdown-toggle" type="button" id="dropdownMenu1" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
-                              {%- if current_version -%}
-                                version {{ current_version}}
-                              {%- else -%}
-                                version 0.0.0
-                              {%- endif -%}
-                              &nbsp;
-                              <span class="caret"></span>
-                          </button>
-                          <ul class="dropdown-menu" aria-labelledby="dropdownMenu1">
-                              {%- if versions -%}
-                                {%- for name, url in versions.tags %}
-                                    <li><a href="{{ url }}">v {{ name }}</a></li>
-                                {%- endfor -%}
-                              {%- else -%}
-                                <li><a href="#">development mode</a></li>
-                              {%- endif %}
-                          </ul>
-                            {%- if current_version -%}
-                                {%- if scv_is_recent_ref -%}
-                                    <span class="version-msg version-latest">&nbsp; ( stable release )</span>
-                                {%- else -%}
-                                    <span class="version-msg version-previous">&nbsp; ( previous release )</span>
-                                {%- endif -%}
+                        {% include "version-menu.html" %}
+
+                    </div>
+                    {%- if current_version -%}
+                        <div class="version-msg">
+                            {%- if scv_is_root or scv_is_greatest_tag -%}
+                                <div class="version-latest">( release )</div>
+                            {%- elif scv_is_tag -%}
+                                <div class="version-previous">( previous )</div>
                             {%- else -%}
-                                <span class="version-msg">&nbsp; ( development mode )</span>
+                                <div class="version-branch"></div>
                             {%- endif -%}
                         </div>
-                    </div>
+                    {%- else -%}
+                        <div class="version-msg">( development )</div>
+                    {%- endif -%}
                 </div><!--//branding-->
                 <ol class="breadcrumb">
                     <li class="nav-item nav-item-0"><a href="{{ pathto(master_doc) }}">Docs</a>{{ reldelim1 }}</li>
@@ -98,7 +84,7 @@
                     </div><!--//doc-content-->
                     <div class="doc-sidebar hidden-xs">
                         <nav id="doc-nav">
-                            {{ toctree(maxdepth=3, includehidden=True) }}
+                            {{ toctree(maxdepth=4, includehidden=True) }}
                         </nav>
                     </div><!--//doc-sidebar-->
                 </div><!--//doc-body-->              

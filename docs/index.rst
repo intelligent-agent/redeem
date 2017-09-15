@@ -50,7 +50,7 @@ There are several different projects that contribute to this platform.
 
 
 ..  toctree::
-    :maxdepth: 4
+    :maxdepth: 5
     :hidden:
 
     ./gettingstarted/index.rst

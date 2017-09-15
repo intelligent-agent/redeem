@@ -2,13 +2,14 @@ Replicape
 =========
 
 ..  toctree::
-    :maxdepth: 4
+    :maxdepth: 8
     :hidden:
 
     ./techspecs.rst
     ./configuration.rst
     ./gcodes.rst
     ./mcodes.rst
+    ./tcodes.rst
     ./redeem.rst
     ./errata.rst
 

@@ -200,7 +200,7 @@ import re
 scv_sort = ('semver',)
 scv_recent_tag = True
 scv_whitelist_tags = (re.compile(r'^\d+\.\d+(\.\d+)?$'),)
-scv_whitelist_branches = (re.compile(r'$^'), )
+scv_whitelist_branches = ('develop', )
 
 autoclass_content = "both"
 

@@ -25,8 +25,43 @@ Changing Password
 -----------------
 
 
-Do this by SSH-ing in as the user you want to change the password of and running the command::
+Do this by SSH-ing in as the user you want to change the password of and running the command:
+
+::
 
     passwd
 
+Helpful SSH Commands
+--------------------
 
+Starts a log within the terminal:
+
+::
+
+    sudo journalctl -fl ;
+
+
+Open network control panel:
+
+::
+
+    sudo nmtui
+
+Restarts Redeem:
+
+::
+
+    sudo systemctl restart redeem
+
+Shows which version of Kamikaze is installed:
+
+::
+
+    cat /etc/kamikaze-release
+
+
+Show status of Toggle:
+
+::
+
+    systemctl status toggle -l -n 100

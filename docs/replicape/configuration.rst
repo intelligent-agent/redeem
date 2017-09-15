@@ -47,6 +47,7 @@ they are case sensitive.
     If you are not writing your own new ``printer.cfg``, keep all your printer
     settings in ``local.cfg`` to avoid getting any setting over-written by a redeem update.
 
+.. _ConfigSystem:
 
 System
 ------
@@ -76,6 +77,8 @@ board revision is read from the EEPROM on the Replicape.
     # Machine type is used by M115
     # to identify the machine connected.
     machine_type = Unknown
+
+.. _ConfigPlugins:
 
 Plugins
 -------
@@ -176,6 +179,8 @@ or in the printer.cfg file if you are a printer manufacturer.
             0.0, 1.0, 0.0,
             0.0, 0.0, 1.0
 
+.. _ConfigDelta:
+
 Delta
 -----
 
@@ -201,10 +206,11 @@ Terminology:
 
 For more information on correcting delta calibration, see the :doc:`/support/howto/deltacalibration`.
 
-
 ::
 
     [Delta]
+
+    # DEPRECATED IN 2.1.1
     # Distance head extends below the effector.
     Hez = 0.0
 
@@ -224,12 +230,19 @@ For more information on correcting delta calibration, see the :doc:`/support/how
     B_radial = 0.0
     C_radial = 0.0
 
+    # DEPRECATED IN 2.1.1
     # Compensation for positional error of the columns
     # (For details, read: https://github.com/hercek/Marlin/blob/Marlin_v1/calibration.wxm)
     # Positive values move the tower to the right, in the +X direction, tangent to it's radius
     A_tangential = 0.0
     B_tangential = 0.0
     C_tangential = 0.0
+
+    # NEW IN 2.1.1
+    A_angular = 0.0
+    B_angular = 0.0
+    C_angular = 0.0
+
 
 Here is a visual depiction of what the length and radius looks like:
 
@@ -239,6 +252,8 @@ Here is a visual depiction of what the length and radius looks like:
 Here is what the Hez looks like:
 
 ..  image:: media/delta_hez.png
+
+..  _ConfigSteppers:
 
 Steppers
 --------
@@ -251,15 +266,17 @@ This section has the stuff you need for the the steppers:
 - acceleration
 - max speed
 - the option to invert a stepper (so you don't have to rotate the stepper connector),
-- the decay mode of the current chopping on the motor drives (see the :ref:`ConfigurationDecay` for more information.
+- the decay mode of the current chopping on the motor drives (see the :ref:`ConfigStepperDecay` for more information.
 
 ::
 
     # Stepper e is ext 1, h is ext 2
     [Steppers]
 
+..  _ConfigStepperMicrostepping:
+
 Microstepping
--------------
+~~~~~~~~~~~~~
 
 ::
 
@@ -282,6 +299,7 @@ Microstepping
 | 7 - Quarter step, StealthChop, interpolated to 256 microsteps
 | 8 - 16th step, StealthChop, interpolated to 256 microsteps
 
+..  _ConfigStepperCurrent:
 
 Current
 ~~~~~~~
@@ -306,6 +324,8 @@ Current
   same stepper, use slave mode with a second driver (usually H). While it
   means splitting off your wiring of the stepper motors you had going to
   a single driver, but it also means you avoid overheating your drivers.
+
+..  _ConfigStepperRatios:
 
 Ratios
 ~~~~~~
@@ -335,6 +355,8 @@ Ratios
     backlash_b = 0.0
     backlash_c = 0.0
 
+..  _ConfigStepperEnable:
+
 Enable / Disable
 ~~~~~~~~~~~~~~~~
 
@@ -349,6 +371,8 @@ Enable / Disable
     in_use_a = False
     in_use_b = False
     in_use_c = False
+
+..  _ConfigStepperDirection:
 
 Direction
 ~~~~~~~~~
@@ -365,7 +389,7 @@ Direction
     direction_b =  1
     direction_c =  1
 
-..  _ConfigurationDecay:
+..  _ConfigStepperDecay:
 
 Decay
 ~~~~~
@@ -423,6 +447,8 @@ CFG4 and CFG5 in the TMC2100 data sheet.
     slow_decay_b = 0
     slow_decay_c = 0
 
+..  _ConfigStepperSlave:
+
 Slave
 ~~~~~
 
@@ -444,10 +470,6 @@ Slave
     # Stepper timout
     use_timeout = True
     timeout_seconds = 500
-
-
-Slave mode
-~~~~~~~~~~
 
 If you want to enable slave mode for a stepper driver, meaning it will
 mirror the movements of another stepper motor exactly, you need to use
@@ -513,6 +535,8 @@ direction. Most likely you will want the current to be the same as well.
     use_timeout = True
     timeout_seconds = 60
 
+..  _ConfigPlanner:
+
 Planner
 -------
 
@@ -544,6 +568,7 @@ path segments before pushing them to the PRU for processing.
     # total buffered move time should not exceed this much (ms)
     max_buffered_move_time = 1000
 
+    # DEPRECATED IN 2.1.1
     # max segment length
     max_length = 0.001
 
@@ -557,14 +582,27 @@ path segments before pushing them to the PRU for processing.
     max_speed_x = 0.2
     ...
 
+    # NEW IN 2.1.1
+    # if total buffered time gets below (min_buffered_move_time) then wait for (print_move_buffer_wait) before moving again, (ms)
+    min_buffered_move_time = 100
+
+    # DEPRECATED IN 2.1.1
     # Max speed for the steppers in m/s
     min_speed_x = 0.005
-    ...
+    min_speed_y = 0.005
+    min_speed_z = 0.005
+    min_speed_e = 0.01
+    min_speed_h = 0.01
+    min_speed_a = 0.01
+    min_speed_b = 0.01
+    min_speed_c = 0.01
 
     # When true, movements on the E axis (eg, G1, G92) will apply
     # to the active tool (similar to other firmwares).  When false,
     # such movements will only apply to the E axis.
     e_axis_active = True
+
+..  _ConfigColdends:
 
 Cold ends
 ---------
@@ -608,6 +646,8 @@ code, so yours will be different than what you see here.
     # different temperature:
     # therm-e-fan-0-target_temp = 70
 
+..   _ConfigHeaters:
+
 Heaters
 -------
 
@@ -620,6 +660,8 @@ __ http://www.thinksrs.com/downloads/programs/Therm%20Calc/NTCCalibrator/NTCcalc
 
 Some of the most common thermistor coefficients have already been
 implemented though, so you might find it here:
+
+.. _ConfigThermistors:
 
 Thermistors
 -----------
@@ -676,7 +718,7 @@ Steinhart-Heart
 
 
 PT100 type thermistors
-^^^^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~~~~
 
 +--------------------------+-----------------------------+
 | Name                     | Comment                     |
@@ -688,7 +730,7 @@ PT100 type thermistors
 
 
 Linear v/deg Scale Thermocouple Boards
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 +----------+-------------------------+
 | Name     | Comment                 |
@@ -696,6 +738,7 @@ Linear v/deg Scale Thermocouple Boards
 | Tboard   | 0.005 Volts pr degree   |
 +----------+-------------------------+
 
+..  _ConfigPID:
 
 PID autotune
 ------------
@@ -705,6 +748,8 @@ stable. To run an auto-tune, use the M-code M303. You should see the
 hot-end or heated bed temperature oscillate for a few cycles before
 completing. To set temperature, number of oscillations, which hot end to
 calibrate etc, try running “M303?” or see the description of the :ref:`M303`.
+
+..  _ConfigEndstops:
 
 Endstops
 --------
@@ -727,9 +772,6 @@ try inverting the end stop.
 See also this `blog post and video`__ for a more thorough explanation.
 
 __ http://www.thing-printer.com/end-stop-configuration-for-redeem/
-
-Soft end stops
---------------
 
 Soft end stops can be used to prevent the print head from moving beyond
 a specified point. For delta printers this is useful since they cannot
@@ -777,6 +819,8 @@ Currently Redeem does not yet support tool offsets for dual or
 multi-extrusion. These offsets must be configured in the slicer, instead
 of in the firmware, for now.
 
+..  _ConfigServos:
+
 Servos
 ------
 
@@ -808,6 +852,8 @@ indexes, so keep the indexes increasing for multiple servos.
     servo_0_pulse_min = 0.001
     servo_0_pulse_max = 0.002
 
+..  _ConfigZProbe:
+
 Z-Probe
 -------
 
@@ -832,7 +878,9 @@ section.
 
 For more information, check out the :doc:`/support/howto/zprobes` page.
 
-Rotary-encoders
+..  _ConfigRotaryEncoders:
+
+Rotary Encoders
 ---------------
 
 ..  warning::
@@ -847,7 +895,9 @@ Rotary-encoders
     cpr-e = -360
     diameter-e = 0.003
 
-Filament-Sensors
+..  _ConfigFilamentSensors:
+
+Filament Sensors
 ----------------
 
 .. warning::
@@ -859,6 +909,8 @@ Filament-Sensors
     [Filament-sensors]
     # If the error is > 1 cm, sound the alarm
     alarm-level-e = 0.01
+
+..  _ConfigWatchdog:
 
 Watchdog
 --------
@@ -878,6 +930,8 @@ watchdog which only disables the steppers.
 
     [Watchdog]
     enable_watchdog = True
+
+..  _ConfigMacros:
 
 Macros
 ------

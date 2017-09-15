@@ -1,0 +1,37 @@
+<div class="dropdown">
+  <button class="btn btn-version dropdown-toggle" type="button" id="dropdownMenu1" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+      {%- if current_version -%}
+        {%- if scv_is_branch -%}
+            branch {{ current_version}}
+        {%- else -%}
+            version {{ current_version}}
+        {%- endif -%}
+      {%- else -%}
+        version 0.0.0
+      {%- endif -%}
+      &nbsp;<span class="caret"></span>
+  </button>
+  <ul class="dropdown-menu" aria-labelledby="dropdownMenu1">
+
+      {%- if not versions -%}
+        <li><a href="#">development mode</a></li>
+      {%- else -%}
+         <li class="tag-list">
+             <ul>
+                 <li><h5>Releases</h5></li>
+                {%- for name, url in versions.tags %}
+                    <li><a href="{{ url }}">v {{ name }}</a></li>
+                {%- endfor -%}
+             </ul>
+         </li>
+          <li class="branch-list">
+              <ul>
+                  <li><h5>Branches</h5></li>
+                  {%- for name, url in versions.branches %}
+                    <li><a href="{{ url }}">{{ name }}</a></li>
+                  {%- endfor -%}
+              </ul>
+          </li>
+      {%- endif -%}
+  </ul>
+</div>
