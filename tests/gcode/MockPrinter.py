@@ -71,8 +71,8 @@ class MockPrinter(unittest.TestCase):
         """
         tf = open("../configs/local.cfg", "w")
         lines = """
-        [System]
-        log_to_file = False
+[System]
+log_to_file = False
         """
         tf.write(lines)
         tf.close()
