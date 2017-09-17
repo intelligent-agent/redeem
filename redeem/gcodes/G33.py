@@ -98,7 +98,7 @@ minimize the regression residuals.
 
 Parameters:
 
-Fn  Number of factors to optimize:
+Nn  Number of factors to optimize:
     3 factors (endstop corrections only)
     4 factors (endstop corrections and delta radius) (Default and recommended)
     6 factors (endstop corrections, delta radius, and two tower
