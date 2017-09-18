@@ -57,6 +57,7 @@ class MockPrinter(unittest.TestCase):
         Override this method for mocking something other than the path planner
         """
         cls.printer.path_planner = mock.MagicMock()
+        pass
 
     @classmethod
     def setUpConfigFiles(cls, path):
@@ -77,11 +78,15 @@ log_to_file = False
         tf.write(lines)
         tf.close()
 
+    # even though printer.path_planner is replaced with a mock, it gets initialized prior (when `Redeem` is
+    # instantiated, still need to mock the initialization of the native planner (`_init_path_planner`).
+
     @classmethod
     @mock.patch.object(EndStop, "_wait_for_event", new=None)
+    @mock.patch.object(PathPlanner, "_init_path_planner")
     @mock.patch.object(CascadingConfigParser, "get_key")
     @mock.patch("Redeem.CascadingConfigParser", new=CascadingConfigParserWedge)
-    def setUpClass(cls, mock_get_key):
+    def setUpClass(cls, mock_get_key, mock_init_path_planner):
 
         mock_get_key.return_value = "TESTING_DUMMY_KEY"
 
@@ -103,6 +108,7 @@ log_to_file = False
         cls.setUpConfigFiles(cfg_path)
 
         cls.R = Redeem(config_location=cfg_path)
+        cls.printer = cls.R.printer
         cls.printer = cls.R.printer
 
         cls.setUpPatch()
@@ -139,6 +145,7 @@ log_to_file = False
     @classmethod
     def execute_gcode(cls, text):
         g = Gcode({"message": text})
+        g.prot = 'testing_noret'
         cls.printer.processor.gcodes[g.gcode].execute(g)
         return g
 
