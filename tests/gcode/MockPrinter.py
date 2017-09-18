@@ -57,7 +57,6 @@ class MockPrinter(unittest.TestCase):
         Override this method for mocking something other than the path planner
         """
         cls.printer.path_planner = mock.MagicMock()
-        pass
 
     @classmethod
     def setUpConfigFiles(cls, path):
