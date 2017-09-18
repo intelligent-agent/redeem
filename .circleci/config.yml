@@ -1,0 +1,39 @@
+version: 2
+jobs:
+  build:
+    docker:
+      - image: circleci/python:2.7.13
+
+    working_directory: ~/repo
+
+    steps:
+      - checkout
+
+      # Download and cache dependencies
+      - restore_cache:
+          keys:
+          - v1-dependencies-{{ checksum "docs/requirements.txt" }}-{{ checksum "tests/module_requirements.txt"}}
+
+      # Install dependencies
+      - run:
+          name: install dependencies
+          command: |
+            virtualenv venv
+            . venv/bin/activate
+            pip install -r docs/requirements.txt
+            pip install -r tests/module_requirements.txt
+
+      # Cache dependencies
+      - save_cache:
+          paths:
+            - ./venv
+          key: v1-dependencies-{{ checksum "docs/requirements.txt" }}-{{ checksum "tests/module_requirements.txt"}}
+
+      # Run tests
+      - run:
+          name: run tests
+          command: |
+            . ~/repo/venv/bin/activate
+            pytest
+          working_directory: ~/repo/tests
+
