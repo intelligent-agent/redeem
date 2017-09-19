@@ -12,7 +12,7 @@ jobs:
       # Download and cache dependencies
       - restore_cache:
           keys:
-          - v1-dependencies-{{ checksum "docs/requirements.txt" }}-{{ checksum "tests/module_requirements.txt"}}
+          - v1-dependencies-{{ checksum "tests/module_requirements.txt"}}
 
       # Install dependencies
       - run:
@@ -20,20 +20,25 @@ jobs:
           command: |
             virtualenv venv
             . venv/bin/activate
-            pip install -r docs/requirements.txt
             pip install -r tests/module_requirements.txt
+            pip install pytest-html
 
       # Cache dependencies
       - save_cache:
           paths:
             - ./venv
-          key: v1-dependencies-{{ checksum "docs/requirements.txt" }}-{{ checksum "tests/module_requirements.txt"}}
+          key: v1-dependencies-{{ checksum "tests/module_requirements.txt"}}
 
       # Run tests
       - run:
           name: run tests
           command: |
             . ~/repo/venv/bin/activate
-            pytest
+            mkdir /tmp/pytest
+            pytest --html=/tmp/pytest/report.html
           working_directory: ~/repo/tests
 
+      # Store artifacts
+      - store_artifacts:
+          path: /tmp/pytest
+          destination: pytest
