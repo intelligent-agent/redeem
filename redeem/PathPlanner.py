@@ -75,11 +75,11 @@ class PathPlanner:
         self.prev.set_prev(None)
 
         if pru_firmware:
-            self.__init_path_planner()
+            self._init_path_planner()
         else:
             self.native_planner = None
 
-    def __init_path_planner(self):
+    def _init_path_planner(self):
         self.alarm_wrapper = AlarmWrapper()
         self.native_planner = PathPlannerNative(int(self.printer.move_cache_size), self.alarm_wrapper)
 
