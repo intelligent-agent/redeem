@@ -91,15 +91,13 @@ class Alarm:
             Alarm.action_command("pause")
             Alarm.action_command("alarm_filament_jam", self.message)
         elif self.type == Alarm.PHYSICAL_ENDSTOP_HIT:
-            if self.printer.stop_print_if_physical_end_stop_hit:
-                self.stop_print()
-                Alarm.action_command("pause")
+            self.stop_print()
+            Alarm.action_command("pause")
             self.inform_listeners()
             Alarm.action_command("alarm_endstop_hit", self.message)
         elif self.type == Alarm.SOFT_ENDSTOP_HIT:
-            if self.printer.stop_print_if_soft_end_stop_hit:
-                self.stop_print()
-                Alarm.action_command("pause")
+            self.stop_print()
+            Alarm.action_command("pause")
             self.inform_listeners()
             Alarm.action_command("alarm_endstop_hit", self.message)
         elif self.type == Alarm.IMPOSSIBLE_MOVE_ATTEMPTED:

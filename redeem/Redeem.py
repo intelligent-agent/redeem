@@ -186,13 +186,6 @@ class Redeem:
         # activate all the endstops
         self.printer.set_active_endstops()
 
-        # End stop alarms config
-        printer.stop_print_if_physical_end_stop_hit = printer.config.getboolean(
-            "Alarms", "stop_print_if_physical_end_stop_hit")
-        printer.stop_print_if_soft_end_stop_hit = printer.config.getboolean(
-            "Alarms", "stop_print_if_soft_end_stop_hit")
-
-
         # Init the 5 Stepper motors (step, dir, fault, DAC channel, name)
         Stepper.printer = printer
         if self.revision == "00A3":
