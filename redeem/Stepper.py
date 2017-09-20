@@ -224,6 +224,10 @@ class Stepper_00B1(Stepper):
         self.shift_reg.set_state(state, 0x0E)
         self.decay = value # For saving the setting with M500
 
+    def reset(self):
+        self.set_disabled()
+        self.set_enabled()
+
 class Stepper_00B2(Stepper_00B1):
 
     def __init__(self, stepPin, dirPin, faultPin, dac_channel, shiftreg_nr, name):
