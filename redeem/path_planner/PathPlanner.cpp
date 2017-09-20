@@ -137,17 +137,20 @@ void PathPlanner::queueMove(VectorN endWorldPos,
 
   // Cap the end position based on soft end stops
   if (enable_soft_endstops) {
-    if (softEndStopApply(endWorldPos)) {
-      if(stop_on_soft_endstops_hit){
-        LOG("soft endstop triggered - suspending path planner and triggering alarm" << std::endl);
-        acceptingPaths = false;
-        alarmCallback.call(8, "Soft endstop hit", "Soft endstop hit");
-        return;
+    int endstop = softEndStopApply(endWorldPos);
+    if (endstop) {
+      LOG("soft endstop triggered - suspending path planner and triggering alarm" << std::endl);
+      acceptingPaths = false;
+      switch(endstop){
+          case 1 : alarmCallback.call(8, "Soft endstop hit", "Soft endstop hit: X min"); break;
+          case 2 : alarmCallback.call(8, "Soft endstop hit", "Soft endstop hit: Y min"); break;
+          case 3 : alarmCallback.call(8, "Soft endstop hit", "Soft endstop hit: Z min"); break;
+          case 11: alarmCallback.call(8, "Soft endstop hit", "Soft endstop hit: X max"); break;
+          case 12: alarmCallback.call(8, "Soft endstop hit", "Soft endstop hit: Y max"); break;
+          case 13: alarmCallback.call(8, "Soft endstop hit", "Soft endstop hit: Z max"); break;
+          default: alarmCallback.call(8, "Soft endstop hit", "Soft endstop hit: unknown");
       }
-      else{
-        LOG("soft endstop triggered - continuing path planner and triggering alarm" << std::endl);
-        alarmCallback.call(8, "Soft endstop hit", "Soft endstop hit");    
-      }
+      return;
     }
   }
   // Calculate the position to reach, with bed levelling
