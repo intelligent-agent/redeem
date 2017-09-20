@@ -52,6 +52,19 @@ class AlarmWrapper(AlarmCallbackNative):
         AlarmCallbackNative.__init__(self)
 
     def call(self, type, message, short_message):
+        endstop = PruInterface.get_endstop_triggered()
+        if endstop == 1:
+            message += ": X1"
+        elif endstop == 2:
+            message += ": Y1"
+        elif endstop == 4:
+            message += ":Z1"
+        elif endstop == 8:
+            message += ": X2"
+        elif endstop == 16:
+            message += ": Y2"
+        elif endstop == 32:
+            message += ": Z2"
         logging.error("Native path planner alarm: {} {} {}".format(type, message, short_message))
         try:
             a = Alarm(int(type), message, short_message)
@@ -99,6 +112,9 @@ class PathPlanner:
         self.native_planner.setMaxBufferedMoveTime(int(self.printer.max_buffered_move_time))
         self.native_planner.setSoftEndstopsMin(tuple(self.printer.soft_min))
         self.native_planner.setSoftEndstopsMax(tuple(self.printer.soft_max))
+        self.native_planner.setSoftEndstopsMax(tuple(self.printer.soft_max))
+        self.native_planner.setStopPrintOnSoftEndstopHit(self.printer.stop_print_if_soft_end_stop_hit)
+        self.native_planner.setStopPrintOnPhysicalEndstopHit(self.printer.stop_print_if_physical_end_stop_hit)
         self.native_planner.setBedCompensationMatrix(tuple(np.identity(3).ravel()))
         self.native_planner.setAxisConfig(self.printer.axis_config)
         self.native_planner.delta_bot.setMainDimensions(Delta.L, Delta.r)

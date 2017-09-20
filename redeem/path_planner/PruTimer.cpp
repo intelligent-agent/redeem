@@ -368,7 +368,7 @@ void PruTimer::push_block(uint8_t* blockMemory, size_t blockLen, unsigned int un
 			if(!ddr_mem || stop) return;
 
 			if (ddr_mem_used == 0) {
-				QUEUELOG("PRU DDR was empty" << std::endl);
+				LOGINFO("PRU DDR was empty" << std::endl);
 			}
 			
 			
@@ -608,7 +608,7 @@ void PruTimer::run() {
 
 		if (nb == 0xFFFFFFFF)
 		{
-			// The PRU has stopped due to an endstop alarm.
+            // The PRU has stopped due to an endstop alarm.
 			endstopAlarmCallback();
 		}
 		else

@@ -58,6 +58,10 @@ class PruInterface:
     def get_steps_remaining():
         return PruInterface.get_shared_long(16)
         
+    @staticmethod
+    def get_endstop_triggered():
+        return PruInterface.get_shared_long(20)
+
 #        with open("/dev/mem", "r+b") as f:	       
 #            ddr_mem = mmap.mmap(f.fileno(), PRU_ICSS_LEN, offset=PRU_ICSS) 
 #            shared = struct.unpack('LLLL', ddr_mem[SHARED_RAM_START:SHARED_RAM_START+16])

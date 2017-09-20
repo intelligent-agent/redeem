@@ -144,6 +144,8 @@ class PathPlanner {
   void setMaxSpeedJumps(VectorN speedJumps);
   void setSoftEndstopsMin(VectorN stops);
   void setSoftEndstopsMax(VectorN stops);
+  void setStopPrintOnSoftEndstopHit(bool stop);
+  void setStopPrintOnPhysicalEndstopHit(bool stop);
   void setBedCompensationMatrix(std::vector<FLOAT_T> matrix);
   void setAxisConfig(int axis);
   void setState(VectorN set);

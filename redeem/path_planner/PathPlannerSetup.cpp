@@ -69,6 +69,16 @@ void PathPlanner::setSoftEndstopsMax(VectorN stops)
   soft_endstops_max = stops;
 }
 
+void PathPlanner::setStopPrintOnSoftEndstopHit(bool stop)
+{ 
+  stop_on_soft_endstops_hit = stop;
+}
+
+void PathPlanner::setStopPrintOnPhysicalEndstopHit(bool stop)
+{ 
+  stop_on_physical_endstops_hit = stop;
+}
+
 // bed compensation
 void PathPlanner::setBedCompensationMatrix(std::vector<FLOAT_T> matrix)
 {
@@ -90,13 +100,18 @@ void PathPlanner::setAxisConfig(int axis)
 
 void PathPlanner::pruAlarmCallback()
 {
-  LOG("PRU fired endstop alarm - disabling path planner and firing alarm" << std::endl);
-  acceptingPaths = false;
-
+  if(stop_on_physical_endstops_hit){
+    LOG("PRU fired endstop alarm - disabling path planner and firing alarm" << std::endl);
+    acceptingPaths = false;
+  }
+  else{
+    LOG("PRU fired endstop alarm - continuing path planner and firing alarm" << std::endl);
+  }
   PyGILState_STATE gstate;
   gstate = PyGILState_Ensure();
-  alarmCallback.call(7, "Endstop hit", "Endstop hit");
+  alarmCallback.call(7, "Physical Endstop hit", "Physical Endstop hit");
   PyGILState_Release(gstate);
+
 }
 
 // the state of the machine

@@ -39,7 +39,7 @@ PathPlanner::PathPlanner(unsigned int cacheSize, AlarmCallback& alarmCallback)
 {
   linesPos = 0;
   linesWritePos = 0;
-  LOG( "PathPlanner " << std::endl);
+  LOGCRITICAL( "PathPlanner, loglevel " << LOGLEVEL << std::endl);
   moveCacheSize = cacheSize;
   lines.resize(moveCacheSize);
   printMoveBufferWait = 250;
@@ -138,10 +138,16 @@ void PathPlanner::queueMove(VectorN endWorldPos,
   // Cap the end position based on soft end stops
   if (enable_soft_endstops) {
     if (softEndStopApply(endWorldPos)) {
-      LOG("soft endstop triggered - suspending path planner and triggering alarm" << std::endl);
-      acceptingPaths = false;
-      alarmCallback.call(7, "Soft endstop hit", "Soft endstop hit");
-      return;
+      if(stop_on_soft_endstops_hit){
+        LOG("soft endstop triggered - suspending path planner and triggering alarm" << std::endl);
+        acceptingPaths = false;
+        alarmCallback.call(8, "Soft endstop hit", "Soft endstop hit");
+        return;
+      }
+      else{
+        LOG("soft endstop triggered - continuing path planner and triggering alarm" << std::endl);
+        alarmCallback.call(8, "Soft endstop hit", "Soft endstop hit");    
+      }
     }
   }
   // Calculate the position to reach, with bed levelling
@@ -162,7 +168,7 @@ void PathPlanner::queueMove(VectorN endWorldPos,
   {
     LOG("attempted move to impossible position - suspending path planner and triggering alarm" << std::endl);
     acceptingPaths = false;
-    alarmCallback.call(7, "Move to unreachable position requested", "Move to unreachable position requested");
+    alarmCallback.call(9, "Move to unreachable position requested", "Move to unreachable position requested");
     return;
   }
 
@@ -255,7 +261,7 @@ void PathPlanner::queueMove(VectorN endWorldPos,
   // wait for the worker
   if(!doesPathQueueHaveSpace()){
     std::unique_lock<std::mutex> lk(line_mutex);
-    QUEUELOG( "Waiting for free move command space... Current: " << linesCount << " lines that take " << linesTicksCount / F_CPU_FLOAT << " seconds"  << std::endl);
+    LOGINFO( "Waiting for free move command space... Current: " << linesCount << " lines that take " << linesTicksCount / F_CPU_FLOAT << " seconds"  << std::endl);
     pathQueueHasSpace.wait(lk, [this] { return this->doesPathQueueHaveSpace(); });
     linesCacheRemaining = moveCacheSize - linesCount;
     linesTicksRemaining = maxBufferedMoveTime - linesTicksCount;
@@ -295,7 +301,7 @@ void PathPlanner::queueMove(VectorN endWorldPos,
   linesCacheRemaining--;
   linesTicksRemaining -= qp.getTimeInTicks();
 
-  QUEUELOG("Move queued for the worker" << std::endl);
+  LOGINFO("Move queued for the worker" << std::endl);
 
   if(linesWritePos>=moveCacheSize)
     linesWritePos = 0;
@@ -568,7 +574,7 @@ void PathPlanner::run() {
     // and we do that until the buffer is not anymore half empty.
     if(waitUntilFilledUp && !isLinesBufferFilled() && cur->getTimeInTicks() > 0) {
       unsigned lastCount = 0;
-      QUEUELOG("Waiting for buffer to fill up. " << linesCount  << " lines pending, lastCount is " << lastCount << std::endl);
+      LOGINFO("Waiting for buffer to fill up. " << linesCount  << " lines pending, lastCount is " << lastCount << std::endl);
       do {
 	lastCount = linesCount;
 	if (lastCount == 0) { // if there are no lines in the queue, we can wait indefinitely
@@ -580,14 +586,14 @@ void PathPlanner::run() {
 	  });
 	}
       } while(lastCount<linesCount && linesCount<moveCacheSize && !stop);
-      QUEUELOG("Done waiting for buffer to fill up... " << linesCount  << " lines ready. " << lastCount << std::endl);			
+      LOGINFO("Done waiting for buffer to fill up... " << linesCount  << " lines ready. " << lastCount << std::endl);			
       waitUntilFilledUp = false;
     }
 		
     //The buffer is empty, we enable again the "wait until buffer is enough full" timing procedure.
     if(linesCount<=1) {
       waitUntilFilledUp = true;
-      QUEUELOG("### Move Command Buffer Empty ###" << std::endl);
+      LOGINFO("### Move Command Buffer Empty ###" << std::endl);
     }
 
     lk.unlock();
@@ -598,7 +604,7 @@ void PathPlanner::run() {
 
     if(cur->isBlocked()){   // This step is in computation - shouldn't happen
       cur = NULL;
-      QUEUELOG( "Path planner thread: path " <<  std::dec << linesPos<< " is blocked, waiting... " << std::endl);
+      LOGINFO( "Path planner thread: path " <<  std::dec << linesPos<< " is blocked, waiting... " << std::endl);
       std::this_thread::sleep_for( std::chrono::milliseconds(100) );
       continue;
     }
@@ -746,8 +752,8 @@ void PathPlanner::runMove(
 
     if (!foundStep)
     {
-      QUEUELOG("last step at " << lastStepTime / F_CPU_FLOAT << " and final time at " << roundedStepTime / F_CPU_FLOAT
-        << " for a final delay of " << *lastDelay << std::endl);
+      /*LOGINFO("last step at " << lastStepTime / F_CPU_FLOAT << " and final time at " << roundedStepTime / F_CPU_FLOAT
+        << " for a final delay of " << *lastDelay << std::endl);*/
       break;
     }
 
