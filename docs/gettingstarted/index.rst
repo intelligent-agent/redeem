@@ -13,8 +13,7 @@ Getting Started
     ./tutorial.rst
 
 
-What will you need to get started?
-
+..  rubric:: What will you need to get started?
 
 The **Replicape** can be ordered from `ThingPrinter`__ or `Seeed Studio`__.
 
@@ -43,19 +42,24 @@ __ http://www.mouser.com/new/beagleboardorg/beagleboneblack/
 __ http://www.newark.com/beagle-bone-accessories
 
 
-A 12V to 24V power supply.
+A **12V to 24V power supply**
 
-- Minimum of 10 Amps
+- Minimum of 10 Amps.
 
-- Typical is 30 amps for a 3d printer with 3 axis, single hot end and extruder and a heat bed.
+- Maximum is 20 Amps (current on the board is limited by the fuse)
 
-- Maximum is
+A **microSD card** (minimum 4GB)
 
+A **3D printer** or **CNC mill or lathe**
 
-A 3D printer. Currently, the Replicape has been implemented with:
+*Optional:* Keyboard, monitor, microHDMI adapter for troubleshooting
 
-- ?
-- ?
-- ?
+-------
 
-Optional: keyboard and monitor (with microHDMI adapter) for trouble shooting
+..  rubric:: How do I get started?
+
+#. :doc:`Connect </gettingstarted/wiring>` your 3D printer to the replicape.
+
+#. :doc:`Install software </gettingstarted/installation>` on the BeagleBone Black.
+
+#. :doc:`Connect to the device </gettingstarted/connecting>` and :doc:`adjust the configuration </gettingstarted/configuration>` for your 3D printer.

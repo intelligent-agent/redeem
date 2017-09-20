@@ -10,7 +10,7 @@ Configuration Settings
 For Redeem, the preferred way to handle configuration is through the web
 interface. The web interface is available through
 `kamikaze.local <http://kamikaze.local>`__ assuming you have your BeagleBone on the
-local network and you are using :doc:`/umikaze/index`.
+local network and you are using Umikaze 2.1.1.
 
 The config files for redeem are present in the folder ``/etc/redeem/``.
 There are three files for setting the configuration. ``default.cfg`` is the

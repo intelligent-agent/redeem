@@ -55,8 +55,6 @@ There are several different projects that contribute to this platform.
 
     ./gettingstarted/index.rst
     ./replicape/index.rst
-    ./umikaze/index.rst
-    ./magnascreen/index.rst
     ./development/index.rst
     ./support/index.rst
     ./attribution.rst
