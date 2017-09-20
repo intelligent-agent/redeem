@@ -53,7 +53,7 @@ class AlarmWrapper(AlarmCallbackNative):
 
     def call(self, type, message, short_message):
         endstop = PruInterface.get_endstop_triggered()
-        message += ": "+["unknown", "X1", "Y1", "Z1", "X2", "Y2", "Z2"][(1<<endstop)]
+        message += ": "+["unknown", "X1", "Y1", "Z1", "X2", "Y2", "Z2"][int(np.log2([endstop])[0]+1)]
         logging.error("Native path planner alarm: {} {} {}".format(type, message, short_message))
         try:
             a = Alarm(int(type), message, short_message)
