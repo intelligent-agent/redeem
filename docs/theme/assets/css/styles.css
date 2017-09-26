@@ -2201,3 +2201,14 @@ fieldset[disabled] .btn-version.focus {
   background: yellow;
   color: red;
 }
+.github-edit {
+  float: right;
+  font-size: 16px;
+}
+.github-edit a {
+  color: #666;
+  text-decoration: none;
+}
+.github-edit a:hover {
+  color: #58bbee;
+}

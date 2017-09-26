@@ -50,7 +50,6 @@
                     </div>
                     <div class="version-select">
                         {% include "version-menu.html" %}
-
                     </div>
                     {%- if current_version -%}
                         <div class="version-msg">
@@ -79,6 +78,14 @@
                 <div class="doc-body">
                     <div class="doc-content">
                         <div class="content-inner">
+                            <div class="github-edit">
+                                <div>
+                                    <a href="{{ edit_url }}">
+                                        <span class="text">edit on github</span>
+                                        <i class="fa fa-github"></i>
+                                    </a>
+                                </div>
+                            </div>
                             {{ body }}
                         </div><!--//content-inner-->
                     </div><!--//doc-content-->

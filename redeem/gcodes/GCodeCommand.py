@@ -30,8 +30,8 @@ class GCodeCommand(object):
         pass
 
     def get_long_description(self):
-        """**Deprecated** Override method to provide long description as text
-        Use ``get_formatted_description``
+        """**Deprecated** Override method to provide long description as text.
+        Use ``GCodeCommand.get_formatted_description``.
         """
         # Return formatted description as plain text
         if not self.get_formatted_description():
@@ -40,7 +40,7 @@ class GCodeCommand(object):
         return self.get_description()
 
     def get_formatted_description(self):
-        """ Return a full description formatted as restructured text."""
+        """ Override method to return a full description formatted as restructured text."""
         return None
 
     def is_buffered(self):
