@@ -88,23 +88,23 @@ class CascadingConfigParser(ConfigParser.SafeConfigParser):
         return
 
     def get_default_settings(self):
-        fs = {}
+        fs = []
         for config_file in self.config_files:
             if os.path.isfile(config_file):
                 c_file = os.path.basename(config_file)
-                logging.info("Using config file " + config_file)
-                fs[c_file] = ConfigParser.SafeConfigParser()
-                fs[c_file].readfp(open(config_file))
+                cp = ConfigParser.SafeConfigParser()
+                cp.readfp(open(config_file))
+                fs.append((c_file, cp))
 
         lines = []
         for section in self.sections():            
             for option in self.options(section):
-                for name, f in fs.iteritems():
-                    if f.has_option(section, option):
-                        line = name+":"+section+":"+option+"="+f.get(section, option)
+                for (name, cp) in fs:
+                    if cp.has_option(section, option):
+                        line = [name, section, option, cp.get(section, option)]
                 lines.append(line)
 
-        return "\n".join(lines)
+        return lines
 
 
     def save(self, filename):
@@ -185,5 +185,5 @@ if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG,
                     format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
                     datefmt='%m-%d %H:%M')
-    c = CascadingConfigParser(["/etc/redeem/default.cfg"])
+    c = CascadingConfigParser(["/etc/redeem/default.cfg", "/etc/redeem/printer.cfg", "/etc/redeem/local.cfg"])
     print c.get_default_settings()
