@@ -22,6 +22,7 @@ import mock
 from sphinx.errors import SphinxError
 
 sys.path.insert(0, os.path.abspath('..'))
+sys.path.insert(0, os.path.abspath('../redeem'))
 sys.path.insert(0, os.path.abspath('.'))
 sys.modules['evdev'] = mock.Mock()
 sys.modules['RotaryEncoder'] = mock.Mock()
