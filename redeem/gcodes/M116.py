@@ -75,17 +75,17 @@ class M116(GCodeCommand):
         return "Wait for a specific temperature/all temperatures to be reached"
 
     def get_long_description(self):
-        desc = ("Wait for a specific temperature/all temperatures to be reached",
-                "If no parameter is added M116 will wait for all temperatures to be reached",
-                "If P or T is set then M116 will wait for the specific Heater to reach temperature only",
-                "Possible values are: ",
-                "-1 - Heated Bed",
-                " 0 - Extruder E",
+        desc = ("Wait for a specific temperature/all temperatures to be reached"
+                "If no parameter is added M116 will wait for all temperatures to be reached"
+                "If P or T is set then M116 will wait for the specific Heater to reach temperature only"
+                "Possible values are: \n"
+                "-1 - Heated Bed \n"
+                " 0 - Extruder E\n"
                 " 1 - Extruder H")
         if self.printer.config.reach_revision:
-            desc = desc + (" 2 - Extruder A",
-                           " 3 - Extruder B",
-                           " 4 - Extruder C")
+            desc += (" 2 - Extruder A\n"
+                    " 3 - Extruder B\n"
+                    " 4 - Extruder C")
         return desc
 
     def is_buffered(self):
