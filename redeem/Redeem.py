@@ -80,7 +80,7 @@ class Redeem:
          - default is installed directory
          - allows for running in a local directory when debugging
         """
-        firmware_version = "2.0.4~Red Heat"
+        firmware_version = "2.0.5~Red Heat"
         logging.info("Redeem initializing "+firmware_version)
 
         printer = Printer()
