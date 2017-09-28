@@ -1,6 +1,10 @@
 Endstops
 ========
 
+..  raw:: html
+
+    <iframe width="560" height="315" src="https://www.youtube.com/embed/5LEjdQtIYe4" frameborder="0" allowfullscreen></iframe>
+
 This was a short troubleshooting advice provided on Slack - it's being
 pasted here as-is until it can be rephrased and re-worked into the
 documentation properly:

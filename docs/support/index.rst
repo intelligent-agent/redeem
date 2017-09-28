@@ -14,6 +14,7 @@ Support
     ./howto/homing.rst
     ./howto/beginlinux.rst
     ./howto/linklocal.rst
+    ./howto/octoprint.rst
     ./howto/marlinmigration.rst
     ./howto/bltouch.rst
     ./printers/corexy.rst

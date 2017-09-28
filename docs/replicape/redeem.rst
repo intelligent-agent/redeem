@@ -18,22 +18,43 @@ of garbage collection and extensive libraries
 ..  figure:: media/redeem_stack.png
     :figclass: inline
 
-Manual Installation
--------------------
+Installation
+------------
 
 The recommended method for installation is to use the Umikaze image which includes
 operating system, redeem, octoprint and all the dependencies needed.
 
+from Package
+~~~~~~~~~~~~
+
 If you'd rather install the Redeem firmware on your own operating system, you can use
-the Debian repository packages for Replicape and Toggle::
+the Debian repository packages for Replicape and Toggle:
+
+::
 
     wget -O - http://kamikaze.thing-printer.com/apt/public.gpg | apt-key add -
     echo "deb http://kamikaze.thing-printer.com/apt ./" >> /etc/apt/sources.list
     apt-get update
 
-The Kernel in the current image is the 4.1 LTS branch, and it has PRU support.
+from Source
+~~~~~~~~~~~
 
-Efforts are ongoing to try and use the 4.4 LTS branch for the new Wireless version of the BeagleBoneBlack.
+enable kernel repo: http://repos.rcn-ee.com/(debian|ubuntu)
+
+::
+
+    apt-get install am335x-pru-package pru-software-support-package swig python-smbus
+    mkdir -p /usr/src
+    cd /usr/src
+    git clone https://github.com/intelligent-agent/redeem.git
+    cd redeem
+    make install
+    mkdir -p /etc/redeem
+    cp configs/* /etc/redeem
+    cp data/* /etc/redeem
+
+
+
 
 Updating
 --------

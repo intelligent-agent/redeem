@@ -4,12 +4,12 @@ Software Installation
 .. role:: todo
 
 While the Redeem firmware can be installed on any BeagleBone Black compliant operating
-system, the Umikaze image (formerly Kamikaze) for BeagleBone Black contains the operating
-system and all the necessary packages and configuration for a quick setup.
+system, the Umikaze image (formerly Kamikaze) contains a ubuntu-based operating
+system with all the necessary packages and configuration included.
 
 To download the latest release, go to the `Umikaze release`__ page.
 
-__ https://github.com/goeland86/Umikaze2/releases
+__ https://github.com/intelligent-agent/Umikaze2/releases
 
 Installation
 ------------
@@ -18,12 +18,9 @@ Once you have downloaded the latest release, you will need to extract it on to a
 
 If you need help with this, check out :doc:`/support/howto/imageburn`.
 
-Next, insert the microSD card into the BeagleBone Black, hold down
-the boot button and apply power.
+Next, insert the microSD card into the BeagleBone Black, hold down the boot button and apply power.
 
-..  figure:: media/bbb_bootbutton.jpg
-
-:todo:`add picture of bbbw`
+..  figure:: media/beaglebone_boot_diagram.png
 
 After 10-15 seconds, there will be 4 blue lights on the BeagleBone Black that will
 will flash in a `Kight Rider`__ pattern. The flashing procedure will take about

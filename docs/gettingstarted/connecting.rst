@@ -16,23 +16,26 @@ Once you connect to the OctoPrint interface, you will need to step
 through setup the first time. As you step through the setup:
 
 -  Set a username and password for OctoPrint
--  It's recommended that you keep Access Control Enabled for security
-   reasons.
+-  It's recommended that you keep Access Control Enabled for security reasons.
 -  Set your print bed dimensions
--  Axis speeds can be left at the defaults, as they only control the
-   manual movements that you make through OctoPrint.
+-  Axis speeds can be left at the defaults, as they only control the manual movements that you make through OctoPrint.
+
+..  figure:: media/octoprint_setup.png
 
 
 Terminal
 --------
 
 Sometimes it is necessary to make changes to the configurations directly
-or to debug a broken config file, without going through the OctoPrint browser
+or to debug a broken config file without going through the OctoPrint browser
 interface. For those unfamiliar with working with a linux operating system,
 check out our :doc:`/support/howto/beginlinux`.
 
 Connecting via Network
 ~~~~~~~~~~~~~~~~~~~~~~
+
+For the standard Beaglebone Black connected via ethernet.
+
 
 ::
 
@@ -42,11 +45,14 @@ Connecting via Network
 Connecting via USB
 ~~~~~~~~~~~~~~~~~~
 
-The BeagleBone has ethernet over USB that has a static IP
-address of 192.168.7.2. Connect your host computer to the device and then
-log in with::
+For BeagleBone Black Wireless, network access isn't yet established.
 
-    ssh root@192.168.7.2
+To determine the device's name once attached look at the output of `ls -al /dev/cu.usbmodem*` before and then
+after you connect your host computer to the device. Next attach to the serial console:
+
+::
+
+    screen /dev/cu.usbmodem<number> 115200
 
 
 Access Control
@@ -67,6 +73,3 @@ There are two user accounts that have admin permissions:
 
     These user passwords are completely separated from the
     octoprint users you setup during the setup wizard for access control.
-
-
-
