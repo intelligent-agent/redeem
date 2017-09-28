@@ -4,7 +4,8 @@ from docutils import nodes
 from sphinx import addnodes
 from docutils.parsers import rst
 
-from docs.ext.gcodes.nodes import GCodeNode, GCodeDescriptionNode, GCodeLongDescriptionNode
+from docs.ext.gcodes.nodes import GCodeNode, GCodeDescriptionNode, GCodeLongDescriptionNode, \
+    GCodeFormattedDescriptionNode
 from redeem.gcodes.GCodeCommand import GCodeCommand
 from redeem import gcodes as gcode_module
 
@@ -53,12 +54,17 @@ class GCodeDirective(rst.Directive):
         gcode_node['gcode'] = gcode
 
         description = GCodeDescriptionNode()
-        description['description'] = gcode.get_description()
+        description['raw'] = gcode.get_description()
         gcode_node += description
 
-        long_description = GCodeLongDescriptionNode()
-        long_description['long-description'] = gcode.get_long_description()
-        gcode_node += long_description
+        if gcode.get_formatted_description():
+            formatted_description = GCodeFormattedDescriptionNode()
+            formatted_description['raw'] = gcode.get_formatted_description()
+            gcode_node += formatted_description
+        else:
+            long_description = GCodeLongDescriptionNode()
+            long_description['raw'] = gcode.get_long_description()
+            gcode_node += long_description
 
         return gcode_node
 

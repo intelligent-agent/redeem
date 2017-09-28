@@ -22,6 +22,7 @@ import mock
 from sphinx.errors import SphinxError
 
 sys.path.insert(0, os.path.abspath('..'))
+sys.path.insert(0, os.path.abspath('../redeem'))
 sys.path.insert(0, os.path.abspath('.'))
 sys.modules['evdev'] = mock.Mock()
 sys.modules['RotaryEncoder'] = mock.Mock()
@@ -65,8 +66,8 @@ extensions = ['sphinx.ext.autodoc',
               'sphinx.ext.githubpages',
               'sphinx.ext.napoleon']
 
-# wip
-extensions += ['ext.gcodes',]
+
+extensions += ['ext.gcodes', 'ext.editurls']
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -204,3 +205,5 @@ scv_whitelist_branches = ('develop', )
 
 autoclass_content = "both"
 
+github_project = 'intelligent-agent/redeem'
+github_branch = 'develop'
