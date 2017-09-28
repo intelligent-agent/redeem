@@ -5,7 +5,7 @@ Replicape Development
 .. role:: todo
 
 If you want to extend, build or modify Replicape, for the repository:
-https://bitbucket.org/intelligentagent/replicape
+https://github.com/intelligent-agent/replicape
 
 Routing and noise
 -----------------
@@ -36,8 +36,7 @@ BeagleBone Connections
 
 Below is a diagram of the pins that have been used on the BeagleBone.
 
-..  figure:: media/replicape_pinout_rev_b3.png
-    :figclass: inline
+..  figure:: media/beaglebone_replicape_pinout.png
 
 Thermistor Inputs
 -----------------
@@ -58,7 +57,9 @@ built using Richtec RT8268GFP.
 Update EEPROM
 -------------
 
-The EEPROM on the Replicape should be updated when it arrives. If not, here are the instructions on how to update it on Debian::
+The EEPROM on the Replicape should be updated when it arrives. If not, here are the instructions on how to update it on Debian
+
+::
 
     sudo -s
     wget https://bitbucket.org/intelligentagent/replicape/raw/bf08295bbb5e98ce6bff60097fe9b78d96002654/eeprom/Replicape_00B3.eeprom

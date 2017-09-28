@@ -32,7 +32,7 @@ While the TMC2100 stepper drivers are designed to be very quiet, high coil
 resistance prevents reaching the current limit causing the steppers to give off a high pitched sound.
 
 If you are experiencing this, you might want to experiment with the "stealth mode"
-which will silence all steppers. See the :todo:`microstepping configuration` section
+which will silence all steppers. See the :ref:`microstepping configuration <ConfigStepperMicrostepping>` section
 for more information. Stealth mode might make the steppers somewhat less powerful, but
 should work for most printers.
 
@@ -157,4 +157,5 @@ connector is used, no power is drawn through the connector.
 ..  note::
     If you power the BBB but not the the Replicape, the BBB will not be able
     to properly communicate with it, and you will get an error such as
-    ``kamikaze redeem[675]: Error accessing 0x70: Check your I2C address``
+    ``kamikaze redeem[675]: Error accessing 0x70: Check your I2C address`` or
+    ``spi.open(2, 1) IOError: [Errno 2] No such file or directory``.

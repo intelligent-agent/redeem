@@ -91,7 +91,7 @@ Each fan connector is polarized with a positive and negative.
 Cold End
 --------
 
-TBD
+Low temperature sensors, such as the DS18B20, are typically used for monitoring the cold end of the extruder.
 
 Thermistor
 ----------

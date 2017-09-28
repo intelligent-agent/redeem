@@ -9,7 +9,6 @@ Getting Started
     ./installation.rst
     ./connecting.rst
     ./configuration.rst
-    ./octoprint.rst
     ./tutorial.rst
 
 
