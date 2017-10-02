@@ -28,6 +28,7 @@ INSTALL_REQUIRES = [
     "scipy",
     "numpy",
     "sympy",
+    "docutils",
     "python-smbus",
     "mock"
 ]
