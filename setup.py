@@ -30,6 +30,7 @@ INSTALL_REQUIRES = [
     "sympy",
     "docutils",
     "python-smbus",
+    "sh",
     "mock"
 ]
 
