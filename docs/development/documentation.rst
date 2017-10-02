@@ -8,11 +8,33 @@ configured to pull docstrings directly from the code base. `Sphinx <http://www.s
 is a python-based document generator which converts RST into HTML docs for browsing
 and searching. Gulp is used as a makefile and to convert LESS stylesheets into CSS.
 
-To beign, you'll need to install a few python modules (assuming you're building locally and not on a BeagleBone).
-This is required because Sphinx reads docstrings from the code base and adds them to the documentation::
+Web-based Updates
+-----------------
 
-    pip install tests/modules.rst
-    pip install docs/requirements.rst
+Github can be used to do most page updates. To begin, click on the 'edit on github' link at the top
+right of the page you'd like to edit. Log in to your github account; or create one and verify your
+email address.
+
+The primary repository can not be edited directly; github will prompt you to create your own copy,
+called a fork. Edit the file using and preview the changes. When you are finished, write a quick
+summary of the change and click "Propose file change". This will create a pull request and notify
+the development team of the suggested update. Once accepted, the documentation will automatically
+be updated on ``develop`` branch.
+
+..  image:: media/forkandedit.png
+
+
+Dependencies
+------------
+
+
+If you're updating docs locally, you'll need to install a few python modules. This is required because Sphinx
+reads docstrings from the code base and adds them to the documentation:
+
+::
+
+    pip install tests/modules.txt
+    pip install docs/requirements.txt
 
 Next you'll need to install a few node-based tools which are used to process the visual theme: `Node Package Manager <https://www.npmjs.com/>`_ and `Yarn <https://yarnpkg.com/en/>`_.
 
