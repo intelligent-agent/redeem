@@ -75,7 +75,6 @@ class G0(GCodeCommand):
             "G0 X1 Y1 Z0"
         ]
 
-
 class G1(G0):
     pass
 
