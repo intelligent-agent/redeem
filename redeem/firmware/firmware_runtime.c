@@ -35,11 +35,12 @@ volatile uint32_t* const GPIO3_SETDATAOUT = (uint32_t*)0x481AE194;
 // TODO in theory, this should put a uint32_t at the start of the block of memory
 // pointed to by C28, but TI doesn't promise any particular placement.
 // Is there a way to get that guarantee?
-__far __attribute__((cregister("PRU_SHAREDMEM", near))) volatile uint32_t g_unused1;
+__far __attribute__((cregister("PRU_SHAREDMEM", near))) volatile uint32_t g_endstopState;
 __far __attribute__((cregister("PRU_SHAREDMEM", near))) volatile uint32_t g_stepperMask;
 __far __attribute__((cregister("PRU_SHAREDMEM", near))) volatile uint32_t g_unused2;
 __far __attribute__((cregister("PRU_SHAREDMEM", near))) volatile uint32_t g_steppersAllowedToMove;
 __far __attribute__((cregister("PRU_SHAREDMEM", near))) volatile uint32_t g_stepsRemaining;
+__far __attribute__((cregister("PRU_SHAREDMEM", near))) volatile uint32_t g_endstops_triggered;
 
 typedef struct SteppersCommand
 {
@@ -168,8 +169,8 @@ int main(void) {
 				{
 					// This move isn't cancellable, but one or more of its axes are blocked.
 					// Stop immediately and sound the alarm.
-
 					*events_counter = 0xFFFFFFFF;
+                    g_endstops_triggered = g_endstopState;
 					armPru0Interrupt();
 					
 					// Don't allow recovery - we have some unknown number of steps already queued up.

@@ -168,6 +168,9 @@ class PathPlanner {
   VectorN soft_endstops_min;
   VectorN soft_endstops_max;
 	
+  bool stop_on_soft_endstops_hit;
+  bool stop_on_physical_endstops_hit;
+
   // bed compensation
   std::vector<FLOAT_T> matrix_bed_comp;
 	
@@ -355,6 +358,8 @@ class PathPlanner {
     
   void setSoftEndstopsMin(VectorN stops);
   void setSoftEndstopsMax(VectorN stops);
+  void setStopPrintOnSoftEndstopHit(bool stop);
+  void setStopPrintOnPhysicalEndstopHit(bool stop);
   void setBedCompensationMatrix(std::vector<FLOAT_T> matrix);
   void setAxisConfig(int axis);
   void setState(VectorN set);

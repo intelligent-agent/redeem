@@ -27,6 +27,7 @@
 #include <cmath>
 #include "PathPlanner.h"
 
+// Return axis num+1 on min hit, axis num + 11 on max.
 int PathPlanner::softEndStopApply(const VectorN &endPos)
 {
   for (size_t i = 0; i<NUM_AXES; ++i) {
@@ -34,12 +35,12 @@ int PathPlanner::softEndStopApply(const VectorN &endPos)
       LOGERROR( "queueMove FAILED: axis " << i 
 		<< " end position outside of soft limit (end = " << endPos[i] 
 		<< ", min limit = " << soft_endstops_min[i] << ")\n");
-      return 1;
+      return i+1;
     } else if (endPos[i] > soft_endstops_max[i]) {
       LOGERROR( "queueMove FAILED: axis " << i 
 		<< " end position outside of soft limit (end = " << endPos[i] 
 		<< ", max limit = " << soft_endstops_max[i] << ")\n");
-      return 1;
+      return i+11;
     }
   }
 

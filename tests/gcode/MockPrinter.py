@@ -71,17 +71,21 @@ class MockPrinter(unittest.TestCase):
         """
         tf = open("../configs/local.cfg", "w")
         lines = """
-        [System]
-        log_to_file = False
+[System]
+log_to_file = False
         """
         tf.write(lines)
         tf.close()
 
+    # even though printer.path_planner is replaced with a mock, it gets initialized prior (when `Redeem` is
+    # instantiated, still need to mock the initialization of the native planner (`_init_path_planner`).
+
     @classmethod
     @mock.patch.object(EndStop, "_wait_for_event", new=None)
+    @mock.patch.object(PathPlanner, "_init_path_planner")
     @mock.patch.object(CascadingConfigParser, "get_key")
     @mock.patch("Redeem.CascadingConfigParser", new=CascadingConfigParserWedge)
-    def setUpClass(cls, mock_get_key):
+    def setUpClass(cls, mock_get_key, mock_init_path_planner):
 
         mock_get_key.return_value = "TESTING_DUMMY_KEY"
 
@@ -139,6 +143,7 @@ class MockPrinter(unittest.TestCase):
     @classmethod
     def execute_gcode(cls, text):
         g = Gcode({"message": text})
+        g.prot = 'testing_noret'
         cls.printer.processor.gcodes[g.gcode].execute(g)
         return g
 

@@ -57,12 +57,12 @@ pathplanner = Extension(
         '-DBUILD_PYTHON_EXT=1',
         '-Wno-write-strings',
         '-Wno-maybe-uninitialized',
-        '-UNDEBUG']
+        '-DLOGLEVEL=30']
 )
 
 setup(
     name = "Redeem",
-    version = "2.0.1",
+    version = "2.0.5",
     packages = find_packages(exclude=["redeem/path_planner"]),
     data_files=[
         ('redeem/firmware', [

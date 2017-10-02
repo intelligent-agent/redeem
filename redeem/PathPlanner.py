@@ -52,6 +52,8 @@ class AlarmWrapper(AlarmCallbackNative):
         AlarmCallbackNative.__init__(self)
 
     def call(self, type, message, short_message):
+        endstop = PruInterface.get_endstop_triggered()
+        message += ": "+["unknown", "X1", "Y1", "Z1", "X2", "Y2", "Z2"][int(np.log2([endstop])[0]+1)]
         logging.error("Native path planner alarm: {} {} {}".format(type, message, short_message))
         try:
             a = Alarm(int(type), message, short_message)
@@ -75,11 +77,11 @@ class PathPlanner:
         self.prev.set_prev(None)
 
         if pru_firmware:
-            self.__init_path_planner()
+            self._init_path_planner()
         else:
             self.native_planner = None
 
-    def __init_path_planner(self):
+    def _init_path_planner(self):
         self.alarm_wrapper = AlarmWrapper()
         self.native_planner = PathPlannerNative(int(self.printer.move_cache_size), self.alarm_wrapper)
 
@@ -98,6 +100,7 @@ class PathPlanner:
         self.native_planner.setPrintMoveBufferWait(int(self.printer.print_move_buffer_wait))
         self.native_planner.setMaxBufferedMoveTime(int(self.printer.max_buffered_move_time))
         self.native_planner.setSoftEndstopsMin(tuple(self.printer.soft_min))
+        self.native_planner.setSoftEndstopsMax(tuple(self.printer.soft_max))
         self.native_planner.setSoftEndstopsMax(tuple(self.printer.soft_max))
         self.native_planner.setBedCompensationMatrix(tuple(np.identity(3).ravel()))
         self.native_planner.setAxisConfig(self.printer.axis_config)
@@ -123,7 +126,7 @@ class PathPlanner:
 
     def restart(self):
         self.native_planner.stopThread(True)        
-        self.__init_path_planner()
+        self._init_path_planner()
 
     def update_steps_pr_meter(self):
         """ Update steps pr meter from the path """
@@ -181,7 +184,7 @@ class PathPlanner:
 
         #Create a new path planner to have everything clean when it restarts
         self.native_planner.stopThread(True)
-        self.__init_path_planner()
+        self._init_path_planner()
 
     def suspend(self):
         ''' Temporary pause of planner '''

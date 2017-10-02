@@ -137,7 +137,7 @@ class G29_2(GCodeCommand): # was G29S[quare]
         probe_speed = g.get_float_by_letter("K", 3000)
         probe_offset_x = g.get_float_by_letter("X", 0)          # Offset X from starting point
         probe_offset_y = g.get_float_by_letter("Y", 0)          # Offset Y from starting point
-
+        invert = 1 if g.has_letter("I") else 0                 # Invert probing
         ppd = np.sqrt(points)
 
         probes = []
@@ -152,7 +152,10 @@ class G29_2(GCodeCommand): # was G29S[quare]
         gcodes += "    G32 ; Undock probe\n"
         gcodes += "    G28 ; Home steppers\n"
         for i in range(len(probes)):
-            gcodes += "    G30 P{} S F{}; Probe point {}\n".format(i, probe_speed, i)
+            if invert:
+                gcodes += "    G30 P{} S F{}; Probe point {}\n".format(len(probes)-i-1, probe_speed, len(probes)-i-1)
+            else:
+                gcodes += "    G30 P{} S F{}; Probe point {}\n".format(i, probe_speed, i)
         gcodes += "    G31 ; Dock probe\n"
         gcodes += "    M561 U; (RFS) Update the matrix based on probe data\n"
         gcodes += "    M561 S; Show the current matrix\n"

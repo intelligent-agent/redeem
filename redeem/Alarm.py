@@ -33,9 +33,11 @@ class Alarm:
     HEATER_FALLING_FAST = 4  # Temperature is faling too fast
     FILAMENT_JAM = 5  # If filamet sensor is installed
     WATCHDOG_ERROR = 6  # Can this be detected?
-    ENDSTOP_HIT = 7  # During print.
-    STEPPER_FAULT = 8  # Error on a stepper
-    ALARM_TEST = 9  # Testsignal, used during start-up
+    PHYSICAL_ENDSTOP_HIT = 7  # During print.
+    SOFT_ENDSTOP_HIT = 8
+    IMPOSSIBLE_MOVE_ATTEMPTED = 9
+    STEPPER_FAULT = 10  # Error on a stepper
+    ALARM_TEST = 11  # Testsignal, used during start-up
 
     printer = None
     executor = None
@@ -88,10 +90,20 @@ class Alarm:
         elif self.type == Alarm.FILAMENT_JAM:
             Alarm.action_command("pause")
             Alarm.action_command("alarm_filament_jam", self.message)
-        elif self.type == Alarm.ENDSTOP_HIT:
+        elif self.type == Alarm.PHYSICAL_ENDSTOP_HIT:
             self.stop_print()
-            self.inform_listeners()
             Alarm.action_command("pause")
+            self.inform_listeners()
+            Alarm.action_command("alarm_endstop_hit", self.message)
+        elif self.type == Alarm.SOFT_ENDSTOP_HIT:
+            self.stop_print()
+            Alarm.action_command("pause")
+            self.inform_listeners()
+            Alarm.action_command("alarm_endstop_hit", self.message)
+        elif self.type == Alarm.IMPOSSIBLE_MOVE_ATTEMPTED:
+            self.stop_print()
+            Alarm.action_command("pause")
+            self.inform_listeners()
             Alarm.action_command("alarm_endstop_hit", self.message)
         elif self.type == Alarm.ALARM_TEST:
             logging.info("Alarm: Operational")
