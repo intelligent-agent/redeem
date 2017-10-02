@@ -18,6 +18,7 @@ Support
     ./howto/marlinmigration.rst
     ./howto/bltouch.rst
     ./printers/corexy.rst
+    ./printers/cartesian.rst
     ./printers/delta.rst
 
 Bugs can be reported at `Redeem on Github <https://github.com/intelligent-agent/redeem/issues>`.
@@ -46,6 +47,4 @@ The answer is:
 -  `The Marlin to Redeem <#>`__ guide, helping those of
    you coming from Marlin appreciate what the differences in Redeem are
    and why.
-
-
 
