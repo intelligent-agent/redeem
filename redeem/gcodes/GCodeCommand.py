@@ -8,10 +8,8 @@ License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 """
 
 from abc import ABCMeta, abstractmethod
-
 from docutils.core import publish_string
-
-from TextWriter import text_writer
+from redeem.TextWriter import text_writer
 
 
 class GCodeCommand(object):
