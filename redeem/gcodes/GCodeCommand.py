@@ -8,6 +8,8 @@ License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 """
 
 from abc import ABCMeta, abstractmethod
+from docutils.core import publish_string
+from redeem.TextWriter import text_writer
 
 
 class GCodeCommand(object):
@@ -26,8 +28,16 @@ class GCodeCommand(object):
         pass
 
     def get_long_description(self):
-        # Return short description if long description is missing
+        """Override method to provide long description as text."""
+        # Return formatted description as plain text
+        if not self.get_formatted_description():
+            return publish_string(self.get_formatted_description(), writer=text_writer)
+        # If subclass doesn't override, return standard description
         return self.get_description()
+
+    def get_formatted_description(self):
+        """ Override method to return a full description formatted as restructured text."""
+        return None
 
     def is_buffered(self):
         """ Return true if the command has to wait in the command buffer or
