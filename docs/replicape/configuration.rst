@@ -204,7 +204,7 @@ Terminology:
     gotten that top work. Seems broken. Instead, add the carriage offset
     to the effector offset.
 
-For more information on correcting delta calibration, see the :doc:`/support/howto/deltacalibration`.
+For more information on correcting delta calibration, see the :doc:`/support/printers/delta`.
 
 ::
 

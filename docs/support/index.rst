@@ -8,7 +8,6 @@ Support
     ./troubleshooting.rst
     ./knownproblems.rst
     ./howto/imageburn.rst
-    ./howto/deltacalibration.rst
     ./howto/zprobes.rst
     ./howto/endstops.rst
     ./howto/homing.rst
