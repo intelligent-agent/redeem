@@ -30,7 +30,7 @@ class GCodeCommand(object):
     def get_long_description(self):
         """Override method to provide long description as text."""
         # Return formatted description as plain text
-        if not self.get_formatted_description():
+        if self.get_formatted_description():
             return publish_string(self.get_formatted_description(), writer=text_writer)
         # If subclass doesn't override, return standard description
         return self.get_description()

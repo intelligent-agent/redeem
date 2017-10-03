@@ -9,9 +9,7 @@ License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 
 from GCodeCommand import GCodeCommand
 
-import ctypes
 import os
-import parted
 import logging
 
 from sh import mount, ErrorReturnCode_32
