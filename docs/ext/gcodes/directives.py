@@ -47,21 +47,29 @@ class GCodeDirective(rst.Directive):
                 sortable_key = "{}{}".format(designation, identifier)
                 self.gcodes[sortable_key] = obj
 
+    def set_inherited_state(self, node):
+        node.document = self.state.document
+        node.source, node.line = self.state_machine.get_source_and_line(self.lineno)
+
     def create_gcode_node(self, gcode):
         gcode_node = GCodeNode()
         gcode_node['gcode'] = gcode
+        self.set_inherited_state(gcode_node)
 
         description = GCodeDescriptionNode()
         description['raw'] = gcode.get_description()
+        self.set_inherited_state(description)
         gcode_node += description
 
         if gcode.get_formatted_description():
             formatted_description = GCodeFormattedDescriptionNode()
             formatted_description['raw'] = gcode.get_formatted_description()
+            self.set_inherited_state(formatted_description)
             gcode_node += formatted_description
         else:
             long_description = GCodeLongDescriptionNode()
             long_description['raw'] = gcode.get_long_description()
+            self.set_inherited_state(long_description)
             gcode_node += long_description
 
         return gcode_node

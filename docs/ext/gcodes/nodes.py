@@ -1,3 +1,4 @@
+import copy
 from docutils import nodes
 
 
@@ -69,7 +70,24 @@ class GCodeFormattedDescriptionNode(nodes.General, nodes.Element):
 def gcode_formatted_description_node_visit(self, node):
     self.body.append("<div class='col-xs-8'>")
 
-    published = publish_parts(node['raw'], writer_name='html')['html_body']
+    # doesn't seem the directive which instantiates this node gets the full set of settings
+    # add the necessary ones that the rst admonition parser relies on
+    settings = copy.copy(node.document.settings)
+
+    settings.traceback = True
+    settings.tab_width = 4
+    settings.pep_references = False
+    settings.rfc_references = False
+    settings.smartquotes_locales = None
+    settings.env.temp_data['docname'] = 'gcodes'
+    settings.language_code = 'en'
+
+    # since we're using docutils directly, it doesn't support '.. versionadded::' directive
+    # patch the language file so it displays correctly
+    import docutils
+    docutils.languages.en.labels['versionmodified'] = 'New in Version'
+
+    published = publish_parts(node['raw'], writer_name='html', settings=settings)['html_body']
     self.body.append(published)
 
     self.body.append("</div>")
