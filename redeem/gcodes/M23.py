@@ -91,7 +91,7 @@ class M23(GCodeCommand):
 ::
 
     > M23 circle.gcode
-    > M32 afoldername/circle.gcode
+    > M23 afoldername/circle.gcode
 """
 
     def is_buffered(self):
