@@ -27,7 +27,7 @@ learn more about that.
 On Replicape/Redeem, BLTouch is support for probing but not homing
 because it only sends pulses. Homing is theoretically possible but
 currently not implemented - feel free to file an issue at `the issue
-tracker <https://bitbucket.org/intelligentagent/redeem/issues>`__ if
+tracker <https://github.com/intelligent-agent/redeem/issues>`__ if
 this is something you could use.
 
 Assuming you plug the servo input into X2 (being careful to match up the

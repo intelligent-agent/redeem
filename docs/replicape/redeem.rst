@@ -3,7 +3,7 @@ Redeem
 
 Redeem is the Replicape firmware; it is a daemon process that chews G-codes
 and spits out coordinates. The software can be found in the redeem repository:
-https://bitbucket.org/intelligentagent/redeem
+https://github.com/intelligent-agent/redeem
 
 Architecture
 ------------
@@ -58,6 +58,7 @@ enable kernel repo: http://repos.rcn-ee.com/(debian|ubuntu)
 
 Updating
 --------
+..  versionadded:: 2.0.5
 
 The octoprint\_redeem plugin should provide a prompt when there is a
 redeem update available, and the wizard should work in almost all cases.
@@ -77,6 +78,7 @@ login as root and execute these commands:
 
 Develop branch
 --------------
+..  versionchanged:: 2.0.5
 
 If your printer suffers from problems that are being addressed or if you
 want to help test the next version of redeem, you need to switch your
@@ -89,7 +91,7 @@ To do so, follow these instructions:
 
     cd /usr/src
     rm -r redeem
-    git clone https://bitbucket.org/intelligentagent/redeem.git
+    git clone https://github.com.com/intelligent-agent/redeem.git
     cd redeem
     git checkout develop
     make clean install

@@ -939,8 +939,9 @@ Macros
 The macro-section contains macros. Duh. Right now, only G29, G31 and G32
 has macro definitions and it's basically a set of other G-codes. To make
 a new macro, you need to also define the actual g-code file for it. That
-is beyond this wiki, but look at G29 in the repository, for instance:
-`2 <https://bitbucket.org/intelligentagent/redeem/src/73c21486b1e294570a125e9fac6c9cef9b4f273b/redeem/gcodes/G29.py?at=develop>`__
+is beyond this wiki, but look at `G29`__ in the repository.
+
+__  https://github.com/intelligent-agent/redeem/src/73c21486b1e294570a125e9fac6c9cef9b4f273b/redeem/gcodes/G29.py?at=develop
 
 ..  note::
 
@@ -964,11 +965,13 @@ stops/homing, ect work make corrections as required. You will also
 most likely need to change under [Geometry] travel\_z direction.
 This should trick the probe into moving in the correct direction.
 
-**G31**::
+**G31**
+::
 
     M574 Z2  ; Probe up (Dock sled)
 
-**G32**::
+**G32**
+::
 
     M574 Z2 z_ccw, h_ccw  ; Probe down (Undock sled)
 

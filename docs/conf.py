@@ -208,5 +208,13 @@ scv_whitelist_branches = ('develop', )
 
 autoclass_content = "both"
 
-github_project = 'intelligent-agent/redeem'
-github_branch = 'develop'
+github_main_dev_project = 'intelligent-agent/redeem'
+github_main_dev_branch = 'develop'
+
+github_doc_edit_project = 'intelligent-agent/redeem'
+github_doc_edit_branch = 'develop'
+
+# rst_prolog = """
+# .. |GithubMainDevProject| replace:: {}
+# .. |GithubMainDevBranch| replace:: {}
+# """.format(github_main_dev_project, github_main_dev_branch)

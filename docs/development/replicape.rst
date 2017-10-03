@@ -62,6 +62,6 @@ The EEPROM on the Replicape should be updated when it arrives. If not, here are 
 ::
 
     sudo -s
-    wget https://bitbucket.org/intelligentagent/replicape/raw/bf08295bbb5e98ce6bff60097fe9b78d96002654/eeprom/Replicape_00B3.eeprom
+    wget https://github.com/intelligent-agent/replicape/raw/bf08295bbb5e98ce6bff60097fe9b78d96002654/eeprom/Replicape_00B3.eeprom
     cat Replicape_00B3.eeprom > /sys/bus/i2c/drivers/at24/2-0054/at24-1/nvmem
     exit
