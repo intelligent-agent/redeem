@@ -1,11 +1,9 @@
 import inspect
 
 from docutils import nodes
-from sphinx import addnodes
 from docutils.parsers import rst
 
-from docs.ext.gcodes.nodes import GCodeNode, GCodeDescriptionNode, GCodeLongDescriptionNode, \
-    GCodeFormattedDescriptionNode
+from docs.ext.gcodes.nodes import GCodeNode, GCodeDescriptionNode, GCodeLongDescriptionNode, GCodeFormattedDescriptionNode
 from redeem.gcodes.GCodeCommand import GCodeCommand
 from redeem import gcodes as gcode_module
 
@@ -73,7 +71,8 @@ class GCodeDirective(rst.Directive):
         gcode_node = self.create_gcode_node(gcode)
 
         section = nodes.section()
-        section += nodes.title(type(gcode).__name__, type(gcode).__name__)
+        title = type(gcode).__name__.replace('_', '.')
+        section += nodes.title(title, title)
 
         target = nodes.target()
         lineno = self.state_machine.abs_line_number()
@@ -91,8 +90,8 @@ class GCodeDirective(rst.Directive):
 
             try:
                 node_list += self.create_gcode_entry(gcode_cls(None))
-            except AttributeError:
-                pass
+            except AttributeError as ae:
+                print("WARNING: could not process {}: {}".format(id, ae.message))
 
         return node_list
 

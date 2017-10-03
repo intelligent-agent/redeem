@@ -84,13 +84,16 @@ class M23(GCodeCommand):
         start_new_thread(self.process_gcode, (g, fn))
 
     def get_description(self):
-        return """"Select a file from the SD Card"""
+        return """Run gcode from file system."""
 
     def get_formatted_description(self):
         return """
 Load *and begin printing* a gcode file from a usb memory stick.
-``M23 circle.gcode``
-``M32 afoldername/circle.gcode``
+
+::
+
+    > M23 circle.gcode
+    > M32 afoldername/circle.gcode
         """
 
     def is_buffered(self):

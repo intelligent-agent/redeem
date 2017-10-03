@@ -46,4 +46,3 @@ The answer is:
 -  `The Marlin to Redeem <#>`__ guide, helping those of
    you coming from Marlin appreciate what the differences in Redeem are
    and why.
-

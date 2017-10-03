@@ -2,7 +2,7 @@
 #
 
 # You can set these variables from the command line.
-SPHINXOPTS    = -a -E
+SPHINXOPTS    = -a -E -T
 SPHINXBUILD   = python -msphinx
 SPHINXPROJ    = ThingPrinter
 SOURCEDIR     = .
