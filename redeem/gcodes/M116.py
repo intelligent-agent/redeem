@@ -82,6 +82,7 @@ class M116(GCodeCommand):
                 "-1 - Heated Bed \n"
                 " 0 - Extruder E\n"
                 " 1 - Extruder H")
+        # unittests and docs may not have printer set when looking for docs
         if not self.printer or self.printer.config.reach_revision:
             desc += (" 2 - Extruder A\n"
                     " 3 - Extruder B\n"
