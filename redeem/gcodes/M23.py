@@ -9,9 +9,7 @@ License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 
 from GCodeCommand import GCodeCommand
 
-import ctypes
 import os
-import parted
 import logging
 
 from sh import mount, ErrorReturnCode_32
@@ -89,11 +87,12 @@ class M23(GCodeCommand):
         return """"Select a file from the SD Card"""
 
     def get_formatted_description(self):
-        return """
-Load *and begin printing* a gcode file from a usb memory stick.
-``M23 circle.gcode``
-``M32 afoldername/circle.gcode``
-        """
+        return """Load *and begin printing* a gcode file from a usb memory stick.
+::
+
+    > M23 circle.gcode
+    > M23 afoldername/circle.gcode
+"""
 
     def is_buffered(self):
         return False
