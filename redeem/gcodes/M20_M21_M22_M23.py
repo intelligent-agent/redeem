@@ -78,6 +78,10 @@ class M2X(GCodeCommand):
 
 
 class M20(M2X):
+    pass
+
+
+class M21(M2X):
 
     def _mount(self, g, source, target, fstype=None, options=''):
 
@@ -128,7 +132,7 @@ class M20(M2X):
 """.format(DEVICE_TABLE)
 
 
-class M21(M2X):
+class M22(M2X):
 
     def execute(self, gcode):
         device_id = check_device_id(self.printer, g)
