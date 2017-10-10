@@ -6,6 +6,7 @@ Author: Andrew Mirsky
 email: andrew@mirskytech.com
 License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 """
+from threading import Lock
 
 from GCodeCommand import GCodeCommand
 
@@ -28,6 +29,9 @@ exfat - is also a file system option commonly found on USB flash drives and othe
 """
 
 current_file = None
+current_line_count = None
+current_file_count = None
+current_lock = Lock()
 
 # device_location = '/dev/mmcblk1p1'
 USB_DEVICE_LOCATION = '/dev/sda1'
@@ -162,8 +166,19 @@ class M23(M2X):
         with open(fn, 'r') as gcode_file:
             logging.info("M23: file open")
 
+            current_lock.acquire()
+            current_file = gcode_file
+            current_line_count = 0
+            current_file_count = len(gcode_file)
+            current_lock.release()
+
             for line in gcode_file:
                 line = line.strip()
+
+                current_lock.acquire()
+                current_line_count += 1
+                current_lock.release()
+
                 if not line or line.startswith(';'):
                     continue
                 file_g = Gcode({"message": line, "parent": g})
@@ -212,3 +227,27 @@ class M23(M2X):
     > M23 /lcl/anotherfile.gcode
 """.format(DEVICE_TABLE)
 
+
+class M27(M2X):
+
+    def execute(self, g):
+
+        message = "file '{}' printing: {} of {} lines"
+
+        current_lock.acquire()
+        message = message.format(current_file, current_line_count, current_file_count)
+        current_lock.release()
+
+        self.printer.send_message(g.prot, message)
+
+        return
+
+    def get_description(self):
+        return """Report external file print status"""
+
+    def get_formatted_description(self):
+        return """Display current file being printed, the number of lines processed and the total number of lines
+::
+    > M27
+    file '/usb/myfolder/myfile.gcode' printing: 10 of 211 lines
+"""
