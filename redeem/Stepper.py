@@ -351,6 +351,7 @@ class Stepper_00A4(Stepper):
         self.dac        = DAC(dac_channel)
         self.dacvalue 	= 0x00   	    # The voltage value on the VREF		
         self.state      = (1<<Stepper_00A4.SLEEP)|(1<<Stepper_00A4.RESET)| (1<<Stepper_00A4.ENABLED) # The initial state of the inputs
+        self.current_enabled = True
         self.update()
 
     def set_enabled(self, force_update=False):
@@ -366,6 +367,21 @@ class Stepper_00A4(Stepper):
             self.state |= (1 << Stepper_00A4.ENABLED)
             self.enabled = False
         self.update()
+        
+    def set_current_disabled(self):
+        ''' Set the stepper in lowest current mode '''
+        if not self.current_enabled:
+            return
+
+        self.current_enable_value = self.current_value
+        self.current_enabled = False
+        self.set_current_value(0)
+
+    def set_current_enabled(self):
+        if self.current_enabled:
+            return
+        self.set_current_value(self.current_enable_value)
+        self.current_enabled = True
 
     def enable_sleepmode(self, force_update=False):
         """Logic high to enable device, logic low to enter
