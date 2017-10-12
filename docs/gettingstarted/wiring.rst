@@ -2,7 +2,6 @@ Wiring
 ======
 
 ..  figure:: ./media/replicape_connectors.png
-    :figclass: inline
 
 
 Screw Terminal Connectors
