@@ -115,7 +115,7 @@ class Printer:
         """
         # Reset Stepper watchdog
         self.swd.reset()
-        # Enabe steppers
+        # Enable steppers
         for name, stepper in self.steppers.iteritems():
             if stepper.in_use:
                 if not stepper.enabled:
