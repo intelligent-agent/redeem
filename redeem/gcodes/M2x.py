@@ -26,6 +26,8 @@ exfat - is also a file system option commonly found on USB flash drives and othe
 """
 
 import os
+from abc import abstractmethod, ABCMeta
+
 import sh
 import logging
 from threading import Lock
@@ -88,6 +90,7 @@ def check_device_id(printer, g):
 
 class M2X(GCodeCommand):
     """base class for all commands that work with external memory"""
+    __metaclass__ = ABCMeta
 
     def is_buffered(self):
         return False
@@ -95,6 +98,7 @@ class M2X(GCodeCommand):
 
 class M20(M2X):
     """list all files on an external memory device"""
+
 
     def execute(self, g):
         device_id = check_device_id(self.printer, g)
@@ -119,10 +123,10 @@ class M20(M2X):
             for filename in filenames:
                 self.printer.send_message(g.prot, " - {}/{}".format(list_location, filename))
 
-        def get_description(self):
-            return """List all files on an external memory location"""
+    def get_description(self):
+        return """List all files on an external memory location"""
 
-        def get_formatted_description(self):
+    def get_formatted_description(self):
             return """For an already attached external memory location, list all the files available. The
 supported devices are:
 
@@ -258,7 +262,6 @@ class M23(M2X):
         current_lock.acquire()
         current_file = fn
         current_lock.release()
-
 
     def get_description(self):
         return """"Select a file from external location"""
