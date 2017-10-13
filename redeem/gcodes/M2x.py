@@ -1,25 +1,22 @@
 """
-GCode M23
-Select SD file
-
 Author: Andrew Mirsky
 email: andrew@mirskytech.com
 License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
-"""
-from threading import Lock
 
-from GCodeCommand import GCodeCommand
+M2x commands:
 
-import os
-import logging
+- M20: List SD card
+- M21: Initialize SD card
+- M22: Release SD card
+- M23: Select SD file
+- M24: Start/resume SD print
+- M25: Pause SD print
+- M26: Set SD position
+- M27: Report SD print status
 
-import sh
+mount uses auto. if this doen't work, use parted library to determine format type
+for more info, see https://github.com/vsinitsyn/fdisk.py/blob/master/fdisk.py
 
-from thread import start_new_thread
-
-from redeem.Gcode import Gcode
-
-"""
 auto - this is a special one. It will try to guess the fs type when you use this.
 ext4 - this is probably the most common Linux fs type of the last few years
 ext3 - this is the most common Linux fs type from a couple years back
@@ -28,6 +25,17 @@ vfat - this is the most common fs type used for smaller external hard drives
 exfat - is also a file system option commonly found on USB flash drives and other external drives
 """
 
+import os
+import sh
+import logging
+from threading import Lock
+from thread import start_new_thread
+
+from GCodeCommand import GCodeCommand
+from redeem.Gcode import Gcode
+
+# multi thread management
+# TODO : encapsulate this into an attribute of the printer. `SDCardManager`
 current_file = None
 current_line_count = None
 current_file_count = None
@@ -48,7 +56,6 @@ MOUNT_LOCATIONS = {
     '/sd': SD_MOUNT_LOCATION,
     '/lcl': LCL_MOUNT_LOCATION
 }
-
 
 DEVICE_TABLE = """
 ==== ===========================
@@ -81,6 +88,7 @@ def check_device_id(printer, g):
 
 class M2X(GCodeCommand):
     """base class for all commands that work with external memory"""
+
     def is_buffered(self):
         return False
 
@@ -106,7 +114,6 @@ class M20(M2X):
             return
 
         # list all files on the device
-        #
         self.printer.send_message(g.prot, "files on external memory '{}'".format(list_location))
         for root, directories, filenames in os.walk(list_location):
             for filename in filenames:
@@ -127,9 +134,9 @@ Use ``M21`` to attach a device.
 
     > M20 /usb
     - /usb/myfile.gcode
-    - /usb/myotherfile.gcode
+    - /usb/mydirectory/myotherfile.gcode
     - /usb/yetanotherfile.gcode
-    
+
     > M20 /lcl
     - /lcl/example.gcode
 
@@ -137,7 +144,6 @@ Use ``M21`` to attach a device.
 
 
 class M21(M2X):
-
     def _mount(self, g, source, target, fstype=None, options=''):
 
         if not os.path.isdir(target):
@@ -184,15 +190,14 @@ class M21(M2X):
 
     > M20 /usb
     > M20 /sd
-    
+
 Use ``M22`` to unattach a device before removing. 
-    
+
 .. note:: local storage is always mounted, used with M21 will be a no-op
 """.format(DEVICE_TABLE)
 
 
 class M22(M2X):
-
     def execute(self, gcode):
         device_id = check_device_id(self.printer, g)
         if not device_id:
@@ -217,16 +222,63 @@ class M22(M2X):
 
     > M21 usb
     > M21 sd
-    
+
 .. note:: local storage is always mounted, used with M22 will be a no-op 
 """.format(DEVICE_TABLE)
 
 
 class M23(M2X):
 
+    def execute(self, g):
+
+        # TODO : what happens when this is called while a file is already being printed? different if machine is halted?
+        logging.info("M23: starting gcode file processing")
+
+        text = g.get_message()[len("M23"):]
+
+        if not text.strip():
+            self.printer.send_message(g.prot, "missing filename")
+            return
+
+        fn = text.strip()
+
+        if fn.startswith('/usb/'):
+            fn = fn.replace('/usb/', USB_MOUNT_LOCATION)
+
+        if fn.startswith('/sd/'):
+            fn = fn.replace('/sd/', SD_MOUNT_LOCATION)
+
+        if fn.startswith('/lcl/'):
+            fn = fn.replace('/lcl/', LCL_MOUNT_LOCATION)
+
+        if not os.path.exists(fn):
+            self.printer.send_message(g.prot, "could not find file at '{}'".format(text.strip()))
+            return
+
+        current_lock.acquire()
+        current_file = fn
+        current_lock.release()
+
+
+    def get_description(self):
+        return """"Select a file from external location"""
+
+    def get_formatted_description(self):
+        return """Choose a gcode file for printing from external location:
+{}
+
+::
+
+    > M23 /usb/myfile.gcode
+    > M23 /sd/myfolder/myotherfile.gcode
+    > M23 /lcl/anotherfile.gcode
+""".format(DEVICE_TABLE)
+
+
+class M24(GCodeCommand):
+
     def process_gcode(self, fn):
 
-        # TODO : this should only identify the file. M24 should start the printing. M32 should select and start
         with open(fn, 'r') as gcode_file:
             logging.info("M23: file open")
 
@@ -258,50 +310,40 @@ class M23(M2X):
 
     def execute(self, g):
 
-        logging.info("M23: starting gcode file processing")
+        current_lock.acquire()
+        fn = current_file
+        current_lock.release()
 
-        text = g.get_message()[len("M23"):]
+        if fn:
+            start_new_thread(self.process_gcode, (fn,))
 
-        if not text.strip():
-            self.printer.send_message(g.prot, "missing filename")
-            return
-
-        fn = text.strip()
-
-        if fn.startswith('/usb/'):
-            fn = fn.replace('/usb/', USB_MOUNT_LOCATION)
-
-        if fn.startswith('/sd/'):
-            fn = fn.replace('/sd/', SD_MOUNT_LOCATION)
-
-        if fn.startswith('/lcl/'):
-            fn = fn.replace('/lcl/', LCL_MOUNT_LOCATION)
-
-        if not os.path.exists(fn):
-            self.printer.send_message(g.prot, "could not find file at '{}'".format(text.strip()))
-            return
-
-        start_new_thread(self.process_gcode, (g, fn))
+        self.printer.path_planner.resume()
 
     def get_description(self):
-        return """"Select a file from the SD Card"""
+        return "Resume the print where it was paused by the M25 command."
 
-    def get_formatted_description(self):
-        return """Load *and begin printing* a gcode file from external location, choose from:
-{}
-        
-::
+    def is_buffered(self):
+        return False
 
-    > M23 /usb/myfile.gcode
-    > M23 /sd/myfolder/myotherfile.gcode
-    > M23 /lcl/anotherfile.gcode
-""".format(DEVICE_TABLE)
+
+class M25(GCodeCommand):
+
+    def execute(self, g):
+        self.printer.path_planner.suspend()
+
+    def get_description(self):
+        return "Pause the current print."
+
+    def is_buffered(self):
+        return False
 
 
 class M27(M2X):
 
-    def execute(self, g):
+    # FIXME : if halted, current_line_count will only reflect the lines loaded into path planner, not actually executed
+    # FIXME : adjust current_line_count by the number of commands in the path planner buffer
 
+    def execute(self, g):
         message = " file '{}' printing: {} of {} lines"
 
         current_lock.acquire()
@@ -321,3 +363,6 @@ class M27(M2X):
     > M27
     file '/usb/myfolder/myfile.gcode' printing: 10 of 211 lines
 """
+
+
+
