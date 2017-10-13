@@ -43,6 +43,13 @@ SD_MOUNT_LOCATION = '/media/sdcard'
 
 LCL_MOUNT_LOCATION = '/usr/share/models'
 
+MOUNT_LOCATIONS = {
+    '/usb': USB_MOUNT_LOCATION,
+    '/sd': SD_MOUNT_LOCATION,
+    '/lcl': LCL_MOUNT_LOCATION
+}
+
+
 DEVICE_TABLE = """
 ==== ===========================
 id  device        
@@ -55,6 +62,7 @@ id  device
 
 
 def check_device_id(printer, g):
+    """utility function to check to make sure one of the correct devices is being requested"""
     text = g.get_message()[len("M2X"):]
 
     if not text.strip():
@@ -72,13 +80,60 @@ def check_device_id(printer, g):
 
 
 class M2X(GCodeCommand):
-
+    """base class for all commands that work with external memory"""
     def is_buffered(self):
         return False
 
 
 class M20(M2X):
-    pass
+    """list all files on an external memory device"""
+
+    def execute(self, g):
+        device_id = check_device_id(self.printer, g)
+        if not device_id:
+            return
+
+        list_location = MOUNT_LOCATIONS[device_id]
+
+        # check if the location exists (even if it isn't mounted, usb and sd should at least have the directory)
+        if not os.path.exists(list_location):
+            self.printer.send_message(g.prot, "external memory '{}' is not initialized".format(device_id))
+            return
+
+        # additional check to make sure usb and sd devices have been mounted
+        if device_id in ['/usb', '/sd'] and not os.path.ismount(list_location):
+            self.printer.send_message(g.prot, "external memory '{}' is not initialized".format(device_id))
+            return
+
+        # list all files on the device
+        #
+        self.printer.send_message(g.prot, "files on external memory '{}'".format(list_location))
+        for root, directories, filenames in os.walk(list_location):
+            for filename in filenames:
+                self.printer.send_message(g.prot, " - {}/{}".format(list_location, filename))
+
+        def get_description(self):
+            return """List all files on an external memory location"""
+
+        def get_formatted_description(self):
+            return """For an already attached external memory location, list all the files available. The
+supported devices are:
+
+{}
+
+Use ``M21`` to attach a device.
+
+::
+
+    > M20 /usb
+    - /usb/myfile.gcode
+    - /usb/myotherfile.gcode
+    - /usb/yetanotherfile.gcode
+    
+    > M20 /lcl
+    - /lcl/example.gcode
+
+"""
 
 
 class M21(M2X):
@@ -115,6 +170,8 @@ class M21(M2X):
         if device_id == 'lcl':
             device_location, mount_location = None, LCL_MOUNT_LOCATION
 
+        self.printer.send_message(g.prot, "external memory location now available: '{}'".format(mount_location))
+
     def get_description(self):
         return """Initialize external memory location"""
 
@@ -125,10 +182,12 @@ class M21(M2X):
 
 ::
 
-    > M20 usb
-    > M20 sd
+    > M20 /usb
+    > M20 /sd
     
-.. note:: local storage is always mounted, used with M20 will be a no-op
+Use ``M22`` to unattach a device before removing. 
+    
+.. note:: local storage is always mounted, used with M21 will be a no-op
 """.format(DEVICE_TABLE)
 
 
@@ -159,7 +218,7 @@ class M22(M2X):
     > M21 usb
     > M21 sd
     
-.. note:: local storage is always mounted, used with M21 will be a no-op 
+.. note:: local storage is always mounted, used with M22 will be a no-op 
 """.format(DEVICE_TABLE)
 
 
@@ -167,6 +226,7 @@ class M23(M2X):
 
     def process_gcode(self, fn):
 
+        # TODO : this should only identify the file. M24 should start the printing. M32 should select and start
         with open(fn, 'r') as gcode_file:
             logging.info("M23: file open")
 
@@ -188,6 +248,12 @@ class M23(M2X):
                 file_g = Gcode({"message": line, "parent": g})
                 self.printer.processor.execute(file_g)
 
+            current_lock.acquire()
+            current_file = None
+            current_lint_count = None
+            current_file_count = None
+            current_lock.release()
+
             logging.info("M23: file complete")
 
     def execute(self, g):
@@ -203,16 +269,16 @@ class M23(M2X):
         fn = text.strip()
 
         if fn.startswith('/usb/'):
-            fn = fn.replace('/usb', USB_MOUNT_LOCATION)
+            fn = fn.replace('/usb/', USB_MOUNT_LOCATION)
 
         if fn.startswith('/sd/'):
-            fn = fn.replace('/sd', SD_MOUNT_LOCATION)
+            fn = fn.replace('/sd/', SD_MOUNT_LOCATION)
 
         if fn.startswith('/lcl/'):
             fn = fn.replace('/lcl/', LCL_MOUNT_LOCATION)
 
         if not os.path.exists(fn):
-            self.printer.send_message(g.prot, "could not find file at '{}'".format(fn))
+            self.printer.send_message(g.prot, "could not find file at '{}'".format(text.strip()))
             return
 
         start_new_thread(self.process_gcode, (g, fn))
@@ -236,7 +302,7 @@ class M27(M2X):
 
     def execute(self, g):
 
-        message = "file '{}' printing: {} of {} lines"
+        message = " file '{}' printing: {} of {} lines"
 
         current_lock.acquire()
         message = message.format(current_file, current_line_count, current_file_count)
