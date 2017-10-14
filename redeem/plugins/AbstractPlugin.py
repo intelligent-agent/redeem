@@ -27,10 +27,12 @@ class AbstractPlugin(object):
 
     @abstractmethod
     def exit(self):
+        """ Called when the plugin is supposed to exit. """
         pass
 
     @abstractstatic
-    def get_description():
+    def get_description(self):
+        """ A short description of this plugin"""
         return ""
 
     def path_planner_initialized(self, path_planner):
