@@ -25,7 +25,7 @@ install:
 
 buildrpm:
 	$(PYTHON) setup.py bdist_rpm --post-install=rpm/postinstall --pre-uninstall=rpm/preuninstall
-w
+
 builddeb:
 	# build the source package in the parent directory
 	# then rename it to project_version.orig.tar.gz
