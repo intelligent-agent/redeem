@@ -61,7 +61,7 @@ MOUNT_LOCATIONS = {
 
 DEVICE_TABLE = """
 ==== ===========================
-id  device        
+id   device        
 ==== ===========================
 /usb usb memory attached to host
 /sd  microsd card
@@ -144,7 +144,7 @@ Use ``M21`` to attach a device.
     > M20 /lcl
     - /lcl/example.gcode
 
-"""
+""".format(DEVICE_TABLE)
 
 
 class M21(M2X):
@@ -190,8 +190,8 @@ class M21(M2X):
         return """Initialize external memory location"""
 
     def get_formatted_description(self):
-        return """
-        Attach external memory device, choose from:
+        return """Attach external memory device, choose from:
+
 {}
 
 ::
@@ -201,7 +201,7 @@ class M21(M2X):
 
 Use ``M22`` to unattach a device before removing. 
 
-.. note:: local storage is always mounted, used with M21 will be a no-op
+.. note:: local storage is always mounted; used with M21 will be a no-op
 """.format(DEVICE_TABLE)
 
 
@@ -220,19 +220,18 @@ class M22(M2X):
             sh.umount(SD_DEVICE_2_LOCATION)
 
     def get_description(self):
-        return """"Release external memory location"""
+        return """Release external memory location"""
 
     def get_formatted_description(self):
-        return """
-        Disconnect external memory device, choose from:
+        return """Disconnect external memory device, choose from:
 {}
 
 ::
 
-    > M21 usb
-    > M21 sd
+    > M21 /usb
+    > M21 /sd
 
-.. note:: local storage is always mounted, used with M22 will be a no-op 
+.. note:: local storage is always mounted; used with M22 will be a no-op 
 """.format(DEVICE_TABLE)
 
 
@@ -270,7 +269,7 @@ class M23(M2X):
         logging.info("M23: active file is '{}'".format(self.printer.sd_card_manager.current_file))
 
     def get_description(self):
-        return """"Select a file from external location"""
+        return """Choose a file from external location"""
 
     def get_formatted_description(self):
         return """Choose a gcode file for printing from external location:
@@ -339,7 +338,12 @@ class M24(GCodeCommand):
         self.printer.path_planner.resume()
 
     def get_description(self):
-        return "Resume the print where it was paused by the M25 command."
+        return "Start/unpause a print"
+
+    def get_formatted_description(self):
+        return """Start printing from an externally selected file using the ``M23`` command.
+        
+If the current print (from any source) was paused by ``M25``, this will resume the print."""
 
     def is_buffered(self):
         return False
@@ -379,10 +383,14 @@ class M27(M2X):
         return """Report external file print status"""
 
     def get_formatted_description(self):
-        return """Display current file being printed, the number of lines processed and the total number of lines
+        return """If printing from an externally selected file (from ``M23``), display of how many lines
+from the active file have been processed. Will also display total number of lines in the file.
+        
 ::
+
     > M27
     file '/usb/myfolder/myfile.gcode' printing: 10 of 211 lines
+    
 """
 
 
