@@ -19,26 +19,15 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
  You should have received a copy of the GNU General Public License
  along with Redeem.  If not, see <http://www.gnu.org/licenses/>.
 """
-from multiprocessing import Lock
 
 from Path import Path
 import numpy as np
 import logging
 from Delta import Delta
 from PruInterface import PruInterface
+from SDCardManager import SDCardManager
 import os
 import json
-
-
-class SDCardManager(object):
-    current_file = None
-    current_line_count = None
-    current_file_count = None
-    current_lock = None
-
-    def __init__(self):
-        self.current_lock = Lock()
-
 
 
 class Printer:
