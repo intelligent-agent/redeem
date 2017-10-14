@@ -19,8 +19,10 @@ class G28(GCodeCommand):
 
     def execute(self, g):
         if g.num_tokens() == 0:  # If no token is given, home all
-            g.set_tokens(["X0", "Y0", "Z0", "E0", "H0"])
-        
+            axes_list = self.printer.config.get('Homing','G28_default_axes').replace(' ','')
+            tokens = [ax+'0' for ax in axes_list.split(",")]
+            g.set_tokens(tokens)
+
         axis_home = []
         
         for i in range(g.num_tokens()):  # Run through all tokens
