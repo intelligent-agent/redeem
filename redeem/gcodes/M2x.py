@@ -38,10 +38,10 @@ from redeem.Gcode import Gcode
 
 # multi thread management
 # TODO : encapsulate this into an attribute of the printer. `SDCardManager`
-current_file = None
-current_line_count = None
-current_file_count = None
-current_lock = Lock()
+# current_file = None
+# current_line_count = None
+# current_file_count = None
+# current_lock = Lock()
 
 # device_location = '/dev/mmcblk1p1'
 USB_DEVICE_LOCATION = '/dev/sda1'
@@ -169,16 +169,20 @@ class M21(M2X):
 
         device_location, mount_location = None, None
 
-        if device_id == 'usb':
+        if device_id == '/usb':
             device_location, mount_location = self._mount(g, USB_DEVICE_LOCATION, USB_MOUNT_LOCATION)
 
-        if device_id == 'sd':
+        if device_id == '/sd':
             device_location, mount_location = self._mount(g, SD_DEVICE_1_LOCATION, SD_MOUNT_LOCATION)
             if not mount_location:
                 device_location, mount_location = self._mount(g, SD_DEVICE_2_LOCATION, SD_MOUNT_LOCATION)
 
-        if device_id == 'lcl':
+        if device_id == '/lcl':
             device_location, mount_location = None, LCL_MOUNT_LOCATION
+
+        if not mount_location:
+            self.printer.send_message(g.prot, "external memory location could not be attached")
+            return
 
         self.printer.send_message(g.prot, "external memory location now available: '{}'".format(mount_location))
 
@@ -202,15 +206,16 @@ Use ``M22`` to unattach a device before removing.
 
 
 class M22(M2X):
-    def execute(self, gcode):
+    def execute(self, g):
         device_id = check_device_id(self.printer, g)
         if not device_id:
             return
 
-        if device_id == 'usb':
+        if device_id == '/usb':
             sh.umount(USB_MOUNT_LOCATION)
+            self.printer.send_message(g.prot, "external memory location closed '{}'".format(device_id))
 
-        if device_id == 'sd':
+        if device_id == '/sd':
             sh.umount(SD_DEVICE_1_LOCATION)
             sh.umount(SD_DEVICE_2_LOCATION)
 
@@ -246,22 +251,23 @@ class M23(M2X):
 
         fn = text.strip()
 
-        if fn.startswith('/usb/'):
-            fn = fn.replace('/usb/', USB_MOUNT_LOCATION)
+        if fn.startswith('/usb'):
+            fn = fn.replace('/usb', USB_MOUNT_LOCATION)
 
-        if fn.startswith('/sd/'):
-            fn = fn.replace('/sd/', SD_MOUNT_LOCATION)
+        if fn.startswith('/sd'):
+            fn = fn.replace('/sd', SD_MOUNT_LOCATION)
 
-        if fn.startswith('/lcl/'):
-            fn = fn.replace('/lcl/', LCL_MOUNT_LOCATION)
+        if fn.startswith('/lcl'):
+            fn = fn.replace('/lcl', LCL_MOUNT_LOCATION)
 
         if not os.path.exists(fn):
-            self.printer.send_message(g.prot, "could not find file at '{}'".format(text.strip()))
+            self.printer.send_message(g.prot, "could not find file at '{}'".format(fn.strip()))
             return
 
-        current_lock.acquire()
-        current_file = fn
-        current_lock.release()
+        self.printer.sd_card_manager.current_lock.acquire()
+        self.printer.sd_card_manager.current_file = fn
+        self.printer.sd_card_manager.current_lock.release()
+        logging.info("M23: active file is '{}'".format(self.printer.sd_card_manager.current_file))
 
     def get_description(self):
         return """"Select a file from external location"""
@@ -280,45 +286,55 @@ class M23(M2X):
 
 class M24(GCodeCommand):
 
-    def process_gcode(self, fn):
+    def process_gcode(self, fn, g):
 
         with open(fn, 'r') as gcode_file:
-            logging.info("M23: file open")
+            logging.info("M23: file open: '{}".format(fn))
 
-            current_lock.acquire()
-            current_file = gcode_file
-            current_line_count = 0
-            current_file_count = len(gcode_file)
-            current_lock.release()
+            count = sum(1 for line in gcode_file)
+            logging.info("M23: line count: '{}".format(count))
+            self.printer.sd_card_manager.current_lock.acquire()
+            self.printer.sd_card_manager.current_line_count = 0
+            self.printer.sd_card_manager.current_file_count = count
+            self.printer.sd_card_manager.current_lock.release()
+
+            gcode_file.seek(0)
 
             for line in gcode_file:
                 line = line.strip()
+                logging.info("line is '{}'".format(line))
 
-                current_lock.acquire()
-                current_line_count += 1
-                current_lock.release()
+                self.printer.sd_card_manager.current_lock.acquire()
+                self.printer.sd_card_manager.current_line_count += 1
+                self.printer.sd_card_manager.current_lock.release()
+
+                logging.info("line count is increased")
 
                 if not line or line.startswith(';'):
                     continue
                 file_g = Gcode({"message": line, "parent": g})
+                logging.info("gcode created")
                 self.printer.processor.execute(file_g)
+                logging.info('line has been executed')
 
-            current_lock.acquire()
-            current_file = None
-            current_lint_count = None
-            current_file_count = None
-            current_lock.release()
+            self.printer.sd_card_manager.current_lock.acquire()
+            self.printer.sd_card_manager.current_file = None
+            self.printer.sd_card_manager.current_lint_count = None
+            self.printer.sd_card_manager.current_file_count = None
+            self.printer.sd_card_manager.current_lock.release()
 
             logging.info("M23: file complete")
 
     def execute(self, g):
 
-        current_lock.acquire()
-        fn = current_file
-        current_lock.release()
-
-        if fn:
-            start_new_thread(self.process_gcode, (fn,))
+        self.printer.sd_card_manager.current_lock.acquire()
+        fn = self.printer.sd_card_manager.current_file
+        count = self.printer.sd_card_manager.current_file_count
+        self.printer.sd_card_manager.current_lock.release()
+        logging.info("M23: current file is: '{}'".format(fn))
+        if not count and fn:
+            logging.info("M23: active file is '{}'".format(fn))
+            start_new_thread(self.process_gcode, (fn, g))
 
         self.printer.path_planner.resume()
 
@@ -349,9 +365,11 @@ class M27(M2X):
     def execute(self, g):
         message = " file '{}' printing: {} of {} lines"
 
-        current_lock.acquire()
-        message = message.format(current_file, current_line_count, current_file_count)
-        current_lock.release()
+        self.printer.sd_card_manager.current_lock.acquire()
+        message = message.format(self.printer.sd_card_manager.current_file,
+                                 self.printer.sd_card_manager.current_line_count,
+                                 self.printer.sd_card_manager.current_file_count)
+        self.printer.sd_card_manager.current_lock.release()
 
         self.printer.send_message(g.prot, message)
 
