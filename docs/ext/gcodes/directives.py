@@ -29,7 +29,8 @@ class GCodeDirective(rst.Directive):
             if inspect.ismodule(obj) and (obj.__name__.startswith('gcodes') or obj.__name__.startswith('redeem.gcodes')):
                 self.load_classes_in_module(obj, designator)
 
-            elif inspect.isclass(obj) and issubclass(obj, GCodeCommand) and module_name != 'GCodeCommand' and module_name != 'ToolChange' and obj.__name__.startswith(designator):
+            elif inspect.isclass(obj) and issubclass(obj, GCodeCommand) and not inspect.isabstract(obj) and \
+                    module_name != 'GCodeCommand' and module_name != 'ToolChange' and obj.__name__.startswith(designator):
 
                 # create the key to sort the classes
                 code_name = obj.__name__
