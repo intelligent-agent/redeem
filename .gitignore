@@ -32,10 +32,11 @@ Redeem.egg-info/
 build/
 sftp-config.json
 
+_build
+node_modules
 # editor temp files
 *.swp
 
 # virtual env
 venv/
 *.svg
-
