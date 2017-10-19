@@ -103,7 +103,7 @@ class M20(M2X):
     def execute(self, g):
         device_id = check_device_id(self.printer, g)
         if not device_id:
-            return
+            device_id = "/lcl"
 
         list_location = MOUNT_LOCATIONS[device_id]
 
