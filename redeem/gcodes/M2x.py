@@ -75,7 +75,7 @@ def check_device_id(printer, g):
     text = g.get_message()[len("M2X"):]
 
     if not text.strip():
-        printer.send_message(g.prot, "device id not specified")
+        # printer.send_message(g.prot, "device id not specified")
         return None
 
     device_id = text.strip()
@@ -103,7 +103,7 @@ class M20(M2X):
     def execute(self, g):
         device_id = check_device_id(self.printer, g)
         if not device_id:
-            return
+            device_id = "/lcl"
 
         list_location = MOUNT_LOCATIONS[device_id]
 
@@ -118,10 +118,10 @@ class M20(M2X):
             return
 
         # list all files on the device
-        self.printer.send_message(g.prot, "files on external memory '{}'".format(list_location))
+        # self.printer.send_message(g.prot, "files on external memory '{}'".format(list_location))
         for root, directories, filenames in os.walk(list_location):
             for filename in filenames:
-                self.printer.send_message(g.prot, " - {}/{}".format(list_location, filename))
+                self.printer.send_message(g.prot, "{}/{} -".format(list_location, filename))
 
     def get_description(self):
         return """List all files on an external memory location"""
