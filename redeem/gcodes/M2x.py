@@ -121,7 +121,8 @@ class M20(M2X):
         self.printer.send_message(g.prot, "Begin file list:")
         for root, directories, filenames in os.walk(list_location):
             for filename in filenames:
-                self.printer.send_message(g.prot, "{}/{} {}".format(device_id, filename, os.stat(list_location + "/" + filename).st_size))
+		file_line_count = sum(1 for line in open(list_location + "/" + filename))
+                self.printer.send_message(g.prot, "{}/{} {}".format(device_id, filename, file_line_count))
 	self.printer.send_message(g.prot, "End file list")
 
     def get_description(self):
@@ -250,15 +251,28 @@ class M23(M2X):
             return
 
         fn = text.strip()
+	list_location = None
 
         if fn.startswith('/usb'):
             fn = fn.replace('/usb', USB_MOUNT_LOCATION)
+	    list_location = USB_MOUNT_LOCATION
 
         if fn.startswith('/sd'):
             fn = fn.replace('/sd', SD_MOUNT_LOCATION)
+	    list_location = SD_MOUNT_LOCATION
 
         if fn.startswith('/lcl'):
             fn = fn.replace('/lcl', LCL_MOUNT_LOCATION)
+	    list_location = LCL_MOUNT_LOCATION
+
+	filemap = dict()
+	for root, directories, filenames in os.walk(list_location):
+		for file in filenames:
+			filepath = root + os.sep + file
+			filemap[filepath.lower()] = filepath
+
+	if fn in filemap:
+		fn = filemap[fn]
 
         if not os.path.exists(fn):
             self.printer.send_message(g.prot, "could not find file at '{}'".format(fn.strip()))
@@ -292,10 +306,10 @@ class M24(GCodeCommand):
     def process_gcode(self, fn, g):
 
         with open(fn, 'r') as gcode_file:
-            logging.info("M24: file open: '{}".format(fn))
+            logging.info("M24: file open: '{}'".format(fn))
 
             count = sum(1 for line in gcode_file)
-            logging.info("M24: line count: '{}".format(count))
+            logging.info("M24: line count: '{}'".format(count))
             self.printer.sd_card_manager.current_lock.acquire()
             self.printer.sd_card_manager.current_line_count = 0
             self.printer.sd_card_manager.current_file_count = count
@@ -373,17 +387,14 @@ class M27(M2X):
     def execute(self, g):
 
         self.printer.sd_card_manager.current_lock.acquire()
-	current_file = self.printer.sd_card_manager.current_file
 	current_line_count = self.printer.sd_card_manager.current_line_count
 	current_file_count = self.printer.sd_card_manager.current_file_count
         self.printer.sd_card_manager.current_lock.release()
 
-	current_file_count = os.stat(current_file).st_size
-
 	if current_line_count is None or current_file_count is None:
 		return
 
-        message = "SD printing byte {}/{}".format(self.printer.sd_card_manager.current_line_count, self.printer.sd_card_manager.current_file_count)
+        message = "SD printing byte {}/{}".format(current_line_count, current_file_count)
 	self.printer.send_message(g.prot, message)
 
         return
