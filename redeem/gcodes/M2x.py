@@ -118,10 +118,11 @@ class M20(M2X):
             return
 
         # list all files on the device
-        # self.printer.send_message(g.prot, "files on external memory '{}'".format(list_location))
+        self.printer.send_message(g.prot, "Begin file list:")
         for root, directories, filenames in os.walk(list_location):
             for filename in filenames:
-                self.printer.send_message(g.prot, "{}/{} -".format(list_location, filename))
+                self.printer.send_message(g.prot, "{}/{}".format(list_location, filename))
+	self.printer.send_message(g.prot, "End file list")
 
     def get_description(self):
         return """List all files on an external memory location"""
@@ -184,7 +185,7 @@ class M21(M2X):
             self.printer.send_message(g.prot, "external memory location could not be attached")
             return
 
-        self.printer.send_message(g.prot, "external memory location now available: '{}'".format(mount_location))
+        # self.printer.send_message(g.prot, "external memory location now available: '{}'".format(mount_location))
 
     def get_description(self):
         return """Initialize external memory location"""
