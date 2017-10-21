@@ -268,8 +268,9 @@ class M23(M2X):
         self.printer.sd_card_manager.current_file = fn
         self.printer.sd_card_manager.current_lock.release()
         logging.info("M23: active file is '{}'".format(self.printer.sd_card_manager.current_file))
+	self.printer.send_message(g.prot, "File opened:{} Size:{}".format(fn, os.stat(fn).st_size))
+	self.printer.send_message(g.prot, "File selected")
 
-	self.printer.send_message(g.prot, "File opened:{} Size:{}".format(fn, os.stat(fn).st_size)
 
     def get_description(self):
         return """Choose a file from external location"""
@@ -370,14 +371,13 @@ class M27(M2X):
     # FIXME : adjust current_line_count by the number of commands in the path planner buffer
 
     def execute(self, g):
-        message = " file '{}' printing: {} of {} lines"
 
         self.printer.sd_card_manager.current_lock.acquire()
-        message = message.format(self.printer.sd_card_manager.current_file,
-                                 self.printer.sd_card_manager.current_line_count,
-                                 self.printer.sd_card_manager.current_file_count)
+	current_file = self.printer.sd_card_manager.current_file
+	current_line_count = self.printer.sd_card_manager.current_line_count
+	current_file_count = self.printer.sd_card_manager.current_file_count
         self.printer.sd_card_manager.current_lock.release()
-
+        message = "SD printing byte '{}'/'{}'".format(self.printer.sd_card_manager.current_line_count, self.printer.sd_card_manager.current_file_count)
         self.printer.send_message(g.prot, message)
 
         return
