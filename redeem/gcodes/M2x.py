@@ -121,7 +121,7 @@ class M20(M2X):
         self.printer.send_message(g.prot, "Begin file list:")
         for root, directories, filenames in os.walk(list_location):
             for filename in filenames:
-                self.printer.send_message(g.prot, "{}/{}".format(list_location, filename))
+                self.printer.send_message(g.prot, "{}/{} {}".format(device_id, filename, os.stat(list_location + "/" + filename).st_size))
 	self.printer.send_message(g.prot, "End file list")
 
     def get_description(self):
@@ -268,6 +268,8 @@ class M23(M2X):
         self.printer.sd_card_manager.current_file = fn
         self.printer.sd_card_manager.current_lock.release()
         logging.info("M23: active file is '{}'".format(self.printer.sd_card_manager.current_file))
+
+	self.printer.send_message(g.prot, "File opened:{} Size:{}".format(fn, os.stat(fn).st_size)
 
     def get_description(self):
         return """Choose a file from external location"""
