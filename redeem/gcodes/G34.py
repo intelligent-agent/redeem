@@ -108,10 +108,10 @@ NOTE: G20 ignored. All units in mm.
 
 Parameters:
 
-Df  Probe move maximum length
-Ff  Probing speed
-Af  Probing acceleration
-Zf  Upward move distance before probing (default: 5 mm)
+Dn  Probe move maximum length n in mm
+Fn  Probing speed n in mm/min
+An  Probing acceleration n in mm/s^2
+Zn  Upward move distance n in mm before probing (default: n = 5)
 S   Simulate only (do not store the results)
         """
 
