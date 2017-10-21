@@ -267,7 +267,7 @@ class M23(M2X):
         self.printer.sd_card_manager.current_lock.acquire()
         self.printer.sd_card_manager.current_file = fn
         self.printer.sd_card_manager.current_lock.release()
-        logging.info("M23: active file is '{}'".format(self.printer.sd_card_manager.current_file))
+        #logging.info("M23: active file is '{}'".format(self.printer.sd_card_manager.current_file))
 	self.printer.send_message(g.prot, "File opened:{} Size:{}".format(fn, os.stat(fn).st_size))
 	self.printer.send_message(g.prot, "File selected")
 
@@ -292,10 +292,10 @@ class M24(GCodeCommand):
     def process_gcode(self, fn, g):
 
         with open(fn, 'r') as gcode_file:
-            logging.info("M23: file open: '{}".format(fn))
+            logging.info("M24: file open: '{}".format(fn))
 
             count = sum(1 for line in gcode_file)
-            logging.info("M23: line count: '{}".format(count))
+            logging.info("M24: line count: '{}".format(count))
             self.printer.sd_card_manager.current_lock.acquire()
             self.printer.sd_card_manager.current_line_count = 0
             self.printer.sd_card_manager.current_file_count = count
@@ -305,20 +305,20 @@ class M24(GCodeCommand):
 
             for line in gcode_file:
                 line = line.strip()
-                logging.info("line is '{}'".format(line))
+                #logging.info("line is '{}'".format(line))
 
                 self.printer.sd_card_manager.current_lock.acquire()
                 self.printer.sd_card_manager.current_line_count += 1
                 self.printer.sd_card_manager.current_lock.release()
 
-                logging.info("line count is increased")
+                #logging.info("line count is increased")
 
                 if not line or line.startswith(';'):
                     continue
                 file_g = Gcode({"message": line, "parent": g})
-                logging.info("gcode created")
+                #logging.info("gcode created")
                 self.printer.processor.execute(file_g)
-                logging.info('line has been executed')
+                #logging.info('line has been executed')
 
             self.printer.sd_card_manager.current_lock.acquire()
             self.printer.sd_card_manager.current_file = None
@@ -326,7 +326,7 @@ class M24(GCodeCommand):
             self.printer.sd_card_manager.current_file_count = None
             self.printer.sd_card_manager.current_lock.release()
 
-            logging.info("M23: file complete")
+            logging.info("M24: file complete")
 
     def execute(self, g):
 
@@ -334,9 +334,9 @@ class M24(GCodeCommand):
         fn = self.printer.sd_card_manager.current_file
         count = self.printer.sd_card_manager.current_file_count
         self.printer.sd_card_manager.current_lock.release()
-        logging.info("M23: current file is: '{}'".format(fn))
+        logging.info("M24: current file is: '{}'".format(fn))
         if not count and fn:
-            logging.info("M23: active file is '{}'".format(fn))
+            logging.info("M24: active file is '{}'".format(fn))
             start_new_thread(self.process_gcode, (fn, g))
 
         self.printer.path_planner.resume()
@@ -377,8 +377,14 @@ class M27(M2X):
 	current_line_count = self.printer.sd_card_manager.current_line_count
 	current_file_count = self.printer.sd_card_manager.current_file_count
         self.printer.sd_card_manager.current_lock.release()
-        message = "SD printing byte '{}'/'{}'".format(self.printer.sd_card_manager.current_line_count, self.printer.sd_card_manager.current_file_count)
-        self.printer.send_message(g.prot, message)
+
+	current_file_count = os.stat(current_file).st_size
+
+	if current_line_count is None or current_file_count is None:
+		return
+
+        message = "SD printing byte {}/{}".format(self.printer.sd_card_manager.current_line_count, self.printer.sd_card_manager.current_file_count)
+	self.printer.send_message(g.prot, message)
 
         return
 
@@ -392,7 +398,7 @@ from the active file have been processed. Will also display total number of line
 ::
 
     > M27
-    file '/usb/myfolder/myfile.gcode' printing: 10 of 211 lines
+    SD printing byte 10/1231
     
 """
 
