@@ -1,0 +1,14 @@
+{
+  "name": "thingprinter",
+  "version": "1.0.0",
+  "main": "index.js",
+  "author": "Andrew Mirsky <andrew.mirsky@hackerati.us>",
+  "license": "MIT",
+  "dependencies": {
+    "gulp": "^3.9.1",
+    "gulp-less": "^3.3.2",
+    "gulp-plumber": "^1.1.0",
+    "gulp-rename": "^1.2.2",
+    "gulp-shell": "^0.6.3"
+  }
+}
