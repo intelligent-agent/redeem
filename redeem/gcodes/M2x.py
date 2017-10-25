@@ -255,24 +255,24 @@ class M23(M2X):
 
         if fn.startswith('/usb'):
             fn = fn.replace('/usb', USB_MOUNT_LOCATION)
-        list_location = USB_MOUNT_LOCATION
+            list_location = USB_MOUNT_LOCATION
 
         if fn.startswith('/sd'):
             fn = fn.replace('/sd', SD_MOUNT_LOCATION)
-        list_location = SD_MOUNT_LOCATION
+            list_location = SD_MOUNT_LOCATION
 
         if fn.startswith('/lcl'):
             fn = fn.replace('/lcl', LCL_MOUNT_LOCATION)
-        list_location = LCL_MOUNT_LOCATION
+            list_location = LCL_MOUNT_LOCATION
 
-    filemap = dict()
-    for root, directories, filenames in os.walk(list_location):
-        for file in filenames:
-            filepath = root + os.sep + file
-            filemap[filepath.lower()] = filepath
+        filemap = dict()
+        for root, directories, filenames in os.walk(list_location):
+            for file in filenames:
+                filepath = root + os.sep + file
+                filemap[filepath.lower()] = filepath
 
-    if fn in filemap:
-        fn = filemap[fn]
+        if fn in filemap:
+            fn = filemap[fn]
 
         if not os.path.exists(fn):
             self.printer.send_message(g.prot, "could not find file at '{}'".format(fn.strip()))
