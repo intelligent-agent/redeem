@@ -338,7 +338,7 @@ class M24(GCodeCommand):
 
             self.printer.sd_card_manager.current_lock.acquire()
             self.printer.sd_card_manager.current_file = None
-            self.printer.sd_card_manager.current_lint_count = None
+            self.printer.sd_card_manager.current_line_count = None
             self.printer.sd_card_manager.current_file_count = None
             self.printer.sd_card_manager.current_lock.release()
 
