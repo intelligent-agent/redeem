@@ -121,9 +121,9 @@ class M20(M2X):
         self.printer.send_message(g.prot, "Begin file list:")
         for root, directories, filenames in os.walk(list_location):
             for filename in filenames:
-		file_line_count = sum(1 for line in open(list_location + "/" + filename))
+                file_byte_count = os.stat(root + os.sep + filename).st_size
                 self.printer.send_message(g.prot, "{}/{} {}".format(device_id, filename, file_line_count))
-	self.printer.send_message(g.prot, "End file list")
+        self.printer.send_message(g.prot, "End file list")
 
     def get_description(self):
         return """List all files on an external memory location"""
@@ -251,28 +251,28 @@ class M23(M2X):
             return
 
         fn = text.strip()
-	list_location = None
+        list_location = None
 
         if fn.startswith('/usb'):
             fn = fn.replace('/usb', USB_MOUNT_LOCATION)
-	    list_location = USB_MOUNT_LOCATION
+        list_location = USB_MOUNT_LOCATION
 
         if fn.startswith('/sd'):
             fn = fn.replace('/sd', SD_MOUNT_LOCATION)
-	    list_location = SD_MOUNT_LOCATION
+        list_location = SD_MOUNT_LOCATION
 
         if fn.startswith('/lcl'):
             fn = fn.replace('/lcl', LCL_MOUNT_LOCATION)
-	    list_location = LCL_MOUNT_LOCATION
+        list_location = LCL_MOUNT_LOCATION
 
-	filemap = dict()
-	for root, directories, filenames in os.walk(list_location):
-		for file in filenames:
-			filepath = root + os.sep + file
-			filemap[filepath.lower()] = filepath
+    filemap = dict()
+    for root, directories, filenames in os.walk(list_location):
+        for file in filenames:
+            filepath = root + os.sep + file
+            filemap[filepath.lower()] = filepath
 
-	if fn in filemap:
-		fn = filemap[fn]
+    if fn in filemap:
+        fn = filemap[fn]
 
         if not os.path.exists(fn):
             self.printer.send_message(g.prot, "could not find file at '{}'".format(fn.strip()))
@@ -282,8 +282,8 @@ class M23(M2X):
         self.printer.sd_card_manager.current_file = fn
         self.printer.sd_card_manager.current_lock.release()
         #logging.info("M23: active file is '{}'".format(self.printer.sd_card_manager.current_file))
-	self.printer.send_message(g.prot, "File opened:{} Size:{}".format(fn, os.stat(fn).st_size))
-	self.printer.send_message(g.prot, "File selected")
+        self.printer.send_message(g.prot, "File opened:{} Size:{}".format(fn, os.stat(fn).st_size))
+        self.printer.send_message(g.prot, "File selected")
 
 
     def get_description(self):
@@ -313,6 +313,7 @@ class M24(GCodeCommand):
             self.printer.sd_card_manager.current_lock.acquire()
             self.printer.sd_card_manager.current_line_count = 0
             self.printer.sd_card_manager.current_file_count = count
+            self.printer.sd_card_manager.current_byte_count = 0
             self.printer.sd_card_manager.current_lock.release()
 
             gcode_file.seek(0)
@@ -323,6 +324,7 @@ class M24(GCodeCommand):
 
                 self.printer.sd_card_manager.current_lock.acquire()
                 self.printer.sd_card_manager.current_line_count += 1
+                self.printer_sd_card_manager.current_byte_count += len(line.encode('utf-8'))
                 self.printer.sd_card_manager.current_lock.release()
 
                 #logging.info("line count is increased")
@@ -384,20 +386,22 @@ class M27(M2X):
     # FIXME : if halted, current_line_count will only reflect the lines loaded into path planner, not actually executed
     # FIXME : adjust current_line_count by the number of commands in the path planner buffer
 
+
     def execute(self, g):
 
         self.printer.sd_card_manager.current_lock.acquire()
-	current_line_count = self.printer.sd_card_manager.current_line_count
-	current_file_count = self.printer.sd_card_manager.current_file_count
+        current_file = self.printer.sd_card_manager.current_file
+        current_byte_count = self.printer.sd_card_manager.current_byte_count
         self.printer.sd_card_manager.current_lock.release()
 
-	if current_line_count is None or current_file_count is None:
-		return
+        if current_byte_count is None or current_file is None:
+            return
 
-        message = "SD printing byte {}/{}".format(current_line_count, current_file_count)
-	self.printer.send_message(g.prot, message)
-
+        message = "SD printing byte {}/{}".format(current_byte_count, os.stat(current_file).st_size)
+        self.printer.send_message(g.prot, message)
+        
         return
+    
 
     def get_description(self):
         return """Report external file print status"""
