@@ -1,5 +1,5 @@
 from redeem.configuration.factories import ConfigFactory
 
 
-class ConfigFactoryV19(ConfigFactory):
+class ConfigFactoryV20(ConfigFactory):
     pass
