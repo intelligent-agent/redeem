@@ -1,3 +1,5 @@
+from ConfigParser import SafeConfigParser
+
 from redeem.CascadingConfigParser import CascadingConfigParser
 from redeem.configuration.RedeemConfig import RedeemConfig
 from redeem.configuration.sections.alarms import AlarmsConfig
@@ -19,53 +21,75 @@ from redeem.configuration.sections.steppers import SteppersConfig
 from redeem.configuration.sections.system import SystemConfig
 from redeem.configuration.sections.watchdog import WatchdogConfig
 
+import logging
+
+
+def _clean(key):
+    return key.replace('-', '_').lower()
+
 
 class ConfigFactory(object):
-    cpp = None
-    sections = [
-        ('Alarms', AlarmsConfig),
-        ('Cold-ends', ColdendsConfig),
-        ('Delta', DeltaConfig),
-        ('Endstops', EndstopsConfig),
-        ('Fans', FansConfig),
-        ('Filament-sensors', FilamentSensorsConfig),
-        ('Geometry', GeometryConfig),
-        ('Heaters', HeatersConfig),
-        ('Homing', HomingConfig),
-        ('Macros', MacrosConfig),
-        ('Planner', PlannerConfig),
-        ('HPX2MaxPlugin', HPX2MaxPluginConfig),
-        ('DualServoPlugin', DualServoPluginConfig),
-        ('Probe', ProbeConfig),
-        ('Rotary-encoders', RotaryEncodersConfig),
-        ('Servos', ServosConfig),
-        ('Steppers', SteppersConfig),
-        ('System', SystemConfig),
-        ('Watchdog', WatchdogConfig)
-    ]
 
-    def __init__(self, config_files):
-        self.ccp = CascadingConfigParser(config_files)
+    sections = {
+        'Alarms': AlarmsConfig,
+        'Cold-ends': ColdendsConfig,
+        'Delta': DeltaConfig,
+        'Endstops': EndstopsConfig,
+        'Fans': FansConfig,
+        'Filament-sensors': FilamentSensorsConfig,
+        'Geometry': GeometryConfig,
+        'Heaters': HeatersConfig,
+        'Homing': HomingConfig,
+        'Macros': MacrosConfig,
+        'Planner': PlannerConfig,
+        'HPX2MaxPlugin': HPX2MaxPluginConfig,
+        'DualServoPlugin': DualServoPluginConfig,
+        'Probe': ProbeConfig,
+        'Rotary-encoders': RotaryEncodersConfig,
+        'Servos': ServosConfig,
+        'Steppers': SteppersConfig,
+        'System': SystemConfig,
+        'Watchdog': WatchdogConfig
+    }
 
-    def hydrate_config(self):
+    def __init__(self):
+        pass
+
+    def hydrate_config(self, config_file=None, config_files=()):
         """Use default mapper, unless another one is specified by subclass"""
+        config_parser = SafeConfigParser()
+
+        if config_file is not None and len(config_files) > 0:
+            raise Exception("cannot provide both single and list of config files")
+
+        if config_file:
+            config_parser.read([config_file, ])
+        elif len(config_files) > 0:
+            config_parser.read(config_files)
+
         redeem_config = RedeemConfig()
-        for section_name, section_cls in self.sections:
+
+        for section in config_parser.sections():
+            if section not in self.sections.keys():
+                logging.warn("[{}] does not match known section".format(section))
+                continue
+            section_cls = self.sections[section]
             hydration_name = 'hydrate_' + section_cls.__name__.lower()
             if hasattr(self, hydration_name):
                 config_func = getattr(self, hydration_name)
                 config = config_func()
             else:
-                config = self.hydrate_section_config(section_name, section_cls)
-            setattr(redeem_config, section_name.lower(), config)
+                config = self.hydrate_section_config(config_parser, section, section_cls)
+            assert(hasattr(redeem_config, _clean(section)))
+            setattr(redeem_config, _clean(section), config)
         return redeem_config
 
-    def hydrate_section_config(self, section_name, config_cls):
+    def hydrate_section_config(self, config_parser, section, config_cls):
         """A simple one-to-one mapper from ini to config class"""
         config = config_cls()
-        for item in config_cls.__dict__:
-            if item.startswith('__'):
+        for option in config_parser.options(section):
+            if not config.has(option):
+                logging.warn("[{}] '{}' does not match known option".format(section, option))
                 continue
-            item = item.replace('_', '-')
-            setattr(config, item, self.ccp.get(section_name, item))
+            setattr(config, option, config_parser.get(section, option))
         return config

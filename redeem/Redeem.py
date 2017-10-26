@@ -67,6 +67,8 @@ from Key_pin import Key_pin, Key_pin_listener
 from Watchdog import Watchdog
 
 # Global vars
+from redeem.configuration.factories.ConfigFactoryV20 import ConfigFactoryV20
+
 printer = None
 
 # Default logging level is set to debug
@@ -97,12 +99,6 @@ class Redeem:
         Alarm.executor = AlarmExecutor()
         alarm = Alarm(Alarm.ALARM_TEST, "Alarm framework operational")
 
-        # check for config files
-        file_path = os.path.join(config_location,"default.cfg")
-        if not os.path.exists(file_path):
-            logging.error(file_path + " does not exist, this file is required for operation")
-            sys.exit() # maybe use something more graceful?
-
         local_path = os.path.join(config_location,"local.cfg")
         if not os.path.exists(local_path):
             logging.info(local_path + " does not exist, Creating one")
@@ -110,10 +106,8 @@ class Redeem:
             os.chmod(local_path, 0o777)
 
         # Parse the config files.
-        printer.config = CascadingConfigParser(
-            [os.path.join(config_location,'default.cfg'),
-             os.path.join(config_location,'printer.cfg'),
-             os.path.join(config_location,'local.cfg')])
+        config_factory = ConfigFactoryV20([os.path.join(config_location, 'printer.cfg'), os.path.join(config_location,'local.cfg')])
+        printer.config = config_factory.hydrate_config()
 
         # Check the local and printer files
         printer_path = os.path.join(config_location,"printer.cfg")
