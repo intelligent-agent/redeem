@@ -1,7 +1,7 @@
 from redeem.configuration.sections import BaseConfig
 
 
-class StepperConfig(BaseConfig):
+class SteppersConfig(BaseConfig):
 
     microstepping_x, microstepping_y, microstepping_z = 3, 3, 3
     microstepping_e, microstepping_h = 3, 3
@@ -39,9 +39,9 @@ class StepperConfig(BaseConfig):
     # meaning that it will mirror the position of the
     # specified stepper. Typically, H will mirror Y or Z,
     # in the case of the former, write this: slave_y = H.
-    slave_x, slave_y, slave_z = None, None, None
-    slave_e, slave_h = None, None
-    slave_a, slave_b, slave_c = None, None, None
+    slave_x, slave_y, slave_z = '', '', ''
+    slave_e, slave_h = '', ''
+    slave_a, slave_b, slave_c = '', '', ''
 
     # Stepper timout
     use_timeout = True

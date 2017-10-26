@@ -12,10 +12,3 @@ class FansConfig(BaseConfig):
     default_fan_7_value = 0.0
     default_fan_8_value = 0.0
     default_fan_9_value = 0.0
-
-    def get(self, key):
-        key = key.replace('_', '-')
-
-        if not getattr(self, key, None):
-            return None
-        return getattr(self, key)
