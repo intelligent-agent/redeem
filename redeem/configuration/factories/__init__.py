@@ -77,7 +77,7 @@ class ConfigFactory(object):
             hydration_name = 'hydrate_' + section_cls.__name__.lower()
             if hasattr(self, hydration_name):
                 config_func = getattr(self, hydration_name)
-                config = config_func()
+                config = config_func(config_parser)
             else:
                 config = self.hydrate_section_config(config_parser, section, section_cls)
             assert(hasattr(redeem_config, _clean(section)))
