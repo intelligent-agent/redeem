@@ -31,6 +31,9 @@ class M106(GCodeCommand):
             if gcode.has_letter("R"): # Ramp to value
                 delay = gcode.get_float_by_letter("R", 0.01)
                 fan.ramp_to(value, delay)            
+            if gcode.has_letter("F"): # Change PWM frequency in hz
+                frequency = gcode.get_float_by_letter("F", 1000)
+                fan.set_PWM_frequency(frequency)
             else:
                 fan.set_value(value)
 
@@ -41,7 +44,8 @@ class M106(GCodeCommand):
         return "Set the current fan power. Specify S parameter for the " \
                "power (between 0 and 255) and the P parameter for the fan " \
                "number. P=0 and S=255 by default. If no P, use fan from config. "\
-               "If no fan configured, use fan 0. If 'R' is present, ramp to the value"
+               "If no fan configured, use fan 0. If 'R' is present, ramp to the value"\
+               "if 'F' present change PWM frequency hz eg. F1000 is 1khz"
 
     def is_buffered(self):
         return True
