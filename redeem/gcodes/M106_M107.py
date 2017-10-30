@@ -9,6 +9,8 @@ License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 """
 
 from GCodeCommand import GCodeCommand
+import logging
+import os
 
 
 class M106(GCodeCommand):
@@ -31,9 +33,19 @@ class M106(GCodeCommand):
             if gcode.has_letter("R"): # Ramp to value
                 delay = gcode.get_float_by_letter("R", 0.01)
                 fan.ramp_to(value, delay)            
+
             if gcode.has_letter("F"): # Change PWM frequency in hz
-                frequency = gcode.get_float_by_letter("F", 1000)
-                fan.set_PWM_frequency(frequency)
+                frequency = gcode.get_int_by_letter("F", 1000)
+
+                logging.info("Setting PWM frequency to "+str(frequency))
+
+                fan.set_frequency(frequency)
+
+                # Update the config.
+                self.printer.config.set('Cold-ends', 'pwm_freq', str(frequency))
+
+                # Save the config file. 
+                self.printer.config.save(os.path.join(self.printer.config_location,'local.cfg'))
             else:
                 fan.set_value(value)
 
@@ -45,7 +57,7 @@ class M106(GCodeCommand):
                "power (between 0 and 255) and the P parameter for the fan " \
                "number. P=0 and S=255 by default. If no P, use fan from config. "\
                "If no fan configured, use fan 0. If 'R' is present, ramp to the value"\
-               "if 'F' present change PWM frequency hz eg. F1000 is 1khz"
+               "if 'F' present change PWM frequency hz eg. F1000 is 1khz. writes value to local.cfg"
 
     def is_buffered(self):
         return True

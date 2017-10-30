@@ -155,7 +155,7 @@ class Redeem:
         if self.revision in ["00A4", "0A4A", "00A3"]:
             PWM.set_frequency(100)
         elif self.revision in ["00B1", "00B2", "00B3", "0B3A"]:
-            PWM.set_frequency(1000)
+            PWM.set_frequency(printer.config.getint('Cold-ends', 'pwm_freq'))
 
         # Init the Watchdog timer
         printer.watchdog = Watchdog()
