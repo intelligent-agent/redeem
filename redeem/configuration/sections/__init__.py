@@ -29,3 +29,8 @@ class BaseConfig(object):
         except ValueError:
             return None
         return val
+
+    def getboolean(self, key):
+        val = self.get(_clean(key))
+        return val in ['True', 'true']
+

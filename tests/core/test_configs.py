@@ -6,6 +6,7 @@ import os
 import re
 
 from redeem.configuration.RedeemConfig import RedeemConfig
+from redeem.configuration.factories.ConfigFactoryV19 import ConfigFactoryV19
 from redeem.configuration.factories.ConfigFactoryV20 import ConfigFactoryV20
 from tests.logger_test import LogTestCase
 
@@ -62,6 +63,57 @@ class ConfigWarningTests(LogTestCase):
                 m = re.search(r'.*?\'([a-z_]+)\'', warning)
                 self.assertIsNotNone(m, "needs to match: {}".format(warning))
                 self.assertIn(m.group(1), self.known_19_mismatches)
+
+
+class ConfigV19toV20Tests(LogTestCase):
+
+    def test_delta(self):
+        """test to make sure delta corrections are zero when tangential and angular are zero"""
+
+        factory = ConfigFactoryV19()
+
+        files = [
+            os.path.join(current_path, 'resources/delta_printer1.9.cfg')
+        ]
+
+        redeem_config = factory.hydrate_config(config_files=files)
+
+        self.assertAlmostEqual(redeem_config.getfloat('delta', 'a_radial'), 0.0)
+        self.assertAlmostEqual(redeem_config.getfloat('delta', 'a_angular'), 0.0)
+
+        self.assertAlmostEqual(redeem_config.getfloat('delta', 'b_radial'), 0.0)
+        self.assertAlmostEqual(redeem_config.getfloat('delta', 'b_angular'), 0.0)
+
+        self.assertAlmostEqual(redeem_config.getfloat('delta', 'c_radial'), 0.0)
+        self.assertAlmostEqual(redeem_config.getfloat('delta', 'c_angular'), 0.0)
+
+    def test_old_config_into_new(self):
+        """test to make sure delta corrections are zero when tangential and angular are zero"""
+
+        factory = ConfigFactoryV19()
+
+        files = [
+            os.path.join(current_path, 'resources/delta_printer1.9.cfg'),
+            os.path.join(current_path, 'resources/delta_local1.9.cfg')
+        ]
+
+        redeem_config = factory.hydrate_config(config_files=files)
+
+        # print("a radial : {}".format(redeem_config.getfloat('delta', 'a_radial')))
+        # print("a angular : {}".format(redeem_config.getfloat('delta', 'a_angular')))
+        # print("b radial : {}".format(redeem_config.getfloat('delta', 'b_radial')))
+        # print("b angular : {}".format(redeem_config.getfloat('delta', 'b_angular')))
+        # print("c radial : {}".format(redeem_config.getfloat('delta', 'c_radial')))
+        # print("c angular : {}".format(redeem_config.getfloat('delta', 'c_angular')))
+
+        self.assertAlmostEqual(redeem_config.getfloat('delta', 'a_radial'), 0.0010672079121700762)
+        self.assertAlmostEqual(redeem_config.getfloat('delta', 'a_angular'), -1.9251837083231607)
+
+        self.assertAlmostEqual(redeem_config.getfloat('delta', 'b_radial'), -0.00210412149464)
+        self.assertAlmostEqual(redeem_config.getfloat('delta', 'b_angular'), 2.38594403039)
+
+        self.assertAlmostEqual(redeem_config.getfloat('delta', 'c_radial'), 0.00610882321576)
+        self.assertAlmostEqual(redeem_config.getfloat('delta', 'c_angular'), 2.39954455253)
 
 
 class LoadMultipleConfigs(LogTestCase):

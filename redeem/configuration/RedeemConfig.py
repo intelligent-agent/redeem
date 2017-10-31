@@ -43,6 +43,10 @@ class RedeemConfig(object):
     system = SystemConfig()
     watchdog = WatchdogConfig()
 
+    replicape_revision = None
+    replicape_data = None
+    replicape_path = None
+
     def get(self, section, key):
         if hasattr(self, section.replace('-', '_').lower()):
             return getattr(self, section.replace('-', '_').lower()).get(key)
@@ -50,6 +54,10 @@ class RedeemConfig(object):
 
     def has(self, section, key):
         return hasattr(self, section.replace('-', '_').lower()) and getattr(self, section.replace('-', '_').lower()).has(key)
+
+    # alias
+    def has_option(self, section, key):
+        return self.has(section, key)
 
     def getint(self, section, key):
         if hasattr(self, section.replace('-', '_').lower()):
@@ -60,3 +68,38 @@ class RedeemConfig(object):
         if hasattr(self, section.replace('-', '_').lower()):
             return getattr(self, section.replace('-', '_').lower()).getfloat(key)
         return None
+
+    def getboolean(self, section, key):
+        if hasattr(self, section.replace('-','_').lower()):
+            return getattr(self, section.replace('-', '_').lower()).getboolean(key)
+        return False
+
+    def parse_capes(self):
+        """ Read the name and revision of each cape on the BeagleBone """
+        self.replicape_revision = None
+        self.reach_revision = None
+
+        import glob
+        paths = glob.glob("/sys/bus/i2c/devices/[1-2]-005[4-7]/*/nvmem")
+        paths.extend(glob.glob("/sys/bus/i2c/devices/[1-2]-005[4-7]/nvmem/at24-[1-4]/nvmem"))
+        # paths.append(glob.glob("/sys/bus/i2c/devices/[1-2]-005[4-7]/eeprom"))
+        for i, path in enumerate(paths):
+            try:
+                with open(path, "rb") as f:
+                    data = f.read(120)
+                    name = data[58:74].strip()
+                    if name == "BB-BONE-REPLICAP":
+                        self.replicape_revision = data[38:42]
+                        self.replicape_data = data
+                        self.replicape_path = path
+                    elif name[:13] == "BB-BONE-REACH":
+                        self.reach_revision = data[38:42]
+                        self.reach_data = data
+                        self.reach_path = path
+                    if self.replicape_revision != None and self.reach_revision != None:
+                        break
+            except IOError as e:
+                pass
+
+    def save(self, filename):
+        raise NotImplemented("not yet implemented")

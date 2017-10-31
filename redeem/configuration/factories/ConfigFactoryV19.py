@@ -9,7 +9,8 @@ def _getfloat(config_parser, section, option, default):
         return config_parser.getfloat(section, option)
     return default
 
-def _degreesToRadians(radians):
+
+def _radiansToDegrees(radians):
     return radians * 180 / np.pi
 
 
@@ -73,12 +74,14 @@ class ConfigFactoryV19(ConfigFactory):
         4) (Avy / sin(At)) - r = A_radial
 
         set 3 equal to 4
-        5) Avy / Avx = sin(At) / cos(At) = tan(At)
+        5) Avx / cos(At) = Avy / sin(At)
+        6) Avx * sin(At) = cos(At) * Avy
+        6) Avy / Avx = sin(At) / cos(At) = tan(At)
 
         solve for At
-        6) arctan(Avy/Avx) = At
+        7) arctan(Avy/Avx) = At
 
-        a_radial from 6 into 1
+        a_radial from 7 into 1
         """
 
         At = np.arctan(Avy / Avx)
@@ -86,7 +89,7 @@ class ConfigFactoryV19(ConfigFactory):
         Ct = np.arctan(Cvy / Cvx)
 
         a_radial = (Avx / np.cos(At)) - r
-        b_radial = (Bvx / np.cos(Bt)) - r
+        b_radial = (Bvx / np.cos(Bt)) + r
         c_radial = (Cvx / np.cos(Ct)) - r
 
         '''from new calcs
@@ -95,9 +98,9 @@ class ConfigFactoryV19(ConfigFactory):
         Ct = degreesToRadians(330.0 + C_angular)'''
 
         # solve for _angular
-        a_angular = _degreesToRadians(At) - 90
-        b_angular = _degreesToRadians(Bt) - 210
-        c_angular = _degreesToRadians(Ct) - 330
+        a_angular = _radiansToDegrees(At) - 90
+        b_angular = _radiansToDegrees(Bt) - 30
+        c_angular = _radiansToDegrees(Ct) + 30
 
         return a_radial, b_radial, c_radial, a_angular, b_angular, c_angular
 
@@ -114,32 +117,31 @@ class ConfigFactoryV19(ConfigFactory):
         """
         cfg = DeltaConfig()
 
-        # if this isn't a delta config, skip transformations
-        if config_parser.getint('geometry', 'axis_config') != 3:
+        # if this isn't a Delta config, skip transformations
+        if config_parser.getint('Geometry', 'axis_config') != 3:
             return cfg
 
-
-        # length of rod same
-        if config_parser.has_option('delta', 'l'):
-            cfg.l = config_parser.getfloat('delta', 'l')
+        # length of rod same in both
+        if config_parser.has_option('Delta', 'L'):
+            cfg.l = config_parser.getfloat('Delta', 'L')
 
         # radius2.0 = radius1.9 + Ae
-        if config_parser.has_option('delta', 'r'):
-            cfg.r = config_parser.getfloat('delta', 'r')
+        if config_parser.has_option('Delta', 'r'):
+            cfg.r = config_parser.getfloat('Delta', 'r')
 
-        if config_parser.has_option('delta', 'ae'):
-            cfg.r += config_parser.getfloat('delta', 'ae')
+        if config_parser.has_option('Delta', 'Ae'):
+            cfg.r -= config_parser.getfloat('Delta', 'Ae')
 
-        r = _getfloat(config_parser, 'delta', 'r', 0.0)
-        ae = _getfloat(config_parser, 'delta', 'ae', 0.0)
-        be = _getfloat(config_parser, 'delta', 'be', 0.0)
-        ce = _getfloat(config_parser, 'delta', 'ce', 0.0)
-        a_radial = _getfloat(config_parser, 'delta', 'a_radial', 0.0)
-        b_radial = _getfloat(config_parser, 'delta', 'b_radial', 0.0)
-        c_radial = _getfloat(config_parser, 'delta', 'c_radial', 0.0)
-        a_tangential = _getfloat(config_parser, 'delta', 'a_tangential', 0.0)
-        b_tangential = _getfloat(config_parser, 'delta', 'b_tangential', 0.0)
-        c_tangential = _getfloat(config_parser, 'delta', 'c_tangential', 0.0)
+        r = _getfloat(config_parser, 'Delta', 'r', 0.0)
+        ae = _getfloat(config_parser, 'Delta', 'Ae', 0.0)
+        be = _getfloat(config_parser, 'Delta', 'Be', 0.0)
+        ce = _getfloat(config_parser, 'Delta', 'Ce', 0.0)
+        a_radial = _getfloat(config_parser, 'Delta', 'A_radial', 0.0)
+        b_radial = _getfloat(config_parser, 'Delta', 'B_radial', 0.0)
+        c_radial = _getfloat(config_parser, 'Delta', 'C_radial', 0.0)
+        a_tangential = _getfloat(config_parser, 'Delta', 'A_tangential', 0.0)
+        b_tangential = _getfloat(config_parser, 'Delta', 'B_tangential', 0.0)
+        c_tangential = _getfloat(config_parser, 'Delta', 'C_tangential', 0.0)
 
         Avx, Avy, Bvx, Bvy, CvX, Cvy = self._calc_old_column_position(r,
                                                                       ae, be, ce,

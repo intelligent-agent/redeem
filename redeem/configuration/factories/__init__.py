@@ -65,7 +65,9 @@ class ConfigFactory(object):
         if config_file:
             config_parser.read([config_file, ])
         elif len(config_files) > 0:
-            config_parser.read(config_files)
+            num_files = config_parser.read(config_files)
+            if num_files < len(config_files):
+                logging.warn("number of files loaded less than provided: {} vs. {}".format(num_files, len(config_files)))
 
         redeem_config = RedeemConfig()
 

@@ -67,6 +67,7 @@ from Key_pin import Key_pin, Key_pin_listener
 from Watchdog import Watchdog
 
 # Global vars
+from redeem.configuration import get_config_factory
 from redeem.configuration.factories.ConfigFactoryV20 import ConfigFactoryV20
 
 printer = None
@@ -106,14 +107,13 @@ class Redeem:
             os.chmod(local_path, 0o777)
 
         # Parse the config files.
-        config_factory = ConfigFactoryV20([os.path.join(config_location, 'printer.cfg'), os.path.join(config_location,'local.cfg')])
-        printer.config = config_factory.hydrate_config()
+        config_files = [
+            os.path.join(config_location, 'printer.cfg'),
+            os.path.join(config_location, 'local.cfg')
+        ]
 
-        # Check the local and printer files
-        printer_path = os.path.join(config_location,"printer.cfg")
-        if os.path.exists(printer_path):
-            printer.config.check(printer_path)
-        printer.config.check(os.path.join(config_location,'local.cfg'))
+        config_factory = get_config_factory()
+        printer.config = config_factory.hydrate_config(config_files)
 
         # Get the revision and loglevel from the Config file
         level = self.printer.config.getint('System', 'loglevel')
