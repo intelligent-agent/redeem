@@ -39,7 +39,7 @@ from redeem.Gcode import Gcode
 # multi thread management
 # TODO : encapsulate this into an attribute of the printer. `SDCardManager`
 # current_file = None
-# current_line_count = None
+# current_byte_count = None
 # current_file_count = None
 # current_lock = Lock()
 
@@ -307,7 +307,6 @@ class M24(GCodeCommand):
 
             count = sum(1 for line in gcode_file)
             self.printer.sd_card_manager.current_lock.acquire()
-            self.printer.sd_card_manager.current_line_count = 0
             self.printer.sd_card_manager.current_file_count = count
             self.printer.sd_card_manager.current_byte_count = 0
             self.printer.sd_card_manager.current_lock.release()
@@ -318,7 +317,6 @@ class M24(GCodeCommand):
                 line = line.strip()
 
                 self.printer.sd_card_manager.current_lock.acquire()
-                self.printer.sd_card_manager.current_line_count += 1
                 self.printer_sd_card_manager.current_byte_count += len(line.encode('utf-8'))
                 self.printer.sd_card_manager.current_lock.release()
 
@@ -329,7 +327,6 @@ class M24(GCodeCommand):
 
             self.printer.sd_card_manager.current_lock.acquire()
             self.printer.sd_card_manager.current_file = None
-            self.printer.sd_card_manager.current_line_count = None
             self.printer.sd_card_manager.current_file_count = None
             self.printer.sd_card_manager.current_lock.release()
 
@@ -374,8 +371,8 @@ class M25(GCodeCommand):
 
 class M27(M2X):
 
-    # FIXME : if halted, current_line_count will only reflect the lines loaded into path planner, not actually executed
-    # FIXME : adjust current_line_count by the number of commands in the path planner buffer
+    # FIXME : if halted, current_byte_count will only reflect the lines loaded into path planner, not actually executed
+    # FIXME : adjust current_byte_count by the number of commands in the path planner buffer
 
 
     def execute(self, g):
