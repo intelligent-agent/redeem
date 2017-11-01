@@ -317,7 +317,7 @@ class M24(GCodeCommand):
                 line = line.strip()
 
                 self.printer.sd_card_manager.current_lock.acquire()
-                self.printer_sd_card_manager.current_byte_count += len(line.encode('utf-8'))
+                self.printer.sd_card_manager.current_byte_count += len(line.encode('utf-8'))
                 self.printer.sd_card_manager.current_lock.release()
 
                 if not line or line.startswith(';'):
