@@ -1,3 +1,8 @@
+import struct
+import logging
+import random
+import string
+
 from redeem.configuration.sections.alarms import AlarmsConfig
 from redeem.configuration.sections.coldends import ColdendsConfig
 from redeem.configuration.sections.delta import DeltaConfig
@@ -46,11 +51,16 @@ class RedeemConfig(object):
     replicape_revision = None
     replicape_data = None
     replicape_path = None
+    replicape_key = None
 
-    def get(self, section, key):
+    reach_revision = None
+    reach_data = None
+    reach_path = None
+
+    def get(self, section, key, default=None):
         if hasattr(self, section.replace('-', '_').lower()):
             return getattr(self, section.replace('-', '_').lower()).get(key)
-        return None
+        return default
 
     def has(self, section, key):
         return hasattr(self, section.replace('-', '_').lower()) and getattr(self, section.replace('-', '_').lower()).has(key)
@@ -59,20 +69,20 @@ class RedeemConfig(object):
     def has_option(self, section, key):
         return self.has(section, key)
 
-    def getint(self, section, key):
+    def getint(self, section, key, default=None):
         if hasattr(self, section.replace('-', '_').lower()):
             return getattr(self, section.replace('-', '_').lower()).getint(key)
-        return None
+        return default
 
-    def getfloat(self, section, key):
+    def getfloat(self, section, key, default=None):
         if hasattr(self, section.replace('-', '_').lower()):
             return getattr(self, section.replace('-', '_').lower()).getfloat(key)
-        return None
+        return default
 
-    def getboolean(self, section, key):
+    def getboolean(self, section, key, default=None):
         if hasattr(self, section.replace('-','_').lower()):
             return getattr(self, section.replace('-', '_').lower()).getboolean(key)
-        return False
+        return default
 
     def parse_capes(self):
         """ Read the name and revision of each cape on the BeagleBone """
@@ -96,10 +106,36 @@ class RedeemConfig(object):
                         self.reach_revision = data[38:42]
                         self.reach_data = data
                         self.reach_path = path
-                    if self.replicape_revision != None and self.reach_revision != None:
+                    if self.replicape_revision is not None and self.reach_revision is not None:
                         break
             except IOError as e:
                 pass
 
     def save(self, filename):
         raise NotImplemented("not yet implemented")
+
+    def _gen_key(self):
+        """ Used to generate a key when one is not found """
+        return ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits) for _ in range(20))
+
+    def get_key(self):
+        """ Get the generated key from the config or create one """
+
+        self.replicape_key = "".join(struct.unpack('20c', self.replicape_data[100:120]))
+
+        logging.debug("Found Replicape key: '"+self.replicape_key+"'")
+
+        if self.replicape_key == '\x00'*20:
+            logging.debug("Replicape key invalid")
+
+            self.replicape_key = self._gen_key()
+            self.replicape_data = self.replicape_data[:100] + self.replicape_key
+
+            logging.debug("New Replicape key: '"+self.replicape_key+"'")
+
+            try:
+                with open(self.replicape_path, "wb") as f:
+                    f.write(self.replicape_data[:120])
+            except IOError as e:
+                logging.warning("Unable to write new key to EEPROM")
+        return self.replicape_key

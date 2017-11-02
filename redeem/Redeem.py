@@ -112,8 +112,8 @@ class Redeem:
             os.path.join(config_location, 'local.cfg')
         ]
 
-        config_factory = get_config_factory()
-        printer.config = config_factory.hydrate_config(config_files)
+        config_factory = get_config_factory(config_files)
+        printer.config = config_factory.hydrate_config(config_files=config_files)
 
         # Get the revision and loglevel from the Config file
         level = self.printer.config.getint('System', 'loglevel')

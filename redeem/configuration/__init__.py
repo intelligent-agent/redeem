@@ -1,4 +1,4 @@
-from ConfigParser import SafeConfigParser
+from ConfigParser import RawConfigParser
 
 from redeem.configuration.factories.ConfigFactoryV19 import ConfigFactoryV19
 from redeem.configuration.factories.ConfigFactoryV20 import ConfigFactoryV20
@@ -6,7 +6,7 @@ from redeem.configuration.factories.ConfigFactoryV20 import ConfigFactoryV20
 
 def get_config_factory(config_files):
 
-    config_parser = SafeConfigParser()
+    config_parser = RawConfigParser()
     config_parser.read(config_files)
 
     version = None
