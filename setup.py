@@ -27,7 +27,8 @@ DEPENDENCY_REQUIRES = []
 for item in pip.req.parse_requirements('requirements.txt', session="somesession"):
     if isinstance(item, pip.req.InstallRequirement):
         if item.link is not None:
-            DEPENDENCY_REQUIRES.append(item.link.url)
+            link = item.link.url.replace('git+', '')
+            DEPENDENCY_REQUIRES.append(link)
         else:
             INSTALL_REQUIRES.append(str(item.req))
 
