@@ -41,9 +41,7 @@ class Gcode:
                 self.prot = self.parent.prot if self.parent else "None"
             self.has_crc = False
             self.answer = "ok"
-            #print packet
             if len(self.message) == 0:
-                #print packet
                 #logging.debug("Empty message")
                 self.gcode = "No-Gcode"
                 return
