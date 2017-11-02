@@ -9,6 +9,7 @@ License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 """
 
 from GCodeCommand import GCodeCommand
+from six import iteritems
 
 
 class M114(GCodeCommand):
@@ -19,7 +20,7 @@ class M114(GCodeCommand):
             pos = self.printer.path_planner.get_current_pos(mm=True, ideal=True)            
         axis_order = ['X', 'Y', 'Z', 'E']
         pos_ordered = [(i, pos[i]) for i in axis_order if i in pos]
-        pos_ordered.extend(sorted(i for i in pos.iteritems() if i[0] not in axis_order))
+        pos_ordered.extend(sorted(i for i in iteritems(pos) if i[0] not in axis_order))
         g.set_answer("ok C: " + ' '.join('%s:%.1f' % (i[0], i[1]) for i in pos_ordered))
 
     def get_description(self):

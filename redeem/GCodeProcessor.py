@@ -28,6 +28,7 @@ import logging
 import re
 import importlib
 from threading import Event
+from six import iteritems
 from gcodes import GCodeCommand
 try:
     from Gcode import Gcode
@@ -164,7 +165,7 @@ class GCodeProcessor:
 
     def get_test_gcodes(self):
         gcodes = []
-        for name,gcode in self.gcodes.iteritems():
+        for name,gcode in iteritems(self.gcodes):
             for str in gcode.get_test_gcodes():
                  gcodes.append( Gcode({"message": str, "prot": "Test"}) )
         return gcodes

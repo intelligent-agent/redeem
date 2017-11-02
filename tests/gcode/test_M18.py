@@ -1,12 +1,12 @@
 from MockPrinter import MockPrinter
 import mock
-from random import random
+from six import iteritems
 from Stepper import Stepper
 
 class M18_Tests(MockPrinter):
 
     def setUp(self):
-        for name, stepper in self.printer.steppers.iteritems():
+        for name, stepper in iteritems(self.printer.steppers):
             if self.printer.config.getboolean('Steppers', 'in_use_' + name):
                 stepper.set_disabled = mock.Mock()
         self.printer.path_planner.wait_until_done = mock.Mock()
@@ -15,14 +15,14 @@ class M18_Tests(MockPrinter):
     def test_gcodes_M18_no_args(self):
         self.execute_gcode("M18")
         self.printer.path_planner.wait_until_done.assert_called()
-        for name, stepper in self.printer.steppers.iteritems():
+        for name, stepper in iteritems(self.printer.steppers):
             if self.printer.config.getboolean('Steppers', 'in_use_' + name):
                 stepper.set_disabled.assert_called()
 
     def test_gcodes_M18_X_Y(self):
         self.execute_gcode("M18 X Y")
         self.printer.path_planner.wait_until_done.assert_called()
-        for name, stepper in self.printer.steppers.iteritems():
+        for name, stepper in iteritems(self.printer.steppers):
             if self.printer.config.getboolean('Steppers', 'in_use_' + name):
                 if name in ["X", "Y"]:
                     stepper.set_disabled.assert_called()

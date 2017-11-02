@@ -7,6 +7,7 @@ License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 from GCodeCommand import GCodeCommand
 import logging
 import os
+from six import iteritems
 
 class M574(GCodeCommand):
 
@@ -41,7 +42,7 @@ class M574(GCodeCommand):
             # Restart the path planner. 
             self.printer.path_planner.restart()
         else:
-            g.set_answer("ok "+", ".join([v.name+" stops: "+str(v.stops)+" " for _,v in sorted(self.printer.end_stops.iteritems())]))
+            g.set_answer("ok "+", ".join([v.name+" stops: "+str(v.stops)+" " for _,v in sorted(iteritems(self.printer.end_stops))]))
 
 
     def get_description(self):

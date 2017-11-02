@@ -12,6 +12,7 @@ License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 from GCodeCommand import GCodeCommand
 import numpy as np
 import logging
+from six import iteritems
 
 
 class M562(GCodeCommand):
@@ -26,7 +27,7 @@ class M562(GCodeCommand):
             elif P == 2:
                 self.printer.heaters["H"].extruder_error = False
         else: # No P, Enable all heaters
-            for _, heater in self.printer.heaters.iteritems():
+            for _, heater in iteritems(self.printer.heaters):
                 heater.extruder_error = False
 
     def get_description(self):

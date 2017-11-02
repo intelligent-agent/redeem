@@ -13,14 +13,14 @@ try:
     from Stepper import Stepper
 except ImportError:
     from redeem.Stepper import Stepper
-
+from six import iteritems
 
 
 class M17(GCodeCommand):
 
     def execute(self, g):
         self.printer.path_planner.wait_until_done()
-        for name, stepper in self.printer.steppers.iteritems():
+        for name, stepper in iteritems(self.printer.steppers):
             if self.printer.config.getboolean('Steppers', 'in_use_' + name):
                 stepper.set_enabled()
 

@@ -10,6 +10,8 @@ License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 
 from GCodeCommand import GCodeCommand
 import logging
+from six import iteritems
+
 
 class M308(GCodeCommand):
 
@@ -17,10 +19,10 @@ class M308(GCodeCommand):
         # If no tokens are given, return the current settings    
         if g.num_tokens() == 0:
             g.set_answer("ok C: " + ' '.join('%s:%.1f mm' % (i[0], i[1]*1000) for i in sorted(
-                self.printer.path_planner.travel_length.iteritems())))
+                iteritems(self.printer.path_planner.travel_length))))
         else:
             # Tokens are given, set the travel length for each token
-            for axis, value in g.get_tokens_as_dict().iteritems():
+            for axis, value in iteritems(g.get_tokens_as_dict()):
                 if axis in self.printer.path_planner.travel_length:
                     try:
                         fvalue = float(value)/1000.0

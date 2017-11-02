@@ -9,11 +9,13 @@ License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 
 from GCodeCommand import GCodeCommand
 import logging
+from six import iteritems
+
 
 class M151(GCodeCommand):
 
     def execute(self, g):
-        for _, heater in self.printer.heaters.iteritems():
+        for _, heater in iteritems(self.printer.heaters):
             heater.enable_min_temp()
 
     def get_description(self):

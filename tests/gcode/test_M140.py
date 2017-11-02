@@ -1,11 +1,11 @@
 from MockPrinter import MockPrinter
-import mock
-from random import random
+from six import iteritems
+
 
 class M140_Tests(MockPrinter):
 
     def setUp(self):
-        for _,v in self.printer.heaters.iteritems():
+        for _, v in iteritems(self.printer.heaters):
             v.target_temp = 12.34
 
     def test_gcodes_M140_no_args(self):

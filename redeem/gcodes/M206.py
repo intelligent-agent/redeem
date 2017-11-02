@@ -22,12 +22,13 @@ from GCodeCommand import GCodeCommand
 import logging
 
 from redeem.Printer import Printer
+from six import iteritems
 
 
 class M206(GCodeCommand):
 
     def _get_offset_str(self):
-        offsets = sorted(self.printer.path_planner.center_offset.iteritems())
+        offsets = sorted(iteritems(self.printer.path_planner.center_offset))
         offset_strs = ["{}: {}".format(k, 1000. * v) for k, v
                        in offsets]
         return ", ".join(offset_strs)

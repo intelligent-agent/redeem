@@ -7,6 +7,7 @@ License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 """
 from GCodeCommand import GCodeCommand
 import logging
+from six import iteritems
 
 
 class M666(GCodeCommand):
@@ -15,7 +16,7 @@ class M666(GCodeCommand):
            
         if g.num_tokens() == 0:
             g.set_answer("ok " + ' '.join('%s:%.1f mm' % (i[0], i[1]*1000) for i in sorted(
-                offset.iteritems())))
+                iteritems(offset))))
         else:
             for axis in self.printer.path_planner.center_offset.keys():
                 if g.has_letter(axis):
