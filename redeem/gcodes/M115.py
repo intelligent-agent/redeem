@@ -9,6 +9,7 @@ License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 """
 
 from GCodeCommand import GCodeCommand
+from _version import __url__
 
 class M115(GCodeCommand):
     def execute(self, g):
@@ -16,7 +17,7 @@ class M115(GCodeCommand):
         replicape_key = self.printer.replicape_key
         firmware_name = "Redeem"
         firmware_version = self.printer.firmware_version
-        firmware_url = "http%3A//wiki.thing-printer.com/index.php?title=Redeem"
+        firmware_url = __url__
         machine_type = self.printer.config.get('System', 'machine_type')
         extruder_count = self.printer.NUM_AXES - 3
         g.set_answer(

@@ -62,7 +62,7 @@ pathplanner = Extension(
         '-DLOGLEVEL=30']
 )
 
-from redeem._version import __version__
+from redeem._version import __version__, __url__
 
 setup(
     name="Redeem",
@@ -103,7 +103,7 @@ setup(
     license = "GPLv3",
     keywords = "3d printer firmware",
     platforms = ["BeagleBone"],
-    url = "https://bitbucket.org/intelligentagent/redeem",
+    url = __url__,
     ext_modules = [pathplanner],
     entry_points = {
         'console_scripts': [
