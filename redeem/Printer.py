@@ -109,8 +109,9 @@ class Printer:
         self.sd_card_manager = SDCardManager()
 
         # default. should be initialized later
-        # TODO : should be passed into from constructor
+        # TODO : these should be passed into from constructor
         self.config = RedeemConfig()
+        self.replicape_key = None
 
     def add_slave(self, master, slave):
         ''' Make an axis copy the movement of another.

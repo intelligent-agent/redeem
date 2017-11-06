@@ -3,6 +3,9 @@ import logging
 import random
 import string
 
+from redeem.configuration.exceptions import InvalidConfigSectionException
+from redeem.configuration.utils import clean_key as _
+
 from redeem.configuration.sections.alarms import AlarmsConfig
 from redeem.configuration.sections.coldends import ColdendsConfig
 from redeem.configuration.sections.delta import DeltaConfig
@@ -58,31 +61,36 @@ class RedeemConfig(object):
     reach_path = None
 
     def get(self, section, key, default=None):
-        if hasattr(self, section.replace('-', '_').lower()):
-            return getattr(self, section.replace('-', '_').lower()).get(key)
+        if hasattr(self, _(section)):
+            return getattr(self, _(section)).get(key)
         return default
 
     def has(self, section, key):
-        return hasattr(self, section.replace('-', '_').lower()) and getattr(self, section.replace('-', '_').lower()).has(key)
+        return hasattr(self, _(section)) and getattr(self, _(section)).has(key)
 
     # alias
     def has_option(self, section, key):
         return self.has(section, key)
 
     def getint(self, section, key, default=None):
-        if hasattr(self, section.replace('-', '_').lower()):
-            return getattr(self, section.replace('-', '_').lower()).getint(key)
+        if hasattr(self, _(section)):
+            return getattr(self, _(section)).getint(key)
         return default
 
     def getfloat(self, section, key, default=None):
-        if hasattr(self, section.replace('-', '_').lower()):
-            return getattr(self, section.replace('-', '_').lower()).getfloat(key)
+        if hasattr(self, _(section)):
+            return getattr(self, _(section)).getfloat(key)
         return default
 
     def getboolean(self, section, key, default=None):
         if hasattr(self, section.replace('-','_').lower()):
-            return getattr(self, section.replace('-', '_').lower()).getboolean(key)
+            return getattr(self, _(section)).getboolean(key)
         return default
+
+    def set(self, section, key, val):
+        if not hasattr(self, _(section)):
+            raise InvalidConfigSectionException()
+        getattr(self, _(section)).set(key, val)
 
     def parse_capes(self):
         """ Read the name and revision of each cape on the BeagleBone """

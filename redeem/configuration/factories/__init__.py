@@ -1,6 +1,5 @@
 from ConfigParser import SafeConfigParser
 
-from redeem.CascadingConfigParser import CascadingConfigParser
 from redeem.configuration.RedeemConfig import RedeemConfig
 from redeem.configuration.sections.alarms import AlarmsConfig
 from redeem.configuration.sections.coldends import ColdendsConfig

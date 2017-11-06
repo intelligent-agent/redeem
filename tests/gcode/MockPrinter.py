@@ -14,6 +14,7 @@ sys.modules['Key_pin'] = mock.Mock()
 sys.modules['GPIO'] = mock.Mock()
 sys.modules['DAC'] = mock.Mock()
 sys.modules['ShiftRegister.py'] = mock.Mock()
+sys.modules['Adafruit_I2C'] = mock.Mock()
 sys.modules['Adafruit_BBIO'] = mock.Mock()
 sys.modules['Adafruit_BBIO.GPIO'] = mock.Mock()
 sys.modules['StepperWatchdog'] = mock.Mock()
@@ -30,8 +31,13 @@ sys.modules['Ethernet'] = mock.Mock()
 sys.modules['Pipe'] = mock.Mock()
 
 from CascadingConfigParser import CascadingConfigParser
-from Redeem import *
+from Redeem import Redeem
+from PathPlanner import PathPlanner
 from EndStop import EndStop
+from Extruder import Extruder, HBP
+from Path import Path
+from Gcode import Gcode
+import numpy as np
 
 
 """
@@ -83,11 +89,15 @@ log_to_file = False
     @classmethod
     @mock.patch.object(EndStop, "_wait_for_event", new=None)
     @mock.patch.object(PathPlanner, "_init_path_planner")
-    @mock.patch.object(CascadingConfigParser, "get_key")
+    # @mock.patch.object(RedeemConfig, "get_key")
     @mock.patch("Redeem.CascadingConfigParser", new=CascadingConfigParserWedge)
-    def setUpClass(cls, mock_get_key, mock_init_path_planner):
+    def setUpClass(cls, mock_init_path_planner):
 
-        mock_get_key.return_value = "TESTING_DUMMY_KEY"
+        config_patch = mock.patch("configuration.RedeemConfig.RedeemConfig", revision="TESTING_REVISION", get_key="TESTING_DUMMY_KEY")
+        config_mock = config_patch.start()
+
+        pwm_patch = mock.patch("Redeem.PWM.i2c")
+        pwm_mock = pwm_patch.start()
 
         """
         Allow Extruder or HBP instantiation without crashing 'cause not BBB/Replicape
