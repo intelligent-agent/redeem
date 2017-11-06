@@ -62,10 +62,12 @@ pathplanner = Extension(
         '-DLOGLEVEL=30']
 )
 
+from redeem._version import __version__
+
 setup(
-    name = "Redeem",
-    version = "2.0.5",
-    packages = find_packages(exclude=["redeem/path_planner"]),
+    name="Redeem",
+    version=__version__,
+    packages=find_packages(exclude=["redeem/path_planner"]),
     data_files=[
         ('redeem/firmware', [
             'redeem/firmware/firmware_runtime.c',
@@ -81,8 +83,8 @@ setup(
             'configs/testing_rev_A.cfg',
             'configs/testing_rev_B.cfg',
             'configs/prusa_i3.cfg',
-	        'configs/debrew.cfg',
-	        'configs/kossel_mini.cfg',
+            'configs/debrew.cfg',
+            'configs/kossel_mini.cfg',
             'configs/rostock_max_v2.cfg']),
         ('redeem/data',[
             'data/B57540G0104F000.cht',
