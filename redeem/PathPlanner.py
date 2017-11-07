@@ -52,9 +52,15 @@ class AlarmWrapper(AlarmCallbackNative):
         AlarmCallbackNative.__init__(self)
 
     def call(self, type, message, short_message):
-        endstop = PruInterface.get_endstop_triggered()
-        message += ": "+["unknown", "X1", "Y1", "Z1", "X2", "Y2", "Z2"][int(np.log2([endstop])[0]+1)]
-        logging.error("Native path planner alarm: {} {} {}".format(type, message, short_message))
+        if "soft endstop" in message.lower():
+            logging.error("{}, {}".format(message, short_message))
+        else:
+            endstop = PruInterface.get_endstop_triggered()
+            endstop_idx = int(np.log2([endstop])[0]+1)
+            if (endstop_idx < 0) or (endstop_idx > 6):
+                endstop_idx = 0
+            message += ": "+["unknown", "X1", "Y1", "Z1", "X2", "Y2", "Z2"][endstop_idx]
+            logging.error("Native path planner alarm: {} {} {}".format(type, message, short_message))
         try:
             a = Alarm(int(type), message, short_message)
         except Exception:
