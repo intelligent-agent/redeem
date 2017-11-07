@@ -118,6 +118,7 @@ log_to_file = False
 
         cls.R = Redeem(config_location=cfg_path)
         cls.printer = cls.R.printer
+        cls.printer.reach_revision = "00B0"
 
         cls.setUpPatch()
 
