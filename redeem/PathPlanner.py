@@ -456,7 +456,6 @@ class PathPlanner:
         # Add babystepping
         new.end_pos[2] += self.printer.offset_z
 
-
         if new.is_G92():
             self.native_planner.setAxisConfig(int(self.printer.axis_config))
             self.native_planner.setState(tuple(new.end_pos))
@@ -486,14 +485,19 @@ class PathPlanner:
                                       bool(new.is_probe),
                                       int(tool_axis))
                                       
+        err = self.native_planner.getLastQueueMoveStatus()
 
-        self.prev = new
-        self.prev.unlink()  # We don't want to store the entire print
-                            # in memory, so we keep only the last path.
-        
-        # make sure that the current state of the printer is correct
-        self.prev.end_pos = self.native_planner.getState()
-        #logging.debug("end pos: "+ str(self.prev.end_pos))
+        if err:
+            logging.debug("add path failed: "+ str(new))
+        else:
+            self.prev = new
+            self.prev.unlink()  # We don't want to store the entire print
+                                # in memory, so we keep only the last path.
+            
+            # make sure that the current state of the printer is correct
+            self.prev.end_pos = self.native_planner.getState()
+            
+        return
 
     def set_extruder(self, ext_nr):
         """

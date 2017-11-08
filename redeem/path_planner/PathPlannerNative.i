@@ -154,6 +154,7 @@ class PathPlanner {
   void setBacklashCompensation(VectorN set);
   void resetBacklash();
   VectorN getState();
+  bool getLastQueueMoveStatus();
   FLOAT_T getLastProbeDistance();
   void suspend();
   void resume();
