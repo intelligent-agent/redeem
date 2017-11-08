@@ -36,13 +36,6 @@ from thread import start_new_thread
 from GCodeCommand import GCodeCommand
 from redeem.Gcode import Gcode
 
-# multi thread management
-# TODO : encapsulate this into an attribute of the printer. `SDCardManager`
-# current_file = None
-# current_byte_count = None
-# current_file_count = None
-# current_lock = Lock()
-
 # device_location = '/dev/mmcblk1p1'
 USB_DEVICE_LOCATION = '/dev/sda1'
 USB_MOUNT_LOCATION = '/media/usbmem'
@@ -275,11 +268,15 @@ class M23(M2X):
         if not os.path.exists(fn):
             self.printer.send_message(g.prot, "could not find file at '{}'".format(fn.strip()))
             return
+            
+        sz = os.stat(fn).st_size
 
         self.printer.sd_card_manager.current_lock.acquire()
         self.printer.sd_card_manager.current_file = fn
+        self.printer.sd_card_manager.current_byte_count = 0
+        self.printer.sd_card_manager.current_file_size = sz
         self.printer.sd_card_manager.current_lock.release()
-        self.printer.send_message(g.prot, "File opened:{} Size:{}".format(fn, os.stat(fn).st_size))
+        self.printer.send_message(g.prot, "File opened:{} Size:{}".format(fn, sz))
         self.printer.send_message(g.prot, "File selected")
 
 
@@ -305,9 +302,7 @@ class M24(GCodeCommand):
         with open(fn, 'r') as gcode_file:
             logging.info("M24: file open: '{}'".format(fn))
 
-            count = sum(1 for line in gcode_file)
             self.printer.sd_card_manager.current_lock.acquire()
-            self.printer.sd_card_manager.current_file_count = count
             self.printer.sd_card_manager.current_byte_count = 0
             self.printer.sd_card_manager.current_lock.release()
 
@@ -326,8 +321,7 @@ class M24(GCodeCommand):
                 self.printer.processor.execute(file_g)
 
             self.printer.sd_card_manager.current_lock.acquire()
-            self.printer.sd_card_manager.current_file = None
-            self.printer.sd_card_manager.current_file_count = None
+            self.printer.sd_card_manager.current_byte_count = self.printer.sd_card_manager.current_file_size
             self.printer.sd_card_manager.current_lock.release()
 
             logging.info("M24: file complete")
@@ -336,10 +330,9 @@ class M24(GCodeCommand):
 
         self.printer.sd_card_manager.current_lock.acquire()
         fn = self.printer.sd_card_manager.current_file
-        count = self.printer.sd_card_manager.current_file_count
         self.printer.sd_card_manager.current_lock.release()
         logging.info("M24: current file is: '{}'".format(fn))
-        if not count and fn:
+        if fn:
             logging.info("M24: active file is '{}'".format(fn))
             start_new_thread(self.process_gcode, (fn, g))
 
@@ -371,22 +364,20 @@ class M25(GCodeCommand):
 
 class M27(M2X):
 
-    # FIXME : if halted, current_byte_count will only reflect the lines loaded into path planner, not actually executed
-    # FIXME : adjust current_byte_count by the number of commands in the path planner buffer
-
-
     def execute(self, g):
 
         self.printer.sd_card_manager.current_lock.acquire()
         current_file = self.printer.sd_card_manager.current_file
         current_byte_count = self.printer.sd_card_manager.current_byte_count
+        current_file_size = self.printer.sd_card_manager.current_file_size
         self.printer.sd_card_manager.current_lock.release()
 
-        if current_byte_count is None or current_file is None:
-            return
-
-        message = "SD printing byte {}/{}".format(current_byte_count, os.stat(current_file).st_size)
+        message = "SD printing byte {}/{}".format(current_byte_count, current_file_size)
         self.printer.send_message(g.prot, message)
+        
+        # message to inform that we have completed the print
+        if (current_byte_count == current_file_size) or (current_file == None):
+            self.printer.send_message(g.prot, "Not SD printing.")
         
         return
     
