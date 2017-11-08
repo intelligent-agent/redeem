@@ -326,7 +326,8 @@ class M24(GCodeCommand):
                 self.printer.processor.execute(file_g)
 
             self.printer.sd_card_manager.current_lock.acquire()
-            self.printer.sd_card_manager.current_file = None
+            # keep `current_file` to allow restart
+            self.printer.sd_card_manager.current_byte_count = None
             self.printer.sd_card_manager.current_file_count = None
             self.printer.sd_card_manager.current_lock.release()
 
@@ -382,11 +383,18 @@ class M27(M2X):
         current_byte_count = self.printer.sd_card_manager.current_byte_count
         self.printer.sd_card_manager.current_lock.release()
 
-        if current_byte_count is None or current_file is None:
+        if current_byte_count is None:
+            # assume that we have finished the file
+            # message to set completion to 100%
+            sz = os.stat(current_file).st_size
+            message = "SD printing byte {}/{}".format(sz, sz) 
+            self.printer.send_message(g.prot, message)
+            # message to inform that we have completed the print
+            self.printer.send_message(g.prot, "Not SD printing.")
             return
-
-        message = "SD printing byte {}/{}".format(current_byte_count, os.stat(current_file).st_size)
-        self.printer.send_message(g.prot, message)
+        else:
+            message = "SD printing byte {}/{}".format(current_byte_count, os.stat(current_file).st_size)
+            self.printer.send_message(g.prot, message)
         
         return
     
