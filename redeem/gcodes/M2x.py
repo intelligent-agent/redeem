@@ -160,6 +160,7 @@ class M21(M2X):
 
         device_id = check_device_id(self.printer, g)
         if not device_id:
+            self.printer.send_message(g.prot, "SD card ok")
             return
 
         device_location, mount_location = None, None
@@ -268,15 +269,12 @@ class M23(M2X):
         if not os.path.exists(fn):
             self.printer.send_message(g.prot, "could not find file at '{}'".format(fn.strip()))
             return
-            
-        sz = os.stat(fn).st_size
 
-        self.printer.sd_card_manager.current_lock.acquire()
-        self.printer.sd_card_manager.current_file = fn
-        self.printer.sd_card_manager.current_byte_count = 0
-        self.printer.sd_card_manager.current_file_size = sz
-        self.printer.sd_card_manager.current_lock.release()
-        self.printer.send_message(g.prot, "File opened:{} Size:{}".format(fn, sz))
+        self.printer.sd_card_manager.load_file(fn)
+        
+        nl, nb = self.printer.sd_card_manager.get_file_size()
+
+        self.printer.send_message(g.prot, "File opened:{} Lines:{} Size:{}B".format(fn, nl, nb))
         self.printer.send_message(g.prot, "File selected")
 
 
@@ -297,44 +295,29 @@ class M23(M2X):
 
 class M24(GCodeCommand):
 
-    def process_gcode(self, fn, g):
+    def process_gcode(self, g):
+        
+        self.printer.sd_card_manager.set_active(True)
+        for line in self.printer.sd_card_manager:
+            line = line.strip()
 
-        with open(fn, 'r') as gcode_file:
-            logging.info("M24: file open: '{}'".format(fn))
-
-            self.printer.sd_card_manager.current_lock.acquire()
-            self.printer.sd_card_manager.current_byte_count = 0
-            self.printer.sd_card_manager.current_lock.release()
-
-            gcode_file.seek(0)
-
-            for line in gcode_file:
-                line = line.strip()
-
-                self.printer.sd_card_manager.current_lock.acquire()
-                self.printer.sd_card_manager.current_byte_count += len(line.encode('utf-8'))
-                self.printer.sd_card_manager.current_lock.release()
-
-                if not line or line.startswith(';'):
-                    continue
-                file_g = Gcode({"message": line, "parent": g})
-                self.printer.processor.execute(file_g)
-
-            self.printer.sd_card_manager.current_lock.acquire()
-            self.printer.sd_card_manager.current_byte_count = self.printer.sd_card_manager.current_file_size
-            self.printer.sd_card_manager.current_lock.release()
-
+            if not line or line.startswith(';'):
+                continue
+            file_g = Gcode({"message": line, "parent": g})
+            self.printer.processor.execute(file_g)
+        if self.printer.sd_card_manager.get_status():
             logging.info("M24: file complete")
+        self.printer.sd_card_manager.set_active(False)
+        
 
     def execute(self, g):
 
-        self.printer.sd_card_manager.current_lock.acquire()
-        fn = self.printer.sd_card_manager.current_file
-        self.printer.sd_card_manager.current_lock.release()
+        fn = self.printer.sd_card_manager.get_file_name()
+        active = self.printer.sd_card_manager.get_status()
         logging.info("M24: current file is: '{}'".format(fn))
-        if fn:
+        if not active:
             logging.info("M24: active file is '{}'".format(fn))
-            start_new_thread(self.process_gcode, (fn, g))
+            start_new_thread(self.process_gcode, (g, ))
 
         self.printer.path_planner.resume()
 
@@ -353,30 +336,63 @@ If the current print (from any source) was paused by ``M25``, this will resume t
 class M25(GCodeCommand):
 
     def execute(self, g):
-        self.printer.path_planner.suspend()
+        self.printer.sd_card_manager.set_active(False)
 
     def get_description(self):
-        return "Pause the current print."
+        return "Pause the current SD print."
 
     def is_buffered(self):
         return False
+        
+class M26(M2X):
+
+    def execute(self, g):
+        
+        S = g.get_int_by_letter("S", 0)
+        L = g.get_int_by_letter("L", 0)
+        
+        line_position, byte_position = self.printer.sd_card_manager.set_position(byte_position=S, line_position=L)
+        size_lines, size_bytes = self.printer.sd_card_manager.get_file_size()
+        
+        message = "SD at line {}/{}, byte {}/{}".format(line_position, size_lines, byte_position, size_bytes)
+        self.printer.send_message(g.prot, message)
+
+    def get_description(self):
+        return "Set SD card print position"
+        
+    def get_formatted_description(self):
+        return """Set SD card print position.
+        
+    S = position in bytes
+    L = line number
+        
+::
+
+    > M26 S0
+    or 
+    > M26 L10
+    
+"""
 
 
 class M27(M2X):
 
     def execute(self, g):
+        
+        line_position, byte_position = self.printer.sd_card_manager.get_position()
+        size_lines, size_bytes = self.printer.sd_card_manager.get_file_size()
+        file_name = self.printer.sd_card_manager.get_file_name()
+        
+        # avoid divide by zero error in octoprint ???
+        if byte_position == 0:
+            byte_position = 1
 
-        self.printer.sd_card_manager.current_lock.acquire()
-        current_file = self.printer.sd_card_manager.current_file
-        current_byte_count = self.printer.sd_card_manager.current_byte_count
-        current_file_size = self.printer.sd_card_manager.current_file_size
-        self.printer.sd_card_manager.current_lock.release()
-
-        message = "SD printing byte {}/{}".format(current_byte_count, current_file_size)
+        message = "SD printing byte {}/{}".format(byte_position, size_bytes)
         self.printer.send_message(g.prot, message)
         
         # message to inform that we have completed the print
-        if (current_byte_count == current_file_size) or (current_file == None):
+        active = self.printer.sd_card_manager.get_status()
+        if not active:
             self.printer.send_message(g.prot, "Not SD printing.")
         
         return
@@ -386,8 +402,8 @@ class M27(M2X):
         return """Report external file print status"""
 
     def get_formatted_description(self):
-        return """If printing from an externally selected file (from ``M23``), display of how many lines
-from the active file have been processed. Will also display total number of lines in the file.
+        return """If printing from an externally selected file (from ``M23``), display of how many bytes
+from the active file have been processed.
         
 ::
 
