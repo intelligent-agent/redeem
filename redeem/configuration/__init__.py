@@ -1,5 +1,5 @@
 try:  # TODO: remove when migrate to python 3
-    from confingparser import ConfigParser
+    from configparser import ConfigParser
 except ImportError:
     from ConfigParser import RawConfigParser as ConfigParser
 
