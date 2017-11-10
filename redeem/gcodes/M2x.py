@@ -13,6 +13,8 @@ M2x commands:
 - M25: Pause SD print
 - M26: Set SD position
 - M27: Report SD print status
+- M28: TODO
+- M29: TODO
 
 mount uses auto. if this doen't work, use parted library to determine format type
 for more info, see https://github.com/vsinitsyn/fdisk.py/blob/master/fdisk.py
@@ -160,6 +162,7 @@ class M21(M2X):
 
         device_id = check_device_id(self.printer, g)
         if not device_id:
+            # default to trick OctoPrint into seeing all files listed as available for SD printing
             self.printer.send_message(g.prot, "SD card ok")
             return
 
@@ -309,6 +312,8 @@ class M24(GCodeCommand):
             logging.info("M24: file complete")
         self.printer.sd_card_manager.set_active(False)
         
+        self.printer.send_message(g.prot, "Done printing file")
+        
 
     def execute(self, g):
 
@@ -413,4 +418,28 @@ from the active file have been processed.
 """
 
 
-
+#class M28(M2X):
+#
+#    def execute(self, g):
+#        self.printer.send_message(g.prot, "M28 not implemented")
+#        self.printer.send_message(g.prot, "use M20 instead to list local files as sd files")
+#        self.printer.send_message(g.prot, "if you used the 'Upload to SD' button in OctoPrint you will now need to disconnect/reconnect Redeem because Octoprint is being dumb")
+#        
+#        # Octoprint expects 'Writing to file' but we don't want that
+#
+#    def get_description(self):
+#        return "Placeholder for write to SD card, use M20 instead"
+#        
+#    def get_formatted_description(self):
+#        return """Placeholder for write to SD card, use M20 instead"""
+#        
+#class M29(M2X):
+#
+#    def execute(self, g):
+#        self.printer.send_message(g.prot, "Done saving file")
+#
+#    def get_description(self):
+#        return "Placeholder for end write to SD card"
+#        
+#    def get_formatted_description(self):
+#        return """Placeholder for end write to SD card"""
