@@ -1,11 +1,11 @@
 from MockPrinter import MockPrinter
 import mock
 from random import random
-from Stepper import Stepper_00A4
+from Stepper import Stepper_00B3
 
 class M19_Tests(MockPrinter):
 
-    @mock.patch.object(Stepper_00A4, "reset")
+    @mock.patch.object(Stepper_00B3, "reset")
     def test_gcodes_M19(self, m):
         self.execute_gcode("M19")
         self.printer.path_planner.wait_until_done.assert_called()
