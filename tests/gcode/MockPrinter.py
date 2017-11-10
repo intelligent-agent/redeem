@@ -93,9 +93,6 @@ log_to_file = False
     @mock.patch("Redeem.CascadingConfigParser", new=CascadingConfigParserWedge)
     def setUpClass(cls, mock_init_path_planner):
 
-        config_patch = mock.patch("configuration.RedeemConfig.RedeemConfig", revision="TESTING_REVISION", get_key="TESTING_DUMMY_KEY")
-        config_mock = config_patch.start()
-
         pwm_patch = mock.patch("Redeem.PWM.i2c")
         pwm_mock = pwm_patch.start()
 
@@ -118,6 +115,7 @@ log_to_file = False
 
         cls.R = Redeem(config_location=cfg_path)
         cls.printer = cls.R.printer
+        cls.printer.replicape_key = "TESTING_DUMMY_KEY"
 
         cls.setUpPatch()
 
