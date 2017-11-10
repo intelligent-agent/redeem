@@ -52,7 +52,6 @@ from PathPlanner import PathPlanner
 from Gcode import Gcode
 from ColdEnd import ColdEnd
 from PruFirmware import PruFirmware
-from CascadingConfigParser import CascadingConfigParser
 from Printer import Printer
 from GCodeProcessor import GCodeProcessor
 from PluginsController import PluginsController

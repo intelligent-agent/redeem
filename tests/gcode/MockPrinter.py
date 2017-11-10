@@ -30,7 +30,6 @@ sys.modules['USB'] = mock.Mock()
 sys.modules['Ethernet'] = mock.Mock()
 sys.modules['Pipe'] = mock.Mock()
 
-from CascadingConfigParser import CascadingConfigParser
 from Redeem import Redeem
 from PathPlanner import PathPlanner
 from EndStop import EndStop
@@ -38,15 +37,6 @@ from Extruder import Extruder, HBP
 from Path import Path
 from Gcode import Gcode
 import numpy as np
-
-
-"""
-Override CascadingConfigParser methods to set self. variables
-"""
-class CascadingConfigParserWedge(CascadingConfigParser):
-    def parse_capes(self):
-        self.replicape_revision = "0A4A" # Fake. No hardware involved in these tests (Redundant?)
-        self.reach_revision = "00A0" # Fake. No hardware involved in these tests (Redundant?)
 
 
 class MockPrinter(unittest.TestCase):
@@ -90,7 +80,6 @@ log_to_file = False
     @mock.patch.object(EndStop, "_wait_for_event", new=None)
     @mock.patch.object(PathPlanner, "_init_path_planner")
     # @mock.patch.object(RedeemConfig, "get_key")
-    @mock.patch("Redeem.CascadingConfigParser", new=CascadingConfigParserWedge)
     def setUpClass(cls, mock_init_path_planner):
 
         config_patch = mock.patch("configuration.RedeemConfig.RedeemConfig", revision="TESTING_REVISION", get_key="TESTING_DUMMY_KEY")
