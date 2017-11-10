@@ -1,10 +1,9 @@
 from __future__ import absolute_import
 
-from .MockPrinter import MockPrinter
-import mock
-from Gcode import Gcode
 import re
-import logging
+from .MockPrinter import MockPrinter
+from redeem.Gcode import Gcode
+
 
 class M115_Tests(MockPrinter):
 

@@ -1,10 +1,9 @@
 from __future__ import absolute_import
 
-from .MockPrinter import MockPrinter
 import mock
-from testfixtures import Comparison as C
-from Path import Path
-from Gcode import Gcode
+from .MockPrinter import MockPrinter
+from redeem.Gcode import Gcode
+
 
 class G30_Tests(MockPrinter):
 

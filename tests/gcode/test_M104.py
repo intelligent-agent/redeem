@@ -1,9 +1,9 @@
 from __future__ import absolute_import
 
-from .MockPrinter import MockPrinter
 import mock
-from Path import Path
 from random import random
+from .MockPrinter import MockPrinter
+
 
 class M104_Tests(MockPrinter):
 

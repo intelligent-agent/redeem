@@ -1,9 +1,9 @@
 from __future__ import absolute_import
 
 from .MockPrinter import MockPrinter
-import mock
-from Path import Path
-from Gcode import Gcode
+from redeem.Path import Path
+from redeem.Gcode import Gcode
+
 
 class G90_Tests(MockPrinter):
 

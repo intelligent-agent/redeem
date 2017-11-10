@@ -1,13 +1,11 @@
 from __future__ import absolute_import
 
-from .MockPrinter import MockPrinter
 import mock
-from Gcode import Gcode
-import re
-import time
 import logging
+from .MockPrinter import MockPrinter
 
 logging.info = mock.Mock()
+
 
 def mock_sleep(t):
     global heaters
@@ -17,6 +15,7 @@ def mock_sleep(t):
             heaters[heater].is_target_temperature_reached.return_value = True
     mock_sleep.counter += 1 
     return None
+
 
 class M116_Tests(MockPrinter):
 

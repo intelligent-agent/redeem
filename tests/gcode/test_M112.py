@@ -1,11 +1,8 @@
 from __future__ import absolute_import
 
-from .MockPrinter import MockPrinter
 import mock
-from Gcode import Gcode
-from random import random
-import math
-import logging
+from .MockPrinter import MockPrinter
+
 
 class M112_Tests(MockPrinter):
 
@@ -13,4 +10,3 @@ class M112_Tests(MockPrinter):
         self.printer.path_planner.emergency_interrupt = mock.Mock(return_value=None)
         self.execute_gcode("M112")
         self.printer.path_planner.emergency_interrupt.assert_called()
-  

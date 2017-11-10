@@ -1,7 +1,8 @@
 from __future__ import absolute_import
 
 from .MockPrinter import MockPrinter
-from Gcode import Gcode
+from redeem.Gcode import Gcode
+
 
 class G20_G21_Tests(MockPrinter):
 

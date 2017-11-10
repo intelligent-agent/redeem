@@ -1,8 +1,8 @@
 from __future__ import absolute_import
 
 from .MockPrinter import MockPrinter
-from mock import MagicMock
-from Path import *
+from redeem.Path import *
+
 
 class G1_G0_Tests(MockPrinter):
 

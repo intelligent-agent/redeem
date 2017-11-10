@@ -1,8 +1,8 @@
 from __future__ import absolute_import
 
-from .MockPrinter import MockPrinter
 import mock
-from Path import Path
+from .MockPrinter import MockPrinter
+
 
 class G92_Tests(MockPrinter):
 

@@ -7,18 +7,16 @@ email: elias(dot)bakken(at)gmail dot com
 Website: http://www.thing-printer.com
 License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 """
+from __future__ import absolute_import
 
-from GCodeCommand import GCodeCommand
+from .GCodeCommand import GCodeCommand
 import logging
 import json
-try:
-    from Gcode import Gcode
-    from Path import G92Path
-    from Alarm import Alarm
-except ImportError:
-    from redeem.Gcode import Gcode
-    from redeem.Path import G92Path
-    from redeem.Alarm import Alarm
+
+from ..Gcode import Gcode
+from ..Path import G92Path
+from ..Alarm import Alarm
+
 
 class G30(GCodeCommand):
 
@@ -114,6 +112,7 @@ class G30(GCodeCommand):
     def get_test_gcodes(self):
         return ["G30", "G30 P0", "G30 P1 X10 Y10"]
 
+
 class G30_1(GCodeCommand):
     
     def execute(self, g):
@@ -171,7 +170,7 @@ class G30_1(GCodeCommand):
         self.printer.path_planner.wait_until_done()
         bed_dist = self.printer.path_planner.probe(probe_length, probe_speed, probe_accel)*1000.0 # convert to mm
         
-        #calculated required offset to make bed equal to Z0 or user's specified Z.
+        # calculated required offset to make bed equal to Z0 or user's specified Z.
         # should be correct, assuming probe starts at Z(5), requested Z(0)  probe Z(-0.3), adjusted global Z should be 5.3
         # assuming probe starts at Z(5), and probe result is -0.3. This says real probe start was 5.3.
         # if we want to start printing at 0.2 above bed, new z should be 5.1.
@@ -190,7 +189,6 @@ class G30_1(GCodeCommand):
         
         # not sure if next part is necessary
         Alarm.action_command("bed_probe_point", json.dumps([point["X"], point["Y"], bed_dist]))
-  
 
     def get_description(self):
         return "Probes the bed at the current point, sets Z0."
@@ -205,6 +203,7 @@ class G30_1(GCodeCommand):
 
     def is_buffered(self):
         return True
+
     # What should be put here?
     def get_test_gcodes(self):
         return ["G30.1", "G30.1 P0", "G30.1 P1 X10 Y10 Z10"]

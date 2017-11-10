@@ -1,9 +1,8 @@
 from __future__ import absolute_import
 
 from .MockPrinter import MockPrinter
-import mock
-from random import random
-from Path import Path
+from redeem.Path import Path
+
 
 class M82_Tests(MockPrinter):
 

@@ -15,6 +15,7 @@ try:
 except ImportError:
     from redeem.Path import G92Path
 
+
 class G28(GCodeCommand):
 
     def execute(self, g):

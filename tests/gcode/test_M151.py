@@ -1,9 +1,9 @@
 from __future__ import absolute_import
 
-from .MockPrinter import MockPrinter
 import mock
-from random import random
-from Extruder import Heater
+from .MockPrinter import MockPrinter
+from redeem.Extruder import Heater
+
 
 class M151_Tests(MockPrinter):
 

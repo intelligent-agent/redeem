@@ -1,9 +1,8 @@
 from __future__ import absolute_import
 
-from .MockPrinter import MockPrinter
 import mock
-from random import random
-from Gcode import Gcode
+from .MockPrinter import MockPrinter
+
 
 class M190_Tests(MockPrinter):
 

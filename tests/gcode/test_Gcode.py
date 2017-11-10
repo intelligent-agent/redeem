@@ -1,7 +1,7 @@
 from __future__ import absolute_import
 
 from .MockPrinter import MockPrinter
-from Gcode import Gcode
+from redeem.Gcode import Gcode
 
 """ 
 We want to keeps our tests within the scope of just the file we're testing,
@@ -9,8 +9,11 @@ as much as possible. So we won't instantiate an entire Printer object, when the
 only variable required for these tests is Printer::factor and we don't call any 
 of Printer's methods.
 """
+
+
 class Printer():
     factor = 1.0
+
 
 class GcodeTest(MockPrinter):
 
@@ -138,4 +141,3 @@ class GcodeTest(MockPrinter):
         self.assertEqual(self.g.is_info_command(), False)
         g = Gcode({"message": "G28?"})
         self.assertEqual(g.is_info_command(), True)
-

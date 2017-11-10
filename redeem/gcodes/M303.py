@@ -14,18 +14,13 @@ Integral (Ki), and Derivative (Kd) values for the hotend or bed (E-1).
 Send the appropriate code and wait for the output to update the firmware. 
 
 """
+from __future__ import absolute_import
 
-from GCodeCommand import GCodeCommand
 import json
-
-try:
-    from Autotune import Autotune
-    from Alarm import Alarm
-except ImportError:
-    from redeem.Autotune import Autotune
-    from redeem.Alarm import Alarm
-
 import logging
+from .GCodeCommand import GCodeCommand
+from ..Autotune import Autotune
+from ..Alarm import Alarm
 
 
 class M303(GCodeCommand):

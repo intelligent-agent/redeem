@@ -1,9 +1,9 @@
 from __future__ import absolute_import
 
-from .MockPrinter import MockPrinter
-from Gcode import Gcode
-import unittest
 import mock
+from .MockPrinter import MockPrinter
+from redeem.Gcode import Gcode
+
 
 class G29_Tests(MockPrinter):
 

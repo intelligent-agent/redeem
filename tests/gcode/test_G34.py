@@ -1,9 +1,9 @@
 from __future__ import absolute_import
 
-from .MockPrinter import MockPrinter
 import mock
-from testfixtures import Comparison as C
-from Gcode import Gcode
+from .MockPrinter import MockPrinter
+from redeem.Gcode import Gcode
+
 
 class G34_Tests(MockPrinter):
 
