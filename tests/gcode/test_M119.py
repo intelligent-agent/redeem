@@ -1,4 +1,6 @@
-from MockPrinter import MockPrinter
+from __future__ import absolute_import
+
+from .MockPrinter import MockPrinter
 from PruInterface import *
 import mock
 from Path import Path

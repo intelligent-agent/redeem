@@ -1,4 +1,6 @@
-from MockPrinter import MockPrinter
+from __future__ import absolute_import
+
+from .MockPrinter import MockPrinter
 from mock import MagicMock
 from Path import *
 

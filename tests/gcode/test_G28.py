@@ -1,4 +1,6 @@
-from MockPrinter import MockPrinter
+from __future__ import absolute_import
+
+from .MockPrinter import MockPrinter
 from Gcode import Gcode
 
 class G28_Tests(MockPrinter):
