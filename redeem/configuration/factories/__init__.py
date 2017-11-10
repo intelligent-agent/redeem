@@ -1,4 +1,8 @@
-from ConfigParser import SafeConfigParser
+try:  # TODO: remove when migrate to python 3
+    from confingparser import ConfigParser
+except ImportError:
+    from ConfigParser import SafeConfigParser as ConfigParser
+
 
 from redeem.configuration.RedeemConfig import RedeemConfig
 from redeem.configuration.sections.alarms import AlarmsConfig
@@ -56,7 +60,7 @@ class ConfigFactory(object):
 
     def hydrate_config(self, config_file=None, config_files=()):
         """Use default mapper, unless another one is specified by subclass"""
-        config_parser = SafeConfigParser()
+        config_parser = ConfigParser()
 
         if config_file is not None and len(config_files) > 0:
             raise Exception("cannot provide both single and list of config files")
