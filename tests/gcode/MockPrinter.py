@@ -4,6 +4,8 @@ import unittest
 import mock
 import sys
 
+from redeem.Extruder import Heater
+
 sys.modules['evdev'] = mock.Mock()
 sys.modules['redeem.RotaryEncoder'] = mock.Mock()
 sys.modules['redeem.Watchdog'] = mock.Mock()
@@ -91,18 +93,17 @@ log_to_file = False
         """
         Allow Extruder or HBP instantiation without crashing 'cause not BBB/Replicape
         """
-        class DisabledExtruder(Extruder):
-            def enable(self):
-                self.avg = 1
-                self.temperatures = [100]
-                pass
-        class DisabledHBP(HBP):
-            def enable(self):
-                pass
+        # class DisabledExtruder(Extruder):
+        def disabled_extruder_enable(self):
+            self.avg = 1
+            self.temperatures = [100]
+            pass
 
-        mock.patch('redeem.Extruder.Heater', side_effect=DisabledExtruder).start()
-        mock.patch('redeem.Extruder.Extruder', side_effect=DisabledExtruder).start()
-        mock.patch('redeem.Extruder.HBP', side_effect=DisabledHBP).start()
+        def disabled_hbp_enable(self):
+            pass
+
+        mock.patch('redeem.Extruder.Extruder.enable', new=disabled_extruder_enable).start()
+        mock.patch('redeem.Extruder.HBP.enable', new=disabled_hbp_enable).start()
 
         cfg_path = "../configs"
         cls.setUpConfigFiles(cfg_path)

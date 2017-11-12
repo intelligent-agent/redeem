@@ -31,14 +31,14 @@ class M116_Tests(MockPrinter):
         self.reset()
         self.printer.processor.execute = mock.Mock() # mock M116's call to M105
 
-    @mock.patch("gcodes.M116.time.sleep", side_effect=mock_sleep) 
+    @mock.patch("redeem.gcodes.M116.time.sleep", side_effect=mock_sleep)
     def test_gcodes_M116_no_param(self, m):
         print ""
         self.execute_gcode("M116")
         for heater in heaters:
             self.assertTrue(heaters[heater].is_target_temperature_reached())
 
-    @mock.patch("gcodes.M116.time.sleep", side_effect=mock_sleep) 
+    @mock.patch("redeem.gcodes.M116.time.sleep", side_effect=mock_sleep)
     def test_gcodes_M116_Pn_Tn(self, m):
 
         print "HEATERS: ", heaters
@@ -55,4 +55,3 @@ class M116_Tests(MockPrinter):
 
                 print "Heater {} target reached: {} ".format(heater, heaters[heater].is_target_temperature_reached())
                 self.assertTrue(heaters[heater].is_target_temperature_reached())
-

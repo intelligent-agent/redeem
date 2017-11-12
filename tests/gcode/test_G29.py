@@ -11,7 +11,7 @@ class G29_Tests(MockPrinter):
         g = Gcode({"message": "G29"})
         self.assertTrue(self.printer.processor.is_buffered(g))
 
-    @mock.patch("gcodes.G29.Gcode")
+    @mock.patch("redeem.gcodes.G29.Gcode")
     def test_gcodes_G29_runs_macro(self, mock_Gcode):
 
         self.printer.processor.execute = mock.Mock() # prevent macro command execution
