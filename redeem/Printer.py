@@ -25,8 +25,10 @@ import numpy as np
 import logging
 from Delta import Delta
 from PruInterface import PruInterface
+from SDCardManager import SDCardManager
 import os
 import json
+
 
 class Printer:
     AXES = "XYZEHABC"
@@ -102,6 +104,8 @@ class Printer:
         self.arc_plane = Path.X_Y_ARC_PLANE
 
         self.axes_relative = []
+
+        self.sd_card_manager = SDCardManager()
 
     def add_slave(self, master, slave):
         ''' Make an axis copy the movement of another.
