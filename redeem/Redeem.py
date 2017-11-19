@@ -65,7 +65,7 @@ from Alarm import Alarm, AlarmExecutor
 from StepperWatchdog import StepperWatchdog
 from Key_pin import Key_pin, Key_pin_listener
 from Watchdog import Watchdog
-from _version import __version__
+from _version import __version__, __release_name__
 
 # Global vars
 printer = None
@@ -83,7 +83,7 @@ class Redeem:
          - default is installed directory
          - allows for running in a local directory when debugging
         """
-        firmware_version = __version__
+        firmware_version = "{}~{}".format(__version__, __release_name__)
         logging.info("Redeem initializing "+firmware_version)
 
         printer = Printer()
