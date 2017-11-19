@@ -1,7 +1,9 @@
-from MockPrinter import MockPrinter
-from Gcode import Gcode
-import unittest
+from __future__ import absolute_import
+
 import mock
+from .MockPrinter import MockPrinter
+from redeem.Gcode import Gcode
+
 
 class G4_Tests(MockPrinter):
 

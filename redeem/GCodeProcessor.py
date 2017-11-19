@@ -49,10 +49,12 @@ class GCodeProcessor:
 
     def load_classes_in_module(self, module):
         for module_name, obj in inspect.getmembers(module):
-            if inspect.ismodule(obj) and (obj.__name__.startswith('gcodes') \
-                or obj.__name__.startswith('redeem.gcodes')):
+            if inspect.ismodule(obj) and \
+                    (obj.__name__.startswith('gcodes') or
+                     obj.__name__.startswith('redeem.gcodes')):
                 self.load_classes_in_module(obj)
             elif inspect.isclass(obj) and \
+                    not inspect.isabstract(obj) and \
                     issubclass(obj, GCodeCommand.GCodeCommand) and \
                     module_name != 'GCodeCommand' and \
                     module_name != 'ToolChange':

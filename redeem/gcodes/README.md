@@ -18,8 +18,9 @@ How to add a new command
         Website: <website>
         License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
         """
+        from __future__ import absolute_import
 
-        from GCodeCommand import GCodeCommand
+        from .GCodeCommand import GCodeCommand
         import logging
 
         class <GCodeName>(GCodeCommand):

@@ -11,11 +11,13 @@ Obviously to be used with extreme caution...
 Author: Elias Bakken
 License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 """
+from __future__ import absolute_import
 
-from GCodeCommand import GCodeCommand
-import logging
 import os
+import logging
 from six import iteritems
+
+from .GCodeCommand import GCodeCommand
 
 
 class M569(GCodeCommand):
@@ -39,9 +41,8 @@ class M569(GCodeCommand):
                 self.printer.config.set('Steppers', 'direction_'+axis, str(value))
                 self.printer.steppers[axis].direction = int(value)
 
-
             # Save the config file. 
-            self.printer.config.save(os.path.join(self.printer.config_location,'local.cfg'))
+            self.printer.config.save(os.path.join(self.printer.config_location, 'local.cfg'))
 
             self.printer.path_planner.wait_until_done()
 

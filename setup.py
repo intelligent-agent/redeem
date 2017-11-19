@@ -1,6 +1,7 @@
 from setuptools import setup, find_packages, Extension
 import numpy as np
 import os
+import pip
 
 from distutils.sysconfig import get_config_vars
 
@@ -19,21 +20,17 @@ os.environ['OPT'] = " ".join(
     flag for flag in opt.split() if flag != '-Wstrict-prototypes'
 )
 
+# build requirements and dependencies from requirements.txt file
+INSTALL_REQUIRES = []
+DEPENDENCY_REQUIRES = []
 
-
-# Requirements for our application
-# Note: WIP, not a complete list
-INSTALL_REQUIRES = [
-    "spidev==3.2.0",
-    "scipy",
-    "numpy",
-    "sympy",
-    "docutils",
-    "python-smbus",
-    "sh",
-    "mock"
-]
-
+for item in pip.req.parse_requirements('requirements.txt', session="somesession"):
+    if isinstance(item, pip.req.InstallRequirement):
+        if item.link is not None:
+            link = item.link.url.replace('git+', '')
+            DEPENDENCY_REQUIRES.append(link)
+        else:
+            INSTALL_REQUIRES.append(str(item.req))
 
 pathplanner = Extension(
     '_PathPlannerNative', sources = [
@@ -81,10 +78,10 @@ setup(
             'configs/testing_rev_A.cfg',
             'configs/testing_rev_B.cfg',
             'configs/prusa_i3.cfg',
-	        'configs/debrew.cfg',
-	        'configs/kossel_mini.cfg',
+            'configs/debrew.cfg',
+            'configs/kossel_mini.cfg',
             'configs/rostock_max_v2.cfg']),
-        ('redeem/data',[
+        ('redeem/data', [
             'data/B57540G0104F000.cht',
             'data/B57560G104F.cht',
             'data/B57561G0103F000.cht',
@@ -95,15 +92,17 @@ setup(
             'data/E3D-PT100-AMPLIFIER.cht']),
     ],
     # metadata for upload to PyPI
-    author = "Elias Bakken",
-    author_email = "elias@iagent.no",
-    description = "Replicape daemon",
-    license = "GPLv3",
-    keywords = "3d printer firmware",
-    platforms = ["BeagleBone"],
-    url = "https://bitbucket.org/intelligentagent/redeem",
-    ext_modules = [pathplanner],
-    entry_points = {
+    author="Elias Bakken",
+    author_email="elias@iagent.no",
+    description="Replicape daemon",
+    license="GPLv3",
+    keywords="3d printer firmware",
+    platforms=["BeagleBone"],
+    install_requires=INSTALL_REQUIRES,
+    dependency_links=DEPENDENCY_REQUIRES,
+    url="https://github.com/intelligent-agent/redeem",
+    ext_modules=[pathplanner],
+    entry_points= {
         'console_scripts': [
             'redeem = redeem.Redeem:main'
         ]

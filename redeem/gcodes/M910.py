@@ -7,9 +7,11 @@ email: elias at iagent dot no
 Website: http://www.thing-printer.com
 License: GPLv3
 """
+from __future__ import absolute_import
 
-from GCodeCommand import GCodeCommand
 import logging
+from .GCodeCommand import GCodeCommand
+
 
 class M910(GCodeCommand):
 

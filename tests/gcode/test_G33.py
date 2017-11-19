@@ -1,9 +1,10 @@
-from MockPrinter import MockPrinter
+from __future__ import absolute_import
+
 import mock
-from testfixtures import Comparison as C
-from Path import Path
-from Gcode import Gcode
 import numpy as np
+from .MockPrinter import MockPrinter
+from redeem.Gcode import Gcode
+
 
 class G33_Tests(MockPrinter):
 
@@ -14,7 +15,7 @@ class G33_Tests(MockPrinter):
         g = Gcode({"message": "G33"})
         self.assertTrue(self.printer.processor.is_buffered(g))
 
-    @mock.patch("gcodes.G33.Gcode")
+    @mock.patch("redeem.gcodes.G33.Gcode")
     def test_G33_abort_on_bad_factor_count(self, mock_Gcode):
         bad_factor_nums = [-1,0,1,2,5,7,10]
         for f in bad_factor_nums:
@@ -22,7 +23,7 @@ class G33_Tests(MockPrinter):
 
         mock_Gcode.assert_not_called()
         
-    @mock.patch("gcodes.G33.Gcode")
+    @mock.patch("redeem.gcodes.G33.Gcode")
     def test_gcodes_G33_runs_G29_macro(self, mock_Gcode):
 
         self.printer.processor.execute = mock.Mock() # prevent macro command execution

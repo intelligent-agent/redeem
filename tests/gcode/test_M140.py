@@ -1,6 +1,9 @@
-from MockPrinter import MockPrinter
+from __future__ import absolute_import
 from six import iteritems
 
+from .MockPrinter import MockPrinter
+import mock
+from random import random
 
 class M140_Tests(MockPrinter):
 

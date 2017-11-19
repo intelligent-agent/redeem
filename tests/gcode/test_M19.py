@@ -1,7 +1,9 @@
-from MockPrinter import MockPrinter
+from __future__ import absolute_import
+
+from .MockPrinter import MockPrinter
 import mock
 from six import iteritems
-from Stepper import Stepper_00A4
+from redeem.Stepper import Stepper_00A4
 
 
 class M19_Tests(MockPrinter):

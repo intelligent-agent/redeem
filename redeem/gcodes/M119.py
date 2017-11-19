@@ -7,11 +7,12 @@ email: zittix(at)xwaves(dot)net
 Website: http://www.xwaves.net
 License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 """
+from __future__ import absolute_import
 
-from GCodeCommand import GCodeCommand
-import logging
 import os
+import logging
 from six import iteritems
+from .GCodeCommand import GCodeCommand
 
 
 class M119(GCodeCommand):
