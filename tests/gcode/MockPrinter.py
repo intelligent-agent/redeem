@@ -102,8 +102,12 @@ log_to_file = False
         def disabled_hbp_enable(self):
             pass
 
+        def bypass_init_path_planner(self):
+            pass
+
         mock.patch('redeem.Extruder.Extruder.enable', new=disabled_extruder_enable).start()
         mock.patch('redeem.Extruder.HBP.enable', new=disabled_hbp_enable).start()
+        mock.patch('redeem.PathPlanner.PathPlanner._init_path_planner', new=bypass_init_path_planner)
 
         cfg_path = "../configs"
         cls.setUpConfigFiles(cfg_path)
