@@ -57,7 +57,8 @@ class M106(GCodeCommand):
                "power (between 0 and 255) and the P parameter for the fan " \
                "number. P=0 and S=255 by default. If no P, use fan from config. "\
                "If no fan configured, use fan 0. If 'R' is present, ramp to the value"\
-               "if 'F' present change PWM frequency hz eg. F1000 is 1khz. writes value to local.cfg"
+               "if 'F' present change PWM frequency hz eg. F1000 is 1khz. writes value to local.cfg "\
+               "PWM change works currently on B-revison boards"
 
     def is_buffered(self):
         return True
