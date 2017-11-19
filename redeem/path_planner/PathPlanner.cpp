@@ -53,6 +53,7 @@ PathPlanner::PathPlanner(unsigned int cacheSize, AlarmCallback& alarmCallback)
   has_slaves = false;
   state.zero();
   lastProbeDistance = 0;
+  queue_move_fail = true;
 
   // set bed compensation matrix to identity
   matrix_bed_comp.resize(9, 0);
@@ -121,6 +122,8 @@ void PathPlanner::queueMove(VectorN endWorldPos,
   ////////////////////////////////////////////////////////////////////
   // PRE-PROCESSING
   ////////////////////////////////////////////////////////////////////
+  
+  queue_move_fail = true;
 
   if (!acceptingPaths)
   {
@@ -328,7 +331,7 @@ void PathPlanner::queueMove(VectorN endWorldPos,
     assert(state != startPos);
   }
 
-  
+  queue_move_fail = false;
 
   PyEval_RestoreThread(_save);
 }
@@ -927,6 +930,11 @@ VectorN PathPlanner::machineToWorld(const IntVectorN& machinePos)
 VectorN PathPlanner::getState()
 {
   return machineToWorld(state);
+}
+
+bool PathPlanner::getLastQueueMoveStatus()
+{
+    return queue_move_fail;
 }
 
 IntVectorN PathPlanner::worldToMachine(const VectorN& worldPos, bool* possible)

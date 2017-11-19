@@ -7,9 +7,11 @@ email: elias(at)iagent(dot)no
 Website: http://www.thing-printer.com
 License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 """
+from __future__ import absolute_import
 
-from GCodeCommand import GCodeCommand
 import logging
+from .GCodeCommand import GCodeCommand
+
 
 class M308(GCodeCommand):
 
@@ -30,8 +32,7 @@ class M308(GCodeCommand):
                          logging.error("Unable to convert value to float for axis {}: {}".format(axis, value))
                 else:
                     logging.warning("Axis does not exis: {}".format(axis))
-                
-        
+
     def get_description(self):
         return "Set or get direction and search length for end stops"
 

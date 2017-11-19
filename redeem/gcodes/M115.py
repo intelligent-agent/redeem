@@ -7,9 +7,10 @@ email: zittix(at)xwaves(dot)net
 Website: http://www.xwaves.net
 License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 """
+from __future__ import absolute_import
 
-from GCodeCommand import GCodeCommand
-from _version import __url__
+from .GCodeCommand import GCodeCommand
+from .._version import __url__
 
 class M115(GCodeCommand):
     def execute(self, g):

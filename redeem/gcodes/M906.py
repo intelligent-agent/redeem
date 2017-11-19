@@ -7,8 +7,9 @@ email: elias.bakken(at)gmail(dot)com
 Website: http://www.thing-printer.com
 License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 """
+from __future__ import absolute_import
 
-from GCodeCommand import GCodeCommand
+from .GCodeCommand import GCodeCommand
 
 
 class M906(GCodeCommand):
@@ -28,5 +29,5 @@ class M906(GCodeCommand):
 
     def get_long_description(self):
         return ("Set the stepper current. Unit is mA. Typical use is 'M906 X400'."
-            "This sets the current to 0.4A on the X stepper motor driver."
-            "Can be set for multiple stepper motor drivers at once. ")
+                "This sets the current to 0.4A on the X stepper motor driver."
+                "Can be set for multiple stepper motor drivers at once. ")

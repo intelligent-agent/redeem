@@ -7,13 +7,10 @@ email: elias.bakken(at)gmail(dot)com
 Website: http://www.thing-printer.com
 License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 """
+from __future__ import absolute_import
 
-from GCodeCommand import GCodeCommand
-try:
-    from Stepper import Stepper
-except ImportError:
-    from redeem.Stepper import Stepper
 import logging
+from .GCodeCommand import GCodeCommand
 
 
 class M909(GCodeCommand):

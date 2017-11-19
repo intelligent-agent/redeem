@@ -7,9 +7,9 @@ email: zittix(at)xwaves(dot)net
 Website: http://www.xwaves.net
 License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 """
+from __future__ import absolute_import
 
-from GCodeCommand import GCodeCommand
-import logging
+from .GCodeCommand import GCodeCommand
 
 
 class M400(GCodeCommand):
@@ -26,7 +26,7 @@ class M400(GCodeCommand):
     def on_sync(self, g):
         pass
         # self.printer.path_planner.clear_sync_event()  # Only needed if blocking the PRU
-        #self.readyEvent.set()                           # This is REQUIRED for synchronous commands!
+        # self.readyEvent.set()                           # This is REQUIRED for synchronous commands!
 
     def get_description(self):
         return "Wait until all buffered paths are executed"
