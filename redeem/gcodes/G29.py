@@ -7,22 +7,16 @@ email: elias(dot)bakken(at)gmail dot com
 Website: http://www.thing-printer.com
 License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 """
+from __future__ import absolute_import
 
-from GCodeCommand import GCodeCommand
+from .GCodeCommand import GCodeCommand
 import logging
 import json
 import numpy as np
 import copy
-try:
-    from Gcode import Gcode
-    from Path import Path
-    from Alarm import Alarm
-    from BedCompensation import BedCompensation
-except ImportError:
-    from redeem.Gcode import Gcode
-    from redeem.Path import Path
-    from redeem.Alarm import Alarm
-    from redeem.BedCompensation import BedCompensation
+
+from ..Gcode import Gcode
+from ..Alarm import Alarm
 
 
 class G29(GCodeCommand):
@@ -71,7 +65,6 @@ class G29(GCodeCommand):
 
     def get_test_gcodes(self):
         return ["G29"]
-
 
 
 class G29_1(GCodeCommand): # was G29C[ircle]
@@ -128,7 +121,6 @@ class G29_1(GCodeCommand): # was G29C[ircle]
                 "Z = add_zero, default = 1\n"
                 "K = probe_speed, default: 3000.0\n"
                 "B = bed compensation matrix, default:0\n")
-
 
 
 class G29_2(GCodeCommand): # was G29S[quare]

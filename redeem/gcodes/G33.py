@@ -17,19 +17,12 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
  You should have received a copy of the GNU General Public License
  along with Redeem.  If not, see <http://www.gnu.org/licenses/>.
 """
-
+from __future__ import absolute_import
 import logging
-
 import numpy as np
 
-from GCodeCommand import GCodeCommand
-
-try:
-    from Gcode import Gcode
-    from Path import Path
-except ImportError:
-    from redeem.Gcode import Gcode
-    from redeem.Path import Path
+from .GCodeCommand import GCodeCommand
+from ..Gcode import Gcode
 
 
 class G33(GCodeCommand):

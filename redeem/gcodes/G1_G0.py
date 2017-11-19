@@ -7,14 +7,11 @@ email: zittix(at)xwaves(dot)net
 Website: http://www.xwaves.net
 License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 """
-
-from GCodeCommand import GCodeCommand
-try:
-    from Path import Path, RelativePath, AbsolutePath, MixedPath
-except ImportError:
-    from redeem.Path import Path, RelativePath, AbsolutePath, MixedPath
+from __future__ import absolute_import
 
 import logging
+from .GCodeCommand import GCodeCommand
+from ..Path import Path, RelativePath, AbsolutePath, MixedPath
 
 
 class G0(GCodeCommand):
@@ -74,6 +71,7 @@ class G0(GCodeCommand):
             "G0 X0 Y0 Z0 F1000", 
             "G0 X1 Y1 Z0"
         ]
+
 
 class G1(G0):
     pass
