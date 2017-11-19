@@ -52,7 +52,7 @@ class AlarmWrapper(AlarmCallbackNative):
         AlarmCallbackNative.__init__(self)
 
     def call(self, type, message, short_message):
-        if "soft endstop" in message.lower():
+        if type == 8:
             logging.error("{}, {}".format(message, short_message))
         else:
             endstop = PruInterface.get_endstop_triggered()
