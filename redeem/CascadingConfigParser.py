@@ -186,4 +186,4 @@ if __name__ == '__main__':
                     format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
                     datefmt='%m-%d %H:%M')
     c = CascadingConfigParser(["/etc/redeem/default.cfg", "/etc/redeem/printer.cfg", "/etc/redeem/local.cfg"])
-    print c.get_default_settings()
+    print(c.get_default_settings())

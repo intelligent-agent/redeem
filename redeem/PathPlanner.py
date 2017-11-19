@@ -37,7 +37,7 @@ import traceback
 
 try:
     from path_planner.PathPlannerNative import PathPlannerNative, AlarmCallbackNative
-except Exception, e:
+except Exception as e:
     try:
         from _PathPlannerNative import PathPlannerNative, AlarmCallbackNative
     except:
@@ -519,7 +519,7 @@ if __name__ == '__main__':
          133.33333333 * (2 ** 4) * 1000.0, 33.4375 * (2 ** 4) * 1000.0,
          33.4375 * (2 ** 4) * 1000.0])
 
-    print "Making steppers"
+    print("Making steppers")
 
     steppers = {}
 

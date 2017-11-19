@@ -49,11 +49,11 @@ class VCNL4000(object):
         val = 0
         i = 0
         state = self.i2c.readU8(0x80)
-        print state
+        print(state)
         self.i2c.write8(0x80, (1<<3))
         while True:
             state = self.i2c.readU8(0x80)
-            print state
+            print(state)
             if (state & (1 << 5)) or i > 100:
                 val |= (self.i2c.readU8(0x87) << 8)
                 val |= (self.i2c.readU8(0x88) << 0)
@@ -87,6 +87,6 @@ if __name__ == '__main__':
 
     prox = VCNL4000()
     for i in range(100):
-        print prox.get_distance()
-        #print prox.get_ambient()
+        print(prox.get_distance())
+        #print(prox.get_ambient())
         #time.sleep(0.1)

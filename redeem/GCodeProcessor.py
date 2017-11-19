@@ -106,7 +106,7 @@ class GCodeProcessor:
         try:
             self.gcodes[val].on_sync(gcode)
             # Forcefully check/set the readyEvent here?
-        except Exception, e:
+        except Exception as e:
             logging.error("Error while executing "+gcode.code()+": "+str(e))
         return gcode
 
@@ -128,7 +128,7 @@ class GCodeProcessor:
             #if self.gcodes[val].is_sync():
             #    self.gcodes[val].readyEvent.wait()  # Block until the event has occurred.
 
-        except Exception, e:
+        except Exception as e:
             logging.error("Error while executing "+gcode.code()+": "+str(e))
             logging.error(traceback.format_exc(sys.exc_info()[2]))
         return gcode
@@ -160,7 +160,7 @@ class GCodeProcessor:
             return "GCode " + gcode.code() + " is not implemented"
         try:
             return self.gcodes[val].get_long_description()
-        except Exception, e:
+        except Exception as e:
             logging.error("Error while getting long description on "+gcode.code()+": "+str(e))
         return "Error getting long decription for "+str(val)
 
@@ -178,8 +178,8 @@ if __name__ == '__main__':
 
     proc = GCodeProcessor({})
 
-    print ""
-    print "Commands:"
+    print("")
+    print("Commands:")
 
     descriptions = proc.get_supported_commands_and_description()
 
@@ -189,4 +189,4 @@ if __name__ == '__main__':
                 s for s in re.split(r'(\d+)', string_)]
 
     for name in sorted(descriptions, key=_natural_key):
-        print name + "\t" + descriptions[name]
+        print(name + "\t" + descriptions[name])

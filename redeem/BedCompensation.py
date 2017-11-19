@@ -137,13 +137,13 @@ if __name__ == "__main__":
     ax.set_ylabel('Y')
     ax.set_zlabel('Z')
 
-    print "Level bed max diff before: "+str(max(z1)-min(z1))+" after: "+str(max(z3)-min(z3))
+    print("Level bed max diff before: "+str(max(z1)-min(z1))+" after: "+str(max(z3)-min(z3)))
 
-    print "var matrix = "+json.dumps(Rn.tolist())+";"
+    print("var matrix = "+json.dumps(Rn.tolist())+";")
     probe = {"x": x1, "y": y1, "z": z1}
-    print "var probe = "+json.dumps(probe)+";"
+    print("var probe = "+json.dumps(probe)+";")
     fixed = {"x": x3, "y": y3, "z": z3}
-    print "var fixed = "+json.dumps(fixed)+";"   
+    print("var fixed = "+json.dumps(fixed)+";")
 
     plt.show()
     

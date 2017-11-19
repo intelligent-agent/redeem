@@ -121,7 +121,7 @@ class TextTranslator(nodes.NodeVisitor):
         # XXX header/footer?
 
     def visit_highlightlang(self, node):
-        raise nodes.SkipNode
+        raise nodes.SkipNode()
 
     def visit_section(self, node):
         self._title_char = self.sectionchars[self.sectionlevel]
@@ -162,7 +162,7 @@ class TextTranslator(nodes.NodeVisitor):
     def visit_title(self, node):
         if isinstance(node.parent, nodes.Admonition):
             self.add_text(node.astext() + ': ')
-            raise nodes.SkipNode
+            raise nodes.SkipNode()
         self.new_state(0)
 
     def depart_title(self, node):
@@ -191,7 +191,7 @@ class TextTranslator(nodes.NodeVisitor):
             self.new_state(0)
             self.add_text('Platform: {}}'.format(node['platform']))
             self.end_state()
-        raise nodes.SkipNode
+        raise nodes.SkipNode()
 
     def visit_desc(self, node):
         pass
@@ -239,7 +239,7 @@ class TextTranslator(nodes.NodeVisitor):
         else:
             self.first_param = 0
         self.add_text(node.astext())
-        raise nodes.SkipNode
+        raise nodes.SkipNode()
 
     def visit_desc_optional(self, node):
         self.add_text('[')
@@ -292,7 +292,7 @@ class TextTranslator(nodes.NodeVisitor):
                 self.add_text('%s    ' % (' ' * len(lastname)))
             self.add_text(production.astext() + '\n')
         self.end_state(wrap=False)
-        raise nodes.SkipNode
+        raise nodes.SkipNode()
 
     def visit_seealso(self, node):
         self.new_state()
@@ -318,7 +318,7 @@ class TextTranslator(nodes.NodeVisitor):
         self.end_state(first='[%s] ' % self._citlabel)
 
     def visit_label(self, node):
-        raise nodes.SkipNode
+        raise nodes.SkipNode()
 
     # XXX: option list could use some better styling
 
@@ -368,11 +368,11 @@ class TextTranslator(nodes.NodeVisitor):
         pass
 
     def visit_tabular_col_spec(self, node):
-        raise nodes.SkipNode
+        raise nodes.SkipNode()
 
     def visit_colspec(self, node):
         self.table[0].append(node['colwidth'])
-        raise nodes.SkipNode
+        raise nodes.SkipNode()
 
     def visit_tgroup(self, node):
         pass
@@ -400,8 +400,7 @@ class TextTranslator(nodes.NodeVisitor):
 
     def visit_entry(self, node):
         if node.has_key('morerows') or node.has_key('morecols'):
-            raise NotImplementedError('Column or row spanning cells are '
-                                      'not implemented.')
+            raise NotImplementedError('Column or row spanning cells are not implemented.')
         self.new_state(0)
 
     def depart_entry(self, node):
@@ -470,18 +469,18 @@ class TextTranslator(nodes.NodeVisitor):
         self.new_state(0)
         self.add_text(', '.join(n.astext() for n in node.children[0].children) + '.')
         self.end_state()
-        raise nodes.SkipNode
+        raise nodes.SkipNode()
 
     def visit_image(self, node):
         self.add_text('[image]')
-        raise nodes.SkipNode
+        raise nodes.SkipNode()
 
     def visit_transition(self, node):
         indent = sum(self.stateindent)
         self.new_state(0)
         self.add_text('=' * (MAXWIDTH - indent))
         self.end_state()
-        raise nodes.SkipNode
+        raise nodes.SkipNode()
 
     def visit_bullet_list(self, node):
         self._list_counter = -1
@@ -667,13 +666,13 @@ class TextTranslator(nodes.NodeVisitor):
             self.end_state()
 
     def visit_target(self, node):
-        raise nodes.SkipNode
+        raise nodes.SkipNode()
 
     def visit_index(self, node):
-        raise nodes.SkipNode
+        raise nodes.SkipNode()
 
     def visit_substitution_definition(self, node):
-        raise nodes.SkipNode
+        raise nodes.SkipNode()
 
     def visit_pending_xref(self, node):
         pass
@@ -731,11 +730,11 @@ class TextTranslator(nodes.NodeVisitor):
 
     def visit_footnote_reference(self, node):
         self.add_text('[%s]' % node.astext())
-        raise nodes.SkipNode
+        raise nodes.SkipNode()
 
     def visit_citation_reference(self, node):
         self.add_text('[%s]' % node.astext())
-        raise nodes.SkipNode
+        raise nodes.SkipNode()
 
     def visit_Text(self, node):
         self.add_text(node.astext())
@@ -753,14 +752,14 @@ class TextTranslator(nodes.NodeVisitor):
         self.new_state(0)
         self.add_text('<SYSTEM MESSAGE: %s>' % node.astext())
         self.end_state()
-        raise nodes.SkipNode
+        raise nodes.SkipNode()
 
     def visit_comment(self, node):
-        raise nodes.SkipNode
+        raise nodes.SkipNode()
 
     def visit_meta(self, node):
         # only valid for HTML
-        raise nodes.SkipNode
+        raise nodes.SkipNode()
 
     def unknown_visit(self, node):
         raise NotImplementedError('Unknown node: ' + node.__class__.__name__)
