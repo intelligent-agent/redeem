@@ -7,6 +7,7 @@ import sys
 from redeem.Extruder import Heater
 
 sys.modules['evdev'] = mock.Mock()
+sys.modules['spidev'] = mock.MagicMock()
 sys.modules['redeem.RotaryEncoder'] = mock.Mock()
 sys.modules['redeem.Watchdog'] = mock.Mock()
 sys.modules['redeem.GPIO'] = mock.Mock()
