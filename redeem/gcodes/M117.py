@@ -10,7 +10,7 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
 from __future__ import absolute_import
 
 from .GCodeCommand import GCodeCommand
-from ..Alarm import Alarm
+from redeem.Alarm import Alarm
 
 
 class M117(GCodeCommand):

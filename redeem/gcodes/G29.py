@@ -15,8 +15,8 @@ import json
 import numpy as np
 import copy
 
-from ..Gcode import Gcode
-from ..Alarm import Alarm
+from redeem.Gcode import Gcode
+from redeem.Alarm import Alarm
 
 
 class G29(GCodeCommand):

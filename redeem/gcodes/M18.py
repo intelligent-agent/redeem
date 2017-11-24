@@ -11,7 +11,7 @@ from __future__ import absolute_import
 
 import logging
 from .GCodeCommand import GCodeCommand
-from ..Stepper import Stepper
+from redeem.Stepper import Stepper
 
 
 class M18(GCodeCommand):
