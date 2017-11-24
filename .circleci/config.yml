@@ -36,8 +36,9 @@ jobs:
           command: |
             . ~/repo/venv/bin/activate
             mkdir /tmp/pytest
-            pytest --html=/tmp/pytest/report.html
-          working_directory: ~/repo/tests
+            cd ~/repo/tests
+            pytest --html=/tmp/pytest/gcode_report.html gcode/test*.py
+            pytest --html=/tmp/pytest/core_report.html core/test*.py
 
       # Store artifacts
       - store_artifacts:
