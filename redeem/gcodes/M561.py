@@ -8,16 +8,14 @@ This cancels any bed-plane fitting as the result of probing (or anything else) a
 Author: Elias Bakken
 License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 """
+from __future__ import absolute_import
 
-from GCodeCommand import GCodeCommand
+import json
 import numpy as np
-import logging
-import json 
 
-try:
-    from BedCompensation import BedCompensation
-except ImportError:
-    from redeem.BedCompensation import BedCompensation
+from .GCodeCommand import GCodeCommand
+from ..BedCompensation import BedCompensation
+
 
 class M561(GCodeCommand):
 

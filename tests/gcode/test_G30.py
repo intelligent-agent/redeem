@@ -1,8 +1,9 @@
-from MockPrinter import MockPrinter
+from __future__ import absolute_import
+
 import mock
-from testfixtures import Comparison as C
-from Path import Path
-from Gcode import Gcode
+from .MockPrinter import MockPrinter
+from redeem.Gcode import Gcode
+
 
 class G30_Tests(MockPrinter):
 
@@ -25,13 +26,13 @@ class G30_Tests(MockPrinter):
         g = Gcode({"message": "G30"})
         self.assertTrue(self.printer.processor.is_buffered(g))
 
-    @mock.patch("gcodes.G30.Gcode") 
+    @mock.patch("redeem.gcodes.G30.Gcode")
     def test_gcodes_G30_point_0_not_set(self, mock_Gcode):
         self.printer.probe_points = []
         self.execute_gcode("G30 P0") # should abort because there is no P0 point stored yet (M557)
         self.assertFalse(mock_Gcode.called)
 
-    @mock.patch("gcodes.G30.Gcode") 
+    @mock.patch("redeem.gcodes.G30.Gcode")
     def test_gcodes_G30_X_Y_Z_speed_accel(self, mock_Gcode):
         self.execute_gcode("G30 X10 Y20 Z35 D10.0 F3000 Q1000")
         expected_moveto = "G0 X{} Y{} Z{}".format(10.0+self.offset_x, 20.0+self.offset_y, 35.0) 

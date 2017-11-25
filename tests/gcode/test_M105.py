@@ -1,8 +1,10 @@
-from MockPrinter import MockPrinter
+from __future__ import absolute_import
+
 import mock
-from Gcode import Gcode
 from random import random
-import math
+from .MockPrinter import MockPrinter
+from redeem.Gcode import Gcode
+
 
 class M105_Tests(MockPrinter):
 

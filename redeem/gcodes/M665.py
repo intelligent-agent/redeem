@@ -7,14 +7,10 @@ M665 L(diagonal rod length) R(delta radius)
 Author: Anthony Clay
 License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 """
+from __future__ import absolute_import
 
-from GCodeCommand import GCodeCommand
-try:
-    from Delta import Delta
-except ImportError:
-    from redeem.Delta import Delta
-
-import logging
+from .GCodeCommand import GCodeCommand
+from ..Delta import Delta
 
 
 class M665(GCodeCommand):
@@ -28,7 +24,7 @@ class M665(GCodeCommand):
                 Delta.r = g.get_float_by_letter("R")
                 
             self.printer.path_planner.native_planner.delta_bot.setMainDimensions(Delta.L, Delta.r)
-            #self.printer.path_planner.native_planner.delta_bot.recalculate()
+            # self.printer.path_planner.native_planner.delta_bot.recalculate()
 
     def get_description(self):
         return "Set delta arm calibration values"

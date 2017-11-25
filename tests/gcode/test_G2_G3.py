@@ -1,10 +1,12 @@
+from __future__ import absolute_import
+
 import os
 import logging
 import itertools
 import numpy as np
 from mock import Mock
 
-from MockPrinter import MockPrinter
+from .MockPrinter import MockPrinter
 
 show_plots = False
 try:

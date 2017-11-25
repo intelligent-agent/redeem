@@ -7,14 +7,13 @@ email: zittix(at)xwaves(dot)net
 Website: http://www.xwaves.net
 License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 """
+from __future__ import absolute_import
 
-from GCodeCommand import GCodeCommand
-try:
-    from Gcode import Gcode
-except ImportError:
-    from redeem.Gcode import Gcode
 import time
 import logging
+from .GCodeCommand import GCodeCommand
+from ..Gcode import Gcode
+
 
 
 class M116(GCodeCommand):
@@ -82,7 +81,8 @@ class M116(GCodeCommand):
                 "-1 - Heated Bed \n"
                 " 0 - Extruder E\n"
                 " 1 - Extruder H")
-        if self.printer.config.reach_revision:
+        # unittests and docs may not have printer set when looking for docs
+        if not self.printer or self.printer.config.reach_revision:
             desc += (" 2 - Extruder A\n"
                     " 3 - Extruder B\n"
                     " 4 - Extruder C")

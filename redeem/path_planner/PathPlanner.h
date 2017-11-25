@@ -162,6 +162,7 @@ class PathPlanner {
   void applyBedCompensation(VectorN &endPos);
   void backlashCompensation(IntVectorN &delta);
   void handleSlaves(VectorN &startPos, VectorN &endPos);
+  bool queue_move_fail;
 	
 	
   // soft endstops
@@ -369,6 +370,7 @@ class PathPlanner {
   void resetBacklash();
 	
   VectorN getState();
+  bool getLastQueueMoveStatus();
 
   FLOAT_T getLastProbeDistance();
 

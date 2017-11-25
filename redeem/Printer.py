@@ -25,8 +25,10 @@ import numpy as np
 import logging
 from Delta import Delta
 from PruInterface import PruInterface
+from SDCardManager import SDCardManager
 import os
 import json
+
 
 class Printer:
     AXES = "XYZEHABC"
@@ -103,6 +105,8 @@ class Printer:
 
         self.axes_relative = []
 
+        self.sd_card_manager = SDCardManager()
+
     def add_slave(self, master, slave):
         ''' Make an axis copy the movement of another.
         the slave will get the same position as the axis'''
@@ -115,7 +119,7 @@ class Printer:
         """
         # Reset Stepper watchdog
         self.swd.reset()
-        # Enabe steppers
+        # Enable steppers
         for name, stepper in self.steppers.iteritems():
             if stepper.in_use:
                 if not stepper.enabled:
