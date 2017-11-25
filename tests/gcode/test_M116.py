@@ -43,7 +43,7 @@ class M116_Tests(MockPrinter):
 
         print "HEATERS: ", heaters
         
-        heater_index_order = ['HBP', 'E', 'H', 'A', 'B', 'C']
+        heater_index_order = ['HBP', 'E', 'H',]
 
         for pt in ["P", "T"]:
             for heater in heater_index_order:

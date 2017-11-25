@@ -12,7 +12,7 @@ from __future__ import absolute_import
 import time
 import logging
 from .GCodeCommand import GCodeCommand
-from ..Gcode import Gcode
+from redeem.Gcode import Gcode
 
 
 

@@ -21,7 +21,7 @@ from __future__ import absolute_import
 
 import logging
 from .GCodeCommand import GCodeCommand
-from ..Printer import Printer
+from redeem.Printer import Printer
 
 
 class M206(GCodeCommand):

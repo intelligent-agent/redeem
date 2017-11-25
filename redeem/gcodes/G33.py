@@ -22,7 +22,7 @@ import logging
 import numpy as np
 
 from .GCodeCommand import GCodeCommand
-from ..Gcode import Gcode
+from redeem.Gcode import Gcode
 
 
 class G33(GCodeCommand):

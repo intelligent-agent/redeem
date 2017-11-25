@@ -13,9 +13,9 @@ from .GCodeCommand import GCodeCommand
 import logging
 import json
 
-from ..Gcode import Gcode
-from ..Path import G92Path
-from ..Alarm import Alarm
+from redeem.Gcode import Gcode
+from redeem.Path import G92Path
+from redeem.Alarm import Alarm
 
 
 class G30(GCodeCommand):
