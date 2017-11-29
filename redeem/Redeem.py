@@ -170,7 +170,10 @@ class Redeem:
         printer.watchdog = Watchdog()
 
         # Enable PWM and steppers
-        printer.enable = Enable("P9_41")
+        if self.revolve:
+            printer.enable = Enable("GPIO0_18", False)
+        else:
+            printer.enable = Enable("P9_41", True)
         printer.enable.set_disabled()
 
         # Init the Paths

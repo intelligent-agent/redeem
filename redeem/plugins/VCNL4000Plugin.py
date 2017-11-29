@@ -21,7 +21,7 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
 """
 
 
-from Adafruit_GPIO.I2C import Device as I2C
+#from Adafruit_GPIO.I2C import Device as I2C
 import time
 import subprocess
 

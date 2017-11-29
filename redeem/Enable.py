@@ -26,15 +26,16 @@ import Adafruit_BBIO.GPIO as GPIO
 
 class Enable:
 
-    def __init__(self, pin):
+    def __init__(self, pin, inverted):
         self.pin = pin
+        self.inverted = inverted
         GPIO.setup(pin, GPIO.OUT)
 
     def set_enabled(self):
-        GPIO.output(self.pin, GPIO.LOW)
+        GPIO.output(self.pin, GPIO.LOW if self.inverted else GPIO.HIGH)
 
     def set_disabled(self):
-        GPIO.output(self.pin, GPIO.HIGH)
+        GPIO.output(self.pin, GPIO.HIGH if self.inverted else GPIO.LOW)
 
 
 
