@@ -237,11 +237,13 @@ class Redeem:
         # Revolve
         if self.revolve in ["00A0"]:
             printer.steppers["X"] = Stepper_Revolve_A0("GPIO3_14", "GPIO3_15", "GPIO0_27", "X")
-            printer.steppers["Y"] = Stepper_Revolve_A0("GPIO3_16", "GPIO3_17", "GPIO2_0", "Y")
+            printer.steppers["Y"] = Stepper_Revolve_A0("GPIO3_16", "GPIO3_17", "GPIO2_0",  "Y")
             printer.steppers["Z"] = Stepper_Revolve_A0("GPIO3_18", "GPIO3_19", "GPIO1_16", "Z")
-            printer.steppers["E"] = Stepper_Revolve_A0("GPIO3_20", "GPIO3_21", "GPIO2_1", "E")
+            printer.steppers["E"] = Stepper_Revolve_A0("GPIO3_20", "GPIO3_21", "GPIO2_1",  "E")
             printer.steppers["H"] = Stepper_Revolve_A0("GPIO2_26", "GPIO2_27", "GPIO0_29", "H")
             printer.steppers["A"] = Stepper_Revolve_A0("GPIO2_28", "GPIO2_29", "GPIO0_26", "A")
+            printer.steppers["B"] = Stepper_Revolve_A0("GPIO2_30", "GPIO2_31", "", "B")
+            printer.steppers["C"] = Stepper_Revolve_A0("GPIO1_12", "GPIO1_13", "", "C")
 
 
         # Enable the steppers and set the current, steps pr mm and
