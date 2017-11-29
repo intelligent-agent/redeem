@@ -20,9 +20,10 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
  You should have received a copy of the GNU General Public License
  along with Redeem.  If not, see <http://www.gnu.org/licenses/>.
 """
-
-from Adafruit_GPIO.I2C import Device as I2C
-
+try:
+    from Adafruit_GPIO.I2C import Device as I2C
+except: 
+    pass
 import time
 import subprocess
 

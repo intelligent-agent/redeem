@@ -63,8 +63,16 @@ class CascadingConfigParser(ConfigParser.SafeConfigParser):
         """ Read the name and revision of each cape on the BeagleBone """
         self.replicape_revision = None
         self.reach_revision = None
+        self.revolve_revision = "00A0"
 
+        with open("/sys/bus/i2c/devices/0-0050/eeprom", "rb") as f:
+            self.replicape_data = f.read(120)
+            self.replicape_path = "/sys/bus/i2c/devices/0-0050/eeprom"
+        return
         import glob
+                
+        
+
         paths = glob.glob("/sys/bus/i2c/devices/[1-2]-005[4-7]/*/nvmem")
         paths.extend(glob.glob("/sys/bus/i2c/devices/[1-2]-005[4-7]/nvmem/at24-[1-4]/nvmem"))
         #paths.append(glob.glob("/sys/bus/i2c/devices/[1-2]-005[4-7]/eeprom"))
@@ -163,6 +171,7 @@ class CascadingConfigParser(ConfigParser.SafeConfigParser):
 
     def get_key(self):
         """ Get the generated key from the config or create one """
+
         self.replicape_key = "".join(struct.unpack('20c', self.replicape_data[100:120]))
         logging.debug("Found Replicape key: '"+self.replicape_key+"'")
         if self.replicape_key == '\x00'*20:

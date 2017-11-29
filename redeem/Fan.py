@@ -34,12 +34,12 @@ class Fan(PWM):
     def set_PWM_frequency(self, value):
         """ Set the amount of on-time from 0..1 """
         self.pwm_frequency = int(value)
-        PWM.set_frequency(value)
+        #PWM.set_frequency(value)
 
     def set_value(self, value):
         """ Set the amount of on-time from 0..1 """
         self.value = value
-        PWM.set_value(value, self.channel)
+        #PWM.set_value(value, self.channel)
 
 
     def ramp_to(self, value, delay=0.01):

@@ -22,6 +22,21 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
 """
 
 from PWM import PWM
+from PWM_pin import PWM_pin
+
+class Mosfet_Pin(PWM_pin):   
+    def __init__(self, channel):
+        self.channel = channel
+        self.power = 0.0
+        #self.pin = PMW_pin(channel, 1000, 0.5)
+
+    def set_power(self, value):
+        """Set duty cycle between 0 and 1"""
+        self.power = value
+        #self.pin.set_value(value)
+
+    def get_power(self):
+        return self.power
 
 class Mosfet(PWM):   
     def __init__(self, channel):

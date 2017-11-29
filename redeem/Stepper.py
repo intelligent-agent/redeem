@@ -25,8 +25,8 @@ import time
 import logging
 from Printer import Printer
 from DAC import DAC, PWM_DAC
-from ShiftRegister import ShiftRegister
-import Adafruit_BBIO.GPIO as GPIO
+#from ShiftRegister import ShiftRegister
+#import Adafruit_BBIO.GPIO as GPIO
 from threading import Thread
 from Alarm import Alarm
 from Key_pin import Key_pin
@@ -53,8 +53,9 @@ class Stepper(object):
         self.current_disabled= False
 
         # Set up the Shift register
-        ShiftRegister.make(8)
-        self.shift_reg = ShiftRegister.registers[shiftreg_nr]
+        if shiftreg_nr >= 0:
+            ShiftRegister.make(8)
+            self.shift_reg = ShiftRegister.registers[shiftreg_nr]
 
         # Add a key code to the key listener
         # Steppers have an nFAULT pin, so callback on falling
@@ -118,6 +119,82 @@ D5 = CFG2-Z  = 0 (microstepping)
 D6 = CFG1    = 0 (microstepping)
 D7 = CFG1-Z  = 0 (microstepping)
 """
+
+
+class Stepper_Revolve_A0(Stepper):
+
+    def __init__(self, stepPin, dirPin, faultPin, name):
+        Stepper.__init__(self, stepPin, dirPin, faultPin, None, -1, name)
+        self.dac    = None
+        self.state  = 0 # The initial state of shift register
+        self.current_enabled = True
+
+    def set_microstepping(self, value, force_update=False):                
+        """ Todo: Find an elegant way for this """
+        EN_CFG1  = (1<<7)
+        DIS_CFG1 = (0<<7)
+        EN_CFG2  = (1<<5)
+        DIS_CFG2 = (0<<5)
+        CFG2_H   = (1<<4)
+        CFG2_L   = (0<<4)
+        CFG1_H   = (1<<6)
+        CFG1_L   = (0<<6)
+
+        if   value == 0:   # GND, GND
+            state = EN_CFG2 | CFG2_L | EN_CFG1 | CFG1_L
+            self.microsteps = 1
+        elif value == 1: # GND, VCC
+            state = EN_CFG2 | CFG2_L | EN_CFG1 | CFG1_H
+            self.microsteps = 2
+        elif value == 2: # GND, open
+            state = EN_CFG2 | CFG2_L | DIS_CFG1 | CFG1_L
+            self.microsteps = 2
+        elif value == 3: # VCC, GND
+            state = EN_CFG2 | CFG2_H | EN_CFG1 | CFG1_L
+            self.microsteps = 4
+        elif value == 4: # VCC, VCC
+            state = EN_CFG2 | CFG2_H | EN_CFG1 | CFG1_H
+            self.microsteps = 16
+        elif value == 5: # VCC, open
+            state = EN_CFG2 | CFG2_H | DIS_CFG1 | CFG1_L
+            self.microsteps = 4
+        elif value == 6: # open, GND
+            state = DIS_CFG2 | CFG2_L | EN_CFG1 | CFG1_L
+            self.microsteps = 16
+        elif value == 7: # open, VCC
+            state = DIS_CFG2 | CFG2_L | EN_CFG1 | CFG1_H
+            self.microsteps = 4
+        elif value == 8: # open, open
+            state = DIS_CFG2 | CFG2_L | DIS_CFG1 | CFG1_L
+            self.microsteps = 16
+
+        #self.shift_reg.set_state(state,0xF0)
+        self.mmPrStep    = 1.0/(self.steps_pr_mm*self.microsteps)
+
+        # update the Printer class with new values
+        stepper_num = self.printer.axis_to_index(self.name)
+        self.printer.steps_pr_meter[stepper_num] = self.get_steps_pr_meter()
+        logging.debug("Updated stepper "+self.name+" to microstepping "+str(value)+" = "+str(self.microsteps))   
+        self.microstepping = value
+
+    def set_current_value(self, i_rms):
+        """ Current chopping limit (This is the value you can change) """
+        self.current_value = i_rms
+
+    def set_disabled(self, force_update=False):
+        if hasattr(Stepper, "printer"):
+            Stepper.printer.enable.set_disabled()
+
+    def set_enabled(self, force_update=False):
+        if hasattr(Stepper, "printer"):
+            Stepper.printer.enable.set_enabled()
+
+    def set_decay(self, value):
+        self.decay = value # For saving the setting with M500
+
+    def reset(self):
+        self.set_disabled()
+        self.set_enabled()
 
 class Stepper_00B1(Stepper):
 

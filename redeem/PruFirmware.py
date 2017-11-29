@@ -337,9 +337,12 @@ class PruFirmware:
 
             # Add end stop delay to the config file
             end_stop_delay = self.config.getint('Endstops', 'end_stop_delay_cycles')
-            configFile.write("#define END_STOP_DELAY " +str(end_stop_delay)+ "\n");
+            configFile.write("#define END_STOP_DELAY " +str(end_stop_delay)+ "\n")
             
-            revision = self.printer.config.replicape_revision.strip('0');
+            if self.printer.config.revolve_revision:
+                revision = "B"
+            else:
+                revision = self.printer.config.replicape_revision.strip('0')
             
             # Note that these are all cycle counts of the 200MHz PRU - 1 cycle is 5ns
             if revision.startswith('A'): # DRV8825

@@ -36,6 +36,18 @@ class PWM_pin:
         elif pin == "P9_16":
             self.chip = 0
             self.channel = 1
+        elif pin == "0:0":
+            self.chip = 0
+            self.channel = 0
+        elif pin == "0:1":
+            self.chip = 0
+            self.channel = 0
+        elif pin == "2:0":
+            self.chip = 0
+            self.channel = 0
+        elif pin == "2:1":
+            self.chip = 0
+            self.channel = 0
         else:
             logging.warning("Unrcognized pin. You may have to implement it...")
 

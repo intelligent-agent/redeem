@@ -29,7 +29,7 @@ spi = None
 try:
     import spidev as SPI
     spi = SPI.SpiDev()
-    spi.open(2, 1)
+    spi.open(1, 1)
 except ImportError:
     # Load SPI module
     try:

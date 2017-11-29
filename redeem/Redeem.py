@@ -36,7 +36,7 @@ import Queue
 import numpy as np
 import sys
 
-from Mosfet import Mosfet
+from Mosfet import Mosfet, Mosfet_Pin
 from Stepper import *
 from TemperatureSensor import *
 from Fan import Fan
@@ -139,8 +139,12 @@ class Redeem:
         # Find out which capes are connected
         self.printer.config.parse_capes()
         self.revision = self.printer.config.replicape_revision
+        self.revolve = self.printer.config.revolve_revision
         if self.revision:
             logging.info("Found Replicape rev. " + self.revision)
+            printer.replicape_key = printer.config.get_key()
+        elif self.revolve:
+            logging.info("Found Revolve rev. " + self.revolve)
             printer.replicape_key = printer.config.get_key()
         else:
             logging.warning("Oh no! No Replicape present!")
@@ -153,6 +157,9 @@ class Redeem:
             Printer.NUM_AXES = 8
         elif self.printer.config.reach_revision == "00B0":
             Printer.NUM_AXES = 7
+    
+        if self.revolve:
+            Printer.NUM_AXES = 6            
 
         if self.revision in ["00A4", "0A4A", "00A3"]:
             PWM.set_frequency(100)
@@ -227,6 +234,15 @@ class Redeem:
             printer.steppers["A"] = Stepper_reach_00B0("GPIO1_16", "GPIO0_5",  "GPIO0_3", 5, 5, "A")
             printer.steppers["B"] = Stepper_reach_00B0("GPIO2_2" , "GPIO0_14", "GPIO0_3", 6, 6, "B")
 
+        # Revolve
+        if self.revolve in ["00A0"]:
+            printer.steppers["X"] = Stepper_Revolve_A0("GPIO3_14", "GPIO3_15", "GPIO0_27", "X")
+            printer.steppers["Y"] = Stepper_Revolve_A0("GPIO3_16", "GPIO3_17", "GPIO2_0", "Y")
+            printer.steppers["Z"] = Stepper_Revolve_A0("GPIO3_18", "GPIO3_19", "GPIO1_16", "Z")
+            printer.steppers["E"] = Stepper_Revolve_A0("GPIO3_20", "GPIO3_21", "GPIO2_1", "E")
+            printer.steppers["H"] = Stepper_Revolve_A0("GPIO2_26", "GPIO2_27", "GPIO0_29", "H")
+            printer.steppers["A"] = Stepper_Revolve_A0("GPIO2_28", "GPIO2_29", "GPIO0_26", "A")
+
 
         # Enable the steppers and set the current, steps pr mm and
         # microstepping
@@ -268,10 +284,15 @@ class Redeem:
         heaters = ["E", "H", "HBP"]
         if self.printer.config.reach_revision:
             heaters.extend(["A", "B", "C"])
+        elif self.revolve:
+            heaters.extend(["A"])
         for e in heaters:
             # Mosfets
             channel = self.printer.config.getint("Heaters", "mosfet_"+e)
-            self.printer.mosfets[e] = Mosfet(channel)
+            if self.revolve:
+                self.printer.mosfets[e] = Mosfet_Pin(channel)
+            else:
+                self.printer.mosfets[e] = Mosfet(channel)
             # Thermistors
             adc = self.printer.config.get("Heaters", "path_adc_"+e)
             if not self.printer.config.has_option("Heaters", "sensor_"+e):
@@ -325,6 +346,12 @@ class Redeem:
             self.printer.fans.append(Fan(14))
             self.printer.fans.append(Fan(15))
             self.printer.fans.append(Fan(7))
+
+        if printer.config.revolve_revision == "00A0":
+            self.printer.fans.append(Fan(14))
+            self.printer.fans.append(Fan(15))
+            self.printer.fans.append(Fan(7))
+
 
         # Set default value for all fans
         for i, f in enumerate(self.printer.fans):
