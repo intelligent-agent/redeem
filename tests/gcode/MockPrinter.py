@@ -7,6 +7,7 @@ import sys
 from redeem.Extruder import Heater
 
 sys.modules['evdev'] = mock.Mock()
+sys.modules['spidev'] = mock.MagicMock()
 sys.modules['redeem.RotaryEncoder'] = mock.Mock()
 sys.modules['redeem.Watchdog'] = mock.Mock()
 sys.modules['redeem.GPIO'] = mock.Mock()
@@ -16,19 +17,21 @@ sys.modules['redeem.DAC'] = mock.Mock()
 sys.modules['redeem.ShiftRegister.py'] = mock.Mock()
 sys.modules['Adafruit_BBIO'] = mock.Mock()
 sys.modules['Adafruit_BBIO.GPIO'] = mock.Mock()
-sys.modules['Adafruit_I2C'] = mock.Mock()
+sys.modules['Adafruit_GPIO'] = mock.Mock()
+sys.modules['Adafruit_GPIO.I2C'] = mock.MagicMock()
 sys.modules['redeem.StepperWatchdog'] = mock.Mock()
 sys.modules['redeem.StepperWatchdog.GPIO'] = mock.Mock()
 sys.modules['redeem._PathPlannerNative'] = mock.Mock()
 sys.modules['redeem.PruInterface'] = mock.Mock()
 sys.modules['redeem.PruInterface'].PruInterface = mock.MagicMock()
 sys.modules['redeem.PruFirmware'] = mock.Mock()
-sys.modules['redeem.HBD'] = mock.Mock()
+sys.modules['redeem.HBD'] = mock.MagicMock()
 sys.modules['redeem.RotaryEncoder'] = mock.Mock()
 sys.modules['JoinableQueue'] = mock.Mock()
 sys.modules['redeem.USB'] = mock.Mock()
 sys.modules['redeem.Ethernet'] = mock.Mock()
 sys.modules['redeem.Pipe'] = mock.Mock()
+
 
 from redeem.CascadingConfigParser import CascadingConfigParser
 from redeem.Redeem import *
@@ -84,16 +87,12 @@ log_to_file = False
     @classmethod
     @mock.patch.object(EndStop, "_wait_for_event", new=None)
     @mock.patch.object(PathPlanner, "_init_path_planner")
-    @mock.patch.object(CascadingConfigParser, "get_key")
     @mock.patch("redeem.CascadingConfigParser", new=CascadingConfigParserWedge)
-    def setUpClass(cls, mock_get_key, mock_init_path_planner):
-
-        mock_get_key.return_value = "TESTING_DUMMY_KEY"
+    def setUpClass(cls, mock_init_path_planner):
 
         """
         Allow Extruder or HBP instantiation without crashing 'cause not BBB/Replicape
         """
-        # class DisabledExtruder(Extruder):
         def disabled_extruder_enable(self):
             self.avg = 1
             self.temperatures = [100]
@@ -102,14 +101,19 @@ log_to_file = False
         def disabled_hbp_enable(self):
             pass
 
+        def bypass_init_path_planner(self):
+            pass
+
         mock.patch('redeem.Extruder.Extruder.enable', new=disabled_extruder_enable).start()
         mock.patch('redeem.Extruder.HBP.enable', new=disabled_hbp_enable).start()
+        mock.patch('redeem.PathPlanner.PathPlanner._init_path_planner', new=bypass_init_path_planner)
 
         cfg_path = "../configs"
         cls.setUpConfigFiles(cfg_path)
 
         cls.R = Redeem(config_location=cfg_path)
         cls.printer = cls.R.printer
+        cls.printer.replicape_key = "TESTING_DUMMY_KEY"
 
         cls.setUpPatch()
 

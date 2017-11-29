@@ -11,7 +11,7 @@ from __future__ import absolute_import
 
 import logging
 from .GCodeCommand import GCodeCommand
-from ..Path import G92Path
+from redeem.Path import G92Path
 
 
 class G92(GCodeCommand):

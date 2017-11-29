@@ -9,7 +9,7 @@ License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 from __future__ import absolute_import
 
 from .GCodeCommand import GCodeCommand
-from ..Path import Path
+from redeem.Path import Path
 
 
 class M83(GCodeCommand):

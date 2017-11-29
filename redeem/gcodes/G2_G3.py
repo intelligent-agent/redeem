@@ -10,7 +10,7 @@ License: GNU GPLv3 http://www.gnu.org/copyleft/gpl.html
 from __future__ import absolute_import
 
 from .GCodeCommand import GCodeCommand
-from ..Path import Path, RelativePath, AbsolutePath
+from redeem.Path import Path, RelativePath, AbsolutePath
 
 import logging
 

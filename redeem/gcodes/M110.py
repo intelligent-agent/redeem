@@ -10,7 +10,7 @@ License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 from __future__ import absolute_import
 
 from .GCodeCommand import GCodeCommand
-from ..Gcode import Gcode
+from redeem.Gcode import Gcode
 
 
 class M110(GCodeCommand):
