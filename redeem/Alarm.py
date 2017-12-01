@@ -23,6 +23,7 @@ import logging
 
 from multiprocessing import JoinableQueue
 import Queue
+from six import iteritems
 
 
 class Alarm:
@@ -121,14 +122,14 @@ class Alarm:
 
     def disable_heaters(self):
         logging.warning("Disabling heaters")
-        for _, heater in self.printer.heaters.iteritems():
+        for _, heater in iteritems(self.printer.heaters):
             heater.extruder_error = True
 
     def inform_listeners(self):
         """ Inform all listeners (comm channels) of the occured error """
         logging.error("Alarm: "+self.message)
         if Alarm.printer and hasattr(Alarm.printer, "comms"):
-            for name, comm in Alarm.printer.comms.iteritems():
+            for name, comm in iteritems(Alarm.printer.comms):
                 if name == "toggle":
                     comm.send_message(self.short_message)
                 else:

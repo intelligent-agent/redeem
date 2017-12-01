@@ -28,7 +28,7 @@ import logging
 import subprocess
 import shutil
 import re
-from Printer import Printer
+from six import iteritems
 
 class PruFirmware:
     def __init__(self, firmware_source_file0, binary_filename0,
@@ -243,7 +243,7 @@ class PruFirmware:
             direction_mask = 0
 
             # Define step and dir pins
-            for name, stepper in self.printer.steppers.iteritems():
+            for name, stepper in iteritems(self.printer.steppers):
                 step_pin  = str(stepper.get_step_pin())
                 step_bank = str(stepper.get_step_bank())
                 dir_pin   = str(stepper.get_dir_pin())
@@ -270,7 +270,7 @@ class PruFirmware:
             configFile.write('\n')
 
             # Define end stop pins and banks
-            for name, endstop in self.printer.end_stops.iteritems():
+            for name, endstop in iteritems(self.printer.end_stops):
                 bank, pin = endstop.get_gpio_bank_and_pin()
                 configFile.write('#define STEPPER_'+ name +'_END_PIN\t\t'+ str(pin) +'\n')
                 configFile.write('#define STEPPER_'+ name +'_END_BANK\t\t'+ "GPIO_"+str(bank) +'_IN\n')
@@ -285,7 +285,7 @@ class PruFirmware:
             configFile.write(inversion_mask + "\n");
 
             # Construct the endstop lookup table.
-            for name, endstop in self.printer.end_stops.iteritems():
+            for name, endstop in iteritems(self.printer.end_stops):
                 mask = 0
 
                 # stepper name is x_cw or x_ccw
@@ -323,13 +323,13 @@ class PruFirmware:
 
             # Put each dir and step pin in the proper buck if they are for GPIO0 or GPIO1 bank.
             # This is a restriction due to the limited capabilities of the pasm preprocessor.
-            for name, bank in banks.iteritems():
+            for name, bank in iteritems(banks):
                 #bank = (~bank & 0xFFFFFFFF)
                 configFile.write("#define GPIO"+name+"_MASK\t\t" +bin(bank)+ "\n");
-            #for name, bank in step_banks.iteritems():
+            # for name, bank in iteritems(step_banks):
                 #bank = (~bank & 0xFFFFFFFF)
             #    configFile.write("#define GPIO"+name+"_STEP_MASK\t\t" +bin(bank)+ "\n");
-            for name, bank in dir_banks.iteritems():
+            for name, bank in iteritems(dir_banks):
                 #bank = (~bank & 0xFFFFFFFF)
                 configFile.write("#define GPIO"+name+"_DIR_MASK\t\t" +bin(bank)+ "\n");
 

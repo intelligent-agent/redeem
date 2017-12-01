@@ -31,6 +31,9 @@ sys.modules['JoinableQueue'] = mock.Mock()
 sys.modules['redeem.USB'] = mock.Mock()
 sys.modules['redeem.Ethernet'] = mock.Mock()
 sys.modules['redeem.Pipe'] = mock.Mock()
+sys.modules['redeem.Fan'] = mock.Mock()
+sys.modules['redeem.Mosfet'] = mock.Mock()
+sys.modules['redeem.PWM'] = mock.Mock()
 
 
 from redeem.CascadingConfigParser import CascadingConfigParser

@@ -10,6 +10,7 @@ License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 from __future__ import absolute_import
 
 import math
+from six import iteritems
 from .GCodeCommand import GCodeCommand
 
 
@@ -31,7 +32,7 @@ class M105(GCodeCommand):
         answer = "ok " + format_temperature(current_tool, "T")
 
         # Append heaters
-        for heater, data in sorted(self.printer.heaters.iteritems(), key=lambda(k,v): (v,k)):
+        for heater, data in sorted(iteritems(self.printer.heaters), key=lambda(k, v): (v, k)):
             answer += " " + format_temperature(heater, data.prefix)
 
         # Append the current tool power is using PID
