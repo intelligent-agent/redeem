@@ -59,10 +59,12 @@ pathplanner = Extension(
         '-DLOGLEVEL=30']
 )
 
+from redeem._version import __version__, __url__
+
 setup(
-    name = "Redeem",
-    version = "2.0.5",
-    packages = find_packages(exclude=["redeem/path_planner"]),
+    name="Redeem",
+    version=__version__,
+    packages=find_packages(exclude=["redeem/path_planner"]),
     data_files=[
         ('redeem/firmware', [
             'redeem/firmware/firmware_runtime.c',
@@ -92,6 +94,7 @@ setup(
             'data/E3D-PT100-AMPLIFIER.cht']),
     ],
     # metadata for upload to PyPI
+
     author="Elias Bakken",
     author_email="elias@iagent.no",
     description="Replicape daemon",
@@ -100,7 +103,7 @@ setup(
     platforms=["BeagleBone"],
     install_requires=INSTALL_REQUIRES,
     dependency_links=DEPENDENCY_REQUIRES,
-    url="https://github.com/intelligent-agent/redeem",
+    url = __url__,
     ext_modules=[pathplanner],
     entry_points= {
         'console_scripts': [
