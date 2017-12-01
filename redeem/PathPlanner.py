@@ -53,9 +53,15 @@ class AlarmWrapper(AlarmCallbackNative):
         AlarmCallbackNative.__init__(self)
 
     def call(self, type, message, short_message):
-        endstop = PruInterface.get_endstop_triggered()
-        message += ": "+["unknown", "X1", "Y1", "Z1", "X2", "Y2", "Z2"][int(np.log2([endstop])[0]+1)]
-        logging.error("Native path planner alarm: {} {} {}".format(type, message, short_message))
+        if type == 8:
+            logging.error("{}, {}".format(message, short_message))
+        else:
+            endstop = PruInterface.get_endstop_triggered()
+            endstop_idx = int(np.log2([endstop])[0]+1)
+            if (endstop_idx < 0) or (endstop_idx > 6):
+                endstop_idx = 0
+            message += ": "+["unknown", "X1", "Y1", "Z1", "X2", "Y2", "Z2"][endstop_idx]
+            logging.error("Native path planner alarm: {} {} {}".format(type, message, short_message))
         try:
             a = Alarm(int(type), message, short_message)
         except Exception:
@@ -451,7 +457,6 @@ class PathPlanner:
         # Add babystepping
         new.end_pos[2] += self.printer.offset_z
 
-
         if new.is_G92():
             self.native_planner.setAxisConfig(int(self.printer.axis_config))
             self.native_planner.setState(tuple(new.end_pos))
@@ -481,14 +486,19 @@ class PathPlanner:
                                       bool(new.is_probe),
                                       int(tool_axis))
                                       
+        err = self.native_planner.getLastQueueMoveStatus()
 
-        self.prev = new
-        self.prev.unlink()  # We don't want to store the entire print
-                            # in memory, so we keep only the last path.
-        
-        # make sure that the current state of the printer is correct
-        self.prev.end_pos = self.native_planner.getState()
-        #logging.debug("end pos: "+ str(self.prev.end_pos))
+        if err:
+            logging.debug("add path failed: "+ str(new))
+        else:
+            self.prev = new
+            self.prev.unlink()  # We don't want to store the entire print
+                                # in memory, so we keep only the last path.
+            
+            # make sure that the current state of the printer is correct
+            self.prev.end_pos = self.native_planner.getState()
+            
+        return
 
     def set_extruder(self, ext_nr):
         """

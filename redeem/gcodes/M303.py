@@ -19,8 +19,8 @@ from __future__ import absolute_import
 import json
 import logging
 from .GCodeCommand import GCodeCommand
-from ..Autotune import Autotune
-from ..Alarm import Alarm
+from redeem.Autotune import Autotune
+from redeem.Alarm import Alarm
 
 
 class M303(GCodeCommand):

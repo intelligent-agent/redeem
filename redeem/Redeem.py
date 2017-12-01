@@ -66,6 +66,7 @@ from StepperWatchdog import StepperWatchdog
 from Key_pin import Key_pin, Key_pin_listener
 from Watchdog import Watchdog
 from six import iteritems
+from _version import __version__, __release_name__
 
 # Global vars
 printer = None
@@ -74,6 +75,8 @@ printer = None
 logging.basicConfig(level=logging.DEBUG,
                     format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
                     datefmt='%m-%d %H:%M')
+
+
 class Redeem:
     def __init__(self, config_location="/etc/redeem"):
         """
@@ -81,7 +84,7 @@ class Redeem:
          - default is installed directory
          - allows for running in a local directory when debugging
         """
-        firmware_version = "2.0.5~Red Heat"
+        firmware_version = "{}~{}".format(__version__, __release_name__)
         logging.info("Redeem initializing "+firmware_version)
 
         printer = Printer()

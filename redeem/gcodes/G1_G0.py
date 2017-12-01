@@ -11,7 +11,7 @@ from __future__ import absolute_import
 
 import logging
 from .GCodeCommand import GCodeCommand
-from ..Path import Path, RelativePath, AbsolutePath, MixedPath
+from redeem.Path import Path, RelativePath, AbsolutePath, MixedPath
 
 
 class G0(GCodeCommand):

@@ -11,7 +11,7 @@ class M130_M131_M132_Tests(MockPrinter):
             self.printer.heaters[k].Kp = 1.0
             self.printer.heaters[k].Ti = 0.0
             self.printer.heaters[k].Td = 0.0
-        self.heater_order = ["HBP", "E", "H", "A", "B", "C"]
+        self.heater_order = ["HBP", "E", "H"]
 
     def test_gcodes_M130_no_args(self):
         g = self.execute_gcode("M130")

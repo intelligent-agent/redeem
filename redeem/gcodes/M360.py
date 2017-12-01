@@ -12,7 +12,7 @@ from __future__ import absolute_import
 import json
 
 from .GCodeCommand import GCodeCommand
-from ..Alarm import Alarm
+from redeem.Alarm import Alarm
 
 
 class M360(GCodeCommand):

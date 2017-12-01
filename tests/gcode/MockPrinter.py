@@ -7,6 +7,7 @@ import sys
 from redeem.Extruder import Heater
 
 sys.modules['evdev'] = mock.Mock()
+sys.modules['spidev'] = mock.MagicMock()
 sys.modules['redeem.RotaryEncoder'] = mock.Mock()
 sys.modules['redeem.Watchdog'] = mock.Mock()
 sys.modules['redeem.GPIO'] = mock.Mock()
@@ -17,14 +18,14 @@ sys.modules['redeem.ShiftRegister.py'] = mock.Mock()
 sys.modules['Adafruit_BBIO'] = mock.Mock()
 sys.modules['Adafruit_BBIO.GPIO'] = mock.Mock()
 sys.modules['Adafruit_GPIO'] = mock.Mock()
-sys.modules['Adafruit_GPIO.I2C'] = mock.Mock()
+sys.modules['Adafruit_GPIO.I2C'] = mock.MagicMock()
 sys.modules['redeem.StepperWatchdog'] = mock.Mock()
 sys.modules['redeem.StepperWatchdog.GPIO'] = mock.Mock()
 sys.modules['redeem._PathPlannerNative'] = mock.Mock()
 sys.modules['redeem.PruInterface'] = mock.Mock()
 sys.modules['redeem.PruInterface'].PruInterface = mock.MagicMock()
 sys.modules['redeem.PruFirmware'] = mock.Mock()
-sys.modules['redeem.HBD'] = mock.Mock()
+sys.modules['redeem.HBD'] = mock.MagicMock()
 sys.modules['redeem.RotaryEncoder'] = mock.Mock()
 sys.modules['JoinableQueue'] = mock.Mock()
 sys.modules['redeem.USB'] = mock.Mock()
@@ -33,6 +34,7 @@ sys.modules['redeem.Pipe'] = mock.Mock()
 sys.modules['redeem.Fan'] = mock.Mock()
 sys.modules['redeem.Mosfet'] = mock.Mock()
 sys.modules['redeem.PWM'] = mock.Mock()
+
 
 from redeem.CascadingConfigParser import CascadingConfigParser
 from redeem.Redeem import *
@@ -102,8 +104,12 @@ log_to_file = False
         def disabled_hbp_enable(self):
             pass
 
+        def bypass_init_path_planner(self):
+            pass
+
         mock.patch('redeem.Extruder.Extruder.enable', new=disabled_extruder_enable).start()
         mock.patch('redeem.Extruder.HBP.enable', new=disabled_hbp_enable).start()
+        mock.patch('redeem.PathPlanner.PathPlanner._init_path_planner', new=bypass_init_path_planner)
 
         cfg_path = "../configs"
         cls.setUpConfigFiles(cfg_path)

@@ -23,7 +23,7 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
 from __future__ import absolute_import
 
 from .GCodeCommand import GCodeCommand
-from ..Gcode import Gcode
+from redeem.Gcode import Gcode
 import logging
 
 
