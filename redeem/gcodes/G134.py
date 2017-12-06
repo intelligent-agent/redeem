@@ -20,10 +20,10 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
  You should have received a copy of the GNU General Public License
  along with Redeem.  If not, see <http://www.gnu.org/licenses/>.
 """
+from __future__ import absolute_import
 
-from GCodeCommand import GCodeCommand
-from redeem.Gcode import Gcode
 import logging
+from .GCodeCommand import GCodeCommand
 
 
 class G134(GCodeCommand):
@@ -56,9 +56,11 @@ class G134(GCodeCommand):
 
     def get_long_description(self):
         return """
-After a G28, jog the print head to where you want it to go after a G28. 
+After a G28 and then a G0 X0 Y0 Z0, jog the print head to where you want it to go after a G28. 
 Then run this command. This will not allow you to position the head manually. 
 You can not disable the steppers and move the ehad to where you want. 
+
+This G-code operates on each axis. If no offsets are given, set the offset for x, y, z.
         """
 
     def is_buffered(self):

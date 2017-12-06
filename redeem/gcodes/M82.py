@@ -6,14 +6,11 @@ Author: Elias Bakken
 email: elias(at)iagent(dot)no
 License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 """
+from __future__ import absolute_import
 
-from GCodeCommand import GCodeCommand
-try:
-    from Printer import Printer
-    from Path import Path
-except ImportError:
-    from redeem.Printer import Printer
-    from redeem.Path import Path
+from .GCodeCommand import GCodeCommand
+from redeem.Path import Path
+
 
 class M82(GCodeCommand):
 

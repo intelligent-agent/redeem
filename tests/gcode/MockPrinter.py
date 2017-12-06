@@ -1,42 +1,50 @@
+from __future__ import absolute_import
+
 import unittest
 import mock
-import os
 import sys
-sys.path.insert(0, '../redeem')
-# sys.path.insert(0, './gcode/TestStubs')
+import os
+import numpy as np
 
 sys.modules['evdev'] = mock.Mock()
-sys.modules['RotaryEncoder'] = mock.Mock()
-sys.modules['Watchdog'] = mock.Mock()
-sys.modules['GPIO'] = mock.Mock()
-sys.modules['Enable'] = mock.Mock()
-sys.modules['Key_pin'] = mock.Mock()
-sys.modules['GPIO'] = mock.Mock()
-sys.modules['DAC'] = mock.Mock()
-sys.modules['ShiftRegister.py'] = mock.Mock()
-sys.modules['Adafruit_I2C'] = mock.Mock()
+sys.modules['spidev'] = mock.MagicMock()
+
+sys.modules['redeem.RotaryEncoder'] = mock.Mock()
+sys.modules['redeem.Watchdog'] = mock.Mock()
+sys.modules['redeem.GPIO'] = mock.Mock()
+sys.modules['redeem.Enable'] = mock.Mock()
+sys.modules['redeem.Key_pin'] = mock.Mock()
+sys.modules['redeem.DAC'] = mock.Mock()
+sys.modules['redeem.ShiftRegister.py'] = mock.Mock()
+
 sys.modules['Adafruit_BBIO'] = mock.Mock()
 sys.modules['Adafruit_BBIO.GPIO'] = mock.Mock()
-sys.modules['StepperWatchdog'] = mock.Mock()
-sys.modules['StepperWatchdog.GPIO'] = mock.Mock()
-sys.modules['_PathPlannerNative'] = mock.Mock()
-sys.modules['PruInterface'] = mock.Mock()
-sys.modules['PruInterface'].PruInterface = mock.MagicMock() 
-sys.modules['PruFirmware'] = mock.Mock()
-sys.modules['HBD'] = mock.Mock()
-sys.modules['RotaryEncoder'] = mock.Mock()
+sys.modules['Adafruit_GPIO'] = mock.Mock()
+sys.modules['Adafruit_GPIO.I2C'] = mock.MagicMock()
+sys.modules['redeem.StepperWatchdog'] = mock.Mock()
+sys.modules['redeem.StepperWatchdog.GPIO'] = mock.Mock()
+sys.modules['redeem._PathPlannerNative'] = mock.Mock()
+sys.modules['redeem.PruInterface'] = mock.Mock()
+sys.modules['redeem.PruInterface'].PruInterface = mock.MagicMock()
+sys.modules['redeem.PruFirmware'] = mock.Mock()
+sys.modules['redeem.HBD'] = mock.MagicMock()
+sys.modules['redeem.RotaryEncoder'] = mock.Mock()
 sys.modules['JoinableQueue'] = mock.Mock()
-sys.modules['USB'] = mock.Mock()
-sys.modules['Ethernet'] = mock.Mock()
-sys.modules['Pipe'] = mock.Mock()
+sys.modules['redeem.USB'] = mock.Mock()
+sys.modules['redeem.Ethernet'] = mock.Mock()
+sys.modules['redeem.Pipe'] = mock.Mock()
+sys.modules['redeem.Fan'] = mock.Mock()
+sys.modules['redeem.Mosfet'] = mock.Mock()
+sys.modules['redeem.PWM'] = mock.Mock()
 
-from Redeem import Redeem
-from PathPlanner import PathPlanner
-from EndStop import EndStop
-from Extruder import Extruder, HBP
-from Path import Path
-from Gcode import Gcode
-import numpy as np
+
+from redeem.Redeem import Redeem
+from redeem.PathPlanner import PathPlanner
+from redeem.EndStop import EndStop
+
+from redeem.Path import Path
+from redeem.Gcode import Gcode
+
 
 
 class MockPrinter(unittest.TestCase):
@@ -82,22 +90,26 @@ log_to_file = False
     # @mock.patch.object(RedeemConfig, "get_key")
     def setUpClass(cls, mock_init_path_planner):
 
-        pwm_patch = mock.patch("Redeem.PWM.i2c")
-        pwm_mock = pwm_patch.start()
+        # pwm_patch = mock.patch("redeem.PWM.PWM.i2c")
+        # pwm_mock = pwm_patch.start()
 
         """
         Allow Extruder or HBP instantiation without crashing 'cause not BBB/Replicape
         """
-        class DisabledExtruder(Extruder):
-            def enable(self):
-                self.avg = 1
-                self.temperatures = [100]
-                pass
-        class DisabledHBP(HBP):
-            def enable(self):
-                pass
-        mock.patch('Redeem.Extruder', side_effect=DisabledExtruder).start()
-        mock.patch('Redeem.HBP', side_effect=DisabledHBP).start()
+        def disabled_extruder_enable(self):
+            self.avg = 1
+            self.temperatures = [100]
+            pass
+
+        def disabled_hbp_enable(self):
+            pass
+
+        def bypass_init_path_planner(self):
+            pass
+
+        mock.patch('redeem.Extruder.Extruder.enable', new=disabled_extruder_enable).start()
+        mock.patch('redeem.Extruder.HBP.enable', new=disabled_hbp_enable).start()
+        mock.patch('redeem.PathPlanner.PathPlanner._init_path_planner', new=bypass_init_path_planner)
 
         cfg_path = "../configs"
         cls.setUpConfigFiles(cfg_path)
@@ -105,7 +117,9 @@ log_to_file = False
         cls.R = Redeem(config_location=cfg_path)
         cls.printer = cls.R.printer
         cls.printer.replicape_key = "TESTING_DUMMY_KEY"
-        cls.printer.reach_revision = "00B0"
+
+        # cls.printer.reach_revision = "00B0"
+
 
         cls.setUpPatch()
 

@@ -5,8 +5,9 @@ Set stepper current in A
 Author: quillford
 License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 """
+from __future__ import absolute_import
 
-from GCodeCommand import GCodeCommand
+from .GCodeCommand import GCodeCommand
 
 
 class M907(GCodeCommand):

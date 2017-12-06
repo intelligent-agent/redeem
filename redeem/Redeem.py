@@ -64,6 +64,8 @@ from Alarm import Alarm, AlarmExecutor
 from StepperWatchdog import StepperWatchdog
 from Key_pin import Key_pin, Key_pin_listener
 from Watchdog import Watchdog
+from six import iteritems
+from _version import __version__, __release_name__
 
 # Global vars
 from redeem.configuration import get_config_factory
@@ -75,6 +77,8 @@ printer = None
 logging.basicConfig(level=logging.DEBUG,
                     format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
                     datefmt='%m-%d %H:%M')
+
+
 class Redeem:
     def __init__(self, config_location="/etc/redeem"):
         """
@@ -82,7 +86,7 @@ class Redeem:
          - default is installed directory
          - allows for running in a local directory when debugging
         """
-        firmware_version = "2.0.5~Red Heat"
+        firmware_version = "{}~{}".format(__version__, __release_name__)
         logging.info("Redeem initializing "+firmware_version)
 
         printer = Printer()
@@ -223,7 +227,7 @@ class Redeem:
 
         # Enable the steppers and set the current, steps pr mm and
         # microstepping
-        for name, stepper in self.printer.steppers.iteritems():
+        for name, stepper in iteritems(self.printer.steppers):
             stepper.in_use = printer.config.getboolean('Steppers', 'in_use_' + name)
             stepper.direction = printer.config.getint('Steppers', 'direction_' + name)
             stepper.has_endstop = printer.config.getboolean('Endstops', 'has_' + name)
@@ -340,7 +344,7 @@ class Redeem:
             servo_nr += 1
 
         # Connect thermitors to fans
-        for t, therm in self.printer.heaters.iteritems():
+        for t, therm in iteritems(self.printer.heaters):
             for f, fan in enumerate(self.printer.fans):
                 if not self.printer.config.has_option('Cold-ends', "connect-therm-{}-fan-{}".format(t, f)):
                     continue
@@ -523,7 +527,7 @@ class Redeem:
 
 
         # Read end stop value again now that PRU is running
-        for _, es in self.printer.end_stops.iteritems():
+        for _, es in iteritems(self.printer.end_stops):
             es.read_value()
 
         # Enable Stepper timeout
@@ -616,15 +620,15 @@ class Redeem:
         # Stops plugins
         self.printer.plugins.exit()
 
-        for name, stepper in self.printer.steppers.iteritems():
+        for name, stepper in iteritems(self.printer.steppers):
             stepper.set_disabled()
         Stepper.commit()
 
-        for name, heater in self.printer.heaters.iteritems():
+        for name, heater in iteritems(self.printer.heaters):
             logging.debug("closing "+name)
             heater.disable()
 
-        for name, comm in self.printer.comms.iteritems():
+        for name, comm in iteritems(self.printer.comms):
             logging.debug("closing "+name)
             comm.close()
 

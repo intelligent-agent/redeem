@@ -7,13 +7,10 @@ email: andrew(at)mirskytech(dot)com
 Website: http://www.mirskytech.com
 License: GNU GPLv3 http://www.gnu.org/copyleft/gpl.html
 """
+from __future__ import absolute_import
 
-from GCodeCommand import GCodeCommand
-
-try:
-    from Path import Path, RelativePath, AbsolutePath
-except ImportError:
-    from redeem.Path import Path, RelativePath, AbsolutePath
+from .GCodeCommand import GCodeCommand
+from redeem.Path import Path, RelativePath, AbsolutePath
 
 import logging
 

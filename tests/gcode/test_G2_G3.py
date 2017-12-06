@@ -1,10 +1,12 @@
+from __future__ import absolute_import
+
 import os
 import logging
 import itertools
 import numpy as np
 from mock import Mock
 
-from MockPrinter import MockPrinter
+from .MockPrinter import MockPrinter
 
 show_plots = False
 try:
@@ -22,7 +24,8 @@ class G2G3CircleTests(MockPrinter):
 
     @classmethod
     def setUpPatch(cls):
-        cls.printer.path_planner.native_planner = Mock()
+        attrs = {'getLastQueueMoveStatus.return_value': False}
+        cls.printer.path_planner.native_planner = Mock(**attrs)
         cls.printer.ensure_steppers_enabled = Mock()
 
     def setUp(self):
@@ -265,7 +268,8 @@ class G2G3ExtrusionTests(MockPrinter):
 
     @classmethod
     def setUpPatch(cls):
-        cls.printer.path_planner.native_planner = Mock()
+        attrs = {'getLastQueueMoveStatus.return_value': False}
+        cls.printer.path_planner.native_planner = Mock(**attrs)
         cls.printer.ensure_steppers_enabled = Mock()
 
     def setUp(self):

@@ -7,8 +7,10 @@ email: zittix(at)xwaves(dot)net
 Website: http://www.xwaves.net
 License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 """
+from __future__ import absolute_import
 
-from GCodeCommand import GCodeCommand
+from .GCodeCommand import GCodeCommand
+from six import iteritems
 
 
 class M19(GCodeCommand):
@@ -16,7 +18,7 @@ class M19(GCodeCommand):
     def execute(self, g):
         self.printer.path_planner.wait_until_done()
         self.printer.path_planner.native_planner.reset()
-        for name, stepper in self.printer.steppers.iteritems():
+        for name, stepper in iteritems(self.printer.steppers):
             stepper.reset()
 
     def get_description(self):

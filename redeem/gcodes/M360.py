@@ -7,14 +7,14 @@ email: elias(at)iagent(dot)no
 Website: http://www.thing-printer.com
 License: GPLv3
 """
+from __future__ import absolute_import
 
-from GCodeCommand import GCodeCommand
-import logging
 import json
-try:
-    from Alarm import Alarm
-except ImportError:
-    from redeem.Alarm import Alarm
+
+from .GCodeCommand import GCodeCommand
+from redeem.Alarm import Alarm
+
+
 class M360(GCodeCommand):
 
     def execute(self, g):

@@ -1,11 +1,11 @@
-from MockPrinter import MockPrinter
+from __future__ import absolute_import
+
 import mock
-from Gcode import Gcode
-import re
-import time
 import logging
+from .MockPrinter import MockPrinter
 
 logging.info = mock.Mock()
+
 
 def mock_sleep(t):
     global heaters
@@ -15,6 +15,7 @@ def mock_sleep(t):
             heaters[heater].is_target_temperature_reached.return_value = True
     mock_sleep.counter += 1 
     return None
+
 
 class M116_Tests(MockPrinter):
 
@@ -30,19 +31,19 @@ class M116_Tests(MockPrinter):
         self.reset()
         self.printer.processor.execute = mock.Mock() # mock M116's call to M105
 
-    @mock.patch("gcodes.M116.time.sleep", side_effect=mock_sleep) 
+    @mock.patch("redeem.gcodes.M116.time.sleep", side_effect=mock_sleep)
     def test_gcodes_M116_no_param(self, m):
         print ""
         self.execute_gcode("M116")
         for heater in heaters:
             self.assertTrue(heaters[heater].is_target_temperature_reached())
 
-    @mock.patch("gcodes.M116.time.sleep", side_effect=mock_sleep) 
+    @mock.patch("redeem.gcodes.M116.time.sleep", side_effect=mock_sleep)
     def test_gcodes_M116_Pn_Tn(self, m):
 
         print "HEATERS: ", heaters
         
-        heater_index_order = ['HBP', 'E', 'H', 'A', 'B', 'C']
+        heater_index_order = ['HBP', 'E', 'H',]
 
         for pt in ["P", "T"]:
             for heater in heater_index_order:
@@ -54,4 +55,3 @@ class M116_Tests(MockPrinter):
 
                 print "Heater {} target reached: {} ".format(heater, heaters[heater].is_target_temperature_reached())
                 self.assertTrue(heaters[heater].is_target_temperature_reached())
-

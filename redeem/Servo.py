@@ -21,10 +21,10 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
  along with Redeem.  If not, see <http://www.gnu.org/licenses/>.
 """
 from threading import Thread
+from builtins import range
 import time
 import math
 import Queue
-import numpy as np
 from multiprocessing import JoinableQueue
 import logging
 from PWM_pin import PWM_pin
@@ -116,10 +116,10 @@ class Servo:
         
 
         if angle>=last_angle:
-            for a in xrange(int(last_angle), int(angle+1), 1):
+            for a in range(int(last_angle), int(angle+1), 1):
                 self.queue.put((self.angle_to_pulse_width(a),t))
         else:
-            for a in xrange(int(last_angle), int(angle-1), -1):
+            for a in range(int(last_angle), int(angle-1), -1):
                 self.queue.put((self.angle_to_pulse_width(a),t))
         
         self.last_pulse_width = pulse_width

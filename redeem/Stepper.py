@@ -472,8 +472,8 @@ class Stepper_00A3(Stepper_00A4):
 if __name__ == '__main__':
     s = Stepper("GPIO0_27", "GPIO1_29", "GPIO2_4" , 0, 0, "X")
 
-    print s.get_step_pin()
-    print s.get_step_bank()
-    print s.get_dir_pin()
-    print s.get_dir_bank()
+    print(s.get_step_pin())
+    print(s.get_step_bank())
+    print(s.get_dir_pin())
+    print(s.get_dir_bank())
 
