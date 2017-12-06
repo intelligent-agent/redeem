@@ -33,10 +33,6 @@ sys.modules['JoinableQueue'] = mock.Mock()
 sys.modules['redeem.USB'] = mock.Mock()
 sys.modules['redeem.Ethernet'] = mock.Mock()
 sys.modules['redeem.Pipe'] = mock.Mock()
-sys.modules['redeem.Fan'] = mock.Mock()
-sys.modules['redeem.Mosfet'] = mock.Mock()
-sys.modules['redeem.PWM'] = mock.Mock()
-
 
 from redeem.Redeem import Redeem
 from redeem.PathPlanner import PathPlanner
@@ -44,7 +40,6 @@ from redeem.EndStop import EndStop
 
 from redeem.Path import Path
 from redeem.Gcode import Gcode
-
 
 
 class MockPrinter(unittest.TestCase):
@@ -87,11 +82,7 @@ log_to_file = False
     @classmethod
     @mock.patch.object(EndStop, "_wait_for_event", new=None)
     @mock.patch.object(PathPlanner, "_init_path_planner")
-    # @mock.patch.object(RedeemConfig, "get_key")
     def setUpClass(cls, mock_init_path_planner):
-
-        # pwm_patch = mock.patch("redeem.PWM.PWM.i2c")
-        # pwm_mock = pwm_patch.start()
 
         """
         Allow Extruder or HBP instantiation without crashing 'cause not BBB/Replicape
@@ -110,6 +101,7 @@ log_to_file = False
         mock.patch('redeem.Extruder.Extruder.enable', new=disabled_extruder_enable).start()
         mock.patch('redeem.Extruder.HBP.enable', new=disabled_hbp_enable).start()
         mock.patch('redeem.PathPlanner.PathPlanner._init_path_planner', new=bypass_init_path_planner)
+        mock.patch("redeem.PWM.PWM.i2c").start()
 
         cfg_path = "../configs"
         cls.setUpConfigFiles(cfg_path)

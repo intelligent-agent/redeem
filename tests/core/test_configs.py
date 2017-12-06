@@ -88,7 +88,7 @@ class ConfigV19toV20Tests(LogTestCase):
         self.assertAlmostEqual(redeem_config.getfloat('delta', 'c_angular'), 0.0)
 
     def test_old_config_into_new(self):
-        """test to make sure delta corrections are zero when tangential and angular are zero"""
+        """test to make sure delta corrections are converted correctly from 1.9 format to 2.0 format"""
 
         factory = ConfigFactoryV19()
 
@@ -98,14 +98,7 @@ class ConfigV19toV20Tests(LogTestCase):
         ]
 
         redeem_config = factory.hydrate_config(config_files=files)
-
-        # print("a radial : {}".format(redeem_config.getfloat('delta', 'a_radial')))
-        # print("a angular : {}".format(redeem_config.getfloat('delta', 'a_angular')))
-        # print("b radial : {}".format(redeem_config.getfloat('delta', 'b_radial')))
-        # print("b angular : {}".format(redeem_config.getfloat('delta', 'b_angular')))
-        # print("c radial : {}".format(redeem_config.getfloat('delta', 'c_radial')))
-        # print("c angular : {}".format(redeem_config.getfloat('delta', 'c_angular')))
-
+        
         self.assertAlmostEqual(redeem_config.getfloat('delta', 'a_radial'), 0.0010672079121700762)
         self.assertAlmostEqual(redeem_config.getfloat('delta', 'a_angular'), -1.9251837083231607)
 

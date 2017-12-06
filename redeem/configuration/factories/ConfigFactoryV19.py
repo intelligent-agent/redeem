@@ -1,6 +1,6 @@
 import numpy as np
 
-from redeem.configuration.factories import ConfigFactory
+from configuration import ConfigFactoryV20
 from redeem.configuration.sections.delta import DeltaConfig
 
 
@@ -14,7 +14,7 @@ def _radiansToDegrees(radians):
     return radians * 180 / np.pi
 
 
-class ConfigFactoryV19(ConfigFactory):
+class ConfigFactoryV19(ConfigFactoryV20):
 
     def _calc_old_column_position(self, r,
                                   ae, be, ce,
