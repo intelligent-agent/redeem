@@ -195,10 +195,12 @@ class PathPlanner:
     def suspend(self):
         ''' Temporary pause of planner '''
         self.native_planner.suspend()
+        logging.info("PathPlanner: suspend")
 
     def resume(self):
         ''' resume a paused planner '''
         self.native_planner.resume()
+        logging.info("PathPlanner: resume")
 
     def _home_internal(self, axis):
         """ Private method for homing a set or a single axis """
