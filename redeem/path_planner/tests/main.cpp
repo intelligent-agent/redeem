@@ -22,16 +22,26 @@
 
 #include <iostream>
 #include "PathPlanner.h"
+#include "AlarmCallback.h"
+
+class MyAlarmCallback: public AlarmCallback{
+    public:
+        void call(int alarmType, std::string message, std::string shortMessage){}
+        ~MyAlarmCallback(){}
+
+};
 
 int main(int argc, const char * argv[])
 {
 	LOG( "Start test program" << std::endl);
 	
-
-	PathPlanner planner;
+    
+    
+    auto callback = MyAlarmCallback();
+	PathPlanner planner(1024, callback);
 	Path *prev=NULL;
 	
-	planner.initPRU("/root/redeem/firmware/firmware_runtime.bin","/root/redeem/firmware/firmware_endstops.bin");
+	planner.initPRU("/tmp/firmware_runtime.bin","/tmp/firmware_endstops.bin");
 	
 	
 	
@@ -42,91 +52,93 @@ int main(int argc, const char * argv[])
 	bzero(end,5*4);
 	
 	planner.runThread();
+		
+    auto axisStepsPerM = VectorN();
+	axisStepsPerM.values[0]=50*1000;
+	axisStepsPerM.values[1]=50*1000;
+	axisStepsPerM.values[2]=2133*1000;
+	axisStepsPerM.values[3]=2133*1000;
+	axisStepsPerM.values[4]=2133*1000;
+	axisStepsPerM.values[5]=2133*1000;
+	axisStepsPerM.values[6]=2133*1000;
+	axisStepsPerM.values[7]=2133*1000;
 	
-	///*std::this_thread::sleep_for( std::chrono::milliseconds(2000) );
-	/*
-	
-	for(int i=0;i<100;i++) {
-		end[0] = i/1000.0;
-		planner.queueMove(start,end,0.05,false);
-		start[0] = end[0];
-	}*/
-	
-	
-	FLOAT_T maxFeedrate[3];
-	
-	maxFeedrate[0]=200; //m/s
-	maxFeedrate[1]=200;
-	maxFeedrate[2]=5;
-	
-	unsigned long axisStepsPerM[3];
-	
-	axisStepsPerM[0]=50*1000;
-	axisStepsPerM[1]=50*1000;
-	axisStepsPerM[2]=2133*1000;
-	
-	FLOAT_T maxAccelerationMPerSquareSecond[3];
-	
-	maxAccelerationMPerSquareSecond[0]=0.05;
-	maxAccelerationMPerSquareSecond[1]=0.05;
-	maxAccelerationMPerSquareSecond[2]=0.05;
-	
-	FLOAT_T maxTravelAccelerationMPerSquareSecond[3];
-	
-	maxTravelAccelerationMPerSquareSecond[0]=0.05;
-	maxTravelAccelerationMPerSquareSecond[1]=0.05;
-	maxTravelAccelerationMPerSquareSecond[2]=0.05;
-	
-	
-	planner.setMaxFeedrates(maxFeedrate);
-	planner.setAxisStepsPerMeter(axisStepsPerM);
-	planner.setPrintAcceleration(maxAccelerationMPerSquareSecond);
-	planner.setTravelAcceleration(maxTravelAccelerationMPerSquareSecond);
-	
-	
-	Extruder & extruder = planner.getExtruder(0);
-	
-	extruder.setAxisStepsPerMeter(535*1000.0);
-	extruder.setTravelAcceleration(0.05);
-	extruder.setPrintAcceleration(0.05);
-	extruder.setMaxFeedrate(0.2);
-	extruder.setMaxStartFeedrate(20/1000.0);
-	
-	planner.setExtruder(0);
+    auto axisSpeedJumps = VectorN();
+	axisSpeedJumps.values[0]=0.1;
+	axisSpeedJumps.values[1]=0.1;
+	axisSpeedJumps.values[2]=0.1;
+	axisSpeedJumps.values[3]=0.1;
+	axisSpeedJumps.values[4]=0.1;
+	axisSpeedJumps.values[5]=0.1;
+	axisSpeedJumps.values[6]=0.1;
+	axisSpeedJumps.values[7]=0.1;
 
-	/*G1 X20.5000620480408 Y19.1339750384809 F6000
-	G1 X41.0000934550738 Y54.6409984607654 F6000
-	G1 X62.000125628132 Y18.2679500769617 F6000*/
+    planner.setMaxSpeedJumps(axisSpeedJumps);
+
+	auto maxAccelerationMPerSquareSecond = VectorN();
 	
-	FLOAT_T speed = 6000/60000.0;
-	
-	end[0]=20.5000620480408/1000.0; end[1]=19.1339750384809/1000.0;  start[0] = 62.000125628132/1000.0; start[1] = 18.2679500769617/1000.0; planner.queueMove(start,end,speed,false); start[0] = end[0]; start[1] = end[1];
-	
-	end[0]=41.0000934550738/1000.0; end[1]=54.6409984607654/1000.0; planner.queueMove(start,end,speed,false); start[0] = end[0]; start[1] = end[1];
-	
-	end[0] = 62.000125628132/1000.0; end[1] = 18.2679500769617/1000.0; planner.queueMove(start,end,speed,false); start[0] = end[0]; start[1] = end[1];
-	
-	
-	start[0] = 500/1000.0;
-	end[0] = 0;
-	
-	//planner.queueMove(start,end,1000);
-	
-	/*for(int i=0;i<16;i++) {
-				p->speed=100;
-		p->endPos[0]=10*(i+1);
-		p->endPos[1]=0;
-		p->endPos[2]=0;
-		p->endPos[3]=0;
-		planner.queueMove(p->startPos,p->endPos,p->speed);
-		prev=p;
+	maxAccelerationMPerSquareSecond.values[0]=0.05;
+	maxAccelerationMPerSquareSecond.values[1]=0.05;
+	maxAccelerationMPerSquareSecond.values[2]=0.05;
 		
+	auto v = VectorN();
+    v.values[0] = 2000.0;
+    v.values[1] = 2000.0;
+    v.values[2] = 2000.0;
+
+	planner.setMaxSpeeds(v);
+	planner.setAxisStepsPerMeter(axisStepsPerM);
+	planner.setAcceleration(maxAccelerationMPerSquareSecond);
+	
+
+    auto axisSpeedJumps2 = VectorN();
+	axisSpeedJumps2.values[0]=0;
+	axisSpeedJumps2.values[1]=0;
+	axisSpeedJumps2.values[2]=0;
+	/*axisSpeedJumps2.values[3]=0;
+	axisSpeedJumps2.values[4]=1;
+	axisSpeedJumps2.values[5]=1;
+	axisSpeedJumps2.values[6]=1;
+	axisSpeedJumps2.values[7]=1;*/
+
+
+    planner.setState(axisSpeedJumps2);
+
+    planner.setAxisConfig(3);
+    planner.delta_bot.setMainDimensions(1.0, 0.1);
+    //    self.native_planner.delta_bot.setRadialError(Delta.A_radial, Delta.B_radial, Delta.C_radial)
+    //self.native_planner.delta_bot.setAngularError(Delta.A_angular, Delta.B_angular, Delta.C_angular)
+
+	for(int i=1;i<16;i++) {
+        auto endWorldPos = VectorN();
+        endWorldPos.values[0] = 0.00001*i;
+        endWorldPos.values[1] = 0.00002*i;
+        endWorldPos.values[2] = 0.00003*i;
+
+	    FLOAT_T speed = 0.1;
+        FLOAT_T accel = 0.05; 
+	    bool cancelable = false;
+        bool optimize = true; 
+	    bool enable_soft_endstops = false;
+        bool use_bed_matrix = false; 
+	    bool use_backlash_compensation = false;
+        bool is_probe = false;
+	    int tool_axis = 0;
+
+		planner.queueMove(endWorldPos, speed,
+            accel,
+	        cancelable,
+            optimize,
+	        enable_soft_endstops,
+            use_bed_matrix,
+	        use_backlash_compensation,
+            is_probe,
+	        tool_axis);
 		
-	}*/
+	}
 	
-	delete prev;
-	
-	//std::this_thread::sleep_for( std::chrono::milliseconds(2000) );
+	std::this_thread::sleep_for( std::chrono::milliseconds(2000) );
+
 	planner.waitUntilFinished();
 	
 	planner.stopThread(true);
