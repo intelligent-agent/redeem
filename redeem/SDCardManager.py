@@ -66,6 +66,10 @@ class SDCardManager(object):
             self.lock.release()
             return out
         else:
+            self.lock.acquire()
+            self.byte_count = self.lines_size[-1]
+            self.line_count = N
+            self.lock.release()
             raise StopIteration()
             
     def get_file_size(self):
