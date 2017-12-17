@@ -38,8 +38,9 @@ import sys
 
 from Mosfet import Mosfet, Mosfet_Pin
 from Stepper import *
+from Stepper_TMC2130 import TMC2130
 from TemperatureSensor import *
-from Fan import Fan
+from Fan import Fan, Fan_Pin
 from Servo import Servo
 from EndStop import EndStop
 from USB import USB
@@ -136,6 +137,7 @@ class Redeem:
             logging.getLogger().addHandler(printer.redeem_logging_handler)
             logging.info("-- Logfile configured --")
 
+
         # Find out which capes are connected
         self.printer.config.parse_capes()
         self.revision = self.printer.config.replicape_revision
@@ -171,10 +173,10 @@ class Redeem:
 
         # Enable PWM and steppers
         if self.revolve:
-            printer.enable = Enable("GPIO0_18", False)
+            printer.enable = Enable("gpio18", False)
         else:
             printer.enable = Enable("P9_41", True)
-        printer.enable.set_disabled()
+        printer.enable.set_enabled()
 
         # Init the Paths
         printer.axis_config = printer.config.getint('Geometry', 'axis_config')
@@ -239,14 +241,31 @@ class Redeem:
 
         # Revolve
         if self.revolve in ["00A0"]:
-            printer.steppers["X"] = Stepper_Revolve_A0("GPIO3_14", "GPIO3_15", "GPIO0_27", "X")
-            printer.steppers["Y"] = Stepper_Revolve_A0("GPIO3_16", "GPIO3_17", "GPIO2_0",  "Y")
-            printer.steppers["Z"] = Stepper_Revolve_A0("GPIO3_18", "GPIO3_19", "GPIO1_16", "Z")
-            printer.steppers["E"] = Stepper_Revolve_A0("GPIO3_20", "GPIO3_21", "GPIO2_1",  "E")
-            printer.steppers["H"] = Stepper_Revolve_A0("GPIO2_26", "GPIO2_27", "GPIO0_29", "H")
-            printer.steppers["A"] = Stepper_Revolve_A0("GPIO2_28", "GPIO2_29", "GPIO0_26", "A")
-            printer.steppers["B"] = Stepper_Revolve_A0("GPIO2_30", "GPIO2_31", "", "B")
-            printer.steppers["C"] = Stepper_Revolve_A0("GPIO1_12", "GPIO1_13", "", "C")
+            import spidev
+            spi_0_0 = spidev.SpiDev()
+            spi_0_0.open(0, 0)
+            Stepper.printer = printer
+            spi_1_0 = spidev.SpiDev()
+            spi_1_0.open(1, 0)
+            spi_1_1 = spidev.SpiDev()
+            spi_1_1.open(1, 1)
+
+            # Append in right order.                       
+            #printer.add_stepper(TMC2130("GPIO2_27", "GPIO3_14", "GPIO0_27", "X", spi_0_0))
+            #printer.add_stepper(TMC2130("GPIO3_16", "GPIO3_17", "GPIO2_0",  "Y", spi_0_0))
+            printer.add_stepper(TMC2130("GPIO3_14", "GPIO3_15", "GPIO0_27", "X", spi_0_0))
+            printer.add_stepper(TMC2130("GPIO3_16", "GPIO3_17", "GPIO2_0",  "Y", spi_0_0))
+            printer.add_stepper(TMC2130("GPIO3_18", "GPIO3_19", "GPIO1_16", "Z", spi_0_0))
+            printer.add_stepper(TMC2130("GPIO3_20", "GPIO3_21", "GPIO2_1",  "E", spi_0_0))
+            printer.add_stepper(TMC2130("GPIO2_26", "GPIO2_27", "GPIO0_29", "H", spi_0_0))
+            printer.add_stepper(TMC2130("GPIO2_28", "GPIO2_29", "GPIO0_26", "A", spi_0_0))
+            #printer.add_stepper(TMC2130("GPIO2_30", "GPIO2_31", None, "B", spi_1_0))
+            #printer.add_stepper(TMC2130("GPIO1_12", "GPIO1_13", None, "C", spi_1_1))
+
+            for i in printer.steppers:
+                s = Stepper.printer.steppers[i]
+                s.update()
+                s.get_diagnostics()
 
 
         # Enable the steppers and set the current, steps pr mm and
@@ -293,11 +312,11 @@ class Redeem:
             heaters.extend(["A"])
         for e in heaters:
             # Mosfets
-            channel = self.printer.config.getint("Heaters", "mosfet_"+e)
+            channel = self.printer.config.get("Heaters", "mosfet_"+e)
             if self.revolve:
                 self.printer.mosfets[e] = Mosfet_Pin(channel)
             else:
-                self.printer.mosfets[e] = Mosfet(channel)
+                self.printer.mosfets[e] = Mosfet(int(channel))
             # Thermistors
             adc = self.printer.config.get("Heaters", "path_adc_"+e)
             if not self.printer.config.has_option("Heaters", "sensor_"+e):
@@ -332,6 +351,12 @@ class Redeem:
             self.printer.heaters[e].max_temp_fall   = self.printer.config.getfloat('Heaters', 'max_fall_temp_'+e)
             self.printer.heaters[e].max_power       = self.printer.config.getfloat('Heaters', 'max_power_'+e)
 
+        if self.revolve in ["00A0"]:
+            self.printer.spi_0_1 = spidev.SpiDev()
+            self.printer.spi_0_1.open(0, 1)
+            self.printer.spi_0_1.xfer([0x00])
+            #self.printer.shiftreg = ShiftRegister(self.printer.spi_0_1)
+
         # Init the three fans. Argument is PWM channel number
         self.printer.fans = []
         if self.revision == "00A3":
@@ -353,9 +378,10 @@ class Redeem:
             self.printer.fans.append(Fan(7))
 
         if printer.config.revolve_revision == "00A0":
-            self.printer.fans.append(Fan(14))
-            self.printer.fans.append(Fan(15))
-            self.printer.fans.append(Fan(7))
+            self.printer.fans.append(Fan_Pin(0, 0))
+            self.printer.fans.append(Fan_Pin(0, 1))
+            self.printer.fans.append(Fan_Pin(2, 0))
+            self.printer.fans.append(Fan_Pin(2, 1))
 
 
         # Set default value for all fans
@@ -459,6 +485,7 @@ class Redeem:
         self.printer.sync_commands = JoinableQueue()
         self.printer.unbuffered_commands = JoinableQueue(10)
 
+
         # Bed compensation matrix
         printer.matrix_bed_comp = printer.load_bed_compensation_matrix()
         logging.debug("Loaded bed compensation matrix: \n"+str(printer.matrix_bed_comp))
@@ -491,6 +518,8 @@ class Redeem:
         printer.move_cache_size = printer.config.getfloat('Planner', 'move_cache_size')
         printer.print_move_buffer_wait = printer.config.getfloat('Planner', 'print_move_buffer_wait')
         printer.max_buffered_move_time = printer.config.getfloat('Planner', 'max_buffered_move_time')
+
+
 
         self.printer.processor = GCodeProcessor(self.printer)
         self.printer.plugins = PluginsController(self.printer)
@@ -584,7 +613,6 @@ class Redeem:
             printer.comms["testing_noret"].send_response = False
         else:
             logging.warning("Neither tty0tty or socat is installed! No virtual tty pipes enabled")
-
 
     def start(self):
         """ Start the processes """

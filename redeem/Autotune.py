@@ -78,7 +78,7 @@ class Autotune:
 
         # Set the standard parameters
         self.d = self.bias = 0.5
-        self.heater.max_power = 1.0
+        self.heater.max_tuning_power = self.heater.max_power
 
         # Pre calibrate
         if self.pre_calibrate_enabled:
@@ -167,12 +167,12 @@ class Autotune:
                     print("Ti: "+str(self.Ti))
                     print("Td: "+str(self.Td))
 
-            self.heater.max_power = self.bias + self.d
-            logging.debug("Power set to "+str(self.heater.max_power))
+            self.heater.max_tuning_power = self.bias + self.d
+            logging.debug("Power set to "+str(self.heater.max_tuning_power))
 
         logging.debug("Cycles completed")
         self.heater.set_target_temperature(0)
-        self.heater.max_power = 1.0
+        self.heater.max_tuning_power = 1.0
 
 
     def _pre_calibrate(self):
@@ -191,7 +191,7 @@ class Autotune:
 
         current_temp = self.heater.get_temperature()
         # Set the heater at 25% max power
-        self.heater.max_power = 0.25
+        self.heater.max_tuning_power = 0.25
 
         heatup_temps = []
 
@@ -243,7 +243,7 @@ class Autotune:
 
         # (9) Raise temp until cutoff. 
         cutoff_temp = self.pre_calibrate_temp - self.cutoff_band
-        self.heater.max_power = 1.0
+        self.heater.max_tuning_power = 1.0
         cutoff_temps = []
         cutoff_times = []
         logging.debug("Cutoff temp: "+str(cutoff_temp)+ " deg")
@@ -347,7 +347,7 @@ class Autotune:
         # Apply max heater power until reaching temp=setpoint - cutoff_band 
                 
         cutoff_temp = self.steady_temperature - self.cutoff_band
-        self.heater.max_power = 1.0
+        self.heater.max_tuning_power = 1.0
         self.heater.set_target_temperature(self.steady_temperature)
         logging.debug("Cutoff temp: "+str(cutoff_temp)+ " deg")
         while self.heater.get_temperature_raw() < cutoff_temp:
@@ -366,7 +366,7 @@ class Autotune:
         logging.debug("Found max peak: "+str(highest_temp)+" deg")
 
         # (6) Apply setpoint_power heater power and hold until stable 
-        self.heater.max_power = self.setpoint_power
+        self.heater.max_tuning_power = self.setpoint_power
         # Set temp to something above the desired. setpoint power should enforce this.
         #self.heater.set_target_temperature(230)
         #while self.heater.get_noise_magnitude(300) > 1.0:
@@ -374,7 +374,7 @@ class Autotune:
 
         #logging.debug("Stable temp reached")
 
-        self.heater.max_power = self.high_cycle_power
+        self.heater.max_tuning_power = self.high_cycle_power
 
         logging.debug("Pre calibrate done")
 

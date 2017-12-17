@@ -44,6 +44,7 @@ class Printer:
     def __init__(self):
         self.config_location = None
         self.steppers    = {}
+        self.steppers_ordered = []
         self.heaters     = {}
         self.thermistors = {}
         self.mosfets     = {}
@@ -106,6 +107,10 @@ class Printer:
         self.axes_relative = []
 
         self.sd_card_manager = SDCardManager()
+
+    def add_stepper(self, stepper):
+        self.steppers[stepper.name] = stepper
+        self.steppers_ordered.append(stepper)
 
     def add_slave(self, master, slave):
         ''' Make an axis copy the movement of another.

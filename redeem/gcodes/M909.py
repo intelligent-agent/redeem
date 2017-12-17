@@ -21,8 +21,7 @@ class M909(GCodeCommand):
         for axis in self.printer.AXES:
             if g.has_letter(axis) and g.has_letter_value(axis):
                 val = g.get_int_by_letter(axis)
-                if val >= 0 and val <= 7:
-                    self.printer.steppers[axis].set_microstepping(val)
+                self.printer.steppers[axis].set_microstepping(val)
         self.printer.path_planner.update_steps_pr_meter()
         logging.debug("Updated steps pr meter to %s", self.printer.steps_pr_meter)
 

@@ -205,6 +205,8 @@ VectorN operator/(const VectorN& v1, const VectorN& v2)
   VectorN v3;
   for (int i = 0; i < NUM_AXES; i++)
   {
+    if(v2[i] == 0)
+        int x = *((int*) 0);
     v3[i] = v1[i] / v2[i];
   }
   return v3;

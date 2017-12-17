@@ -49,6 +49,7 @@ class Heater(object):
         self.prefix = ""
         self.sleep = 0.1                    # Time to sleep between measurements
         self.max_power = 1.0                # Maximum power
+        self.max_tuning_power = 1.0         # Maximum power during M303
 
         self.min_temp_enabled   = False  # Temperature error limit 
         self.min_temp           = 0      # If temperature falls below this point from the target, disable. 

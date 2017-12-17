@@ -48,8 +48,20 @@ class PWM_pin:
         elif pin == "2:1":
             self.chip = 0
             self.channel = 0
+        elif pin == "4:0":
+            self.chip = 4
+            self.channel = 0
+        elif pin == "5:0":
+            self.chip = 5
+            self.channel = 0
+        elif pin == "6:0":
+            self.chip = 6
+            self.channel = 0
+        elif pin == "7:0":
+            self.chip = 7
+            self.channel = 0
         else:
-            logging.warning("Unrcognized pin. You may have to implement it...")
+            logging.warning("Unrcognized pin '{}'. You may have to implement it...".format(pin))
 
         self.export_chip(self.chip, self.channel)
         self.set_frequency(frequency)
@@ -57,10 +69,10 @@ class PWM_pin:
         self.set_enabled()
         
     def export_chip(self, chip, channel):
-        self.base = "/sys/class/pwm/pwmchip"+str(chip)+"/pwm"+str(channel)
+        self.base = "/sys/class/pwm/pwmchip{}/pwm-{}:{}".format(chip, chip, channel)
         if not os.path.exists(self.base):
-            with open("/sys/class/pwm/pwmchip"+str(self.chip)+"/export", "w") as f:
-                f.write(str(self.channel))
+            with open("/sys/class/pwm/pwmchip{}/export".format(chip), "w") as f:
+                f.write(str(channel))
             if not os.path.exists(self.base):
                 logging.warning("Unable to export PWM pin")
         

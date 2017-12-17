@@ -21,26 +21,25 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
  along with Redeem.  If not, see <http://www.gnu.org/licenses/>.
 """
 
-
-import Adafruit_BBIO.GPIO as GPIO
-
 class Enable:
 
-    def __init__(self, pin, inverted):
+    def __init__(self, pin, inverted=True):
         self.pin = pin
         self.inverted = inverted
-        GPIO.setup(pin, GPIO.OUT)
 
     def set_enabled(self):
-        GPIO.output(self.pin, GPIO.LOW if self.inverted else GPIO.HIGH)
+        with open("/sys/class/gpio/{}/value".format(self.pin), "w") as f:
+            f.write("{}\n".format(int(not self.inverted)))
 
     def set_disabled(self):
-        GPIO.output(self.pin, GPIO.HIGH if self.inverted else GPIO.LOW)
+        with open("/sys/class/gpio/{}/value".format(self.pin), "w") as f:
+            f.write("{}\n".format(int(self.inverted)))
 
 
 
 if __name__ == '__main__':
-    en = Enable("P9_41")
+    en = Enable("gpio18")
     en.set_enabled()
+    en.set_disabled()
 
 

@@ -136,8 +136,8 @@ class Thermistor(TemperatureSensor):
         """ Return the temperature in degrees celsius. Uses Steinhart-Hart """
         r = self.voltage_to_resistance(voltage)
         #if self.name == "MOSFET E":
-        #    logging.debug("Voltage: "+str(voltage))
-        #    logging.debug("resistance: "+str(r))
+            #logging.debug("Voltage: "+str(voltage))
+            #logging.debug("resistance: "+str(r))
         if r > 0:
             l = math.log(r)
             t = float((1.0 / (self.c1 + self.c2 * l + self.c3 * math.pow(l,3))) - 273.15)

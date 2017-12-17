@@ -23,6 +23,26 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
 
 import time
 from PWM import PWM
+from PWM_pin import PWM_pin
+
+
+
+
+class Fan_Pin(PWM_pin):
+
+    def __init__(self, chip, channel):
+        PWM_pin.__init__(self, "{}:{}".format(chip, channel), 20000, 0.0)
+        self.chip = chip
+        self.channel = channel
+        self.value = 0.0
+
+    def ramp_to(self, value, delay=0.01):
+        ''' Set the fan/light value to the given value, in degree, with the given speed in deg / sec '''
+        for w in xrange(int(self.value*255.0), int(value*255.0), (1 if value>=self.value else -1)):
+            logging.debug("Fan value: "+str(w))
+            self.set_value(w/255.0)
+            time.sleep(delay)
+        self.set_value(value)
 
 
 class Fan(PWM):
