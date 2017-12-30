@@ -52,9 +52,9 @@ class M303(GCodeCommand):
         self.printer.send_message(g.prot, "M131 P{} S{:.4f}\n".format(heater_nr, heater.Ti))
         self.printer.send_message(g.prot, "M132 P{} S{:.4f}\n".format(heater_nr, heater.Td))
         self.printer.send_message(g.prot, "Settings in local.cfg: \n")
-        self.printer.send_message(g.prot, "pid_{}_Kp = {:.4f}\n".format(heater_name.lower(), heater.Kp))
-        self.printer.send_message(g.prot, "pid_{}_Ti = {:.4f}\n".format(heater_name.lower(), heater.Ti))
-        self.printer.send_message(g.prot, "pid_{}_Td = {:.4f}".format(heater_name.lower(), heater.Td))
+        self.printer.send_message(g.prot, "pid_Kp_{} = {:.4f}\n".format(heater_name.lower(), heater.Kp))
+        self.printer.send_message(g.prot, "pid_Ti_{} = {:.4f}\n".format(heater_name.lower(), heater.Ti))
+        self.printer.send_message(g.prot, "pid_Td_{} = {:.4f}".format(heater_name.lower(), heater.Td))
 
         tune_data = {
             "tune_data": tuner.plot_temps,
