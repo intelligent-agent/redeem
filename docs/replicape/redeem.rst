@@ -91,7 +91,7 @@ To do so, follow these instructions:
 
     cd /usr/src
     rm -r redeem
-    git clone https://github.com.com/intelligent-agent/redeem.git
+    git clone https://github.com/intelligent-agent/redeem.git
     cd redeem
     git checkout develop
     make clean install
