@@ -30,6 +30,8 @@ import shutil
 import re
 from six import iteritems
 
+from Printer import Printer
+
 class PruFirmware:
     def __init__(self, firmware_source_file0, binary_filename0,
                  firmware_source_file1, binary_filename1,
