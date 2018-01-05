@@ -332,7 +332,8 @@ class Redeem:
 
         # Set default value for all fans
         for i, f in enumerate(self.printer.fans):
-            f.set_value(self.printer.config.getfloat('Fans', "default-fan-{}-value".format(i)))
+            val = self.printer.config.getint('Fans', "default-fan-{}-value".format(i))
+            f.set_value(val/255.0)
 
         # Init the servos
         printer.servos = []
