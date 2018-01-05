@@ -281,6 +281,7 @@ class M23(M2X):
 
         self.printer.send_message(g.prot, "File opened:{} Lines:{} Size:{}B".format(fn, nl, nb))
         self.printer.send_message(g.prot, "File selected")
+        logging.info("M23: finished gcode file processing")
 
 
     def get_description(self):
@@ -302,7 +303,7 @@ class M24(GCodeCommand):
 
     def process_gcode(self, g):
         
-        self.printer.sd_card_manager.set_active(True)
+        self.printer.sd_card_manager.set_status(True)
 
         for line in self.printer.sd_card_manager:
             line = line.strip()
@@ -313,7 +314,7 @@ class M24(GCodeCommand):
             
         if self.printer.sd_card_manager.get_status():
             logging.info("M24: file complete")
-        self.printer.sd_card_manager.set_active(False)
+        self.printer.sd_card_manager.set_status(False)
         
         self.printer.send_message(g.prot, "Done printing file")
 
@@ -327,7 +328,10 @@ class M24(GCodeCommand):
             start_new_thread(self.process_gcode, (g, ))
             
             # allow some time for the new thread to start before we proceed
-            sleep(0.1)
+            counter = 0
+            while (not active) and (counter < 10):
+                sleep(0.1)
+                counter += 1
 
         self.printer.path_planner.resume()
         
@@ -348,7 +352,7 @@ If the current print (from any source) was paused by ``M25``, this will resume t
 class M25(GCodeCommand):
 
     def execute(self, g):
-        self.printer.sd_card_manager.set_active(False)
+        self.printer.sd_card_manager.set_status(False)
 
     def get_description(self):
         return "Pause the current SD print."
