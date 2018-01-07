@@ -634,8 +634,9 @@ code, so yours will be different than what you see here.
     ...
     connect-therm-H-fan-1 = False
     ...
-
-    add-fan-0-to-M106 = False
+    # For your part cooling fan, you'll want to set this to True for the correct Fan-input so your slicer can control it.
+    # If your part-cooling fan is connected to the Fan0 input, use this:
+    add-fan-0-to-M106 = True
     ...
 
     # If you want coolers to
@@ -645,6 +646,12 @@ code, so yours will be different than what you see here.
     # If you want the fan-thermistor connections to have a
     # different temperature:
     # therm-e-fan-0-target_temp = 70
+    
+    # if you have a Titan Aero (or any other all-metal) hotend, you'll want the fan on the hotend to turn on 
+    # automatically above 50C. To make the fan connected to the Fan1 input turn on when the hotend reaches 60C 
+    # (provided that the hotend is connected to "thermistor extruder 1", also referred to as E).
+    connect-therm-E-fan-1 = True
+    therm-e-fan-1-target_temp = 50
 
 ..   _ConfigHeaters:
 
