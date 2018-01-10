@@ -39,7 +39,7 @@ import sys
 from Mosfet import Mosfet
 from Stepper import *
 from TemperatureSensor import *
-from Fan import Fan
+from FanControl import Fan
 from Servo import Servo
 from EndStop import EndStop
 from USB import USB
@@ -310,29 +310,25 @@ class Redeem:
             self.printer.heaters[e].max_temp_fall   = self.printer.config.getfloat('Heaters', 'max_fall_temp_'+e)
             self.printer.heaters[e].max_power       = self.printer.config.getfloat('Heaters', 'max_power_'+e)
 
-        # Init the three fans. Argument is PWM channel number
+        # Init the three fans. Arguments: PWM channel number, fan number, printer
         self.printer.fans = []
         if self.revision == "00A3":
-            self.printer.fans.append(Fan(0))
-            self.printer.fans.append(Fan(1))
-            self.printer.fans.append(Fan(2))
+            self.printer.fans.append(Fan(0,0,self.printer))
+            self.printer.fans.append(Fan(1,1,self.printer))
+            self.printer.fans.append(Fan(2,2,self.printer))
         elif self.revision == "0A4A":
-            self.printer.fans.append(Fan(8))
-            self.printer.fans.append(Fan(9))
-            self.printer.fans.append(Fan(10))
+            self.printer.fans.append(Fan(8,0,self.printer))
+            self.printer.fans.append(Fan(9,1,self.printer))
+            self.printer.fans.append(Fan(10,2,self.printer))
         elif self.revision in ["00B1", "00B2", "00B3", "0B3A"]:
-            self.printer.fans.append(Fan(7))
-            self.printer.fans.append(Fan(8))
-            self.printer.fans.append(Fan(9))
-            self.printer.fans.append(Fan(10))
+            self.printer.fans.append(Fan(7,0,self.printer))
+            self.printer.fans.append(Fan(8,1,self.printer))
+            self.printer.fans.append(Fan(9,2,self.printer))
+            self.printer.fans.append(Fan(10,3,self.printer))
         if printer.config.reach_revision == "00A0":
-            self.printer.fans.append(Fan(14))
-            self.printer.fans.append(Fan(15))
-            self.printer.fans.append(Fan(7))
-
-        # Set default value for all fans
-        for i, f in enumerate(self.printer.fans):
-            f.set_value(self.printer.config.getfloat('Fans', "default-fan-{}-value".format(i)))
+            self.printer.fans.append(Fan(14,0,self.printer))
+            self.printer.fans.append(Fan(15,1,self.printer))
+            self.printer.fans.append(Fan(7,2,self.printer))
 
         # Init the servos
         printer.servos = []
@@ -350,56 +346,12 @@ class Redeem:
                 logging.info("Added servo "+str(servo_nr))
             servo_nr += 1
 
-        # Connect thermitors to fans
-        for t, therm in iteritems(self.printer.heaters):
-            for f, fan in enumerate(self.printer.fans):
-                if not self.printer.config.has_option('Cold-ends', "connect-therm-{}-fan-{}".format(t, f)):
-                    continue
-                if printer.config.getboolean('Cold-ends', "connect-therm-{}-fan-{}".format(t, f)):
-                    c = Cooler(therm, fan, "Cooler-{}-{}".format(t, f), True) # Use ON/OFF on these.
-                    c.ok_range = 4
-                    opt_temp = "therm-{}-fan-{}-target_temp".format(t, f)
-                    if printer.config.has_option('Cold-ends', opt_temp):
-                        target_temp = printer.config.getfloat('Cold-ends', opt_temp)
-                    else:
-                        target_temp = 60
-                    c.set_target_temperature(target_temp)
-                    max_speed = "therm-{}-fan-{}-max_speed".format(t, f)
-                    if printer.config.has_option('Cold-ends', max_speed):
-                        target_speed = printer.config.getfloat('Cold-ends', max_speed)
-                    else:
-                        target_speed = 1.0
-                    c.set_max_speed(target_speed)
-                    c.enable()
-                    printer.coolers.append(c)
-                    logging.info("Cooler connects therm {} with fan {}".format(t, f))
-
         # Connect fans to M106
         printer.controlled_fans = []
         for i, fan in enumerate(self.printer.fans):
-            if not self.printer.config.has_option('Cold-ends', "add-fan-{}-to-M106".format(i)):
-                continue
-            if self.printer.config.getboolean('Cold-ends', "add-fan-{}-to-M106".format(i)):
+            if self.printer.config.getboolean('Fan-{}'.format(i), "add-to-M106"):
                 printer.controlled_fans.append(self.printer.fans[i])
                 logging.info("Added fan {} to M106/M107".format(i))
-
-        # Connect the colds to fans
-        for ce, cold_end in enumerate(self.printer.cold_ends):
-            for f, fan in enumerate(self.printer.fans):
-                option = "connect-ds18b20-{}-fan-{}".format(ce, f)
-                if self.printer.config.has_option('Cold-ends', option):
-                    if self.printer.config.getboolean('Cold-ends', option):
-                        c = Cooler(cold_end, fan, "Cooler-ds18b20-{}-{}".format(ce, f), False)
-                        c.ok_range = 4
-                        opt_temp = "cooler_{}_target_temp".format(ce)
-                        if printer.config.has_option('Cold-ends', opt_temp):
-                            target_temp = printer.config.getfloat('Cold-ends', opt_temp)
-                        else:
-                            target_temp = 60
-                        c.set_target_temperature(target_temp)
-                        c.enable()
-                        printer.coolers.append(c)
-                        logging.info("Cooler connects temp sensor ds18b20 {} with fan {}".format(ce, f))
 
         # Init roatray encs.
         printer.filament_sensors = []
