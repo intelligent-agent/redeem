@@ -36,7 +36,9 @@ class PluginsController:
         self.plugins = {}
 
         # Load the plugins specified by the config
-        pluginsToLoad = [v.strip() for v in self.printer.config.get('System', 'plugins', '').split(',')]
+        pluginsToLoad = []
+        if 'plugins' in self.printer.config["System"]:
+            pluginsToLoad = [v.strip() for v in self.printer.config.get('System', 'plugins').split(',')]
         pluginClasses = PluginsController.get_plugin_classes()
 
         for plugin in pluginsToLoad:

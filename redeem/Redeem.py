@@ -39,7 +39,7 @@ import sys
 from Mosfet import Mosfet
 from Stepper import *
 from TemperatureSensor import *
-from FanControl import Fan
+import TemperatureControl
 from Servo import Servo
 from EndStop import EndStop
 from USB import USB
@@ -117,13 +117,8 @@ class Redeem:
         printer.config = CascadingConfigParser(
             [os.path.join(config_location,'default.cfg'),
              os.path.join(config_location,'printer.cfg'),
-             os.path.join(config_location,'local.cfg')])
-
-        # Check the local and printer files
-        printer_path = os.path.join(config_location,"printer.cfg")
-        if os.path.exists(printer_path):
-            printer.config.check(printer_path)
-        printer.config.check(os.path.join(config_location,'local.cfg'))
+             os.path.join(config_location,'local.cfg')],
+            allow_new = ["Temperature Control"]) # <-- this is where users are allowed to add stuff to the config 
 
         # Get the revision and loglevel from the Config file
         level = self.printer.config.getint('System', 'loglevel')
@@ -189,6 +184,9 @@ class Redeem:
 
         # activate all the endstops
         self.printer.set_active_endstops()
+        
+        #######################################################################
+        # STEPPER
 
         # Init the 5 Stepper motors (step, dir, fault, DAC channel, name)
         Stepper.printer = printer
@@ -235,17 +233,17 @@ class Redeem:
         # Enable the steppers and set the current, steps pr mm and
         # microstepping
         for name, stepper in iteritems(self.printer.steppers):
-            stepper.in_use = printer.config.getboolean('Steppers', 'in_use_' + name)
-            stepper.direction = printer.config.getint('Steppers', 'direction_' + name)
-            stepper.has_endstop = printer.config.getboolean('Endstops', 'has_' + name)
-            stepper.set_current_value(printer.config.getfloat('Steppers', 'current_' + name))
-            stepper.set_steps_pr_mm(printer.config.getfloat('Steppers', 'steps_pr_mm_' + name))
-            stepper.set_microstepping(printer.config.getint('Steppers', 'microstepping_' + name))
-            stepper.set_decay(printer.config.getint("Steppers", "slow_decay_" + name))
+            stepper.in_use = printer.config.getboolean('Steppers', 'in_use_' + name.lower())
+            stepper.direction = printer.config.getint('Steppers', 'direction_' + name.lower())
+            stepper.has_endstop = printer.config.getboolean('Endstops', 'has_' + name.lower())
+            stepper.set_current_value(printer.config.getfloat('Steppers', 'current_' + name.lower()))
+            stepper.set_steps_pr_mm(printer.config.getfloat('Steppers', 'steps_pr_mm_' + name.lower()))
+            stepper.set_microstepping(printer.config.getint('Steppers', 'microstepping_' + name.lower()))
+            stepper.set_decay(printer.config.getint("Steppers", "slow_decay_" + name.lower()))
             # Add soft end stops
-            printer.soft_min[Printer.axis_to_index(name)] = printer.config.getfloat('Endstops', 'soft_end_stop_min_' + name)
-            printer.soft_max[Printer.axis_to_index(name)] = printer.config.getfloat('Endstops', 'soft_end_stop_max_' + name)
-            slave = printer.config.get('Steppers', 'slave_' + name)
+            printer.soft_min[Printer.axis_to_index(name)] = printer.config.getfloat('Endstops', 'soft_end_stop_min_' + name.lower())
+            printer.soft_max[Printer.axis_to_index(name)] = printer.config.getfloat('Endstops', 'soft_end_stop_max_' + name.lower())
+            slave = printer.config.get('Steppers', 'slave_' + name.lower())
             if slave:
                 printer.add_slave(name, slave)
                 logging.debug("Axis "+name+" has slave "+slave)
@@ -260,6 +258,9 @@ class Redeem:
             opts = ["L", "r", "A_radial", "B_radial", "C_radial", "A_angular", "B_angular", "C_angular" ]
             for opt in opts:
                 Delta.__dict__[opt] = printer.config.getfloat('Delta', opt)
+                
+        #######################################################################
+        # TEMPERATURE CONTROL
 
         # Discover and add all DS18B20 cold ends.
         paths = glob.glob("/sys/bus/w1/devices/28-*/w1_slave")
@@ -310,25 +311,34 @@ class Redeem:
             self.printer.heaters[e].max_temp_fall   = self.printer.config.getfloat('Heaters', 'max_fall_temp_'+e)
             self.printer.heaters[e].max_power       = self.printer.config.getfloat('Heaters', 'max_power_'+e)
 
-        # Init the three fans. Arguments: PWM channel number, fan number, printer
-        self.printer.fans = []
+
+        # update the channel information for fans
         if self.revision == "00A3":
-            self.printer.fans.append(Fan(0,0,self.printer))
-            self.printer.fans.append(Fan(1,1,self.printer))
-            self.printer.fans.append(Fan(2,2,self.printer))
+            for i, c in enumerate([0,1,2]):
+                self.printer.config["Fans"]["Fan-{}".format(i)]["channel"] = c
         elif self.revision == "0A4A":
-            self.printer.fans.append(Fan(8,0,self.printer))
-            self.printer.fans.append(Fan(9,1,self.printer))
-            self.printer.fans.append(Fan(10,2,self.printer))
+            for i, c in enumerate([8,9,10]):
+                self.printer.config["Fans"]["Fan-{}".format(i)]["channel"] = c
         elif self.revision in ["00B1", "00B2", "00B3", "0B3A"]:
-            self.printer.fans.append(Fan(7,0,self.printer))
-            self.printer.fans.append(Fan(8,1,self.printer))
-            self.printer.fans.append(Fan(9,2,self.printer))
-            self.printer.fans.append(Fan(10,3,self.printer))
+            for i, c in enumerate([7,8,9,10]):
+                self.printer.config["Fans"]["Fan-{}".format(i)]["channel"] = c
         if printer.config.reach_revision == "00A0":
-            self.printer.fans.append(Fan(14,0,self.printer))
-            self.printer.fans.append(Fan(15,1,self.printer))
-            self.printer.fans.append(Fan(7,2,self.printer))
+            for i, c in enumerate([14,15,7]):
+                self.printer.config["Fans"]["Fan-{}".format(i)]["channel"] = c
+                
+        self.printer.controlled_fans = []
+        self.printer.fans = []
+        
+        # fans and ... generated and added to printer in build_temperature_control
+        TemperatureControl.build_temperature_control(self.printer)
+        
+        # turn on the fans and ...
+        
+        for fan in self.printer.fans:
+            fan.enable()
+                
+        #######################################################################
+        # SERVO
 
         # Init the servos
         printer.servos = []
@@ -346,12 +356,8 @@ class Redeem:
                 logging.info("Added servo "+str(servo_nr))
             servo_nr += 1
 
-        # Connect fans to M106
-        printer.controlled_fans = []
-        for i, fan in enumerate(self.printer.fans):
-            if self.printer.config.getboolean('Fan-{}'.format(i), "add-to-M106"):
-                printer.controlled_fans.append(self.printer.fans[i])
-                logging.info("Added fan {} to M106/M107".format(i))
+        #######################################################################
+        # ROTARY ENCODER
 
         # Init roatray encs.
         printer.filament_sensors = []
@@ -375,6 +381,10 @@ class Redeem:
                 logging.debug("Alarm level"+str(alarm_level))
                 sensor.alarm_level = alarm_level
                 printer.filament_sensors.append(sensor)
+
+
+        #######################################################################
+        # PATH PLANNING
 
         # Make a queue of commands
         self.printer.commands = JoinableQueue(10)
@@ -586,6 +596,10 @@ class Redeem:
         for name, heater in iteritems(self.printer.heaters):
             logging.debug("closing "+name)
             heater.disable()
+            
+        for fan in self.printer.fans:
+            logging.debug("closing "+fan.name)
+            fan.disable()
 
         for name, comm in iteritems(self.printer.comms):
             logging.debug("closing "+name)

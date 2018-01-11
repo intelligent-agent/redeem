@@ -256,7 +256,7 @@ class PruFirmware:
                 configFile.write('#define STEPPER_' + name + '_DIR_PIN\t\t'   + dir_pin+'\n')
 
                 # Define direction
-                direction = "0" if self.config.getint('Steppers', 'direction_' + name) > 0 else "1"
+                direction = "0" if self.config.getint('Steppers', 'direction_' + name.lower()) > 0 else "1"
                 configFile.write('#define STEPPER_'+ name +'_DIRECTION\t\t'+ direction +'\n')
 
                 index = Printer.axis_to_index(name)
