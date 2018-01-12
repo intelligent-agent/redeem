@@ -160,8 +160,9 @@ class Safety(Unit):
         self.min_temp           = float(self.options["min_temp"])         # If temperature falls below this point from the target, disable. 
         self.max_temp           = float(self.options["max_temp"])         # Max temp that can be reached before disabling printer. 
         self.max_temp_rise      = float(self.options["max_rise_temp"])    # Fastest temp can rise pr measrement
-        self.min_temp_rise      = float(self.options["min_rise_temp"])    # Slowest temp can rise pr measurement, to catch incorrect attachment of thermistor
         self.max_temp_fall      = float(self.options["max_fall_temp"])    # Fastest temp can fall pr measurement
+        self.min_temp_rise      = float(self.options["min_rise_temp"])    # Slowest temp can rise pr measurement, to catch incorrect attachment of thermistor
+        self.min_rise_offset    = float(self.options["min_rise_offset"])  # Allow checking for slow temp rise when temp is below this offset from target temp 
         
         self.temp = None
         self.time = None
@@ -218,7 +219,7 @@ class Safety(Unit):
         
         temp_delta /= time_delta # get a gradient deg C / sec
         
-        target_temperature = self.heater.input.target_temperature
+        target_temp = self.heater.input.target_temperature
         power_on = self.heater.mosfet.get_power() > 0
         
         # Check that temperature is not rising too quickly
@@ -226,7 +227,7 @@ class Safety(Unit):
             a = Alarm(Alarm.HEATER_RISING_FAST, 
                 "Temperature rising too quickly ({} degrees) for {}".format(temp_delta, self.name))
         # Check that temperature is not rising quickly enough when power is applied
-        if (temp_delta < self.min_temp_rise) and (power_on):
+        if (temp_delta < self.min_temp_rise) and (power_on) and (self.temp < (target_temp - self.min_rise_offset)):
             a = Alarm(Alarm.HEATER_RISING_SLOW, 
                 "Temperature rising too slowly ({} degrees) for {}".format(temp_delta, self.name))
         # Check that temperature is not falling too quickly
@@ -234,7 +235,7 @@ class Safety(Unit):
             a = Alarm(Alarm.HEATER_FALLING_FAST, 
                 "Temperature falling too quickly ({} degrees) for {}".format(temp_delta, self.name))
         # Check that temperature has not fallen below a certain setpoint from target
-        if self.min_temp_enabled and self.temp < (target_temperature - self.min_temp):
+        if self.min_temp_enabled and self.temp < (target_temp - self.min_temp):
             a = Alarm(Alarm.HEATER_TOO_COLD, 
                 "Temperature below min set point ({} degrees) for {}".format(self.min_temp, self.name))
         # Check if the temperature has gone beyond the max value
