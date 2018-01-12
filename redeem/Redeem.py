@@ -39,14 +39,14 @@ import sys
 from Mosfet import Mosfet
 from Stepper import *
 from TemperatureSensor import *
-import TemperatureControl
+from TemperatureControl import *
+from Fan import Fan
+from Heater import Heater
 from Servo import Servo
 from EndStop import EndStop
 from USB import USB
 from Pipe import Pipe
 from Ethernet import Ethernet
-from Extruder import Extruder, HBP
-from Cooler import Cooler
 from Path import Path
 from PathPlanner import PathPlanner
 from Gcode import Gcode
@@ -269,48 +269,30 @@ class Redeem:
             self.printer.cold_ends.append(ColdEnd(path, "ds18b20-"+str(i)))
             logging.info("Found Cold end "+str(i)+" on " + path)
 
-        # Make Mosfets, temperature sensors and extruders
+        # Make Mosfets and temperature sensors
         heaters = ["E", "H", "HBP"]
         if self.printer.config.reach_revision:
             heaters.extend(["A", "B", "C"])
+        
         for e in heaters:
-            # Mosfets
-            channel = self.printer.config.getint("Heaters", "mosfet_"+e)
-            self.printer.mosfets[e] = Mosfet(channel)
             # Thermistors
-            adc = self.printer.config.get("Heaters", "path_adc_"+e)
-            if not self.printer.config.has_option("Heaters", "sensor_"+e):
-                sensor = self.printer.config.get("Heaters", "temp_chart_"+e)
-                logging.warning("Deprecated config option temp_chart_"+e+" use sensor_"+e+" instead.")
-            else:
-                sensor = self.printer.config.get("Heaters", "sensor_"+e)
-            self.printer.thermistors[e] = TemperatureSensor(adc, 'MOSFET '+e, sensor)
-            self.printer.thermistors[e].printer = printer
-
-            # Extruders
-            onoff = self.printer.config.getboolean('Heaters', 'onoff_'+e)
-            prefix =  self.printer.config.get('Heaters', 'prefix_'+e)
-            if e != "HBP":
-                self.printer.heaters[e] = Extruder(
-                                        self.printer.steppers[e],
-                                        self.printer.thermistors[e],
-                                        self.printer.mosfets[e], e, onoff)
-            else:
-                self.printer.heaters[e] = HBP(
-                                        self.printer.thermistors[e],
-                                        self.printer.mosfets[e], onoff)
-            self.printer.heaters[e].prefix = prefix
-            self.printer.heaters[e].Kp = self.printer.config.getfloat('Heaters', 'pid_Kp_'+e)
-            self.printer.heaters[e].Ti = self.printer.config.getfloat('Heaters', 'pid_Ti_'+e)
-            self.printer.heaters[e].Td = self.printer.config.getfloat('Heaters', 'pid_Td_'+e)
-
-            # Min/max settings
-            self.printer.heaters[e].min_temp        = self.printer.config.getfloat('Heaters', 'min_temp_'+e)
-            self.printer.heaters[e].max_temp        = self.printer.config.getfloat('Heaters', 'max_temp_'+e)
-            self.printer.heaters[e].max_temp_rise   = self.printer.config.getfloat('Heaters', 'max_rise_temp_'+e)
-            self.printer.heaters[e].max_temp_fall   = self.printer.config.getfloat('Heaters', 'max_fall_temp_'+e)
-            self.printer.heaters[e].max_power       = self.printer.config.getfloat('Heaters', 'max_power_'+e)
-
+            name = "Thermistor-{}".format(e)
+            adc = self.printer.config.get("Thermistors", name, "path_adc")
+            sensor = self.printer.config.get("Thermistors", name, "sensor")
+            self.printer.thermistors[name] = TemperatureSensor(adc, name, sensor)
+            self.printer.thermistors[name].printer = printer
+            self.printer.config["Thermistors"][name]["active"] = True
+            
+            # Mosfets
+            name = "Heater-{}".format(e)
+            channel = self.printer.config.getint("Heaters", name, "mosfet")
+            self.printer.mosfets["MOSFET-{}".format(e)] = Mosfet(channel)
+            self.printer.config["Heaters"][name]["active"] = True
+            
+            # Control
+            name = "Control-{}".format(e)
+            self.printer.config["Temperature Control"][name]["active"] = True
+            
 
         # update the channel information for fans
         if self.revision == "00A3":
@@ -325,17 +307,55 @@ class Redeem:
         if printer.config.reach_revision == "00A0":
             for i, c in enumerate([14,15,7]):
                 self.printer.config["Fans"]["Fan-{}".format(i)]["channel"] = c
-                
+        
+        # build and connect all of the temperature control infrastructure
         self.printer.controlled_fans = []
         self.printer.fans = []
+        self.printer.heaters = {}
         
         # fans and ... generated and added to printer in build_temperature_control
-        TemperatureControl.build_temperature_control(self.printer)
+        control_units = {"alias":Alias, "difference":Difference, 
+                      "maximum":Maximum, "minimum":Minimum,
+                      "constant-control":ConstantControl,
+                      "on-off-control":OnOffControl,
+                      "pid-control":PIDControl,
+                      "proportional-control":ProportionalControl,
+                      "fan":Fan,
+                      "heater":Heater}
+    
+        units = {}
+        for section in ["Temperature Control", "Fans", "Heaters"]:
+            cfg = self.printer.config[section]
         
-        # turn on the fans and ...
+            # generate units
+            for name, options in cfg.items():
+                if not isinstance(options, Section):
+                    continue
+                
+                # check the unit is active
+                active = options["active"]
+                if (not active) or (active == "False"):
+                    continue
+                
+                input_type = options["type"]
+                unit = control_units[input_type](name, options, self.printer)
+                units[name] = unit
+            
+        # connect units
+        for name, unit in units.items():
+            unit.connect(units)
+            
+        # initialise units
+        for name, unit in units.items():
+            unit.initialise()
+        
+        # turn on the fans and heaters
         
         for fan in self.printer.fans:
             fan.enable()
+            
+        for heater in self.printer.heaters:
+            heater.enable()
                 
         #######################################################################
         # SERVO

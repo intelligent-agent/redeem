@@ -40,15 +40,21 @@ class Unit:
     counter = 0
     
     def get_unit(self, name, units):
-        """ retrieve a thermistor, cold_end, or unit"""
+        """ retrieve a thermistor, cold_end, mosfet, or unit"""
+        
+        # check if we already have what we are looking for
+        if isinstance(name, Unit):
+            return name
         
         # check units, thermistors, and cold ends
         if name in units:
             return units[name]
-        elif "thermistor-" in name:
-            g = name.replace("thermistor-","")
-            if g in self.printer.thermistors:
-                return self.printer.thermistors[g]
+        elif "Thermistor" in name:
+            if name in self.printer.thermistors:
+                return self.printer.thermistors[name]
+        elif "MOSFET" in name:
+            if name in self.printer.mosfets:
+                return self.printer.mosfets[name]
         elif "ds18b20" in name:
             for sensor in self.printer.cold_ends:
                 if name == sensor.name:
@@ -59,6 +65,13 @@ class Unit:
             units[c_name] = unit
             return unit
 
+        
+        return
+        
+    def initialise(self):
+        """ stuff to do after connecting"""
+        
+        #        
         
         return
                         
@@ -142,6 +155,8 @@ class Control(Unit):
         if "output" in options:
             self.output = options["output"]
         
+        self.power = 0.0
+        
         self.get_options()
         
         self.counter += 1
@@ -153,9 +168,13 @@ class Control(Unit):
         if self.output:
             self.output = self.get_unit(self.output, units)
             self.output.input = self
+        
+        return
             
         
 class ConstantControl(Control):
+    
+    feedback_control = False
     
     def get_options(self):
         self.power = int(self.options['input'])/255.0
@@ -166,6 +185,8 @@ class ConstantControl(Control):
         
         
 class OnOffControl(Control):
+    
+    feedback_control = True
         
     def get_options(self):
         self.on_temperature = float(self.options['on_temperature'])
@@ -181,15 +202,17 @@ class OnOffControl(Control):
 
         temp = self.input.get_temperature()
         
-        if temp >= self.on_temperature:
+        if temp <= self.on_temperature:
             self.power = self.on_power
-        elif temp <= self.off_temperature:
+        elif temp >= self.off_temperature:
             self.power = self.off_power
         
         return self.power
         
         
 class ProportionalControl(Control):
+    
+    feedback_control = True
 
     def get_options(self):
         """ Init """
@@ -217,124 +240,74 @@ class ProportionalControl(Control):
         power = max(power, self.min_speed)
         
         return power
-
-###        
         
-class Fan(Unit):
+class PIDControl(Control):
     
-    def __init__(self, name, options, printer):
-        """
-        channel : channel that this fan is on
-        fan_id : number of the fan
-        printer : description of this printer 
-        """
+    feedback_control = True
+    
+    def get_options(self):
         
-        self.name = name
-        self.options = options
-        self.printer = printer
+        self.Kp = float(self.options['pid_Kp'])
+        self.Ti = float(self.options['pid_Ti'])
+        self.Td = float(self.options['pid_Td'])
+        self.ok_range = float(self.options['ok_range'])
+        self.sleep = float(self.options['sleep'])
         
-        self.input = self.options["input"]
-        self.channel = int(self.options["channel"])
-        self.force_disable = False
-        
-        self.printer.fans.append(self)
-        
-        self.counter += 1
-            
         return
         
-    def connect(self, units):
-        self.input = self.get_unit(self.input, units)
+    def initialise(self):
         
-        if self.options["add-to-M106"] == "True":
-            self.force_disable = True
-            if not isinstance(self.input, ConstantControl):
-                msg = "{} has a non-constant controller attached. For control by M106/M107 set config 'input' as a constant".format(self.name)
-                logging.error(msg)
-                raise RuntimeError(msg)
-            
-            self.printer.controlled_fans.append(self)
-            logging.info("Added {} to M106/M107".format(self.name))
+        self.avg = max(int(1.0/self.sleep), 3)
+        self.error = 0
+        self.errors = [0]*self.avg
+        self.averages = [0]*self.avg
         
+        current_temp = self.input.get_temperature()
+        self.temperatures = [current_temp]
+        
+        self.error_integral = 0.0           # Accumulated integral since the temperature came within the boudry
+        self.error_integral_limit = 100.0   # Integral temperature boundary
+        
+        
+    def get_power(self):
+        
+        current_temp = self.input.get_temperature()
+        self.temperatures.append(current_temp)
+        self.temperatures[:-max(int(60/self.sleep), self.avg)] = [] # Keep only this much history
 
-    def set_PWM_frequency(self, value):
-        """ Set the amount of on-time from 0..1 """
-        self.pwm_frequency = int(value)
-        PWM.set_frequency(value)
+        self.error = self.target_temp-current_temp
+        self.errors.append(self.error)
+        self.errors.pop(0)
 
-    def set_value(self, value):
-        """ Set the amount of on-time from 0..1 """
-        self.value = value
-        PWM.set_value(value, self.channel)
+        derivative = self.get_error_derivative()
+        integral = self.get_error_integral()
+        # The standard formula for the PID
+        power = self.Kp*(self.error + (1.0/self.Ti)*integral + self.Td*derivative)  
+        power = max(min(power, self.max_power, 1.0), 0.0)                         # Normalize to 0, max
+
+        return power
+        
+    def get_error_derivative(self):
+        """ Get the derivative of the temperature"""
+        # Using temperature and not error for calculating derivative 
+        # gets rid of the derivative kick. dT/dt
+        der = (self.temperatures[-2]-self.temperatures[-1])/self.sleep
+        self.averages.append(der)
+        if len(self.averages) > 11:
+            self.averages.pop(0)
+        return np.average(self.averages)
+
+    def get_error_integral(self):
+        """ Calculate and return the error integral """
+        self.error_integral += self.error*self.sleep
+        # Avoid windup by clippping the integral part 
+        # to the reciprocal of the integral term
+        self.error_integral = np.clip(self.error_integral, 0, self.max_power*self.Ti/self.Kp)
+        return self.error_integral
+        
+    def reset(self):
+        
+        self.error_integral = 0.0
+        
         return
-
-
-    def ramp_to(self, value, delay=0.01):
-        ''' Set the fan/light value to the given value, in degree, with the given speed in deg / sec '''
-        for w in range(int(self.value*255.0), int(value*255.0), (1 if value >= self.value else -1)):
-            logging.debug("Fan value: "+str(w))
-            self.set_value(w/255.0)
-            time.sleep(delay)
-        self.set_value(value)
-
-    def run_controller(self):
-        """ follow a target PWM value 0..1"""
         
-        while self.enabled:
-            self.set_value(self.input.get_power())            		 
-            time.sleep(1)
-        self.disabled = True
-
-    def disable(self):
-        """ stops the controller """
-        self.enabled = False
-        # Wait for controller to stop
-        while self.disabled == False:
-            time.sleep(0.2)
-        # The controller loop has finished
-        self.set_value(0.0)
-
-    def enable(self):
-        """ starts the controller """
-        if self.force_disable:
-            self.disabled = True
-            self.enabled = False
-            return
-        self.enabled = True
-        self.disabled = False
-        self.t = Thread(target=self.run_controller, name=self.name)
-        self.t.daemon = True
-        self.t.start()	
-        return
-
-#==============================================================================
-# FUNCTIONS
-#==============================================================================
-
-def build_temperature_control(printer):
-    """ build the network linking sensors to controllers """
-    
-    control_units = {"alias":Alias, "difference":Difference, 
-                      "maximum":Maximum, "minimum":Minimum,
-                      "constant-control":ConstantControl,
-                      "on-off-control":OnOffControl,
-                      "proportional-control":ProportionalControl,
-                      "fan":Fan}
-    
-    units = {}
-    for section in ["Temperature Control", "Fans"]: #, Heaters]: TODO
-        cfg = printer.config[section]
-    
-        # generate units
-        for name, options in cfg.items():
-            if not isinstance(options, Section):
-                continue
-            input_type = options["type"]
-            unit = control_units[input_type](name, options, printer)
-            units[name] = unit
-        
-    # connect units
-    for name, unit in units.items():
-        unit.connect(units)
-    
-    return

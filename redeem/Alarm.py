@@ -39,6 +39,7 @@ class Alarm:
     IMPOSSIBLE_MOVE_ATTEMPTED = 9
     STEPPER_FAULT = 10  # Error on a stepper
     ALARM_TEST = 11  # Testsignal, used during start-up
+    HEATER_RISING_SLOW = 12  # Temperture is rising too fast
 
     printer = None
     executor = None
@@ -79,6 +80,11 @@ class Alarm:
             self.inform_listeners()
             Alarm.action_command("pause")
             Alarm.action_command("alarm_heater_rising_fast", self.message)
+        elif self.type == Alarm.HEATER_RISING_SLOW:
+            self.stop_print()
+            self.inform_listeners()
+            Alarm.action_command("pause")
+            Alarm.action_command("alarm_heater_rising_slow", self.message)
         elif self.type == Alarm.HEATER_FALLING_FAST:
             self.disable_heaters()
             self.inform_listeners()

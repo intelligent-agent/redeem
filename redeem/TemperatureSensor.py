@@ -40,10 +40,10 @@ class TemperatureSensor:
 
     mutex = Lock()
 
-    def __init__(self, pin, heater_name, sensorIdentifier):
+    def __init__(self, pin, name, sensorIdentifier):
 
         self.pin = pin
-        self.heater = heater_name
+        self.name = name
         self.sensorIdentifier = sensorIdentifier
         self.maxAdc = 4095.0
 
@@ -51,7 +51,7 @@ class TemperatureSensor:
         found = False
         for s in TemperatureSensorConfigs.thermistors_shh:
             if s[0] == self.sensorIdentifier:
-                self.sensor = Thermistor(pin, s, self.heater)
+                self.sensor = Thermistor(pin, s, self.name)
                 found = True
                 break
 
@@ -60,7 +60,7 @@ class TemperatureSensor:
                 if p[0] == self.sensorIdentifier:
                     logging.warning("PT100 temperature sensor support is experimental at this stage.")
                     """ Experimental solution """
-                    self.sensor = PT100(pin, p, self.heater)
+                    self.sensor = PT100(pin, p, self.name)
                     found = True
                     break
 
@@ -69,7 +69,7 @@ class TemperatureSensor:
                 if p[0] == self.sensorIdentifier:
                     logging.warning("Tboard sensors are experimental")
                     """ Not working yet. No known hardware solution """
-                    self.sensor = Tboard(pin, p, self.heater)
+                    self.sensor = Tboard(pin, p, self.name)
                     found = True
                     break
 

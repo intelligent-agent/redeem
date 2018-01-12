@@ -23,9 +23,9 @@ class M105(GCodeCommand):
             Returns <prefix>:<heater temperature> for a given heater and
             prefix. Temperature values are formatted as integers.
             """
-            temperature = self.printer.heaters[heater].get_temperature()
+            thermistor_temperature, control_temperature = self.printer.heaters[heater].get_temperature()
             target = self.printer.heaters[heater].get_target_temperature()
-            return "{0}:{1:.1f}/{2:.1f}".format(prefix, temperature, target)
+            return "{0}:{1:.1f}/{2:.1f}({3:0.1f})".format(prefix, control_temperature, target, thermistor_temperature)
 
         # Cura expects the temperature from the first
         current_tool = self.printer.current_tool
