@@ -80,16 +80,16 @@ class Alarm:
             self.inform_listeners()
             Alarm.action_command("pause")
             Alarm.action_command("alarm_heater_rising_fast", self.message)
-        elif self.type == Alarm.HEATER_RISING_SLOW:
-            self.stop_print()
-            self.inform_listeners()
-            Alarm.action_command("pause")
-            Alarm.action_command("alarm_heater_rising_slow", self.message)
         elif self.type == Alarm.HEATER_FALLING_FAST:
             self.disable_heaters()
             self.inform_listeners()
             Alarm.action_command("pause")
             Alarm.action_command("alarm_heater_falling_fast", self.message)
+        elif self.type == Alarm.HEATER_RISING_SLOW:
+            self.stop_print()
+            self.inform_listeners()
+            Alarm.action_command("pause")
+            Alarm.action_command("alarm_heater_rising_slow", self.message)
         elif self.type == Alarm.STEPPER_FAULT:
             self.inform_listeners()
             Alarm.action_command("pause")

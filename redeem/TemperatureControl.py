@@ -30,6 +30,9 @@ from configobj import Section
 import logging
 from threading import Thread
 
+from TemperatureSensor import TemperatureSensor
+from ColdEnd import ColdEnd
+
 #==============================================================================
 # CLASSES
 #==============================================================================
@@ -70,9 +73,10 @@ class Unit:
         
     def initialise(self):
         """ stuff to do after connecting"""
+        return
         
-        #        
-        
+    def check(self):
+        """ run any checks that need to be performed after full initialisation"""
         return
                         
         
@@ -143,6 +147,110 @@ class Minimum(Compare):
         return min(self.inputs[0].get_temperature(), self.inputs[1].get_temperature())
         
         
+class Safety(Unit):
+    
+    def __init__(self, name, options, printer):
+        self.name = name
+        self.options = options
+        self.printer = printer
+        
+        self.input = options["input"]
+        self.heater = options["heater"]
+        
+        self.min_temp           = float(self.options["min_temp"])         # If temperature falls below this point from the target, disable. 
+        self.max_temp           = float(self.options["max_temp"])         # Max temp that can be reached before disabling printer. 
+        self.max_temp_rise      = float(self.options["max_rise_temp"])    # Fastest temp can rise pr measrement
+        self.min_temp_rise      = float(self.options["min_rise_temp"])    # Slowest temp can rise pr measurement, to catch incorrect attachment of thermistor
+        self.max_temp_fall      = float(self.options["max_fall_temp"])    # Fastest temp can fall pr measurement
+        
+        self.temp = None
+        self.time = None
+        
+        self.min_temp_enabled = False
+        
+        return
+        
+    def connect(self, units):
+        
+        self.input = self.get_unit(self.input, units)
+        self.heater = self.get_unit(self.heater, units)
+        
+        return
+        
+    def initialise(self):
+        
+        # insert into the attached heater, if it isn't already there
+        if self not in self.heater.safety:
+            self.heater.safety.append(self)
+    
+        if (not isinstance(self.input, TemperatureSensor)) and (not isinstance(self.input, ColdEnd)):
+            msg = "{} will not work, input = {} is not a temperature sensor".format(self.name, self.input.name)
+            logging.error(msg)
+            
+            # disconnect from the heater
+            for i, s in enumerate(self.heater.safety):
+                if self == s:
+                    self.heater.safety.pop(i)
+                    break
+                        
+        return
+        
+    def set_min_temp_enabled(self, flag):
+        """ enable the min_temp flag """
+        self.min_temp_enabled = flag
+        
+    def run_safety_checks(self):
+        """ Check the temperatures, make sure they are sane. 
+        Sound the alarm if something is wrong """
+        
+        if not self.time:
+            self.time = time.time()
+            self.temp = self.input.get_temperature()
+            return
+            
+        old_time = self.time
+        old_temp = self.temp
+        self.time = time.time()
+        self.temp = self.input.get_temperature()
+        
+        time_delta = self.time - old_time
+        temp_delta = self.temp - old_temp
+        
+        temp_delta /= time_delta # get a gradient deg C / sec
+        
+        target_temperature = self.heater.input.target_temperature
+        power_on = self.heater.mosfet.get_power() > 0
+        
+        # Check that temperature is not rising too quickly
+        if temp_delta > self.max_temp_rise:
+            a = Alarm(Alarm.HEATER_RISING_FAST, 
+                "Temperature rising too quickly ({} degrees) for {}".format(temp_delta, self.name))
+        # Check that temperature is not rising quickly enough when power is applied
+        if (temp_delta < self.min_temp_rise) and (power_on):
+            a = Alarm(Alarm.HEATER_RISING_SLOW, 
+                "Temperature rising too slowly ({} degrees) for {}".format(temp_delta, self.name))
+        # Check that temperature is not falling too quickly
+        if temp_delta < -self.max_temp_fall:
+            a = Alarm(Alarm.HEATER_FALLING_FAST, 
+                "Temperature falling too quickly ({} degrees) for {}".format(temp_delta, self.name))
+        # Check that temperature has not fallen below a certain setpoint from target
+        if self.min_temp_enabled and self.temp < (target_temperature - self.min_temp):
+            a = Alarm(Alarm.HEATER_TOO_COLD, 
+                "Temperature below min set point ({} degrees) for {}".format(self.min_temp, self.name))
+        # Check if the temperature has gone beyond the max value
+        if self.temp > self.max_temp:
+            a = Alarm(Alarm.HEATER_TOO_HOT, 
+                "Temperature beyond max ({} degrees) for {}".format(self.max_temp, self.name))                
+        # Check the time diff, only warn if something is off.     
+        if time_delta > 4:
+            logging.warning("Time between updates too large: " +
+                            self.name + " temp: " +
+                            str(self.temp) + " time delta: " +
+                            str(time_delta))
+        
+        return
+        
+        
 class Control(Unit):
     
     def __init__(self, name, options, printer):
@@ -161,6 +269,9 @@ class Control(Unit):
         
         self.counter += 1
         
+        return
+        
+    def get_options(self):
         return
         
     def connect(self, units):
@@ -193,6 +304,7 @@ class OnOffControl(Control):
         self.off_temperature = float(self.options['off_temperature'])
         self.on_power = float(self.options['on_power'])/255.0
         self.off_power = float(self.options['off_power'])/255.0
+        self.target_temperature = float(self.options['target_temperature'])
         
         self.power = self.off_power
         
@@ -217,7 +329,7 @@ class ProportionalControl(Control):
     def get_options(self):
         """ Init """
         self.current_temp = 0.0
-        self.target_temp = float(self.options['target_temperature'])             # Target temperature (Ts). Start off. 
+        self.target_temperature = float(self.options['target_temperature'])             # Target temperature (Ts). Start off. 
         self.P = float(self.options['proportional'])                     # Proportional 
         self.max_speed = float(self.options['max_speed'])/255.0
         self.min_speed = float(self.options['min_speed'])/255.0
@@ -226,7 +338,7 @@ class ProportionalControl(Control):
     def get_power(self):
         """ PID Thread that keeps the temperature stable """
         self.current_temp = self.input.get_temperature()
-        error = self.target_temp-self.current_temp
+        error = self.target_temperature-self.current_temp
         
         if error <= self.ok_range:
             return 0.0
@@ -247,6 +359,7 @@ class PIDControl(Control):
     
     def get_options(self):
         
+        self.target_temperature = float(self.options['target_temperature'])
         self.Kp = float(self.options['pid_Kp'])
         self.Ti = float(self.options['pid_Ti'])
         self.Td = float(self.options['pid_Td'])
@@ -275,7 +388,7 @@ class PIDControl(Control):
         self.temperatures.append(current_temp)
         self.temperatures[:-max(int(60/self.sleep), self.avg)] = [] # Keep only this much history
 
-        self.error = self.target_temp-current_temp
+        self.error = self.target_temperature-current_temp
         self.errors.append(self.error)
         self.errors.pop(0)
 

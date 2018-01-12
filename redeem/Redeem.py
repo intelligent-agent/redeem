@@ -268,32 +268,7 @@ class Redeem:
         for i, path in enumerate(paths):
             self.printer.cold_ends.append(ColdEnd(path, "ds18b20-"+str(i)))
             logging.info("Found Cold end "+str(i)+" on " + path)
-
-        # Make Mosfets and temperature sensors
-        heaters = ["E", "H", "HBP"]
-        if self.printer.config.reach_revision:
-            heaters.extend(["A", "B", "C"])
-        
-        for e in heaters:
-            # Thermistors
-            name = "Thermistor-{}".format(e)
-            adc = self.printer.config.get("Thermistors", name, "path_adc")
-            sensor = self.printer.config.get("Thermistors", name, "sensor")
-            self.printer.thermistors[name] = TemperatureSensor(adc, name, sensor)
-            self.printer.thermistors[name].printer = printer
-            self.printer.config["Thermistors"][name]["active"] = True
             
-            # Mosfets
-            name = "Heater-{}".format(e)
-            channel = self.printer.config.getint("Heaters", name, "mosfet")
-            self.printer.mosfets["MOSFET-{}".format(e)] = Mosfet(channel)
-            self.printer.config["Heaters"][name]["active"] = True
-            
-            # Control
-            name = "Control-{}".format(e)
-            self.printer.config["Temperature Control"][name]["active"] = True
-            
-
         # update the channel information for fans
         if self.revision == "00A3":
             for i, c in enumerate([0,1,2]):
@@ -307,21 +282,46 @@ class Redeem:
         if printer.config.reach_revision == "00A0":
             for i, c in enumerate([14,15,7]):
                 self.printer.config["Fans"]["Fan-{}".format(i)]["channel"] = c
+
         
+        # define the inputs/outputs available on this board
+        # also define those that are NOT available for later use...
+        exclude = []
+        heaters = ["E", "H", "HBP"]
+        extra = ["A", "B", "C"]
+        if self.printer.config.reach_revision:
+            heaters.extend(extra)
+        else:
+            exclude = extra
+        
+        # Make Mosfets and thermistors
+        for e in heaters:
+            # Thermistors
+            name = "Thermistor-{}".format(e)
+            adc = self.printer.config.get("Thermistors", name, "path_adc")
+            sensor = self.printer.config.get("Thermistors", name, "sensor")
+            self.printer.thermistors[name] = TemperatureSensor(adc, name, sensor)
+            self.printer.thermistors[name].printer = printer
+            
+            # Mosfets
+            name = "Heater-{}".format(e)
+            channel = self.printer.config.getint("Heaters", name, "mosfet")
+            self.printer.mosfets["MOSFET-{}".format(e)] = Mosfet(channel)
+            
+
         # build and connect all of the temperature control infrastructure
         self.printer.controlled_fans = []
         self.printer.fans = []
         self.printer.heaters = {}
         
-        # fans and ... generated and added to printer in build_temperature_control
+        # available control unit types, see TemperatureControl.py
         control_units = {"alias":Alias, "difference":Difference, 
                       "maximum":Maximum, "minimum":Minimum,
                       "constant-control":ConstantControl,
                       "on-off-control":OnOffControl,
                       "pid-control":PIDControl,
                       "proportional-control":ProportionalControl,
-                      "fan":Fan,
-                      "heater":Heater}
+                      "fan":Fan, "heater":Heater, "safety":Safety}
     
         units = {}
         for section in ["Temperature Control", "Fans", "Heaters"]:
@@ -332,9 +332,8 @@ class Redeem:
                 if not isinstance(options, Section):
                     continue
                 
-                # check the unit is active
-                active = options["active"]
-                if (not active) or (active == "False"):
+                e = name.split('-')[-1]
+                if e in exclude:
                     continue
                 
                 input_type = options["type"]
@@ -348,6 +347,10 @@ class Redeem:
         # initialise units
         for name, unit in units.items():
             unit.initialise()
+            
+        # run checks
+        for name, unit in units.items():
+            unit.check()
         
         # turn on the fans and heaters
         
