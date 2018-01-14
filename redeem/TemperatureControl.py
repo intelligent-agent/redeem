@@ -39,6 +39,36 @@ from ColdEnd import ColdEnd
 # CLASSES
 #==============================================================================
 
+class CircularBuffer(object):
+    #https://stackoverflow.com/a/40784706
+    def __init__(self, size):
+        """Initialization"""
+        self.index = 0
+        self.size = size
+        self._data = []
+
+    def append(self, value):
+        """Append an element"""
+        if len(self._data) == self.size:
+            self._data[self.index] = value
+        else:
+            self._data.append(value)
+        self.index = (self.index + 1) % self.size
+        
+    def get_length(self):
+        return len(self._data)
+
+    def __getitem__(self, key):
+        """Get element by index, relative to the current index"""
+        if len(self._data) == self.size:
+            return(self._data[(key + self.index) % self.size])
+        else:
+            return(self._data[key])
+
+    def __repr__(self):
+        """Return string representation"""
+        return self._data.__repr__() + ' (' + str(len(self._data))+' items)'
+
 class Unit:
     
     printer = None
@@ -167,9 +197,6 @@ class Safety(Unit):
         self.min_rise_offset    = float(self.options["min_rise_offset"])  # Allow checking for slow temp rise when temp is below this offset from target temp 
         self.min_rise_delay     = float(self.options["min_rise_delay"])   # Allow checking for slow temp rise after this delay time to allow for heat soak
         
-        self.temp = None
-        self.time = None
-        
         self.min_temp_enabled = False
         
         return
@@ -196,6 +223,10 @@ class Safety(Unit):
                 if self == s:
                     self.heater.safety.pop(i)
                     break
+                
+        self.avg = max(int(1.0/self.heater.input.sleep), 5)
+        self.temp = CircularBuffer(self.avg)
+        self.time = CircularBuffer(self.avg)
                         
         return
         
@@ -207,57 +238,66 @@ class Safety(Unit):
         """ Check the temperatures, make sure they are sane. 
         Sound the alarm if something is wrong """
         
-        if not self.time:
-            self.time = time.time()
-            self.temp = self.input.get_temperature()
+        # add to ring buffers
+        self.time.append(time.time())
+        self.temp.append(self.input.get_temperature())
+        
+        # get ordered lists
+        times = [self.time[i] for i in range(self.time.get_length())]
+        temps = [self.temp[i] for i in range(self.temp.get_length())]
+        n = len(times)
+        
+        if not n == self.time.size:
             return
-            
-        old_time = self.time
-        old_temp = self.temp
-        self.time = time.time()
-        self.temp = self.input.get_temperature()
         
-        time_delta = self.time - old_time
-        temp_delta = self.temp - old_temp
+        # last recorded temperature
+        current_time = times[-1]
+        current_temp = sum(temps)/float(n) #average
         
-        temp_delta /= time_delta # get a gradient deg C / sec
+        # rate of change of temperature wrt time
+        temp_rate = np.polyfit(times, temps, 1)[0]
+        time_delta = times[-1] - times[0]
         
+        # heater info
         target_temp = self.heater.input.target_temperature
         power_on = self.heater.mosfet.get_power() > 0
         
         # track when the heater was first turned on
         if target_temp == 0.0:
             self. start_heating_time = time.time()
-        heating_time = self.time - self.start_heating_time
+        heating_time = current_time - self.start_heating_time
         
         # Check that temperature is not rising too quickly
-        if temp_delta > self.max_temp_rise:
+        if temp_rate > self.max_temp_rise:
             a = Alarm(Alarm.HEATER_RISING_FAST, 
-                "Temperature rising too quickly ({} degrees/sec) for {}".format(temp_delta, self.name))
+                "Temperature rising too quickly ({:.2f} degrees/sec) for {} ({} = {:.2f})".format(temp_rate, self.name, self.input.name, current_temp))
+        
+        
         # Check that temperature is not rising quickly enough when power is applied
-        if (temp_delta < self.min_temp_rise) \
-            and (power_on) \
-            and (self.temp < (target_temp - self.min_rise_offset))\
-            and (heating_time > self.min_rise_delay):
+        check = [temp_rate < self.min_temp_rise, 
+                 power_on, 
+                 current_temp < (target_temp - self.min_rise_offset), 
+                 heating_time > self.min_rise_delay]
+        if np.all(check):
             a = Alarm(Alarm.HEATER_RISING_SLOW, 
-                "Temperature rising too slowly ({} degrees/sec) for {}".format(temp_delta, self.name))
+                "Temperature rising too slowly ({:.2f} degrees/sec) for {} ({} = {:.2f})".format(temp_rate, self.name, self.input.name, current_temp))
         # Check that temperature is not falling too quickly
-        if temp_delta < -self.max_temp_fall:
+        if temp_rate < -self.max_temp_fall:
             a = Alarm(Alarm.HEATER_FALLING_FAST, 
-                "Temperature falling too quickly ({} degrees/sec) for {}".format(temp_delta, self.name))
+                "Temperature falling too quickly ({:.2f} degrees/sec) for {} ({} = {:.2f})".format(temp_rate, self.name, self.input.name, current_temp))
         # Check that temperature has not fallen below a certain setpoint from target
-        if self.min_temp_enabled and self.temp < (target_temp - self.min_temp):
+        if self.min_temp_enabled and (current_temp < (target_temp - self.min_temp)):
             a = Alarm(Alarm.HEATER_TOO_COLD, 
-                "Temperature of {} below min set point ({} degrees) for {}".format(self.temp, self.min_temp, self.name))
+                "Temperature of {:.2f} below min set point ({:.2f} degrees) for {}".format(current_temp, self.min_temp, self.name))
         # Check if the temperature has gone beyond the max value
-        if self.temp > self.max_temp:
+        if current_temp > self.max_temp:
             a = Alarm(Alarm.HEATER_TOO_HOT, 
-                "Temperature of {} beyond max ({} degrees) for {}".format(self.temp, self.max_temp, self.name))                
+                "Temperature of {:.2f} beyond max ({:.2f} degrees) for {}".format(current_temp, self.max_temp, self.name))                
         # Check the time diff, only warn if something is off.     
         if time_delta > 4:
             logging.warning("Time between updates too large: " +
                             self.name + " temp: " +
-                            str(self.temp) + " time delta: " +
+                            str(current_temp) + " time delta: " +
                             str(time_delta))
         
         return

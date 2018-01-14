@@ -205,9 +205,6 @@ class Heater(Unit):
                 self.temperatures[:-max(int(60/self.sleep), self.avg)] = [] # Keep only this much history
 
                 # Run safety checks
-                self.time_diff = self.current_time-self.prev_time
-                self.prev_time = self.current_time
-                self.current_time = time.time()
 
                 if not self.heater_error:
                     self.check_temperature_error()
