@@ -25,12 +25,13 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
 
 import time
 from builtins import range
-from PWM import PWM
 from configobj import Section
 import logging
 from threading import Thread
 import numpy as np
 
+from PWM import PWM
+from Alarm import Alarm
 from TemperatureSensor import TemperatureSensor
 from ColdEnd import ColdEnd
 
@@ -164,6 +165,7 @@ class Safety(Unit):
         self.max_temp_fall      = float(self.options["max_fall_temp"])    # Fastest temp can fall pr measurement
         self.min_temp_rise      = float(self.options["min_rise_temp"])    # Slowest temp can rise pr measurement, to catch incorrect attachment of thermistor
         self.min_rise_offset    = float(self.options["min_rise_offset"])  # Allow checking for slow temp rise when temp is below this offset from target temp 
+        self.min_rise_delay     = float(self.options["min_rise_delay"])   # Allow checking for slow temp rise after this delay time to allow for heat soak
         
         self.temp = None
         self.time = None
@@ -223,26 +225,34 @@ class Safety(Unit):
         target_temp = self.heater.input.target_temperature
         power_on = self.heater.mosfet.get_power() > 0
         
+        # track when the heater was first turned on
+        if target_temp == 0.0:
+            self. start_heating_time = time.time()
+        heating_time = self.time - self.start_heating_time
+        
         # Check that temperature is not rising too quickly
         if temp_delta > self.max_temp_rise:
             a = Alarm(Alarm.HEATER_RISING_FAST, 
-                "Temperature rising too quickly ({} degrees) for {}".format(temp_delta, self.name))
+                "Temperature rising too quickly ({} degrees/sec) for {}".format(temp_delta, self.name))
         # Check that temperature is not rising quickly enough when power is applied
-        if (temp_delta < self.min_temp_rise) and (power_on) and (self.temp < (target_temp - self.min_rise_offset)):
+        if (temp_delta < self.min_temp_rise) \
+            and (power_on) \
+            and (self.temp < (target_temp - self.min_rise_offset))\
+            and (heating_time > self.min_rise_delay):
             a = Alarm(Alarm.HEATER_RISING_SLOW, 
-                "Temperature rising too slowly ({} degrees) for {}".format(temp_delta, self.name))
+                "Temperature rising too slowly ({} degrees/sec) for {}".format(temp_delta, self.name))
         # Check that temperature is not falling too quickly
         if temp_delta < -self.max_temp_fall:
             a = Alarm(Alarm.HEATER_FALLING_FAST, 
-                "Temperature falling too quickly ({} degrees) for {}".format(temp_delta, self.name))
+                "Temperature falling too quickly ({} degrees/sec) for {}".format(temp_delta, self.name))
         # Check that temperature has not fallen below a certain setpoint from target
         if self.min_temp_enabled and self.temp < (target_temp - self.min_temp):
             a = Alarm(Alarm.HEATER_TOO_COLD, 
-                "Temperature below min set point ({} degrees) for {}".format(self.min_temp, self.name))
+                "Temperature of {} below min set point ({} degrees) for {}".format(self.temp, self.min_temp, self.name))
         # Check if the temperature has gone beyond the max value
         if self.temp > self.max_temp:
             a = Alarm(Alarm.HEATER_TOO_HOT, 
-                "Temperature beyond max ({} degrees) for {}".format(self.max_temp, self.name))                
+                "Temperature of {} beyond max ({} degrees) for {}".format(self.temp, self.max_temp, self.name))                
         # Check the time diff, only warn if something is off.     
         if time_delta > 4:
             logging.warning("Time between updates too large: " +
@@ -397,7 +407,7 @@ class PIDControl(Control):
         self.Ti = float(self.options['pid_Ti'])
         self.Td = float(self.options['pid_Td'])
         self.ok_range = float(self.options['ok_range'])
-        self.max_power = min(1.0, float(self.options['ok_range'])/255.0)
+        self.max_power = min(1.0, float(self.options['max_power'])/255.0)
         self.sleep = float(self.options['sleep'])
         
         return

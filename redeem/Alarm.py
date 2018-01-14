@@ -89,7 +89,7 @@ class Alarm:
             Alarm.action_command("pause")
             Alarm.action_command("alarm_heater_falling_fast", self.message)
         elif self.type == Alarm.HEATER_RISING_SLOW:
-            self.stop_print()
+            self.disable_heaters()
             self.inform_listeners()
             Alarm.action_command("pause")
             Alarm.action_command("alarm_heater_rising_slow", self.message)
@@ -137,7 +137,7 @@ class Alarm:
     def disable_heaters(self):
         logging.warning("Disabling heaters")
         for _, heater in iteritems(self.printer.heaters):
-            heater.extruder_error = True
+            heater.heater_error = True
 
     def inform_listeners(self):
         """ Inform all listeners (comm channels) of the occured error """

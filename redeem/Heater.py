@@ -221,6 +221,7 @@ class Heater(Unit):
         finally:
             # Disable this mosfet if anything goes wrong
             self.mosfet.set_power(0)
+            self.set_target_temperature(0.0)
 
     def check_temperature_error(self):
         """ for errors according to the attached safety units """

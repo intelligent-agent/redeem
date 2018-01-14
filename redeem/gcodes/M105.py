@@ -39,7 +39,7 @@ class M105(GCodeCommand):
             # Append the current tool power
             current_power = math.floor(255*self.printer.heaters[current_tool].mosfet.get_power())
             if current_power > 0.0:
-                answer += " @:" + str(curent_power)
+                answer += " @:" + str(current_power)
 
         for c, cooler in enumerate(self.printer.cold_ends):
             temp = cooler.get_temperature()

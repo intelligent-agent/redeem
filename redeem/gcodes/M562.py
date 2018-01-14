@@ -29,7 +29,7 @@ class M562(GCodeCommand):
                 self.printer.heaters["H"].heater_error = False
         else: # No P, Enable all heaters
             for _, heater in iteritems(self.printer.heaters):
-                heater.extruder_error = False
+                heater.heater_error = False
 
     def get_description(self):
         return "Reset temperature fault. "
