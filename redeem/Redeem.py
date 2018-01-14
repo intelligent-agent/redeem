@@ -34,7 +34,7 @@ from threading import Thread
 from multiprocessing import JoinableQueue
 import Queue
 import numpy as np
-import sys
+import sys, traceback
 
 from Mosfet import Mosfet
 from Stepper import *
@@ -84,22 +84,8 @@ class Redeem:
          - default is installed directory
          - allows for running in a local directory when debugging
         """
-        firmware_version = "{}~{}".format(__version__, __release_name__)
-        logging.info("Redeem initializing "+firmware_version)
-
-        printer = Printer()
-        self.printer = printer
-        Path.printer = printer
-        Gcode.printer = printer
-
-        printer.firmware_version = firmware_version
-
-        printer.config_location = config_location
-
-        # Set up and Test the alarm framework
-        Alarm.printer = self.printer
-        Alarm.executor = AlarmExecutor()
-        alarm = Alarm(Alarm.ALARM_TEST, "Alarm framework operational")
+        
+        self.config_location = config_location
 
         # check for config files
         file_path = os.path.join(config_location,"default.cfg")
@@ -112,13 +98,54 @@ class Redeem:
             logging.info(local_path + " does not exist, Creating one")
             os.mknod(local_path)
             os.chmod(local_path, 0o777)
+            
+        
+        configs = [os.path.join(config_location,'default.cfg'),
+                   os.path.join(config_location,'printer.cfg'),
+                   os.path.join(config_location,'local.cfg')]
+                   
+        self.config_error = []
+            
+        # run initialisation
+        self.initialize(configs)
+        
+        if self.config_error:
+            for err in self.config_error:
+                Alarm(Alarm.CONFIG_ERROR, err)
 
+        return
+            
+            
+    def initialize(self, configs=[]):
+        """
+        set up the printer
+        """
+        
+        if not configs:
+            msg = "No configuration files provided, aborting"
+            logging.error(msg)
+            raise RuntimeError(msg)
+            
+        firmware_version = "{}~{}".format(__version__, __release_name__)
+        logging.info("Redeem initializing "+firmware_version)
+        
+        printer = Printer()
+        self.printer = printer
+        Path.printer = printer
+        Gcode.printer = printer
+
+        printer.firmware_version = firmware_version
+
+        printer.config_location = self.config_location
+
+        # Set up and Test the alarm framework
+        Alarm.printer = self.printer
+        Alarm.executor = AlarmExecutor()
+        alarm = Alarm(Alarm.ALARM_TEST, "Alarm framework operational")
+        
         # Parse the config files.
-        printer.config = CascadingConfigParser(
-            [os.path.join(config_location,'default.cfg'),
-             os.path.join(config_location,'printer.cfg'),
-             os.path.join(config_location,'local.cfg')],
-            allow_new = ["Temperature Control"]) # <-- this is where users are allowed to add stuff to the config 
+        printer.config = CascadingConfigParser(configs, 
+                                               allow_new = ["Temperature Control"]) # <-- this is where users are allowed to add stuff to the config 
 
         # Get the revision and loglevel from the Config file
         level = self.printer.config.getint('System', 'loglevel')
@@ -282,10 +309,9 @@ class Redeem:
         if printer.config.reach_revision == "00A0":
             for i, c in enumerate([14,15,7]):
                 self.printer.config["Fans"]["Fan-{}".format(i)]["channel"] = c
-
         
         # define the inputs/outputs available on this board
-        # also define those that are NOT available for later use...
+        # also define those that are NOT available (for later use)
         exclude = []
         heaters = ["E", "H", "HBP"]
         extra = ["A", "B", "C"]
@@ -300,13 +326,13 @@ class Redeem:
             name = "Thermistor-{}".format(e)
             adc = self.printer.config.get("Thermistors", name, "path_adc")
             sensor = self.printer.config.get("Thermistors", name, "sensor")
-            self.printer.thermistors[name] = TemperatureSensor(adc, name, sensor)
-            self.printer.thermistors[name].printer = printer
+            self.printer.thermistors[e] = TemperatureSensor(adc, name, sensor)
+            self.printer.thermistors[e].printer = printer
             
             # Mosfets
             name = "Heater-{}".format(e)
             channel = self.printer.config.getint("Heaters", name, "mosfet")
-            self.printer.mosfets["MOSFET-{}".format(e)] = Mosfet(channel)
+            self.printer.mosfets[e] = Mosfet(channel)
             
 
         # build and connect all of the temperature control infrastructure
@@ -323,11 +349,12 @@ class Redeem:
                       "proportional-control":ProportionalControl,
                       "fan":Fan, "heater":Heater, "safety":Safety}
     
+        # generate units
+        all_built = True
         units = {}
         for section in ["Temperature Control", "Fans", "Heaters"]:
             cfg = self.printer.config[section]
-        
-            # generate units
+
             for name, options in cfg.items():
                 if not isinstance(options, Section):
                     continue
@@ -337,8 +364,22 @@ class Redeem:
                     continue
                 
                 input_type = options["type"]
-                unit = control_units[input_type](name, options, self.printer)
-                units[name] = unit
+                try:
+                    unit = control_units[input_type](name, options, self.printer)
+                    units[name] = unit
+                except Exception as e:
+                    msg = "Configuration section '{}' failed to build. Have you defined {}?".format(name, str(e))
+                    self.config_error.append(msg)
+                    logging.error(msg, exc_info=True)
+                    all_built = False
+        
+        if not all_built:
+            logging.warning("Control unit/s failed. Using default.cfg only.")
+            self.initialize(configs = [configs[0]]) # re-run this method but only on default.cfg
+            return
+            # ^^^ this means that even if we stuff something up, redeem will not crash
+            # it will probably be basically unusable, but it won't crash.
+            
             
         # connect units
         for name, unit in units.items():
@@ -355,9 +396,11 @@ class Redeem:
         # turn on the fans and heaters
         
         for fan in self.printer.fans:
+            logging.info("{} enabled".format(fan.name))
             fan.enable()
             
-        for heater in self.printer.heaters:
+        for name, heater in self.printer.heaters.items():
+            logging.info("{} enabled".format(name))
             heater.enable()
                 
         #######################################################################

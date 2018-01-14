@@ -49,6 +49,7 @@ class Fan(Unit):
         self.force_disable = False
         
         self.printer.fans.append(self)
+        self.max_power = 1.0
         
         self.counter += 1
             
@@ -66,6 +67,14 @@ class Fan(Unit):
             
             self.printer.controlled_fans.append(self)
             logging.info("Added {} to M106/M107".format(self.name))
+            
+    def initialise(self):
+        """ stuff to do after connecting"""
+        
+        # inherit the sleep timer from controller
+        self.sleep = self.input.sleep
+            
+        return
         
 
     def set_PWM_frequency(self, value):
@@ -93,7 +102,7 @@ class Fan(Unit):
         
         while self.enabled:
             self.set_value(self.input.get_power())            		 
-            time.sleep(1)
+            time.sleep(self.sleep)
         self.disabled = True
 
     def disable(self):

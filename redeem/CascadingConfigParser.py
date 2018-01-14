@@ -22,6 +22,7 @@ from configobj import OPTION_DEFAULTS, ConfigObj, Section
 import os
 import logging
 import struct
+import copy
 
 #==============================================================================
 # Functions
@@ -169,6 +170,7 @@ class CascadingConfigParser(ConfigObj):
                 if i == 0: # generate the base config 
                     self._initialise(self.parser_options)
                     self._load(config_file, self._original_configspec)
+                    self.default_cfg = self.dict()
                 else:
                     cfg = ConfigObj(config_file, **self.parser_options)
                 

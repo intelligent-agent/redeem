@@ -29,6 +29,7 @@ from PWM import PWM
 from configobj import Section
 import logging
 from threading import Thread
+import numpy as np
 
 from TemperatureSensor import TemperatureSensor
 from ColdEnd import ColdEnd
@@ -53,18 +54,18 @@ class Unit:
         if name in units:
             return units[name]
         elif "Thermistor" in name:
-            if name in self.printer.thermistors:
-                return self.printer.thermistors[name]
+            e = name.split("-")[-1]
+            return self.printer.thermistors[e]
         elif "MOSFET" in name:
-            if name in self.printer.mosfets:
-                return self.printer.mosfets[name]
+            e = name.split("-")[-1]
+            return self.printer.mosfets[name]
         elif "ds18b20" in name:
             for sensor in self.printer.cold_ends:
                 if name == sensor.name:
                     return sensor
         else: #assume it is a constant
             c_name = "Constant-{}".format(self.counter)
-            unit = ConstantControl(c_name, {"input":int(name)}, self.printer)
+            unit = ConstantControl(c_name, {"input":int(name), "sleep":1.0}, self.printer)
             units[c_name] = unit
             return unit
 
@@ -282,6 +283,9 @@ class Control(Unit):
             self.output.input = self
         
         return
+        
+    def reset(self):
+        return
             
         
 class ConstantControl(Control):
@@ -290,6 +294,7 @@ class ConstantControl(Control):
     
     def get_options(self):
         self.power = int(self.options['input'])/255.0
+        self.sleep = 1.0 # use a default
         return
         
     def get_power(self):
@@ -301,22 +306,39 @@ class OnOffControl(Control):
     feedback_control = True
         
     def get_options(self):
-        self.on_temperature = float(self.options['on_temperature'])
-        self.off_temperature = float(self.options['off_temperature'])
-        self.on_power = float(self.options['on_power'])/255.0
-        self.off_power = float(self.options['off_power'])/255.0
         self.target_temperature = float(self.options['target_temperature'])
+        self.on_offset = float(self.options['on_offset'])
+        self.off_offset = float(self.options['off_offset'])
+        self.max_power = float(self.options['on_power'])/255.0
+        self.off_power = float(self.options['off_power'])/255.0
+        self.sleep = float(self.options['sleep'])
+        
+        self.on_temperature = self.target_temperature + self.on_offset
+        self.off_temperature = self.target_temperature + self.off_offset
         
         self.power = self.off_power
         
         return
+        
+    def set_target_temperature(self, temp):
+        """ set the target temperature """
+
+        self.target_temperature = float(temp)
+        self.on_temperature = self.target_temperature + self.on_offset
+        self.off_temperature = self.target_temperature + self.off_offset
+        
+        return
+        
+    def get_target_temperature(self):
+        """ get the target temperature """
+        return self.target_temperature
         
     def get_power(self):
 
         temp = self.input.get_temperature()
         
         if temp <= self.on_temperature:
-            self.power = self.on_power
+            self.power = self.max_power
         elif temp >= self.off_temperature:
             self.power = self.off_power
         
@@ -332,9 +354,19 @@ class ProportionalControl(Control):
         self.current_temp = 0.0
         self.target_temperature = float(self.options['target_temperature'])             # Target temperature (Ts). Start off. 
         self.P = float(self.options['proportional'])                     # Proportional 
-        self.max_speed = float(self.options['max_speed'])/255.0
-        self.min_speed = float(self.options['min_speed'])/255.0
+        self.max_power = min(1.0, float(self.options['max_power'])/255.0)
+        self.min_power = max(0, float(self.options['min_power'])/255.0)
         self.ok_range = float(self.options['ok_range'])
+        self.sleep = float(self.options['sleep'])
+        
+    def set_target_temperature(self, temp):
+        """ set the target temperature """
+        self.target_temperature = float(temp)
+        return
+        
+    def get_target_temperature(self):
+        """ get the target temperature """
+        return self.target_temperature
 
     def get_power(self):
         """ PID Thread that keeps the temperature stable """
@@ -347,10 +379,10 @@ class ProportionalControl(Control):
         power = self.P*error  # The formula for the PID (only P)		
         power = max(min(power, 1.0), 0.0)                             # Normalize to 0,1
         
-        # Clamp the max speed
-        power = min(power, self.max_speed)
-        # Clamp min speed
-        power = max(power, self.min_speed)
+        # Clamp the max power
+        power = min(power, self.max_power)
+        # Clamp min power
+        power = max(power, self.min_power)
         
         return power
         
@@ -365,6 +397,7 @@ class PIDControl(Control):
         self.Ti = float(self.options['pid_Ti'])
         self.Td = float(self.options['pid_Td'])
         self.ok_range = float(self.options['ok_range'])
+        self.max_power = min(1.0, float(self.options['ok_range'])/255.0)
         self.sleep = float(self.options['sleep'])
         
         return
@@ -381,6 +414,16 @@ class PIDControl(Control):
         
         self.error_integral = 0.0           # Accumulated integral since the temperature came within the boudry
         self.error_integral_limit = 100.0   # Integral temperature boundary
+        
+    
+    def set_target_temperature(self, temp):
+        """ set the target temperature """
+        self.target_temperature = float(temp)
+        return
+        
+    def get_target_temperature(self):
+        """ get the target temperature """
+        return self.target_temperature
         
         
     def get_power(self):

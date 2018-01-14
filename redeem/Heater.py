@@ -38,15 +38,12 @@ class Heater(Unit):
 
         self.name = name
         self.options = options
-        self.printer = printer        
+        self.printer = printer       
         
         self.mosfet = self.options["mosfet"]
         self.prefix = self.options["prefix"]
-        self.sleep = float(self.options["sleep"])                    # Time to sleep between measurements
-        
         
         self.safety = [s.strip() for s in options["safety"].split(",")]
-        self.max_power          = float(self.options["max_power"])                # Maximum power
         self.min_temp_enabled   = False  # Temperature error limit 
         
         self.input = self.options["input"]
@@ -55,13 +52,17 @@ class Heater(Unit):
         
         self.temperatures = []
         
+        # add to printer
+        self.short_name = self.name.split("-")[-1]
+        self.printer.heaters[self.short_name] = self
+        
         return
 
     def connect(self, units):
         """ connect to sensors and control units"""
         
         # connect a MOSFET
-        self.mosfet = self.printer.mosfets[self.name.replace("Heater", "MOSFET")]
+        self.mosfet = self.printer.mosfets[self.short_name]
         
         # connect the controller
         self.input = self.get_unit(self.input, units)
@@ -75,9 +76,9 @@ class Heater(Unit):
     def initialise(self):
         """ stuff to do after connecting"""
         
-        # inherit the sleep timer from PID controller if that is what we are using
-        if isinstance(self.input, PIDControl):
-            self.sleep = self.input.sleep
+        # inherit the sleep timer from controller
+        self.sleep = self.input.sleep
+        self.max_power = self.input.max_power
             
         return
         
@@ -104,7 +105,7 @@ class Heater(Unit):
     def set_target_temperature(self, temp):
         """ Set the target temperature of the controller """
         self.min_temp_enabled = False
-        self.input.target_temperature = float(temp)
+        self.input.set_target_temperature(temp)
 
     def get_temperature(self):
         """ get the temperature of the thermistor and the control input"""
@@ -116,18 +117,18 @@ class Heater(Unit):
 
     def get_target_temperature(self):
         """ get the target temperature"""
-        return self.input.target_temperature
+        return self.input.get_target_temperature()
 
     def is_target_temperature_reached(self):
         """ Returns true if the target temperature is reached """
         
         current_temp = self.temperatures[-1]
-        target_temp = self.input.target_temperature
+        target_temp = self.get_target_temperature()
         
         if target_temp == 0:
             return True
         if current_temp == 0:
-            self.input.target_temperature = 0
+            self.set_target_temperature(0)
             target_temp = 0
         err = abs(current_temp - target_temp)
         reached = err < self.input.ok_range
@@ -135,7 +136,7 @@ class Heater(Unit):
 
     def is_temperature_stable(self, seconds=10):
         """ Returns true if the temperature has been stable for n seconds """
-        target_temp = self.input.target_temperature
+        target_temp = self.get_target_temperature()
         ok_range = self.input.ok_range
         if len(self.temperatures) < int(seconds/self.sleep):
             return False
@@ -167,7 +168,7 @@ class Heater(Unit):
     
     def disable(self):
         """ Stops the heater and the PID controller """
-        self.input.target_temperature = 0
+        self.set_target_temperature(0)
         self.enabled = False
         self.mosfet.set_power(0.0)
         # Wait for PID to stop
@@ -200,7 +201,7 @@ class Heater(Unit):
                 
                 # get the controlling temperature
                 temp = self.input.input.get_temperature()
-                self.temperatures.append(cntrl_temp)
+                self.temperatures.append(temp)
                 self.temperatures[:-max(int(60/self.sleep), self.avg)] = [] # Keep only this much history
 
                 # Run safety checks

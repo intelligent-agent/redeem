@@ -44,6 +44,7 @@ class Printer:
 
     def __init__(self):
         self.config_location = None
+        self.alarms      = []
         self.steppers    = {}
         self.heaters     = {}
         self.thermistors = {}
@@ -233,6 +234,18 @@ class Printer:
         # Only update if they are different
         if mat != self.config.get('Geometry', 'bed_compensation_matrix'):
             self.config.set('Geometry', 'bed_compensation_matrix', mat)
+            
+    def resend_alarms(self):
+        """ send all alarms that are in the alarms queue """
+            
+        for alarm in self.alarms:
+            alarm.execute()
+            #logging.info("Resent alarm : {}".format(alarm.message))
+        
+        # clear alarms
+        self.alarms = []
+        
+        return
 
     def movement_axis(self, axis):
         if self.e_axis_active and axis == "E":

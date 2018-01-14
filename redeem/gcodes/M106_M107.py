@@ -27,6 +27,8 @@ class M106(GCodeCommand):
         value = float(gcode.get_float_by_letter("S", 255)) / 255.0
     
         for fan in fans:
+            # exit any control loop that the fan maybe in 
+            fan.disable()
             if gcode.has_letter("R"): # Ramp to value
                 delay = gcode.get_float_by_letter("R", 0.01)
                 fan.ramp_to(value, delay)            

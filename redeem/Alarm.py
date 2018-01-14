@@ -39,7 +39,8 @@ class Alarm:
     IMPOSSIBLE_MOVE_ATTEMPTED = 9
     STEPPER_FAULT = 10  # Error on a stepper
     ALARM_TEST = 11  # Testsignal, used during start-up
-    HEATER_RISING_SLOW = 12  # Temperture is rising too fast
+    HEATER_RISING_SLOW = 12  # Temperature is rising too slow
+    CONFIG_ERROR = 13 # error when importing config
 
     printer = None
     executor = None
@@ -57,6 +58,8 @@ class Alarm:
             Alarm.executor.queue.put(self)
         else:
             logging.error("Enable to enqueue alarm!")
+            
+        self.printer.alarms.append(self)
 
     def execute(self):
         """ Execute the alarm """
@@ -115,6 +118,11 @@ class Alarm:
         elif self.type == Alarm.ALARM_TEST:
             logging.info("Alarm: Operational")
             Alarm.action_command("alarm_operational", self.message)
+        elif self.type == Alarm.CONFIG_ERROR:
+            self.stop_print()
+            Alarm.action_command("pause")
+            self.inform_listeners()
+            Alarm.action_command("alarm_config_error", self.message)
         else:
             logging.warning("An Alarm of unknown type was sounded!")
 
