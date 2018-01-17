@@ -26,6 +26,9 @@ class G90(GCodeCommand):
     def is_buffered(self):
         return True
 
+    def is_async(self):
+        return True
+
 
 class G91(GCodeCommand):
 
@@ -38,4 +41,7 @@ class G91(GCodeCommand):
         return "Set movement mode to relative"
 
     def is_buffered(self):
+        return True
+
+    def is_async(self):
         return True

@@ -31,7 +31,6 @@ import os.path
 import signal
 import threading
 from threading import Thread
-from multiprocessing import JoinableQueue
 import Queue
 import numpy as np
 import sys
@@ -425,11 +424,12 @@ class Redeem:
                 printer.filament_sensors.append(sensor)
 
         # Make a queue of commands
-        self.printer.commands = JoinableQueue(10)
+        self.printer.commands = Queue.Queue(10)
 
         # Make a queue of commands that should not be buffered
-        self.printer.sync_commands = JoinableQueue()
-        self.printer.unbuffered_commands = JoinableQueue(10)
+        self.printer.sync_commands = Queue.Queue()
+        self.printer.unbuffered_commands = Queue.Queue(10)
+        self.printer.async_commands = Queue.Queue(10)
 
         # Bed compensation matrix
         printer.matrix_bed_comp = printer.load_bed_compensation_matrix()
@@ -566,15 +566,19 @@ class Redeem:
                     args=(self.printer.commands, "buffered"), name="p0")
         p1 = Thread(target=self.loop,
                     args=(self.printer.unbuffered_commands, "unbuffered"), name="p1")
-        p2 = Thread(target=self.eventloop,
-                    args=(self.printer.sync_commands, "sync"), name="p2")
+        p2 = Thread(target=self.loop,
+                    args=(self.printer.async_commands, "async"), name="p2")
+        p3 = Thread(target=self.eventloop,
+                    args=(self.printer.sync_commands, "sync"), name="p3")
         p0.daemon = True
         p1.daemon = True
         p2.daemon = True
+        p3.daemon = True
 
         p0.start()
         p1.start()
         p2.start()
+        p3.start()
 
         Alarm.executor.start()
         Key_pin.listener.start()
@@ -595,10 +599,11 @@ class Redeem:
                     gcode = queue.get(block=True, timeout=1)
                 except Queue.Empty:
                     continue
-                #logging.debug("Executing "+gcode.code()+" from "+name + " " + gcode.message)
+                logging.debug("Executing "+gcode.code()+" from "+name + " " + gcode.message)
                 self._execute(gcode)
                 self.printer.reply(gcode)
                 queue.task_done()
+                logging.debug("Completed "+gcode.code()+" from "+name + " " + gcode.message)
         except Exception:
             logging.exception("Exception in {} loop: ".format(name))
 
@@ -611,6 +616,7 @@ class Redeem:
                     try:
                         gcode = queue.get(block=True, timeout=1)
                     except Queue.Empty:
+                        logging.info("spurious sync event completion")
                         continue
                     self._synchronize(gcode)
                     logging.info("Event handled for " + gcode.code() + " from " + name + " " + gcode.message)

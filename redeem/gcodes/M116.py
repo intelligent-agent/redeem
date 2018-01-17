@@ -15,7 +15,6 @@ from .GCodeCommand import GCodeCommand
 from redeem.Gcode import Gcode
 
 
-
 class M116(GCodeCommand):
     def execute(self, g):
         self.printer.running_M116 = True
@@ -31,7 +30,8 @@ class M116(GCodeCommand):
             elif g.has_letter("T"):  # Set hotend temp based on the T-param
                 heater_index = g.get_int_by_letter("T", 0)
             if heater_index > len(self.printer.heaters) - 1:
-                logging.warning("M116: heater index out of bounds: {}".format(heater_index))
+                logging.warning(
+                    "M116: heater index out of bounds: {}".format(heater_index))
                 return
 
         all_ok = [
@@ -57,6 +57,7 @@ class M116(GCodeCommand):
                 all_ok[5] |= self.printer.heaters['C'].is_target_temperature_reached()
 
             m105 = Gcode({"message": "M105", "parent": g})
+            self.printer.processor.resolve(m105)
             self.printer.processor.execute(m105)
             if False not in all_ok or not self.printer.running_M116:
                 logging.info("Heating done.")
@@ -65,7 +66,8 @@ class M116(GCodeCommand):
                 return
             else:
                 answer = m105.get_answer()
-                answer += " E: " + ("0" if self.printer.current_tool == "E" else "1")
+                answer += " E: " + \
+                    ("0" if self.printer.current_tool == "E" else "1")
                 m105.set_answer(answer[2:])  # strip away the "ok"
                 self.printer.reply(m105)
                 time.sleep(1)
@@ -84,8 +86,8 @@ class M116(GCodeCommand):
         # unittests and docs may not have printer set when looking for docs
         if not self.printer or self.printer.config.reach_revision:
             desc += (" 2 - Extruder A\n"
-                    " 3 - Extruder B\n"
-                    " 4 - Extruder C")
+                     " 3 - Extruder B\n"
+                     " 4 - Extruder C")
         return desc
 
     def is_buffered(self):

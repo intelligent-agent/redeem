@@ -29,7 +29,7 @@ class G33(GCodeCommand):
 
     def execute(self, g):
         num_factors = g.get_int_by_letter("N", 4)
-        if num_factors not in [3,4,6,8,9]:
+        if num_factors not in [3, 4, 6, 8, 9]:
             msg = "G33: Invalid number of calibration factors."
             logging.error(msg)
             self.printer.send_message(g.prot, msg)
@@ -38,46 +38,59 @@ class G33(GCodeCommand):
         # we reuse the G29 macro for the autocalibration purposes
         gcodes = self.printer.config.get("Macros", "G29").split("\n")
         self.printer.path_planner.wait_until_done()
-        for gcode in gcodes:        
+        for gcode in gcodes:
             G = Gcode({"message": gcode, "parent": g})
             self.printer.processor.execute(G)
             self.printer.path_planner.wait_until_done()
 
         # adjust probe heights
-        probe_z_coords = np.array(self.printer.probe_heights[:len(self.printer.probe_points)])
-        offset_z = self.printer.config.getfloat('Probe', 'offset_z')*1000.
-        logging.info("G33: adjusting offset using Z-probe offset by " + str(offset_z))
+        probe_z_coords = np.array(
+            self.printer.probe_heights[:len(self.printer.probe_points)])
+        offset_z = self.printer.config.getfloat('Probe', 'offset_z') * 1000.
+        logging.info(
+            "G33: adjusting offset using Z-probe offset by " + str(offset_z))
         # this is where the print head was when the probe was triggered
         print_head_zs = probe_z_coords - offset_z
 
         # Log the found heights
-        logging.info("G33: Found heights: "+str(np.round(print_head_zs, 2)))
+        logging.info("G33: Found heights: " + str(np.round(print_head_zs, 2)))
 
         simulate_only = g.has_letter("S")
 
         # run the actual delta autocalibration
         params = self.printer.path_planner.autocalibrate_delta_printer(
-                    num_factors, simulate_only,
-                    self.printer.probe_points, print_head_zs)
+            num_factors, simulate_only,
+            self.printer.probe_points, print_head_zs)
         logging.info("G33: Finished printer autocalibration\n")
 
         if g.has_letter("P"):
             # dump the dictionary to log file
-            logging.debug(str(params)) 
-            
-            #pretty print to printer output
-            self.printer.send_message(g.prot, "delta calibration : L = %g"%params["L"])
-            self.printer.send_message(g.prot, "delta calibration : r = %g"%params["r"])
-            self.printer.send_message(g.prot, "delta calibration : A_angular = %g"%params["A_angular"])
-            self.printer.send_message(g.prot, "delta calibration : B_angular = %g"%params["B_angular"])
-            self.printer.send_message(g.prot, "delta calibration : C_angular = %g"%params["C_angular"])
-            self.printer.send_message(g.prot, "delta calibration : A_radial = %g"%params["A_radial"])
-            self.printer.send_message(g.prot, "delta calibration : B_radial = %g"%params["B_radial"])
-            self.printer.send_message(g.prot, "delta calibration : C_radial = %g"%params["C_radial"])
-            self.printer.send_message(g.prot, "delta calibration : offset_x = %g"%params["offset_x"])
-            self.printer.send_message(g.prot, "delta calibration : offset_y = %g"%params["offset_y"])
-            self.printer.send_message(g.prot, "delta calibration : offset_z = %g"%params["offset_z"])
-        
+            logging.debug(str(params))
+
+            # pretty print to printer output
+            self.printer.send_message(
+                g.prot, "delta calibration : L = %g" % params["L"])
+            self.printer.send_message(
+                g.prot, "delta calibration : r = %g" % params["r"])
+            self.printer.send_message(
+                g.prot, "delta calibration : A_angular = %g" % params["A_angular"])
+            self.printer.send_message(
+                g.prot, "delta calibration : B_angular = %g" % params["B_angular"])
+            self.printer.send_message(
+                g.prot, "delta calibration : C_angular = %g" % params["C_angular"])
+            self.printer.send_message(
+                g.prot, "delta calibration : A_radial = %g" % params["A_radial"])
+            self.printer.send_message(
+                g.prot, "delta calibration : B_radial = %g" % params["B_radial"])
+            self.printer.send_message(
+                g.prot, "delta calibration : C_radial = %g" % params["C_radial"])
+            self.printer.send_message(
+                g.prot, "delta calibration : offset_x = %g" % params["offset_x"])
+            self.printer.send_message(
+                g.prot, "delta calibration : offset_y = %g" % params["offset_y"])
+            self.printer.send_message(
+                g.prot, "delta calibration : offset_z = %g" % params["offset_z"])
+
         return
 
     def get_description(self):
@@ -110,6 +123,8 @@ P   Print the calculated variables"""
     def is_buffered(self):
         return True
 
+    def is_async(self):
+        return True
+
     def get_test_gcodes(self):
         return ["G33 F4"]
-

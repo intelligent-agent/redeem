@@ -20,7 +20,7 @@ class G0(GCodeCommand):
         if g.has_letter("F"):  # Get the feed rate & convert from mm/min to SI unit m/s
             self.printer.feed_rate = g.get_distance_by_letter("F") / 60000.
             g.remove_token_by_letter("F")
-        if  g.has_letter("Q"):  # Get the Accel & convert from mm/min^2 to SI unit m/s^2
+        if g.has_letter("Q"):  # Get the Accel & convert from mm/min^2 to SI unit m/s^2
             self.printer.accel = g.get_distance_by_letter("Q") / 3600000.
             g.remove_token_by_letter("Q")
         smds = {}
@@ -28,21 +28,24 @@ class G0(GCodeCommand):
             axis = self.printer.movement_axis(g.token_letter(i))
 
             # Get the value, new position or vector
-            value = float(g.token_distance(i)) / 1000.0 # mm to SI unit m
+            value = float(g.token_distance(i)) / 1000.0  # mm to SI unit m
             if axis in ('E', 'H', 'A', 'B', 'C'):
                 value *= self.printer.extrude_factor
             smds[axis] = value
-    
+
         if self.printer.movement == Path.ABSOLUTE:
-            path = AbsolutePath(smds, self.printer.feed_rate * self.printer.speed_factor, self.printer.accel)
+            path = AbsolutePath(smds, self.printer.feed_rate *
+                                self.printer.speed_factor, self.printer.accel)
         elif self.printer.movement == Path.RELATIVE:
-            path = RelativePath(smds, self.printer.feed_rate * self.printer.speed_factor, self.printer.accel)
+            path = RelativePath(smds, self.printer.feed_rate *
+                                self.printer.speed_factor, self.printer.accel)
         elif self.printer.movement == Path.MIXED:
-            path = MixedPath(smds, self.printer.feed_rate * self.printer.speed_factor, self.printer.accel)
+            path = MixedPath(smds, self.printer.feed_rate *
+                             self.printer.speed_factor, self.printer.accel)
         else:
             logging.error("invalid movement: " + str(self.printer.movement))
             return
-        
+
         # Add the path. This blocks until the path planner has capacity
         self.printer.path_planner.add_path(path)
 
@@ -66,13 +69,15 @@ class G0(GCodeCommand):
     def is_buffered(self):
         return True
 
+    def is_async(self):
+        return True
+
     def get_test_gcodes(self):
         return [
-            "G0 X0 Y0 Z0 F1000", 
+            "G0 X0 Y0 Z0 F1000",
             "G0 X1 Y1 Z0"
         ]
 
 
 class G1(G0):
     pass
-
