@@ -38,18 +38,20 @@ class G34(GCodeCommand):
             probe_length = g.get_float_by_letter("D")
         else:
             probe_length = 1000. * self.printer.config.getfloat('Probe',
-                                                                'length') # m
+                                                                'length')  # m
         # Get probe speed. If not preset, use config value.
         if g.has_letter("F"):
-            probe_speed = g.get_float_by_letter("F") / 60000.0 # mm/min -> m/s
+            probe_speed = g.get_float_by_letter("F") / 60000.0  # mm/min -> m/s
         else:
-            probe_speed = self.printer.config.getfloat('Probe', 'speed') # m/s
+            probe_speed = self.printer.config.getfloat('Probe', 'speed')  # m/s
 
         # Get acceleration. If not present, use value from config.
         if g.has_letter("Q"):
-            probe_accel = g.get_float_by_letter("Q") / 3600000 # mm/min^2 -> m/s^2
+            probe_accel = g.get_float_by_letter(
+                "Q") / 3600000  # mm/min^2 -> m/s^2
         else:
-            probe_accel = self.printer.config.getfloat('Probe', 'accel') # m/s^2
+            probe_accel = self.printer.config.getfloat(
+                'Probe', 'accel')  # m/s^2
 
         probe_start_height = g.get_float_by_letter("Z", 5.0)
 
@@ -73,7 +75,7 @@ class G34(GCodeCommand):
         exec_and_wait("G32")
 
         probe_z = 1000. * self.printer.path_planner.probe(
-                probe_length / 1000., probe_speed, probe_accel)
+            probe_length / 1000., probe_speed, probe_accel)
 
         # retract probe
         logging.debug("retracting probe")
@@ -85,8 +87,8 @@ class G34(GCodeCommand):
         logging.debug("z_offset = %f", z_offset)
 
         self.printer.send_message(
-                g.prot,
-                "Probe Z offset: {} mm".format(z_offset))
+            g.prot,
+            "Probe Z offset: {} mm".format(z_offset))
 
         # store the results
         if not g.has_letter("S"):
@@ -119,3 +121,5 @@ S   Simulate only (do not store the results)
     def is_buffered(self):
         return True
 
+    def is_async(self):
+        return True

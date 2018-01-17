@@ -14,10 +14,9 @@ from redeem.TextWriter import text_writer
 
 class GCodeCommand(object):
     __metaclass__ = ABCMeta
-    
+
     def __init__(self, printer):
         self.printer = printer
-        self.readyEvent = None
 
     @abstractmethod
     def execute(self, gcode):
@@ -48,10 +47,14 @@ class GCodeCommand(object):
         """ Return true if the command requires realtime synchronization with command execution """
         return False
 
+    def is_async(self):
+        """ Return true if the command executes asynchronously (such as a movement command that queues in the native path planner) """
+        return False
+
     def __str__(self):
         """ The class name of the gcode """
         return type(self).__name__
-    
+
     def get_test_gcodes(self):
-        """ List of gcode strings for nose testing """ 
+        """ List of gcode strings for nose testing """
         return []
