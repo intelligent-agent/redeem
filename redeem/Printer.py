@@ -54,6 +54,7 @@ class Printer:
         self.cold_ends   = []
         self.coolers     = []
         self.comms       = {}  # Communication channels
+        self.command_connect = {}
         self.path_planner       = None
         self.speed_factor       = 1.0
         self.unit_factor        = 1.0

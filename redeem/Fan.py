@@ -44,37 +44,31 @@ class Fan(Unit):
         self.options = options
         self.printer = printer
         
-        self.input = self.options["input"]
+        self.input = None
+        if "input" in self.options:
+            self.input = self.options["input"]
+            
         self.channel = int(self.options["channel"])
-        self.force_disable = False
         
-        self.printer.fans.append(self)
-        self.max_power = 1.0
+        # get fan index
+        i = int(name[-1])
+        
+        self.printer.fans[i] = self
+        self.max_value = 1.0
         
         self.counter += 1
             
         return
         
     def connect(self, units):
-        self.input = self.get_unit(self.input, units)
-        
-        if self.options["add-to-M106"] == "True":
-            self.force_disable = True
-            if not isinstance(self.input, ConstantControl):
-                msg = "{} has a non-constant controller attached. For control by M106/M107 set config 'input' as a constant".format(self.name)
-                logging.error(msg)
-                raise RuntimeError(msg)
+        if self.input:
+            self.input = self.get_unit(self.input, units)
+            if not self.input.output:        
+                self.input.output = self
             
-            self.printer.controlled_fans.append(self)
-            logging.info("Added {} to M106/M107".format(self.name))
+    def check(self):
+        logging.info("{} --> {}".format(self.input, self.name))
             
-    def initialise(self):
-        """ stuff to do after connecting"""
-        
-        # inherit the sleep timer from controller
-        self.sleep = self.input.sleep
-            
-        return
         
 
     def set_PWM_frequency(self, value):
@@ -101,8 +95,8 @@ class Fan(Unit):
         """ follow a target PWM value 0..1"""
         
         while self.enabled:
-            self.set_value(self.input.get_power())            		 
-            time.sleep(self.sleep)
+            self.set_value(self.input.get_value())            		 
+            time.sleep(self.input.sleep)
         self.disabled = True
 
     def disable(self):
@@ -116,13 +110,19 @@ class Fan(Unit):
 
     def enable(self):
         """ starts the controller """
-        if self.force_disable:
-            self.disabled = True
+        
+        if not self.input:
             self.enabled = False
+            self.disabled = True
+            self.set_value(0.0)
             return
+            
         self.enabled = True
         self.disabled = False
         self.t = Thread(target=self.run_controller, name=self.name)
         self.t.daemon = True
         self.t.start()	
         return
+        
+    def __str__(self):
+        return self.name

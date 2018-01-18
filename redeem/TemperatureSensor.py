@@ -86,6 +86,9 @@ class TemperatureSensor:
         if not self.sensor:
             return 0.0
         return self.sensor.get_temperature(voltage)
+        
+    def get_value(self):
+        return self.get_temperature()
 
 
     """
@@ -108,6 +111,9 @@ class TemperatureSensor:
 
         TemperatureSensor.mutex.release()
         return voltage
+        
+    def __str__(self):
+        return self.name
 
 
 """ This class represents standard thermistor sensors.

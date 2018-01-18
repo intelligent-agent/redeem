@@ -96,7 +96,7 @@ class Unit:
                     return sensor
         else: #assume it is a constant
             c_name = "Constant-{}".format(self.counter)
-            unit = ConstantControl(c_name, {"input":int(name), "sleep":1.0}, self.printer)
+            unit = ConstantControl(c_name, {"value":int(name)}, self.printer)
             units[c_name] = unit
             return unit
 
@@ -110,6 +110,9 @@ class Unit:
     def check(self):
         """ run any checks that need to be performed after full initialisation"""
         return
+        
+    def __str__(self):
+        return self.name
                         
         
 class Alias(Unit):
@@ -119,11 +122,8 @@ class Alias(Unit):
         self.name = name
         self.options = options
         self.printer = printer
-        self.input = options["input"]
         
-        self.output = None
-        if "output" in options:
-            self.output = options["output"]
+        self.input = self.options["input"]
             
         self.counter += 1
         
@@ -131,12 +131,12 @@ class Alias(Unit):
         
     def connect(self, units):
         self.input = self.get_unit(self.input, units)
-        if self.output:
-            self.output = self.get_unit(self.output, units)
-            self.output.input = self
         
-    def get_temperature(self):
-        return self.input.get_temperature()
+    def get_value(self):
+        return self.input.get_value()
+        
+    def check(self):
+        logging.info("{} --> {} ".format(self.input, self.name))
         
         
 class Compare(Unit):
@@ -144,41 +144,38 @@ class Compare(Unit):
         self.name = name
         self.options = options
         self.printer = printer
-        self.inputs = []
+        
+        self.input = []
         for i in range(2):
-            self.inputs.append(options["input-{}".format(i)])
-            
-        self.output = None
-        if "output" in options:
-            self.output = options["output"]
+            self.input.append(options["input-{}".format(i)])
             
         self.counter += 1
             
         return
     
     def connect(self, units):
+        
         for i in range(2):
-            self.inputs[i] = self.get_unit(self.inputs[i], units)
-        if self.output:
-            self.output = self.get_unit(self.output, units)
-            self.output.input = self
+            self.input[i] = self.get_unit(self.input[i], units)
+            
+    def check(self):
+        logging.info("({} and {}) --> {}".format(self.input[0].name, self.input[1].name, self.name))
     
     
 class Difference(Compare):
-    def get_temperature(self):
-        return self.inputs[0].get_temperature() - self.inputs[1].get_temperature()
+    def get_value(self):
+        return self.input[0].get_value() - self.input[1].get_value()
         
         
 class Maximum(Compare):
-    def get_temperature(self):
-        return max(self.inputs[0].get_temperature(), self.inputs[1].get_temperature())
+    def get_value(self):
+        return max(self.input[0].get_value(), self.input[1].get_value())
         
         
 class Minimum(Compare):
-    def get_temperature(self):
-        return min(self.inputs[0].get_temperature(), self.inputs[1].get_temperature())
-        
-        
+    def get_value(self):
+        return min(self.input[0].get_value(), self.input[1].get_value())
+
 class Safety(Unit):
     
     def __init__(self, name, options, printer):
@@ -202,19 +199,23 @@ class Safety(Unit):
         return
         
     def connect(self, units):
-        
         self.input = self.get_unit(self.input, units)
         self.heater = self.get_unit(self.heater, units)
-        
         return
         
     def initialise(self):
         
         # insert into the attached heater, if it isn't already there
-        if self not in self.heater.safety:
+        if not self.heater.safety:
+            self.heater.safety = [self]
+        elif self not in self.heater.safety:
             self.heater.safety.append(self)
+            
+        input_sensor = self.input
+        if isinstance(self.input, Alias):
+            input_sensor = self.input.input
     
-        if (not isinstance(self.input, TemperatureSensor)) and (not isinstance(self.input, ColdEnd)):
+        if (not isinstance(input_sensor, TemperatureSensor)) and (not isinstance(input_sensor, ColdEnd)):
             msg = "{} will not work, input = {} is not a temperature sensor".format(self.name, self.input.name)
             logging.error(msg)
             
@@ -230,6 +231,9 @@ class Safety(Unit):
                         
         return
         
+    def check(self):
+        logging.info("{} --> {} --> {}".format(self.input.name, self.name, self.heater.name))
+        
     def set_min_temp_enabled(self, flag):
         """ enable the min_temp flag """
         self.min_temp_enabled = flag
@@ -240,7 +244,7 @@ class Safety(Unit):
         
         # add to ring buffers
         self.time.append(time.time())
-        self.temp.append(self.input.get_temperature())
+        self.temp.append(self.input.get_value())
         
         # get ordered lists
         times = [self.time[i] for i in range(self.time.get_length())]
@@ -259,7 +263,7 @@ class Safety(Unit):
         time_delta = times[-1] - times[0]
         
         # heater info
-        target_temp = self.heater.input.target_temperature
+        target_temp = self.heater.input.target_value
         power_on = self.heater.mosfet.get_power() > 0
         
         # track when the heater was first turned on
@@ -309,13 +313,12 @@ class Control(Unit):
         self.name = name
         self.options = options
         self.printer = printer
-        self.input = options["input"]
         
+        self.input = None
         self.output = None
-        if "output" in options:
-            self.output = options["output"]
         
-        self.power = 0.0
+        self.value = 0.0
+        self.sleep = 0.25
         
         self.get_options()
         
@@ -324,6 +327,7 @@ class Control(Unit):
         return
         
     def get_options(self):
+            
         return
         
     def connect(self, units):
@@ -336,6 +340,9 @@ class Control(Unit):
         
     def reset(self):
         return
+        
+    def check(self):        
+        logging.info("{} --> {} --> {}".format(self.input, self.name, self.output))
             
         
 class ConstantControl(Control):
@@ -343,12 +350,74 @@ class ConstantControl(Control):
     feedback_control = False
     
     def get_options(self):
-        self.power = int(self.options['input'])/255.0
-        self.sleep = 1.0 # use a default
+        
+        self.output = None
+        if "output" in self.options:
+            self.output = self.options["output"]
+            
+        self.value = int(self.options['value'])/255.0
         return
         
-    def get_power(self):
-        return self.power
+    def connect(self, units):
+        if self.output:
+            self.output = self.get_unit(self.output, units)
+            self.output.input = self
+        
+        
+    def get_value(self):
+        return self.value
+        
+    def set_target_value(self, value):
+        self.value = float(value)
+        
+    def ramp_to(self, value, delay):
+        save_sleep = self.sleep
+        self.sleep = delay/2.0
+        for w in range(int(self.value*255.0), int(value*255.0), (1 if value >= self.value else -1)):
+            self.value = w/255.0
+            time.sleep(delay)
+        self.value = value
+        self.sleep = save_sleep
+        
+    
+    def check(self):
+        logging.info("{} --> {} --> {}".format(self.value, self.name, self.output))
+        
+        
+
+class CommandCode(ConstantControl):
+    """ 
+    For connecting G and M codes
+    """
+        
+    def get_options(self):
+        self.command = [c.strip() for c in self.options["command"].split(",")]
+        for command in self.command:
+            if command in self.printer.command_connect:
+                logging.warning("multiple instances of {} used in [Temperature Control]".format(self.command))
+            self.printer.command_connect[command] = self
+        
+        self.output = []
+        if "output" in self.options:
+            self.output = [o.strip() for o in self.options["output"].split(",")]
+            
+        self.input = self.command
+        
+        
+    def connect(self, units):
+        for i, output in enumerate(self.output):
+            self.output[i] = self.get_unit(output, units)
+            self.output[i].input = self
+            
+    def check(self):
+        outputs = "["
+        for output in self.output:
+            outputs += "{}, ".format(output)
+        outputs = outputs[0:-2] + "]"
+        logging.info("{} --> {} --> {}".format(self.input, self.name, outputs))
+            
+    def __str__(self):
+        return str(self.name)
         
         
 class OnOffControl(Control):
@@ -356,43 +425,47 @@ class OnOffControl(Control):
     feedback_control = True
         
     def get_options(self):
-        self.target_temperature = float(self.options['target_temperature'])
+        self.input = self.options["input"]
+        self.output = None
+        if "output" in self.options:
+            self.output = self.options["output"]
+        self.target_value = float(self.options['target_value'])
         self.on_offset = float(self.options['on_offset'])
         self.off_offset = float(self.options['off_offset'])
-        self.max_power = float(self.options['on_power'])/255.0
-        self.off_power = float(self.options['off_power'])/255.0
+        self.max_value = float(self.options['on_value'])/255.0
+        self.off_value = float(self.options['off_value'])/255.0
         self.sleep = float(self.options['sleep'])
         
-        self.on_temperature = self.target_temperature + self.on_offset
-        self.off_temperature = self.target_temperature + self.off_offset
+        self.on_value = self.target_value + self.on_offset
+        self.off_value = self.target_value + self.off_offset
         
-        self.power = self.off_power
-        
-        return
-        
-    def set_target_temperature(self, temp):
-        """ set the target temperature """
-
-        self.target_temperature = float(temp)
-        self.on_temperature = self.target_temperature + self.on_offset
-        self.off_temperature = self.target_temperature + self.off_offset
+        self.value = self.off_value
         
         return
         
-    def get_target_temperature(self):
-        """ get the target temperature """
-        return self.target_temperature
-        
-    def get_power(self):
+    def set_target_value(self, value):
+        """ set the target value """
 
-        temp = self.input.get_temperature()
+        self.target_value = float(value)
+        self.on_value = self.target_value + self.on_offset
+        self.off_value = self.target_value + self.off_offset
         
-        if temp <= self.on_temperature:
-            self.power = self.max_power
-        elif temp >= self.off_temperature:
-            self.power = self.off_power
+        return
         
-        return self.power
+    def get_target_value(self):
+        """ get the target value """
+        return self.target_value
+        
+    def get_value(self):
+
+        value = self.input.get_value()
+        
+        if value <= self.on_value:
+            self.value = self.max_value
+        elif value >= self.off_value:
+            self.value = self.off_value
+        
+        return self.value
         
         
 class ProportionalControl(Control):
@@ -401,53 +474,60 @@ class ProportionalControl(Control):
 
     def get_options(self):
         """ Init """
-        self.current_temp = 0.0
-        self.target_temperature = float(self.options['target_temperature'])             # Target temperature (Ts). Start off. 
+        self.input = self.options["input"]
+        self.output = None
+        if "output" in self.options:
+            self.output = self.options["output"]
+        self.current_value = 0.0
+        self.target_value = float(self.options['target_value'])             # Target value (Ts). Start off. 
         self.P = float(self.options['proportional'])                     # Proportional 
-        self.max_power = min(1.0, float(self.options['max_power'])/255.0)
-        self.min_power = max(0, float(self.options['min_power'])/255.0)
+        self.max_value = min(1.0, float(self.options['max_value'])/255.0)
+        self.min_value = max(0, float(self.options['min_value'])/255.0)
         self.ok_range = float(self.options['ok_range'])
         self.sleep = float(self.options['sleep'])
         
-    def set_target_temperature(self, temp):
-        """ set the target temperature """
-        self.target_temperature = float(temp)
+    def set_target_value(self, value):
+        """ set the target value """
+        self.target_value = float(value)
         return
         
-    def get_target_temperature(self):
-        """ get the target temperature """
-        return self.target_temperature
+    def get_target_value(self):
+        """ get the target value """
+        return self.target_value
 
-    def get_power(self):
-        """ PID Thread that keeps the temperature stable """
-        self.current_temp = self.input.get_temperature()
-        error = self.target_temperature-self.current_temp
+    def get_value(self):
+        """ PID Thread that keeps the value stable """
+        self.current_value = self.input.get_value()
+        error = self.target_value-self.current_value
         
         if error <= self.ok_range:
             return 0.0
         
-        power = self.P*error  # The formula for the PID (only P)		
-        power = max(min(power, 1.0), 0.0)                             # Normalize to 0,1
+        value = self.P*error  # The formula for the PID (only P)		
+        value = max(min(value, 1.0), 0.0)                             # Normalize to 0,1
         
-        # Clamp the max power
-        power = min(power, self.max_power)
-        # Clamp min power
-        power = max(power, self.min_power)
+        # Clamp the max value
+        value = min(value, self.max_value)
+        # Clamp min value
+        value = max(value, self.min_value)
         
-        return power
+        return value
         
 class PIDControl(Control):
     
     feedback_control = True
     
     def get_options(self):
-        
-        self.target_temperature = float(self.options['target_temperature'])
+        self.input = self.options["input"]
+        self.output = None
+        if "output" in self.options:
+            self.output = self.options["output"]
+        self.target_value = float(self.options['target_value'])
         self.Kp = float(self.options['pid_Kp'])
         self.Ti = float(self.options['pid_Ti'])
         self.Td = float(self.options['pid_Td'])
         self.ok_range = float(self.options['ok_range'])
-        self.max_power = min(1.0, float(self.options['max_power'])/255.0)
+        self.max_value = min(1.0, float(self.options['max_value'])/255.0)
         self.sleep = float(self.options['sleep'])
         
         return
@@ -459,46 +539,46 @@ class PIDControl(Control):
         self.errors = [0]*self.avg
         self.averages = [0]*self.avg
         
-        current_temp = self.input.get_temperature()
-        self.temperatures = [current_temp]
+        current_value = self.input.get_value()
+        self.values = [current_value]
         
-        self.error_integral = 0.0           # Accumulated integral since the temperature came within the boudry
-        self.error_integral_limit = 100.0   # Integral temperature boundary
+        self.error_integral = 0.0           # Accumulated integral since the value came within the boudry
+        self.error_integral_limit = 100.0   # Integral value boundary
         
     
-    def set_target_temperature(self, temp):
-        """ set the target temperature """
-        self.target_temperature = float(temp)
+    def set_target_value(self, value):
+        """ set the target value """
+        self.target_value = float(value)
         return
         
-    def get_target_temperature(self):
-        """ get the target temperature """
-        return self.target_temperature
+    def get_target_value(self):
+        """ get the target value """
+        return self.target_value
         
         
-    def get_power(self):
+    def get_value(self):
         
-        current_temp = self.input.get_temperature()
-        self.temperatures.append(current_temp)
-        self.temperatures[:-max(int(60/self.sleep), self.avg)] = [] # Keep only this much history
+        current_value = self.input.get_value()
+        self.values.append(current_value)
+        self.values[:-max(int(60/self.sleep), self.avg)] = [] # Keep only this much history
 
-        self.error = self.target_temperature-current_temp
+        self.error = self.target_value-current_value
         self.errors.append(self.error)
         self.errors.pop(0)
 
         derivative = self.get_error_derivative()
         integral = self.get_error_integral()
         # The standard formula for the PID
-        power = self.Kp*(self.error + (1.0/self.Ti)*integral + self.Td*derivative)  
-        power = max(min(power, self.max_power, 1.0), 0.0)                         # Normalize to 0, max
+        value = self.Kp*(self.error + (1.0/self.Ti)*integral + self.Td*derivative)  
+        value = max(min(value, self.max_value, 1.0), 0.0)                         # Normalize to 0, max
 
-        return power
+        return value
         
     def get_error_derivative(self):
-        """ Get the derivative of the temperature"""
-        # Using temperature and not error for calculating derivative 
+        """ Get the derivative of the value"""
+        # Using value and not error for calculating derivative 
         # gets rid of the derivative kick. dT/dt
-        der = (self.temperatures[-2]-self.temperatures[-1])/self.sleep
+        der = (self.values[-2]-self.values[-1])/self.sleep
         self.averages.append(der)
         if len(self.averages) > 11:
             self.averages.pop(0)
@@ -509,7 +589,7 @@ class PIDControl(Control):
         self.error_integral += self.error*self.sleep
         # Avoid windup by clippping the integral part 
         # to the reciprocal of the integral term
-        self.error_integral = np.clip(self.error_integral, 0, self.max_power*self.Ti/self.Kp)
+        self.error_integral = np.clip(self.error_integral, 0, self.max_value*self.Ti/self.Kp)
         return self.error_integral
         
     def reset(self):

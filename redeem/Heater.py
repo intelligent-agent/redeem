@@ -43,10 +43,15 @@ class Heater(Unit):
         self.mosfet = self.options["mosfet"]
         self.prefix = self.options["prefix"]
         
-        self.safety = [s.strip() for s in options["safety"].split(",")]
+        self.safety = None
+        if self.safety in self.options:
+            self.safety = [s.strip() for s in options["safety"].split(",")]
+            
         self.min_temp_enabled   = False  # Temperature error limit 
         
-        self.input = self.options["input"]
+        self.input = None
+        if "input" in self.options:
+            self.input = self.options["input"]
 
         self.heater_error = False
         
@@ -65,25 +70,37 @@ class Heater(Unit):
         self.mosfet = self.printer.mosfets[self.short_name]
         
         # connect the controller
-        self.input = self.get_unit(self.input, units)
+        if self.input:
+            self.input = self.get_unit(self.input, units)
+            if not self.input.output:        
+                self.input.output = self
+        
         
         #connect the safety
-        for i, s in enumerate(self.safety):
-            self.safety[i] = self.get_unit(s, units)
+        if self.safety:
+            for i, s in enumerate(self.safety):
+                self.safety[i] = self.get_unit(s, units)
+                if not self.safety[i].heater:
+                    self.safety[i].heater = self
 
         return
         
     def initialise(self):
         """ stuff to do after connecting"""
         
-        # inherit the sleep timer from controller
-        self.sleep = self.input.sleep
-        self.max_power = self.input.max_power
+        if self.input:
+            self.max_value = self.input.max_value
+        else:
+            self.max_value = 0.0
             
         return
         
     def check(self):
         """ run checks"""
+        
+        if not self.input:
+            logging.warning("{} is unconnected".format(self.name))
+            self.heater_error = True
 
         if not self.safety:
             self.mosfet.set_power(0.0)
@@ -105,7 +122,7 @@ class Heater(Unit):
     def set_target_temperature(self, temp):
         """ Set the target temperature of the controller """
         self.min_temp_enabled = False
-        self.input.set_target_temperature(temp)
+        self.input.set_target_value(temp)
 
     def get_temperature(self):
         """ get the temperature of the thermistor and the control input"""
@@ -117,7 +134,7 @@ class Heater(Unit):
 
     def get_target_temperature(self):
         """ get the target temperature"""
-        return self.input.get_target_temperature()
+        return self.input.get_target_value()
 
     def is_target_temperature_reached(self):
         """ Returns true if the target temperature is reached """
@@ -138,11 +155,11 @@ class Heater(Unit):
         """ Returns true if the temperature has been stable for n seconds """
         target_temp = self.get_target_temperature()
         ok_range = self.input.ok_range
-        if len(self.temperatures) < int(seconds/self.sleep):
+        if len(self.temperatures) < int(seconds/self.input.sleep):
             return False
-        if max(self.temperatures[-int(seconds/self.sleep):]) > (target_temp + ok_range):
+        if max(self.temperatures[-int(seconds/self.input.sleep):]) > (target_temp + ok_range):
             return False
-        if min(self.temperatures[-int(seconds/self.sleep):]) < (target_temp - ok_range):
+        if min(self.temperatures[-int(seconds/self.input.sleep):]) < (target_temp - ok_range):
             return False
         return True
 
@@ -183,9 +200,9 @@ class Heater(Unit):
         if self.heater_error:
             self.enabled = False
             return
-        self.avg = max(int(1.0/self.sleep), 3)
+        self.avg = max(int(1.0/self.input.sleep), 3)
         self.prev_time = self.current_time = time.time()
-        self.temperatures = [self.input.input.get_temperature()]
+        self.temperatures = [self.input.input.get_value()]
         self.enabled = True
         self.t = Thread(target=self.run_controller, name=self.name)
         self.t.start()
@@ -196,13 +213,14 @@ class Heater(Unit):
             while self.enabled:
                 
                 # get the controllers recommendation
-                power = self.input.get_power()
-                power = max(min(power, self.max_power, 1.0), 0.0)
+                sleep = self.input.sleep
+                value = self.input.get_value()
+                value = max(min(value, self.max_value, 1.0), 0.0)
                 
                 # get the controlling temperature
-                temp = self.input.input.get_temperature()
+                temp = self.input.input.get_value()
                 self.temperatures.append(temp)
-                self.temperatures[:-max(int(60/self.sleep), self.avg)] = [] # Keep only this much history
+                self.temperatures[:-max(int(60/sleep), self.avg)] = [] # Keep only this much history
 
                 # Run safety checks
 
@@ -211,10 +229,10 @@ class Heater(Unit):
 
                 # Set temp if temperature is OK
                 if not self.heater_error:
-                    self.mosfet.set_power(power)
+                    self.mosfet.set_power(value)
                 else:
                     self.mosfet.set_power(0)        
-                time.sleep(self.sleep)
+                time.sleep(sleep)
         finally:
             # Disable this mosfet if anything goes wrong
             self.mosfet.set_power(0)
@@ -226,3 +244,6 @@ class Heater(Unit):
         for s in self.safety:
             s.set_min_temp_enabled(self.min_temp_enabled)
             s.run_safety_checks()
+            
+    def __str__(self):
+        return self.name

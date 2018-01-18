@@ -298,15 +298,19 @@ class Redeem:
             
         # update the channel information for fans
         if self.revision == "00A3":
+            self.printer.fans = [None]*3
             for i, c in enumerate([0,1,2]):
                 self.printer.config["Fans"]["Fan-{}".format(i)]["channel"] = c
         elif self.revision == "0A4A":
+            self.printer.fans = [None]*3
             for i, c in enumerate([8,9,10]):
                 self.printer.config["Fans"]["Fan-{}".format(i)]["channel"] = c
         elif self.revision in ["00B1", "00B2", "00B3", "0B3A"]:
+            self.printer.fans = [None]*4
             for i, c in enumerate([7,8,9,10]):
                 self.printer.config["Fans"]["Fan-{}".format(i)]["channel"] = c
         if printer.config.reach_revision == "00A0":
+            self.printer.fans = [None]*3
             for i, c in enumerate([14,15,7]):
                 self.printer.config["Fans"]["Fan-{}".format(i)]["channel"] = c
         
@@ -336,9 +340,8 @@ class Redeem:
             
 
         # build and connect all of the temperature control infrastructure
-        self.printer.controlled_fans = []
-        self.printer.fans = []
         self.printer.heaters = {}
+        self.printer.command_connect = {}
         
         # available control unit types, see TemperatureControl.py
         control_units = {"alias":Alias, "difference":Difference, 
@@ -347,7 +350,8 @@ class Redeem:
                       "on-off-control":OnOffControl,
                       "pid-control":PIDControl,
                       "proportional-control":ProportionalControl,
-                      "fan":Fan, "heater":Heater, "safety":Safety}
+                      "fan":Fan, "heater":Heater, "safety":Safety,
+                      "gcode":CommandCode}
     
         # generate units
         all_built = True
