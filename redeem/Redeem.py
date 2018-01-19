@@ -75,8 +75,7 @@ printer = None
 logging.basicConfig(level=logging.DEBUG,
                     format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
                     datefmt='%m-%d %H:%M')
-
-
+                    
 class Redeem:
     def __init__(self, config_location="/etc/redeem"):
         """
@@ -84,6 +83,8 @@ class Redeem:
          - default is installed directory
          - allows for running in a local directory when debugging
         """
+        
+        self.logging = False
         
         self.config_location = config_location
 
@@ -147,20 +148,23 @@ class Redeem:
         printer.config = CascadingConfigParser(configs, 
                                                allow_new = ["Temperature Control"]) # <-- this is where users are allowed to add stuff to the config 
 
-        # Get the revision and loglevel from the Config file
-        level = self.printer.config.getint('System', 'loglevel')
-        if level > 0:
-            logging.getLogger().setLevel(level)
-
-        # Set up additional logging, if present:
-        if self.printer.config.getboolean('System', 'log_to_file'):
-            logfile = self.printer.config.get('System', 'logfile')
-            formatter = '%(asctime)s %(name)-12s %(levelname)-8s %(message)s'
-            printer.redeem_logging_handler = logging.handlers.RotatingFileHandler(logfile, maxBytes=2*1024*1024)
-            printer.redeem_logging_handler.setFormatter(logging.Formatter(formatter))
-            printer.redeem_logging_handler.setLevel(level)
-            logging.getLogger().addHandler(printer.redeem_logging_handler)
-            logging.info("-- Logfile configured --")
+        if not self.logging:
+            # Get the revision and loglevel from the Config file
+            level = self.printer.config.getint('System', 'loglevel')
+            if level > 0:
+                logging.getLogger().setLevel(level)
+    
+            # Set up additional logging, if present:
+            if self.printer.config.getboolean('System', 'log_to_file'):
+                logfile = self.printer.config.get('System', 'logfile')
+                formatter = '%(asctime)s %(name)-12s %(levelname)-8s %(message)s'
+                printer.redeem_logging_handler = logging.handlers.RotatingFileHandler(logfile, maxBytes=2*1024*1024)
+                printer.redeem_logging_handler.setFormatter(logging.Formatter(formatter))
+                printer.redeem_logging_handler.setLevel(level)
+                logging.getLogger().addHandler(printer.redeem_logging_handler)
+                logging.info("-- Logfile configured --")
+            
+            self.logging = True
 
         # Find out which capes are connected
         self.printer.config.parse_capes()
