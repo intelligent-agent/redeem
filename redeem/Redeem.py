@@ -77,6 +77,7 @@ logging.basicConfig(level=logging.DEBUG,
                     datefmt='%m-%d %H:%M')
                     
 class Redeem:
+    
     def __init__(self, config_location="/etc/redeem"):
         """
         config_location: provide the location to look for config files.
