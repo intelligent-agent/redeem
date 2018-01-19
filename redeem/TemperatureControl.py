@@ -249,15 +249,21 @@ class Safety(Unit):
         if isinstance(self.input, Alias):
             input_sensor = self.input.input
     
+        disconnect = False
         if (not isinstance(input_sensor, TemperatureSensor)) and (not isinstance(input_sensor, ColdEnd)):
-            msg = "{} will not work, input = {} is not a temperature sensor".format(self.name, self.input.name)
-            logging.error(msg)
+            msg = "{} disabled. {} is not a temperature sensor".format(self.name, self.input.name)
+            logging.warning(msg)
+            disconnect = True
             
-            # disconnect from the heater
+        # disconnect from the heater
+        if disconnect:
             for i, s in enumerate(self.heater.safety):
                 if self == s:
                     self.heater.safety.pop(i)
                     break
+                
+            return
+                
                 
         self.avg = max(int(1.0/self.heater.input.sleep), 5)
         self.temp = CircularBuffer(self.avg)

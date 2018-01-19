@@ -354,7 +354,7 @@ class Redeem:
                       "gcode":CommandCode}
     
         # generate units
-        all_built = True
+        success = True
         units = {}
         for section in ["Temperature Control", "Fans", "Heaters"]:
             cfg = self.printer.config[section]
@@ -375,27 +375,45 @@ class Redeem:
                     msg = "Configuration section '{}' failed to build. Have you defined {}?".format(name, str(e))
                     self.config_error.append(msg)
                     logging.error(msg, exc_info=True)
-                    all_built = False
-        
-        if not all_built:
-            logging.warning("Control unit/s failed. Using default.cfg only.")
+                    success = False
+            
+        # connect units
+        for name, unit in units.items():
+            try:
+                unit.connect(units)
+            except:
+                msg = "{} failed when connecting:".format(name)
+                self.config_error.append(msg)
+                logging.error(msg, exc_info=True)
+                success = False
+            
+        # initialise units
+        all_initialised = True
+        for name, unit in units.items():
+            try:
+                unit.initialise()
+            except:
+                msg = "{} failed when initializing:".format(name)
+                self.config_error.append(msg)
+                logging.error(msg, exc_info=True)
+                success = False
+            
+        # run checks
+        for name, unit in units.items():
+            try:
+                unit.check()
+            except:
+                msg = "{} failed when performing checks:".format(name)
+                self.config_error.append(msg)
+                logging.error(msg, exc_info=True)
+                success = False
+                
+        if not success:
+            logging.warning("Temperature control configuration invalid\n\n\n   Restarting Redeem with default.cfg only \n")
             self.initialize(configs = [configs[0]]) # re-run this method but only on default.cfg
             return
             # ^^^ this means that even if we stuff something up, redeem will not crash
             # it will probably be basically unusable, but it won't crash.
-            
-            
-        # connect units
-        for name, unit in units.items():
-            unit.connect(units)
-            
-        # initialise units
-        for name, unit in units.items():
-            unit.initialise()
-            
-        # run checks
-        for name, unit in units.items():
-            unit.check()
         
         # turn on the fans and heaters
         

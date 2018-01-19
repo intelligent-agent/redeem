@@ -72,8 +72,9 @@ class Heater(Unit):
         # connect the controller
         if self.input:
             self.input = self.get_unit(self.input, units)
-            if not self.input.output:        
-                self.input.output = self
+            if self.check_input():
+                if not self.input.output:        
+                    self.input.output = self
         
         
         #connect the safety
@@ -99,13 +100,17 @@ class Heater(Unit):
         """ run checks"""
         
         if not self.input:
-            logging.warning("{} is unconnected".format(self.name))
-            self.heater_error = True
+            raise RuntimeError("{} has no input".format(self.name))
 
         if not self.safety:
-            self.mosfet.set_power(0.0)
-            logging.warning("{} has no safety connected, heater disabled".format(self.name))
-            self.heater_error = True
+            raise RuntimeError("{} has no safety connected".format(self.name))
+        
+        self.check_input()
+        
+        return
+        
+    def check_input(self):
+        """ check the input is valid """
         
         # ensure the controller is one that allows feedback, i.e. not open loop        
         allow = False
@@ -113,11 +118,10 @@ class Heater(Unit):
             if self.input.feedback_control:
                 allow = True
         if not allow:
-            self.mosfet.set_power(0.0)
-            logging.error("{} has non-feedback control assigned, heater disabled".format(self.name))
-            self.heater_error = True
+            raise RuntimeError("{} has non-feedback control".format(self.name))
+            
+        return allow
         
-        return
 
     def set_target_temperature(self, temp):
         """ Set the target temperature of the controller """
@@ -197,9 +201,6 @@ class Heater(Unit):
 
     def enable(self):
         """ Start the PID controller """
-        if self.heater_error:
-            self.enabled = False
-            return
         self.avg = max(int(1.0/self.input.sleep), 3)
         self.prev_time = self.current_time = time.time()
         self.temperatures = [self.input.input.get_value()]
