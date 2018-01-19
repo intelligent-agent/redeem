@@ -40,7 +40,12 @@ from ColdEnd import ColdEnd
 #==============================================================================
 
 class CircularBuffer(object):
-    #https://stackoverflow.com/a/40784706
+    """
+    A list of specified size that overwrites the oldest data when space 
+    runs out. 
+
+    https://stackoverflow.com/a/40784706
+    """
     def __init__(self, size):
         """Initialization"""
         self.index = 0
@@ -56,6 +61,7 @@ class CircularBuffer(object):
         self.index = (self.index + 1) % self.size
         
     def get_length(self):
+        """ Get the current length of the list"""
         return len(self._data)
 
     def __getitem__(self, key):
@@ -70,6 +76,9 @@ class CircularBuffer(object):
         return self._data.__repr__() + ' (' + str(len(self._data))+' items)'
 
 class Unit:
+    """
+    Base component of all temperature control units
+    """
     
     printer = None
     counter = 0
@@ -104,7 +113,7 @@ class Unit:
         return
         
     def initialise(self):
-        """ stuff to do after connecting"""
+        """ perform post connection initialization"""
         return
         
     def check(self):
@@ -116,8 +125,12 @@ class Unit:
                         
         
 class Alias(Unit):
+    """
+    Used as an alias for another unit
+    """
     
     def __init__(self, name, options, printer):
+        """ initialize the unit """
         
         self.name = name
         self.options = options
@@ -130,17 +143,25 @@ class Alias(Unit):
         return
         
     def connect(self, units):
+        """ connect to other units """
         self.input = self.get_unit(self.input, units)
         
     def get_value(self):
+        """ return the current value """
         return self.input.get_value()
         
     def check(self):
+        """ perform any checks or logging after full connection """
         logging.info("{} --> {} ".format(self.input, self.name))
         
         
 class Compare(Unit):
+    """
+    Perform an operation on two inputs
+    """
+    
     def __init__(self, name, options, printer):
+        """ initialize the unit """
         self.name = name
         self.options = options
         self.printer = printer
@@ -154,31 +175,43 @@ class Compare(Unit):
         return
     
     def connect(self, units):
-        
+        """ connect to other units """
         for i in range(2):
             self.input[i] = self.get_unit(self.input[i], units)
             
     def check(self):
+        """ perform any checks or logging after full connection """
         logging.info("({} and {}) --> {}".format(self.input[0].name, self.input[1].name, self.name))
     
     
 class Difference(Compare):
+    """ Calculate the difference between inputs""" 
     def get_value(self):
+        """ return the current value """
         return self.input[0].get_value() - self.input[1].get_value()
         
         
 class Maximum(Compare):
+    """ Calculate the maximum of two inputs"""
     def get_value(self):
+        """ return the current value """
         return max(self.input[0].get_value(), self.input[1].get_value())
         
         
 class Minimum(Compare):
+    """ Calculate the minimum of two inputs"""
     def get_value(self):
+        """ return the current value """
         return min(self.input[0].get_value(), self.input[1].get_value())
 
 class Safety(Unit):
+    """
+    Perform safety related checks based on the temperature of the attached
+    sensor and raise appropriate alarms
+    """
     
     def __init__(self, name, options, printer):
+        """ initialize the unit """
         self.name = name
         self.options = options
         self.printer = printer
@@ -188,9 +221,9 @@ class Safety(Unit):
         
         self.min_temp           = float(self.options["min_temp"])         # If temperature falls below this point from the target, disable. 
         self.max_temp           = float(self.options["max_temp"])         # Max temp that can be reached before disabling printer. 
-        self.max_temp_rise      = float(self.options["max_rise_temp"])    # Fastest temp can rise pr measrement
-        self.max_temp_fall      = float(self.options["max_fall_temp"])    # Fastest temp can fall pr measurement
-        self.min_temp_rise      = float(self.options["min_rise_temp"])    # Slowest temp can rise pr measurement, to catch incorrect attachment of thermistor
+        self.max_rise_rate      = float(self.options["max_rise_rate"])    # Fastest temp can rise pr measrement
+        self.max_fall_rate      = float(self.options["max_fall_rate"])    # Fastest temp can fall pr measurement
+        self.min_rise_rate      = float(self.options["min_rise_rate"])    # Slowest temp can rise pr measurement, to catch incorrect attachment of thermistor
         self.min_rise_offset    = float(self.options["min_rise_offset"])  # Allow checking for slow temp rise when temp is below this offset from target temp 
         self.min_rise_delay     = float(self.options["min_rise_delay"])   # Allow checking for slow temp rise after this delay time to allow for heat soak
         
@@ -199,12 +232,13 @@ class Safety(Unit):
         return
         
     def connect(self, units):
+        """ connect to other units """
         self.input = self.get_unit(self.input, units)
         self.heater = self.get_unit(self.heater, units)
         return
         
     def initialise(self):
-        
+        """ perform post connection initialization"""
         # insert into the attached heater, if it isn't already there
         if not self.heater.safety:
             self.heater.safety = [self]
@@ -232,6 +266,7 @@ class Safety(Unit):
         return
         
     def check(self):
+        """ perform any checks or logging after full connection """
         logging.info("{} --> {} --> {}".format(self.input.name, self.name, self.heater.name))
         
     def set_min_temp_enabled(self, flag):
@@ -272,13 +307,13 @@ class Safety(Unit):
         heating_time = current_time - self.start_heating_time
         
         # Check that temperature is not rising too quickly
-        if temp_rate > self.max_temp_rise:
+        if temp_rate > self.max_rise_rate:
             a = Alarm(Alarm.HEATER_RISING_FAST, 
                 "Temperature rising too quickly ({:.2f} degrees/sec) for {} ({} = {:.2f})".format(temp_rate, self.name, self.input.name, current_temp))
         
         
         # Check that temperature is not rising quickly enough when power is applied
-        check = [temp_rate < self.min_temp_rise, 
+        check = [temp_rate < self.min_rise_rate, 
                  power_on, 
                  current_temp < (target_temp - self.min_rise_offset), 
                  heating_time > self.min_rise_delay]
@@ -286,7 +321,7 @@ class Safety(Unit):
             a = Alarm(Alarm.HEATER_RISING_SLOW, 
                 "Temperature rising too slowly ({:.2f} degrees/sec) for {} ({} = {:.2f})".format(temp_rate, self.name, self.input.name, current_temp))
         # Check that temperature is not falling too quickly
-        if temp_rate < -self.max_temp_fall:
+        if temp_rate < -self.max_fall_rate:
             a = Alarm(Alarm.HEATER_FALLING_FAST, 
                 "Temperature falling too quickly ({:.2f} degrees/sec) for {} ({} = {:.2f})".format(temp_rate, self.name, self.input.name, current_temp))
         # Check that temperature has not fallen below a certain setpoint from target
@@ -308,8 +343,12 @@ class Safety(Unit):
         
         
 class Control(Unit):
+    """
+    Control schemes base class
+    """
     
     def __init__(self, name, options, printer):
+        """ initialize the unit """
         self.name = name
         self.options = options
         self.printer = printer
@@ -327,10 +366,12 @@ class Control(Unit):
         return
         
     def get_options(self):
+        """ retrieve options from config"""
             
         return
         
     def connect(self, units):
+        """ connect to other units """
         self.input = self.get_unit(self.input, units)
         if self.output:
             self.output = self.get_unit(self.output, units)
@@ -339,17 +380,23 @@ class Control(Unit):
         return
         
     def reset(self):
+        """ reset any historical data """
         return
         
-    def check(self):        
+    def check(self):  
+        """ perform any checks or logging after full connection """
         logging.info("{} --> {} --> {}".format(self.input, self.name, self.output))
             
         
 class ConstantControl(Control):
+    """
+    Return a constant value for control applications
+    """
     
     feedback_control = False
     
     def get_options(self):
+        """ retrieve options from config"""
         
         self.output = None
         if "output" in self.options:
@@ -359,18 +406,22 @@ class ConstantControl(Control):
         return
         
     def connect(self, units):
+        """ connect to other units """
         if self.output:
             self.output = self.get_unit(self.output, units)
             self.output.input = self
         
         
     def get_value(self):
+        """ return the current value """
         return self.value
         
     def set_target_value(self, value):
+        """ set the desired value """
         self.value = float(value)
         
     def ramp_to(self, value, delay):
+        """ ramp the control output up to 'value' by 1/255 every 'delay' seconds"""
         save_sleep = self.sleep
         self.sleep = delay/2.0
         for w in range(int(self.value*255.0), int(value*255.0), (1 if value >= self.value else -1)):
@@ -381,6 +432,7 @@ class ConstantControl(Control):
         
     
     def check(self):
+        """ perform any checks or logging after full connection """
         logging.info("{} --> {} --> {}".format(self.value, self.name, self.output))
         
         
@@ -391,6 +443,7 @@ class CommandCode(ConstantControl):
     """
         
     def get_options(self):
+        """ retrieve options from config"""
         self.command = [c.strip() for c in self.options["command"].split(",")]
         for command in self.command:
             if command in self.printer.command_connect:
@@ -405,11 +458,13 @@ class CommandCode(ConstantControl):
         
         
     def connect(self, units):
+        """ connect to other units """
         for i, output in enumerate(self.output):
             self.output[i] = self.get_unit(output, units)
             self.output[i].input = self
             
     def check(self):
+        """ perform any checks or logging after full connection """
         outputs = "["
         for output in self.output:
             outputs += "{}, ".format(output)
@@ -421,10 +476,14 @@ class CommandCode(ConstantControl):
         
         
 class OnOffControl(Control):
+    """
+    Control by switching between two defined states
+    """
     
     feedback_control = True
         
     def get_options(self):
+        """ retrieve options from config"""
         self.input = self.options["input"]
         self.output = None
         if "output" in self.options:
@@ -457,7 +516,7 @@ class OnOffControl(Control):
         return self.target_value
         
     def get_value(self):
-
+        """ return the current value """
         value = self.input.get_value()
         
         if value <= self.on_value:
@@ -469,11 +528,15 @@ class OnOffControl(Control):
         
         
 class ProportionalControl(Control):
+    """
+    Control output in proportion to the instantaneous error between current 
+    and target value
+    """
     
     feedback_control = True
 
     def get_options(self):
-        """ Init """
+        """ retrieve options from config"""
         self.input = self.options["input"]
         self.output = None
         if "output" in self.options:
@@ -496,7 +559,7 @@ class ProportionalControl(Control):
         return self.target_value
 
     def get_value(self):
-        """ PID Thread that keeps the value stable """
+        """ return the current value based on proportional (P) control"""
         self.current_value = self.input.get_value()
         error = self.target_value-self.current_value
         
@@ -514,10 +577,15 @@ class ProportionalControl(Control):
         return value
         
 class PIDControl(Control):
+    """
+    Control output according to proportional (P), integral (I) and 
+    derivative (D) terms.
+    """
     
     feedback_control = True
     
     def get_options(self):
+        """ retrieve options from config"""
         self.input = self.options["input"]
         self.output = None
         if "output" in self.options:
@@ -533,7 +601,7 @@ class PIDControl(Control):
         return
         
     def initialise(self):
-        
+        """ perform post connection initialization"""
         self.avg = max(int(1.0/self.sleep), 3)
         self.error = 0
         self.errors = [0]*self.avg
@@ -557,7 +625,7 @@ class PIDControl(Control):
         
         
     def get_value(self):
-        
+        """ return the current value based on PID control"""
         current_value = self.input.get_value()
         self.values.append(current_value)
         self.values[:-max(int(60/self.sleep), self.avg)] = [] # Keep only this much history
@@ -593,6 +661,7 @@ class PIDControl(Control):
         return self.error_integral
         
     def reset(self):
+        """ reset any historical values """
         
         self.error_integral = 0.0
         

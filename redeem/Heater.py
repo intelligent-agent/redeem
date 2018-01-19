@@ -30,8 +30,8 @@ from TemperatureControl import Unit, Control, PIDControl
 
 class Heater(Unit):
     """
-    A heater element that must keep temperature,
-    either an extruder, a HBP or could even be a heated chamber
+    Controls the temperature of a heater element by modulating the power of an
+    attached MOSFET
     """
     def __init__(self, name, options, printer):
         """ Init """

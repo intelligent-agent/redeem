@@ -32,12 +32,13 @@ from TemperatureControl import Unit, ConstantControl
 
 
 class Fan(Unit):
+    """
+    Used to move air
+    """
     
     def __init__(self, name, options, printer):
         """
-        channel : channel that this fan is on
-        fan_id : number of the fan
-        printer : description of this printer 
+        Fan initialization.
         """
         
         self.name = name
@@ -61,12 +62,14 @@ class Fan(Unit):
         return
         
     def connect(self, units):
+        """ Connect this unit to other units"""
         if self.input:
             self.input = self.get_unit(self.input, units)
             if not self.input.output:        
                 self.input.output = self
             
     def check(self):
+        """ Perform any checks or logging after all connections are made"""
         logging.info("{} --> {}".format(self.input, self.name))
             
         

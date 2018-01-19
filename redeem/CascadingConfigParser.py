@@ -90,10 +90,22 @@ def check_modified(cfg, path, key, value):
 #==============================================================================
 
 class CascadingConfigParser(ConfigObj):
+    """
+    Build a configuration from a hierarchy of inputs where each successive
+    input is allowed to overwrite the ones before
+    """
     
     parser_options = OPTION_DEFAULTS
     
     def __init__(self, config_files, allow_new=[]):
+        """
+        initialize the config parser
+        
+        config_files: list of paths to config files
+        allow_new: a list of sections that permit children to be added 
+            regardless of whether those children existed in the first 
+            config file 
+        """
         
         self.parser_options["list_values"] = False
 
@@ -290,13 +302,3 @@ class CascadingConfigParser(ConfigObj):
             return True
             
         return False
-
-
-if __name__ == '__main__':
-    c = CascadingConfigParser(["../configs/default.cfg", "../configs/test.cfg"], allow_new=["Temperature Control"])
-    
-    print c["Fans"]
-    
-    #c.save("")
-    
-    #print c#["Temperature Control"]
