@@ -78,6 +78,7 @@ logging.basicConfig(level=logging.DEBUG,
 
 
 class Redeem:
+    logger = None
     def __init__(self, config_location="/etc/redeem"):
         """
         config_location: provide the location to look for config files.
@@ -150,7 +151,8 @@ class Redeem:
         # Get the revision and loglevel from the Config file
         level = self.printer.config.getint('System', 'loglevel')
         if level > 0:
-            logging.getLogger().setLevel(level)
+            if not self.logger:
+                self.logger = logging.getLogger().setLevel(level)
 
         # Set up additional logging, if present:
         if self.printer.config.getboolean('System', 'log_to_file'):
