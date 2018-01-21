@@ -33,6 +33,7 @@ from PruInterface import PruInterface
 from BedCompensation import BedCompensation
 from DeltaAutoCalibration import delta_auto_calibration
 from Alarm import Alarm
+from six import iteritems
 import traceback
 
 try:
@@ -95,6 +96,7 @@ class PathPlanner:
         fw1 = self.pru_firmware.get_firmware(1)
 
         if fw0 is None or fw1 is None:
+            logging.error("Unable to get PRU firmware")
             return
 
         self.native_planner.initPRU(fw0, fw1)
@@ -118,6 +120,8 @@ class PathPlanner:
         self.native_planner.setState(self.prev.end_pos)
         self.printer.plugins.path_planner_initialized(self)
         self.native_planner.runThread()
+        
+        logging.info("PathPlanner initialized")
 
     def configure_slaves(self):
         self.native_planner.enableSlaves(self.printer.has_slaves)
@@ -185,20 +189,21 @@ class PathPlanner:
         # Note: This method has to be thread safe as it can be called from the
         # command thread directly or from the command queue thread
         self.native_planner.suspend()
-        for name, stepper in self.printer.steppers.iteritems():
+        for name, stepper in iteritems(self.printer.steppers):
             stepper.set_disabled(True)
 
         #Create a new path planner to have everything clean when it restarts
-        self.native_planner.stopThread(True)
-        self._init_path_planner()
+        self.restart()
 
     def suspend(self):
         ''' Temporary pause of planner '''
         self.native_planner.suspend()
+        logging.info("PathPlanner: suspend")
 
     def resume(self):
         ''' resume a paused planner '''
         self.native_planner.resume()
+        logging.info("PathPlanner: resume")
 
     def _home_internal(self, axis):
         """ Private method for homing a set or a single axis """

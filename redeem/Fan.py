@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 """
-A fan is for blowing stuff away. This one is for Replicape.
+For running a fan.
 
-Author: Elias Bakken
-email: elias(dot)bakken(at)gmail(dot)com
+Author: Daryl Bond
+email: daryl(dot)bond(at)hotmail(dot)com
 Website: http://www.thing-printer.com
 License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
 
@@ -22,78 +22,111 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
 """
 
 import time
+from builtins import range
 from PWM import PWM
-from PWM_pin import PWM_pin
+from configobj import Section
 import logging
+from threading import Thread
 
-
-
-class Fan_Pin(PWM_pin):
-
-    def __init__(self, chip, channel, max_value=1.0):
-        self.max_value = max_value
-        PWM_pin.__init__(self, "{}:{}".format(chip, channel), 20000, 0.0)
-        self.chip = chip
-        self.channel = channel
-        self.value = 0.0
-
-    def set_value(self, value):
-        super(Fan_Pin, self).set_value(value*self.max_value)
+from TemperatureControl import Unit, ConstantControl
 
 class Fan(PWM):
 
-    def __init__(self, channel):
-        """ Channel is the channel that the fan is on (0-7) """
-        self.channel = channel
+class Fan(Unit):
+    """
+    Used to move air
+    """
+    
+    def __init__(self, name, options, printer):
+        """
+        Fan initialization.
+        """
+        
+        self.name = name
+        self.options = options
+        self.printer = printer
+        
+        self.input = None
+        if "input" in self.options:
+            self.input = self.options["input"]
+            
+        self.channel = int(self.options["channel"])
+        
+        # get fan index
+        i = int(name[-1])
+        
+        self.printer.fans[i] = self
         self.max_value = 1.0
+        
+        self.counter += 1
+            
+        return
+        
+    def connect(self, units):
+        """ Connect this unit to other units"""
+        if self.input:
+            self.input = self.get_unit(self.input, units)
+            if not self.input.output:        
+                self.input.output = self
+            
+    def check(self):
+        """ Perform any checks or logging after all connections are made"""
+        logging.info("{} --> {}".format(self.input, self.name))
+            
+        
 
     def set_PWM_frequency(self, value):
         """ Set the amount of on-time from 0..1 """
         self.pwm_frequency = int(value)
-        #PWM.set_frequency(value)
+        PWM.set_frequency(value)
 
     def set_value(self, value):
         """ Set the amount of on-time from 0..1 """
         self.value = value
-        #PWM.set_value(value, self.channel)
+        PWM.set_value(value, self.channel)
+        return
 
 
     def ramp_to(self, value, delay=0.01):
         ''' Set the fan/light value to the given value, in degree, with the given speed in deg / sec '''
-        for w in xrange(int(self.value*255.0), int(value*255.0), (1 if value>=self.value else -1)):
+        for w in range(int(self.value*255.0), int(value*255.0), (1 if value >= self.value else -1)):
             logging.debug("Fan value: "+str(w))
             self.set_value(w/255.0)
             time.sleep(delay)
         self.set_value(value)
 
-if __name__ == '__main__':
-    import os
-    import logging
+    def run_controller(self):
+        """ follow a target PWM value 0..1"""
+        
+        while self.enabled:
+            self.set_value(self.input.get_value())            		 
+            time.sleep(self.input.sleep)
+        self.disabled = True
 
-    logging.basicConfig(level=logging.DEBUG,
-                        format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
-                        datefmt='%m-%d %H:%M')
+    def disable(self):
+        """ stops the controller """
+        self.enabled = False
+        # Wait for controller to stop
+        while self.disabled == False:
+            time.sleep(0.2)
+        # The controller loop has finished
+        self.set_value(0.0)
 
-    PWM.set_frequency(100)   
-
-    fan7 = Fan(7) 
-    fan8 = Fan(8)
-    fan9 = Fan(9)
-    fan10 = Fan(10)
-
-
-    while 1:    
-        for i in xrange(1,100):
-            fan7.set_value(i/100.0)
-            fan8.set_value(i/100.0)
-            fan9.set_value(i/100.0)
-            fan10.set_value(i/100.0)
-            time.sleep(0.01)	
-        for i in xrange(100,1,-1):
-            fan7.set_value(i/100.0)
-            fan8.set_value(i/100.0)
-            fan9.set_value(i/100.0)
-            fan10.set_value(i/100.0)
-            time.sleep(0.01)
-
-
+    def enable(self):
+        """ starts the controller """
+        
+        if not self.input:
+            self.enabled = False
+            self.disabled = True
+            self.set_value(0.0)
+            return
+            
+        self.enabled = True
+        self.disabled = False
+        self.t = Thread(target=self.run_controller, name=self.name)
+        self.t.daemon = True
+        self.t.start()	
+        return
+        
+    def __str__(self):
+        return self.name

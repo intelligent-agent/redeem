@@ -44,7 +44,7 @@ There are several different projects that contribute to this platform.
 
 **Kamikaze** the predecessor to Umikaze, based on Debian
 
-**MagnaScreen** a compact, high-definition touch screen
+**Manga Screen** a compact, high-definition touch screen
 
 **Toggle** software to build interactive applications with MagnaScreen
 

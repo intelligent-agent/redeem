@@ -15,6 +15,7 @@ from __future__ import absolute_import
 
 import os
 import logging
+from six import iteritems
 
 from .GCodeCommand import GCodeCommand
 
@@ -24,7 +25,7 @@ class M569(GCodeCommand):
     def execute(self, g):
         if g.num_tokens() == 0:
             g.set_answer("ok "+", ".join([name+": "+str(stepper.direction)+" "
-                for name,stepper in sorted(self.printer.steppers.iteritems())]))            
+                for name,stepper in sorted(iteritems(self.printer.steppers))]))
         else:
             for i in range(g.num_tokens()):  # Run through all tokens
                 axis = g.token_letter(i)

@@ -11,6 +11,7 @@ from __future__ import absolute_import
 
 import os
 import logging
+from six import iteritems
 from .GCodeCommand import GCodeCommand
 
 
@@ -49,7 +50,7 @@ class M119(GCodeCommand):
             endstop = self.printer.end_stops[es]
             logging.info("Is {} hit? {}, inverted? {}".format(es, endstop.hit, endstop.invert))
         else:
-            g.set_answer("ok "+", ".join([v.name+": "+str(v.hit) for _,v in sorted(self.printer.end_stops.iteritems())]))
+            g.set_answer("ok "+", ".join([v.name+": "+str(v.hit) for _,v in sorted(iteritems(self.printer.end_stops))]))
 
     def get_description(self):
         return "Get current endstops state or set invert setting"    

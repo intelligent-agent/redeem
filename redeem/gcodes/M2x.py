@@ -35,6 +35,8 @@ import logging
 from threading import Lock
 from thread import start_new_thread
 
+from time import sleep
+
 from GCodeCommand import GCodeCommand
 from redeem.Gcode import Gcode
 
@@ -279,6 +281,7 @@ class M23(M2X):
 
         self.printer.send_message(g.prot, "File opened:{} Lines:{} Size:{}B".format(fn, nl, nb))
         self.printer.send_message(g.prot, "File selected")
+        logging.info("M23: finished gcode file processing")
 
 
     def get_description(self):
@@ -300,20 +303,20 @@ class M24(GCodeCommand):
 
     def process_gcode(self, g):
         
-        self.printer.sd_card_manager.set_active(True)
+        self.printer.sd_card_manager.set_status(True)
+
         for line in self.printer.sd_card_manager:
             line = line.strip()
-
             if not line or line.startswith(';'):
                 continue
             file_g = Gcode({"message": line, "parent": g})
             self.printer.processor.execute(file_g)
+            
         if self.printer.sd_card_manager.get_status():
             logging.info("M24: file complete")
-        self.printer.sd_card_manager.set_active(False)
+        self.printer.sd_card_manager.set_status(False)
         
         self.printer.send_message(g.prot, "Done printing file")
-        
 
     def execute(self, g):
 
@@ -323,8 +326,16 @@ class M24(GCodeCommand):
         if not active:
             logging.info("M24: active file is '{}'".format(fn))
             start_new_thread(self.process_gcode, (g, ))
+            
+            # allow some time for the new thread to start before we proceed
+            counter = 0
+            while (not active) and (counter < 10):
+                sleep(0.1)
+                counter += 1
 
         self.printer.path_planner.resume()
+        
+        self.printer.send_message(g.prot, "ok : M24 in progress")
 
     def get_description(self):
         return "Start/unpause a print"
@@ -341,7 +352,7 @@ If the current print (from any source) was paused by ``M25``, this will resume t
 class M25(GCodeCommand):
 
     def execute(self, g):
-        self.printer.sd_card_manager.set_active(False)
+        self.printer.sd_card_manager.set_status(False)
 
     def get_description(self):
         return "Pause the current SD print."
@@ -394,12 +405,14 @@ class M27(M2X):
 
         message = "SD printing byte {}/{}".format(byte_position, size_bytes)
         self.printer.send_message(g.prot, message)
+        logging.info(message)
         
         # message to inform that we have completed the print
         active = self.printer.sd_card_manager.get_status()
         if not active:
-            self.printer.send_message(g.prot, "Not SD printing.")
-        
+            message = "Not SD printing."
+            self.printer.send_message(g.prot, message)
+            logging.info(message)
         return
     
 

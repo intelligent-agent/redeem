@@ -43,6 +43,7 @@ class G28(GCodeCommand):
     
         logging.info("Homing done.")
         self.printer.send_message(g.prot, "Homing done.")
+        self.printer.send_message(g.prot, "ok")
 
     def get_description(self):
         return "Move the steppers to their homing position (and find it as " \

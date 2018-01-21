@@ -11,6 +11,9 @@ License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 from __future__ import absolute_import
 
 from .GCodeCommand import GCodeCommand
+import numpy as np
+import logging
+from six import iteritems
 
 
 class M562(GCodeCommand):
@@ -19,14 +22,14 @@ class M562(GCodeCommand):
         if g.has_letter("P"):
             heater_nr = g.get_int_by_letter("P", 1)
             if P == 0:
-                self.printer.heaters["HBP"].extruder_error = False
+                self.printer.heaters["HBP"].heater_error = False
             elif P == 1:
-                self.printer.heaters["E"].extruder_error = False
+                self.printer.heaters["E"].heater_error = False
             elif P == 2:
-                self.printer.heaters["H"].extruder_error = False
+                self.printer.heaters["H"].heater_error = False
         else: # No P, Enable all heaters
-            for _, heater in self.printer.heaters.iteritems():
-                heater.extruder_error = False
+            for _, heater in iteritems(self.printer.heaters):
+                heater.heater_error = False
 
     def get_description(self):
         return "Reset temperature fault. "
