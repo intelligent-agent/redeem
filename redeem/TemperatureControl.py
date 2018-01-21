@@ -501,8 +501,7 @@ class OnOffControl(Control):
         self.off_value = float(self.options['off_value'])/255.0
         self.sleep = float(self.options['sleep'])
         
-        self.on_value = self.target_value + self.on_offset
-        self.off_value = self.target_value + self.off_offset
+        self.ok_range = abs(self.on_offset)
         
         self.value = self.off_value
         
@@ -510,11 +509,7 @@ class OnOffControl(Control):
         
     def set_target_value(self, value):
         """ set the target value """
-
         self.target_value = float(value)
-        self.on_value = self.target_value + self.on_offset
-        self.off_value = self.target_value + self.off_offset
-        
         return
         
     def get_target_value(self):
@@ -525,9 +520,9 @@ class OnOffControl(Control):
         """ return the current value """
         value = self.input.get_value()
         
-        if value <= self.on_value:
+        if value <= (self.target_value + self.on_offset):
             self.value = self.max_value
-        elif value >= self.off_value:
+        elif value >= (self.target_value + self.off_offset):
             self.value = self.off_value
         
         return self.value
