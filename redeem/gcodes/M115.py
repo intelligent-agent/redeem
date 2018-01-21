@@ -39,6 +39,11 @@ class M115(GCodeCommand):
                 extruder_count
             )
         )
+        
+        # tell printer to push all outstanding alarms
+        self.printer.resend_alarms()
+        
+        return 
 
     def get_description(self):
         return "Get Firmware Version and Capabilities"
