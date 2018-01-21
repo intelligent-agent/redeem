@@ -61,39 +61,65 @@ class CascadingConfigParser(ConfigParser.SafeConfigParser):
 
     def parse_capes(self):
         """ Read the name and revision of each cape on the BeagleBone """
-        self.replicape_revision = None
-        self.reach_revision = None
-        self.revolve_revision = "00A0"
+        self.board_name = None
+        self.board_rev  = None
+        self.cape_name  = None
+        self.cape_rev   = None
+        self.addon_name = None
+        self.addon_rev  = None
+        self.key_path   = None
 
-        with open("/sys/bus/i2c/devices/0-0050/eeprom", "rb") as f:
-            self.replicape_data = f.read(120)
-            self.replicape_path = "/sys/bus/i2c/devices/0-0050/eeprom"
-        return
-        import glob
-                
-        
+        # Get baseboard
+        with open("/sys/devices/platform/bone_capemgr/baseboard/board-name", "r") as f:
+            self.board_name = f.readline().rstrip()
+        with open("/sys/devices/platform/bone_capemgr/baseboard/revision", "r") as f:
+            self.board_rev = f.readline().rstrip()
 
-        paths = glob.glob("/sys/bus/i2c/devices/[1-2]-005[4-7]/*/nvmem")
-        paths.extend(glob.glob("/sys/bus/i2c/devices/[1-2]-005[4-7]/nvmem/at24-[1-4]/nvmem"))
-        #paths.append(glob.glob("/sys/bus/i2c/devices/[1-2]-005[4-7]/eeprom"))
-        for i, path in enumerate(paths):
-            try:
-                with open(path, "rb") as f:
-                    data = f.read(120)
-                    name = data[58:74].strip()
-                    if name == "BB-BONE-REPLICAP":
-                        self.replicape_revision = data[38:42]
-                        self.replicape_data = data
-                        self.replicape_path = path
-                    elif name[:13] == "BB-BONE-REACH":
-                        self.reach_revision = data[38:42]
-                        self.reach_data = data
-                        self.reach_path = path
-                    if self.replicape_revision != None and self.reach_revision != None:
-                        break
-            except IOError as e:
-                pass
-        return
+        logging.info("Found board '{}', rev '{}'".format(self.board_name, self.board_rev))
+
+        # Revolve has the key stored in base board EEPROM
+        if self.board_name == "A335RVLV": 
+            logging.info("Baseboard is Revolve, board revision {}".format(self.board_rev))
+            self.board_name = "Revolve"
+            self.key_path = "/sys/bus/i2c/devices/0-0050/eeprom"
+        else:
+            for i in range(4):
+                name_path = "/sys/devices/platform/bone_capemgr/slot-{}/board-name".format(i)
+                rev_path  = "/sys/devices/platform/bone_capemgr/slot-{}/revision".format(i)
+                if os.path.isfile(name_path):
+                    with open(name_path) as f:
+                        name = f.readline()
+                    if name.startswith("Replicape"):
+                        self.cape_name = "Replicape"
+                        self.key_path = "/sys/bus/i2c/devices/0-00{}/eeprom".format(50+i)
+                        with open(rev_path) as f:
+                            self.cape_rev = f.readline()
+                    elif name.startswith("Reach"):
+                        self.addon_name = "Reach"
+                        with open(rev_path) as f:
+                            self.addon_rev = f.readline()    
+
+        if self.key_path:
+            logging.debug("Checking for key at {}".format(self.key_path))            
+            with open(self.key_path, "rb") as f:
+                self.key_data = f.read(120)
+            self.replicape_key = "".join(struct.unpack('20c', self.key_data[100:120]))
+            if self.replicape_key == '\x00'*20 or self.replicape_key == '\xFF'*20:
+                logging.debug("Replicape key invalid")
+                self.replicape_key = self.make_key()
+                self.replicape_data = self.key_data[:100] + self.replicape_key
+                logging.debug("New Replicape key: '"+self.replicape_key+"'")
+                try:
+                    with open(self.key_path, "wb") as f:
+                        f.write(self.key_data[:120])
+                except IOError as e:
+                    logging.warning("Unable to write new key to EEPROM")
+            else:
+                logging.debug("Found Replicape key : '{}'".format(self.replicape_key))
+
+        else:
+            self.replicape_key = self.make_key()
+            logging.debug("Using random key: '"+self.replicape_key+"'")
 
     def get_default_settings(self):
         fs = []
@@ -171,24 +197,13 @@ class CascadingConfigParser(ConfigParser.SafeConfigParser):
 
     def get_key(self):
         """ Get the generated key from the config or create one """
-
-        self.replicape_key = "".join(struct.unpack('20c', self.replicape_data[100:120]))
-        logging.debug("Found Replicape key: '"+self.replicape_key+"'")
-        if self.replicape_key == '\x00'*20:
-            logging.debug("Replicape key invalid")
-            import random
-            import string
-            self.replicape_key = ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits) for _ in range(20))
-            self.replicape_data = self.replicape_data[:100] + self.replicape_key
-            logging.debug("New Replicape key: '"+self.replicape_key+"'")
-            #logging.debug("".join(struct.unpack('20c', self.new_replicape_data[100:120])))
-            try:
-                with open(self.replicape_path, "wb") as f:
-                    f.write(self.replicape_data[:120])
-            except IOError as e:
-                logging.warning("Unable to write new key to EEPROM")
         return self.replicape_key
 
+
+    def make_key(self):
+        import random
+        import string
+        return ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits) for _ in range(20))
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG,

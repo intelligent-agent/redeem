@@ -46,6 +46,7 @@ class Printer:
         self.steppers    = {}
         self.steppers_ordered = []
         self.heaters     = {}
+        self.heaters_ordered = []
         self.thermistors = {}
         self.mosfets     = {}
         self.end_stops   = {}

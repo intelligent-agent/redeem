@@ -15,7 +15,7 @@ from .GCodeCommand import GCodeCommand
 class M115(GCodeCommand):
     def execute(self, g):
         protocol_version = 0.1
-        replicape_key = self.printer.replicape_key
+        replicape_key = self.printer.config.replicape_key
         firmware_name = "Redeem"
         firmware_version = self.printer.firmware_version
         firmware_url = "http%3A//wiki.thing-printer.com/index.php?title=Redeem"

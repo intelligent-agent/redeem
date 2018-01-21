@@ -140,53 +140,39 @@ class Redeem:
 
         # Find out which capes are connected
         self.printer.config.parse_capes()
-        self.revision = self.printer.config.replicape_revision
-        self.revolve = self.printer.config.revolve_revision
-        if self.revision:
-            logging.info("Found Replicape rev. " + self.revision)
-            printer.replicape_key = printer.config.get_key()
-        elif self.revolve:
-            logging.info("Found Revolve rev. " + self.revolve)
-            printer.replicape_key = printer.config.get_key()
-        else:
-            logging.warning("Oh no! No Replicape present!")
-            self.revision = "0B3A"
-        # We set it to 5 axis by default
-        Printer.NUM_AXES = 5
-        if self.printer.config.reach_revision:
-            logging.info("Found Reach rev. "+self.printer.config.reach_revision)
-        if self.printer.config.reach_revision == "00A0":
-            Printer.NUM_AXES = 8
-        elif self.printer.config.reach_revision == "00B0":
-            Printer.NUM_AXES = 7
-    
-        if self.revolve:
-            Printer.NUM_AXES = 6            
 
-        if self.revision in ["00A4", "0A4A", "00A3"]:
-            PWM.set_frequency(100)
-        elif self.revision in ["00B1", "00B2", "00B3", "0B3A"]:
-            PWM.set_frequency(1000)
+        # Init basic stuff by platform
+        if printer.config.board_name == "Revolve":
+            Printer.NUM_AXES = 6
+            printer.enable = Enable("gpio18", False)
+        elif printer.config.cape_name == "Replicape":
+            Printer.NUM_AXES = 5
+            printer.enable = Enable("P9_41", True)
+            if printer.config.cape_rev in ["00B1", "00B2", "00B3", "0B3A"]:
+                PWM.set_frequency(250)
+            elif printer.config.cape_rev in ["00A4", "0A4A", "00A3"]:
+                PWM.set_frequency(100)
+        if printer.config.addon_name == "Reach":
+            if printer.config.addon_rev == "00A0":
+                Printer.NUM_AXES = 8
+            elif printer.config.addon_rev == "00B0":
+                Printer.NUM_AXES = 7
 
         # Init the Watchdog timer
         printer.watchdog = Watchdog()
 
-        # Enable PWM and steppers
-        if self.revolve:
-            printer.enable = Enable("gpio18", False)
-        else:
-            printer.enable = Enable("P9_41", True)
+        # Enable power to steppers/PWM stuff
         printer.enable.set_enabled()
 
         # Init the Paths
         printer.axis_config = printer.config.getint('Geometry', 'axis_config')
 
         # Init the end stops
-        EndStop.inputdev = self.printer.config.get("Endstops", "inputdev")
+        EndStop.inputdev = printer.config.get("Endstops", "inputdev")
         # Set up key listener
         Key_pin.listener = Key_pin_listener(EndStop.inputdev)
 
-        homing_only_endstops = self.printer.config.get('Endstops', 'homing_only_endstops')
+        homing_only_endstops = printer.config.get('Endstops', 'homing_only_endstops')
 
         for es in ["Z2", "Y2", "X2", "Z1", "Y1", "X1"]: # Order matches end stop inversion mask in Firmware
             pin = self.printer.config.get("Endstops", "pin_"+es)
@@ -200,47 +186,50 @@ class Redeem:
 
         # Init the 5 Stepper motors (step, dir, fault, DAC channel, name)
         Stepper.printer = printer
-        if self.revision == "00A3":
-            printer.steppers["X"] = Stepper_00A3("GPIO0_27", "GPIO1_29", "GPIO2_4" , 0, "X")
-            printer.steppers["Y"] = Stepper_00A3("GPIO1_12", "GPIO0_22", "GPIO2_5" , 1, "Y")
-            printer.steppers["Z"] = Stepper_00A3("GPIO0_23", "GPIO0_26", "GPIO0_15", 2, "Z")
-            printer.steppers["E"] = Stepper_00A3("GPIO1_28", "GPIO1_15", "GPIO2_1" , 3, "E")
-            printer.steppers["H"] = Stepper_00A3("GPIO1_13", "GPIO1_14", "GPIO2_3" , 4, "H")
-        elif self.revision == "00B1":
-            printer.steppers["X"] = Stepper_00B1("GPIO0_27", "GPIO1_29", "GPIO2_4" , 11, 0, "X")
-            printer.steppers["Y"] = Stepper_00B1("GPIO1_12", "GPIO0_22", "GPIO2_5" , 12, 1, "Y")
-            printer.steppers["Z"] = Stepper_00B1("GPIO0_23", "GPIO0_26", "GPIO0_15", 13, 2, "Z")
-            printer.steppers["E"] = Stepper_00B1("GPIO1_28", "GPIO1_15", "GPIO2_1" , 14, 3, "E")
-            printer.steppers["H"] = Stepper_00B1("GPIO1_13", "GPIO1_14", "GPIO2_3" , 15, 4, "H")
-        elif self.revision == "00B2":
-            printer.steppers["X"] = Stepper_00B2("GPIO0_27", "GPIO1_29", "GPIO2_4" , 11, 0, "X")
-            printer.steppers["Y"] = Stepper_00B2("GPIO1_12", "GPIO0_22", "GPIO2_5" , 12, 1, "Y")
-            printer.steppers["Z"] = Stepper_00B2("GPIO0_23", "GPIO0_26", "GPIO0_15", 13, 2, "Z")
-            printer.steppers["E"] = Stepper_00B2("GPIO1_28", "GPIO1_15", "GPIO2_1" , 14, 3, "E")
-            printer.steppers["H"] = Stepper_00B2("GPIO1_13", "GPIO1_14", "GPIO2_3" , 15, 4, "H")
-        elif self.revision in ["00B3", "0B3A"]:
-            printer.steppers["X"] = Stepper_00B3("GPIO0_27", "GPIO1_29", 90, 11, 0, "X")
-            printer.steppers["Y"] = Stepper_00B3("GPIO1_12", "GPIO0_22", 91, 12, 1, "Y")
-            printer.steppers["Z"] = Stepper_00B3("GPIO0_23", "GPIO0_26", 92, 13, 2, "Z")
-            printer.steppers["E"] = Stepper_00B3("GPIO1_28", "GPIO1_15", 93, 14, 3, "E")
-            printer.steppers["H"] = Stepper_00B3("GPIO1_13", "GPIO1_14", 94, 15, 4, "H")
-        elif self.revision in ["00A4", "0A4A"]:
-            printer.steppers["X"] = Stepper_00A4("GPIO0_27", "GPIO1_29", "GPIO2_4" , 0, 0, "X")
-            printer.steppers["Y"] = Stepper_00A4("GPIO1_12", "GPIO0_22", "GPIO2_5" , 1, 1, "Y")
-            printer.steppers["Z"] = Stepper_00A4("GPIO0_23", "GPIO0_26", "GPIO0_15", 2, 2, "Z")
-            printer.steppers["E"] = Stepper_00A4("GPIO1_28", "GPIO1_15", "GPIO2_1" , 3, 3, "E")
-            printer.steppers["H"] = Stepper_00A4("GPIO1_13", "GPIO1_14", "GPIO2_3" , 4, 4, "H")
-        # Init Reach steppers, if present.
-        if printer.config.reach_revision == "00A0":
-            printer.steppers["A"] = Stepper_reach_00A4("GPIO2_2" , "GPIO1_18", "GPIO0_14", 5, 5, "A")
-            printer.steppers["B"] = Stepper_reach_00A4("GPIO1_16", "GPIO0_5" , "GPIO0_14", 6, 6, "B")
-            printer.steppers["C"] = Stepper_reach_00A4("GPIO0_3" , "GPIO3_19", "GPIO0_14", 7, 7, "C")
-        elif printer.config.reach_revision == "00B0":
-            printer.steppers["A"] = Stepper_reach_00B0("GPIO1_16", "GPIO0_5",  "GPIO0_3", 5, 5, "A")
-            printer.steppers["B"] = Stepper_reach_00B0("GPIO2_2" , "GPIO0_14", "GPIO0_3", 6, 6, "B")
+        if printer.config.cape_name == "Replicape":
+            if printer.config.cape_rev in ["00B3", "0B3A"]:
+                printer.steppers["X"] = Stepper_00B3("GPIO0_27", "GPIO1_29", 90, 11, 0, "X")
+                printer.steppers["Y"] = Stepper_00B3("GPIO1_12", "GPIO0_22", 91, 12, 1, "Y")
+                printer.steppers["Z"] = Stepper_00B3("GPIO0_23", "GPIO0_26", 92, 13, 2, "Z")
+                printer.steppers["E"] = Stepper_00B3("GPIO1_28", "GPIO1_15", 93, 14, 3, "E")
+                printer.steppers["H"] = Stepper_00B3("GPIO1_13", "GPIO1_14", 94, 15, 4, "H")
+            elif printer.config.cape_rev == "00B2":
+                printer.steppers["X"] = Stepper_00B2("GPIO0_27", "GPIO1_29", "GPIO2_4" , 11, 0, "X")
+                printer.steppers["Y"] = Stepper_00B2("GPIO1_12", "GPIO0_22", "GPIO2_5" , 12, 1, "Y")
+                printer.steppers["Z"] = Stepper_00B2("GPIO0_23", "GPIO0_26", "GPIO0_15", 13, 2, "Z")
+                printer.steppers["E"] = Stepper_00B2("GPIO1_28", "GPIO1_15", "GPIO2_1" , 14, 3, "E")
+                printer.steppers["H"] = Stepper_00B2("GPIO1_13", "GPIO1_14", "GPIO2_3" , 15, 4, "H")
+            elif printer.config.cape_rev == "00B1":
+                printer.steppers["X"] = Stepper_00B1("GPIO0_27", "GPIO1_29", "GPIO2_4" , 11, 0, "X")
+                printer.steppers["Y"] = Stepper_00B1("GPIO1_12", "GPIO0_22", "GPIO2_5" , 12, 1, "Y")
+                printer.steppers["Z"] = Stepper_00B1("GPIO0_23", "GPIO0_26", "GPIO0_15", 13, 2, "Z")
+                printer.steppers["E"] = Stepper_00B1("GPIO1_28", "GPIO1_15", "GPIO2_1" , 14, 3, "E")
+                printer.steppers["H"] = Stepper_00B1("GPIO1_13", "GPIO1_14", "GPIO2_3" , 15, 4, "H")
+            elif printer.config.cape_rev in ["00A4", "0A4A"]:
+                printer.steppers["X"] = Stepper_00A4("GPIO0_27", "GPIO1_29", "GPIO2_4" , 0, 0, "X")
+                printer.steppers["Y"] = Stepper_00A4("GPIO1_12", "GPIO0_22", "GPIO2_5" , 1, 1, "Y")
+                printer.steppers["Z"] = Stepper_00A4("GPIO0_23", "GPIO0_26", "GPIO0_15", 2, 2, "Z")
+                printer.steppers["E"] = Stepper_00A4("GPIO1_28", "GPIO1_15", "GPIO2_1" , 3, 3, "E")
+                printer.steppers["H"] = Stepper_00A4("GPIO1_13", "GPIO1_14", "GPIO2_3" , 4, 4, "H")
+            elif printer.config.cape_rev == "00A3":
+                printer.steppers["X"] = Stepper_00A3("GPIO0_27", "GPIO1_29", "GPIO2_4" , 0, "X")
+                printer.steppers["Y"] = Stepper_00A3("GPIO1_12", "GPIO0_22", "GPIO2_5" , 1, "Y")
+                printer.steppers["Z"] = Stepper_00A3("GPIO0_23", "GPIO0_26", "GPIO0_15", 2, "Z")
+                printer.steppers["E"] = Stepper_00A3("GPIO1_28", "GPIO1_15", "GPIO2_1" , 3, "E")
+                printer.steppers["H"] = Stepper_00A3("GPIO1_13", "GPIO1_14", "GPIO2_3" , 4, "H")
+
+            # Init Reach steppers, if present.
+            if printer.config.addon_name == "Reach":
+                if printer.config.addon_rev == "00B0":
+                    printer.steppers["A"] = Stepper_reach_00B0("GPIO1_16", "GPIO0_5",  "GPIO0_3", 5, 5, "A")
+                    printer.steppers["B"] = Stepper_reach_00B0("GPIO2_2" , "GPIO0_14", "GPIO0_3", 6, 6, "B")
+                elif printer.config.addon_rev == "00A0":
+                    printer.steppers["A"] = Stepper_reach_00A4("GPIO2_2" , "GPIO1_18", "GPIO0_14", 5, 5, "A")
+                    printer.steppers["B"] = Stepper_reach_00A4("GPIO1_16", "GPIO0_5" , "GPIO0_14", 6, 6, "B")
+                    printer.steppers["C"] = Stepper_reach_00A4("GPIO0_3" , "GPIO3_19", "GPIO0_14", 7, 7, "C")
 
         # Revolve
-        if self.revolve in ["00A0"]:
+        elif printer.config.board_name == "Revolve":
             import spidev
             spi_0_0 = spidev.SpiDev()
             spi_0_0.open(0, 0)
@@ -250,22 +239,18 @@ class Redeem:
             spi_1_1 = spidev.SpiDev()
             spi_1_1.open(1, 1)
 
-            # Append in right order.                       
-            #printer.add_stepper(TMC2130("GPIO2_27", "GPIO3_14", "GPIO0_27", "X", spi_0_0))
-            #printer.add_stepper(TMC2130("GPIO3_16", "GPIO3_17", "GPIO2_0",  "Y", spi_0_0))
-            printer.add_stepper(TMC2130("GPIO3_14", "GPIO3_15", "GPIO0_27", "X", spi_0_0))
-            printer.add_stepper(TMC2130("GPIO3_16", "GPIO3_17", "GPIO2_0",  "Y", spi_0_0))
-            printer.add_stepper(TMC2130("GPIO3_18", "GPIO3_19", "GPIO1_16", "Z", spi_0_0))
-            printer.add_stepper(TMC2130("GPIO3_20", "GPIO3_21", "GPIO2_1",  "E", spi_0_0))
-            printer.add_stepper(TMC2130("GPIO2_26", "GPIO2_27", "GPIO0_29", "H", spi_0_0))
-            printer.add_stepper(TMC2130("GPIO2_28", "GPIO2_29", "GPIO0_26", "A", spi_0_0))
-            #printer.add_stepper(TMC2130("GPIO2_30", "GPIO2_31", None, "B", spi_1_0))
-            #printer.add_stepper(TMC2130("GPIO1_12", "GPIO1_13", None, "C", spi_1_1))
+            # Append in right order.         
+            for name in ["XYZEHA"]:
+                step_pin  = printer.config.get('Steppers', 'step_pin_' + name)
+                dir_pin   = printer.config.get('Steppers', 'dir_pin_' + name)
+                fault_pin = printer.config.get('Steppers', 'fault_pin_' + name)
+                printer.add_stepper(TMC2130(step_pin, dir_pin, fault_pin, name, spi_0_0))              
 
+            
             for i in printer.steppers:
                 s = Stepper.printer.steppers[i]
                 s.update()
-                s.get_diagnostics()
+                #s.get_diagnostics()
 
 
         # Enable the steppers and set the current, steps pr mm and
@@ -306,14 +291,14 @@ class Redeem:
 
         # Make Mosfets, temperature sensors and extruders
         heaters = ["E", "H", "HBP"]
-        if self.printer.config.reach_revision:
+        if printer.config.addon_name == "Reach":
             heaters.extend(["A", "B", "C"])
-        elif self.revolve:
+        elif printer.config.board_name == "Revolve":
             heaters.extend(["A"])
         for e in heaters:
             # Mosfets
             channel = self.printer.config.get("Heaters", "mosfet_"+e)
-            if self.revolve:
+            if printer.config.board_name == "Revolve":
                 self.printer.mosfets[e] = Mosfet_Pin(channel)
             else:
                 self.printer.mosfets[e] = Mosfet(int(channel))
@@ -351,7 +336,7 @@ class Redeem:
             self.printer.heaters[e].max_temp_fall   = self.printer.config.getfloat('Heaters', 'max_fall_temp_'+e)
             self.printer.heaters[e].max_power       = self.printer.config.getfloat('Heaters', 'max_power_'+e)
 
-        if self.revolve in ["00A0"]:
+        if printer.config.board_name == "Revolve":
             self.printer.spi_0_1 = spidev.SpiDev()
             self.printer.spi_0_1.open(0, 1)
             self.printer.spi_0_1.xfer([0x00])
@@ -359,30 +344,31 @@ class Redeem:
 
         # Init the three fans. Argument is PWM channel number
         self.printer.fans = []
-        if self.revision == "00A3":
-            self.printer.fans.append(Fan(0))
-            self.printer.fans.append(Fan(1))
-            self.printer.fans.append(Fan(2))
-        elif self.revision == "0A4A":
-            self.printer.fans.append(Fan(8))
-            self.printer.fans.append(Fan(9))
-            self.printer.fans.append(Fan(10))
-        elif self.revision in ["00B1", "00B2", "00B3", "0B3A"]:
-            self.printer.fans.append(Fan(7))
-            self.printer.fans.append(Fan(8))
-            self.printer.fans.append(Fan(9))
-            self.printer.fans.append(Fan(10))
-        if printer.config.reach_revision == "00A0":
-            self.printer.fans.append(Fan(14))
-            self.printer.fans.append(Fan(15))
-            self.printer.fans.append(Fan(7))
+        if printer.config.board_name == "Revolve":
+            self.printer.fans.append(Fan_Pin(0, 0, self.printer.config.getfloat('Fans', "fan_0_max_value")))
+            self.printer.fans.append(Fan_Pin(0, 1, self.printer.config.getfloat('Fans', "fan_1_max_value")))
+            self.printer.fans.append(Fan_Pin(2, 0, self.printer.config.getfloat('Fans', "fan_2_max_value")))
+            self.printer.fans.append(Fan_Pin(2, 1, self.printer.config.getfloat('Fans', "fan_3_max_value")))
 
-        if printer.config.revolve_revision == "00A0":
-            self.printer.fans.append(Fan_Pin(0, 0))
-            self.printer.fans.append(Fan_Pin(0, 1))
-            self.printer.fans.append(Fan_Pin(2, 0))
-            self.printer.fans.append(Fan_Pin(2, 1))
-
+        if printer.config.cape_name == "Replicape":
+            if printer.config.cape_rev == "00A3":
+                self.printer.fans.append(Fan(0))
+                self.printer.fans.append(Fan(1))
+                self.printer.fans.append(Fan(2))
+            elif printer.config.cape_rev == "0A4A":
+                self.printer.fans.append(Fan(8))
+                self.printer.fans.append(Fan(9))
+                self.printer.fans.append(Fan(10))
+            elif printer.config.cape_rev in ["00B1", "00B2", "00B3", "0B3A"]:
+                self.printer.fans.append(Fan(7))
+                self.printer.fans.append(Fan(8))
+                self.printer.fans.append(Fan(9))
+                self.printer.fans.append(Fan(10))
+        if printer.config.addon_name == "Reach":
+            if printer.config.addon_rev == "00A0":
+                self.printer.fans.append(Fan(14))
+                self.printer.fans.append(Fan(15))
+                self.printer.fans.append(Fan(7))
 
         # Set default value for all fans
         for i, f in enumerate(self.printer.fans):
@@ -437,7 +423,7 @@ class Redeem:
                 printer.controlled_fans.append(self.printer.fans[i])
                 logging.info("Added fan {} to M106/M107".format(i))
 
-        # Connect the colds to fans
+        # Connect the cold ends to fans
         for ce, cold_end in enumerate(self.printer.cold_ends):
             for f, fan in enumerate(self.printer.fans):
                 option = "connect-ds18b20-{}-fan-{}".format(ce, f)

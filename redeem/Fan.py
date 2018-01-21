@@ -24,32 +24,28 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
 import time
 from PWM import PWM
 from PWM_pin import PWM_pin
-
+import logging
 
 
 
 class Fan_Pin(PWM_pin):
 
-    def __init__(self, chip, channel):
+    def __init__(self, chip, channel, max_value=1.0):
+        self.max_value = max_value
         PWM_pin.__init__(self, "{}:{}".format(chip, channel), 20000, 0.0)
         self.chip = chip
         self.channel = channel
         self.value = 0.0
 
-    def ramp_to(self, value, delay=0.01):
-        ''' Set the fan/light value to the given value, in degree, with the given speed in deg / sec '''
-        for w in xrange(int(self.value*255.0), int(value*255.0), (1 if value>=self.value else -1)):
-            logging.debug("Fan value: "+str(w))
-            self.set_value(w/255.0)
-            time.sleep(delay)
-        self.set_value(value)
-
+    def set_value(self, value):
+        super(Fan_Pin, self).set_value(value*self.max_value)
 
 class Fan(PWM):
 
     def __init__(self, channel):
         """ Channel is the channel that the fan is on (0-7) """
         self.channel = channel
+        self.max_value = 1.0
 
     def set_PWM_frequency(self, value):
         """ Set the amount of on-time from 0..1 """

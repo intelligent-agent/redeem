@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-This is an implementation of the PWM pin for servos
+A single PWM channel or timer on the AM335x. 
 
 Author: Elias Bakken
 email: elias(dot)bakken(at)gmail(dot)com
@@ -28,7 +28,7 @@ import logging
 
 """ 
 """
-class PWM_pin:
+class PWM_pin(object):
     def __init__(self, pin, frequency, duty_cycle): 
         if pin == "P9_14":
             self.chip = 0
@@ -41,13 +41,13 @@ class PWM_pin:
             self.channel = 0
         elif pin == "0:1":
             self.chip = 0
-            self.channel = 0
+            self.channel = 1
         elif pin == "2:0":
-            self.chip = 0
+            self.chip = 2
             self.channel = 0
         elif pin == "2:1":
-            self.chip = 0
-            self.channel = 0
+            self.chip = 2
+            self.channel = 1
         elif pin == "4:0":
             self.chip = 4
             self.channel = 0
@@ -63,10 +63,11 @@ class PWM_pin:
         else:
             logging.warning("Unrcognized pin '{}'. You may have to implement it...".format(pin))
 
+
+        self.enabled = False
         self.export_chip(self.chip, self.channel)
         self.set_frequency(frequency)
         self.set_value(duty_cycle)
-        self.set_enabled()
         
     def export_chip(self, chip, channel):
         self.base = "/sys/class/pwm/pwmchip{}/pwm-{}:{}".format(chip, chip, channel)
@@ -78,9 +79,12 @@ class PWM_pin:
         
 
     def set_enabled(self, is_enabled = True):
+        if self.enabled == is_enabled:
+            return
         path = self.base+"/enable"
         with open(path, "w") as f:           
             f.write("1" if is_enabled else "0")
+        self.enabled = is_enabled
 
 
     def set_frequency(self, freq):
@@ -100,6 +104,16 @@ class PWM_pin:
         #logging.debug("Setting duty_cycle to "+str(duty_cycle))
         with open(path, "w") as f:
             f.write(str(duty_cycle))
+        # Call enable/disable here since the timer pins 
+        self.set_enabled( (value > 0) )
+
+
+    def ramp_to(self, value, delay=0.01):
+        ''' Set the fan/light value to the given value, in degree, with the given speed in deg / sec '''
+        for w in xrange(int(self.value*255.0), int(value*255.0), (1 if value>=self.value else -1)):
+            self.set_value(w/255.0)
+            time.sleep(delay)
+        self.set_value(value)
 
 
 if __name__ == '__main__':
