@@ -26,9 +26,10 @@ import logging
 from Delta import Delta
 from PruInterface import PruInterface
 from SDCardManager import SDCardManager
-import os
 import json
 from six import iteritems
+
+from configuration.RedeemConfig import RedeemConfig
 
 
 class Printer:
@@ -107,6 +108,11 @@ class Printer:
         self.axes_relative = []
 
         self.sd_card_manager = SDCardManager()
+
+        # default. should be initialized later
+        # TODO : these should be passed into from constructor
+        self.config = RedeemConfig()
+        self.replicape_key = None
 
     def add_slave(self, master, slave):
         ''' Make an axis copy the movement of another.

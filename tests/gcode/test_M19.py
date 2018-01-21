@@ -5,7 +5,6 @@ import mock
 from six import iteritems
 from redeem.Stepper import Stepper_00B3
 
-
 class M19_Tests(MockPrinter):
 
     @mock.patch.object(Stepper_00B3, "reset")

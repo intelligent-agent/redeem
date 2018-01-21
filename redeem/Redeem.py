@@ -52,7 +52,6 @@ from PathPlanner import PathPlanner
 from Gcode import Gcode
 from ColdEnd import ColdEnd
 from PruFirmware import PruFirmware
-from CascadingConfigParser import CascadingConfigParser
 from Printer import Printer
 from GCodeProcessor import GCodeProcessor
 from PluginsController import PluginsController
@@ -69,6 +68,9 @@ from six import iteritems
 from _version import __version__, __release_name__
 
 # Global vars
+from redeem.configuration import get_config_factory
+from redeem.configuration.factories.ConfigFactoryV20 import ConfigFactoryV20
+
 printer = None
 
 # Default logging level is set to debug
@@ -101,12 +103,6 @@ class Redeem:
         Alarm.executor = AlarmExecutor()
         alarm = Alarm(Alarm.ALARM_TEST, "Alarm framework operational")
 
-        # check for config files
-        file_path = os.path.join(config_location,"default.cfg")
-        if not os.path.exists(file_path):
-            logging.error(file_path + " does not exist, this file is required for operation")
-            sys.exit() # maybe use something more graceful?
-
         local_path = os.path.join(config_location,"local.cfg")
         if not os.path.exists(local_path):
             logging.info(local_path + " does not exist, Creating one")
@@ -114,16 +110,13 @@ class Redeem:
             os.chmod(local_path, 0o777)
 
         # Parse the config files.
-        printer.config = CascadingConfigParser(
-            [os.path.join(config_location,'default.cfg'),
-             os.path.join(config_location,'printer.cfg'),
-             os.path.join(config_location,'local.cfg')])
+        config_files = [
+            os.path.join(config_location, 'printer.cfg'),
+            os.path.join(config_location, 'local.cfg')
+        ]
 
-        # Check the local and printer files
-        printer_path = os.path.join(config_location,"printer.cfg")
-        if os.path.exists(printer_path):
-            printer.config.check(printer_path)
-        printer.config.check(os.path.join(config_location,'local.cfg'))
+        config_factory = get_config_factory(config_files)
+        printer.config = config_factory.hydrate_config(config_files=config_files)
 
         # Get the revision and loglevel from the Config file
         level = self.printer.config.getint('System', 'loglevel')

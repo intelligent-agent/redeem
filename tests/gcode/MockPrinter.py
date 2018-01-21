@@ -3,11 +3,12 @@ from __future__ import absolute_import
 import unittest
 import mock
 import sys
-
-from redeem.Extruder import Heater
+import os
+import numpy as np
 
 sys.modules['evdev'] = mock.Mock()
 sys.modules['spidev'] = mock.MagicMock()
+
 sys.modules['redeem.RotaryEncoder'] = mock.Mock()
 sys.modules['redeem.Watchdog'] = mock.Mock()
 sys.modules['redeem.GPIO'] = mock.Mock()
@@ -15,6 +16,7 @@ sys.modules['redeem.Enable'] = mock.Mock()
 sys.modules['redeem.Key_pin'] = mock.Mock()
 sys.modules['redeem.DAC'] = mock.Mock()
 sys.modules['redeem.ShiftRegister.py'] = mock.Mock()
+
 sys.modules['Adafruit_BBIO'] = mock.Mock()
 sys.modules['Adafruit_BBIO.GPIO'] = mock.Mock()
 sys.modules['Adafruit_GPIO'] = mock.Mock()
@@ -31,23 +33,13 @@ sys.modules['JoinableQueue'] = mock.Mock()
 sys.modules['redeem.USB'] = mock.Mock()
 sys.modules['redeem.Ethernet'] = mock.Mock()
 sys.modules['redeem.Pipe'] = mock.Mock()
-sys.modules['redeem.Fan'] = mock.Mock()
-sys.modules['redeem.Mosfet'] = mock.Mock()
-sys.modules['redeem.PWM'] = mock.Mock()
 
-
-from redeem.CascadingConfigParser import CascadingConfigParser
-from redeem.Redeem import *
+from redeem.Redeem import Redeem
+from redeem.PathPlanner import PathPlanner
 from redeem.EndStop import EndStop
 
-
-"""
-Override CascadingConfigParser methods to set self. variables
-"""
-class CascadingConfigParserWedge(CascadingConfigParser):
-    def parse_capes(self):
-        self.replicape_revision = "0A4A" # Fake. No hardware involved in these tests (Redundant?)
-        self.reach_revision = "00A0" # Fake. No hardware involved in these tests (Redundant?)
+from redeem.Path import Path
+from redeem.Gcode import Gcode
 
 
 class MockPrinter(unittest.TestCase):
@@ -90,7 +82,6 @@ log_to_file = False
     @classmethod
     @mock.patch.object(EndStop, "_wait_for_event", new=None)
     @mock.patch.object(PathPlanner, "_init_path_planner")
-    @mock.patch("redeem.CascadingConfigParser", new=CascadingConfigParserWedge)
     def setUpClass(cls, mock_init_path_planner):
 
         """
@@ -110,6 +101,7 @@ log_to_file = False
         mock.patch('redeem.Extruder.Extruder.enable', new=disabled_extruder_enable).start()
         mock.patch('redeem.Extruder.HBP.enable', new=disabled_hbp_enable).start()
         mock.patch('redeem.PathPlanner.PathPlanner._init_path_planner', new=bypass_init_path_planner)
+        mock.patch("redeem.PWM.PWM.i2c").start()
 
         cfg_path = "../configs"
         cls.setUpConfigFiles(cfg_path)
@@ -117,6 +109,9 @@ log_to_file = False
         cls.R = Redeem(config_location=cfg_path)
         cls.printer = cls.R.printer
         cls.printer.replicape_key = "TESTING_DUMMY_KEY"
+
+        # cls.printer.reach_revision = "00B0"
+
 
         cls.setUpPatch()
 
