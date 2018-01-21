@@ -604,6 +604,10 @@ class PIDControl(Control):
         self.max_value = min(1.0, float(self.options['max_value'])/255.0)
         self.sleep = float(self.options['sleep'])
         
+        self.on_off_range = np.inf
+        if "on_off_range" in self.options:
+            self.on_off_range = float(self.options['on_off_range'])
+        
         return
         
     def initialise(self):
@@ -639,12 +643,18 @@ class PIDControl(Control):
         self.error = self.target_value-current_value
         self.errors.append(self.error)
         self.errors.pop(0)
-
-        derivative = self.get_error_derivative()
-        integral = self.get_error_integral()
-        # The standard formula for the PID
-        value = self.Kp*(self.error + (1.0/self.Ti)*integral + self.Td*derivative)  
-        value = max(min(value, self.max_value, 1.0), 0.0)                         # Normalize to 0, max
+        
+        if self.error > self.on_off_range:
+            # on off control
+            self.reset()
+            value = self.max_value
+        else:
+            # pid control
+            derivative = self.get_error_derivative()
+            integral = self.get_error_integral()
+            # The standard formula for the PID
+            value = self.Kp*(self.error + (1.0/self.Ti)*integral + self.Td*derivative)  
+            value = max(min(value, self.max_value, 1.0), 0.0)                         # Normalize to 0, max
 
         return value
         
@@ -672,4 +682,3 @@ class PIDControl(Control):
         self.error_integral = 0.0
         
         return
-        
