@@ -601,102 +601,333 @@ path segments before pushing them to the PRU for processing.
     # to the active tool (similar to other firmwares).  When false,
     # such movements will only apply to the E axis.
     e_axis_active = True
+    
+    
+.. _ConfigTemperatureControl:
 
-..  _ConfigColdends:
+Temperature Control
+-------------------
+Thermal management is implemented in Redeem through a user configurable network 
+of sensors, heaters and fans. The user specifies the nodes of this network where
+each node is a uniquely configured instance from a pre-defined set. This approach 
+allows a high degree of flexibility in setting up when fans/heaters turn on or off, 
+the type of control logic that is used for each heater/fan, and even allowing 
+multiple sensors to control the behaviour of an individual heater or fan. 
 
-Cold ends
----------
+In order to allow for basic operation of your printer there are some default settings 
+provided for attaching fans to the `M106` M-code, controlling heaters with PID control, 
+and running safety checks on these heaters. However, as the topology of the control 
+network is user definable, the contents of this section may be modified by the user
+to allow for a much wider range of options. To aid in generating a network of sensors, 
+logic units, control units, heaters, and fans, each of the available units will be 
+described below. Then some examples will be shown that demonstrate the flexibility of the 
+scheme.
+
+Available control units
+~~~~~~~~~~~~~~~~~~~~~~~
+Units that are available to make up the control network are shown in this section. 
+The name of each unit is provided in the sub-section heading `[[UnitName]]`, with 
+all of the settings for that unit held within that sub-section. All temperature 
+control units have a type parameter which determines what that unit does and the 
+parameters it needs. We will now go through the available types of units.
+
+**ALIAS** The alias unit is, as the name suggests, a way of renaming other units. This is useful 
+when renaming temperature sensors from their original name such as ``Thermistor-E`` to
+``Hot End Temperature`` or ``ds18b20-1`` to ``Ambient Temperature``.
+
+::
+
+    [[AliasUnitName]]
+    type = alias
+    input = <name of another unit>
+    
+    
+**COMPARISON** The compraison unit compares values and returns a single value. The
+returned value may be the difference (``input_0 - input_1``) or the maximum or minumum
+value.
+
+::
+
+    [[ComparisonUnitName]]
+    type = difference, maximum, or minimum
+    input_0 = <name of input>
+    input_1 = <name of input>
+    
+**CONSTANT** Allows for the use of constants as a control item. This unit simply returns 
+the value that is provided. Note that the input is assumed to lie within the range [0,255].
+
+::
+
+    [[ConstantName]]
+    type = constant-control
+    value = <number in range 0..255>
+    output = <optional output target name>
+
+**SAFETY** Safety units link temperature sensors and heaters so that a heater that misbehaves
+in any way should cause all heaters, and potentially the motion control as well, to enter an
+error state. This means that all heaters have their power set to zero and motion stops. The
+max rise and fall rates provide limits on excessively rapid changes in temperature, while min 
+and max temp limits the absolute temperatures that are allowed. The ``min_rise_`` parameters 
+allow for checking that the attached input is actually connected to this heater. To avoid false 
+triggering, when temperature is close to steady-state, we provide the ``min_rise_offset`` 
+parameter which only allows for ``min_rise_rate`` checking when the input temperature is 
+``min_rise_offset`` below the heater controllers target temperature. Likewise the ``min_rise_delay``
+provides a delay between starting heating and beginning this particular check.
+
+::
+
+    [[SafetyName]]
+    type = safety
+    max_rise_rate = <number, deg/sec>
+    max_fall_rate = <number, deg/sec>
+    min_temp = <number, deg>
+    max_temp = <number, deg>
+    min_rise_rate = <number, deg/sec>
+    min_rise_offset = <number, deg>
+    min_rise_delay = <number, sec>
+    input = <input sensor name>
+    heater = <heater name>
+
+**ON-OFF CONTROL** This control scheme is best suited to heated beds and the like, where
+response to being on or off is relatively slow. In this unit a target value is specified
+as well as a range within which the heater may be on or off depending on its previous state.
+When the input value is below ``target_value + on_offset`` the output will be ``on_value``.
+When the input value rises above ``target_value + off_offset`` the output will be ``off_value``.
+Note that the output does not turn off when passing through the lower bound, only when it passes
+through the upper bound. Here we are also introduced to the ``sleep`` parameter which gives the
+time between updating the output from this control unit.
+
+::
+
+    [[OnOffName]]
+    type=on-off-control
+    target_value = <number>
+    on_offset = <number, turn on when value <= target + on_offset>
+    off_offset = <number, turn off when value >= target + off_offset>
+    on_value = <number in range 0..255>
+    off_value = <number in range 0..255>
+    sleep = <number, sec, time between control updates>
+    output = <optional output target name>
+    
+**PROPORTIONAL CONTROL** This unit returns a value that is simply ``proportional`` multiplied by
+the difference between ``target_value`` and ``input``, along with some other modifications. These
+modifications are that we don't allow negative output values and if ``input`` drops below 
+``target_value`` then the unit turns off (``output = 0``). If we are within ``ok_range`` of the
+target then ``output`` will be the ``min_value`` and we never allow the output to exceed ``max_value``.
+
+::
+
+    [[ProportionalControlName]]
+    type = proportional-control
+    input = <name of input>
+    target_value = <number, desired temperature>
+    proportional = <number, multiplier of error>
+    max_value = <number in range 0..255>
+    min_value = <number in range 0..255>
+    ok_range = <number, output=min_value if input is within ok_range of target>
+    sleep = <number, sec, time between control updates>
+    output = <optional output target name>
+
+**PID CONTROL** The control unit best for keeping your input exactly where you want it
+is Proportional-Integral -Derivative control. This unit accepts three parameters which
+govern the dynamics of the controller (you are encouraged to look up exactly what 
+``pid_Kp``, ``pid_Ti``, and ``pid_Td`` actually do, I'm not going into that here).
+Again we have an ``ok_range`` within which the controller will output zero, however, we
+also have an ``on_off_range`` which basically turns this control unit full on until 
+``input`` is above ``target_value - on_off_range``. This helps to prevent overshoot
+in certain cases.
+
+..  _ConfigPID:
+
+:todo:`CHECK THIS`
+With version 1.2.6 and beyond, the PID autotune algorithm is fairly
+stable. To run an auto-tune, use the M-code M303. You should see the
+hot-end or heated bed temperature oscillate for a few cycles before
+completing. To set temperature, number of oscillations, which hot end to
+calibrate etc, try running “M303?” or see the description of the :ref:`M303`.
+
+::
+
+    [[PIDControlName]]
+    type = pid-control
+    input = <name of input>
+    target_value =  <number, desired temperature>
+    pid_Kp =  <number, proportional constant>
+    pid_Ti = <number, integral constant>
+    pid_Td = <number, derivative constant>
+    ok_range = <number, output=0 if input is within ok_range of target>
+    on_off_range = <optional number, output max_value if input is less than target - on_off_range>
+    max_value = <number in range 0..255>
+    sleep = <number, sec, time between control updates>
+    output = <optional output target name>
+
+**COMMANDS** To allow linking between G- and M-codes we have the gcode type unit. 
+Currently this only connects ``M106`` and ``M107`` to fans but this may change in 
+the future. The default setting has connected all fans to ``M106`` and ``M107``, 
+if you only want specific fans connected to these M-codes then list only those 
+fans in the ``ouput`` paramter as a comma separated list.
+
+::
+
+    [[CommandName]]
+    type = gcode
+    command = <G- or M-code/s, multiple codes allowed as a comma separated list>
+    output = <output name/s, multiple outputs allowed as a comma separated list>
+
+Dallas one-wire sensors
+~~~~~~~~~~~~~~~~~~~~~~~
 
 Replicape has three thermistor inputs and a Dallas one-wire input.
 Typically, the thermistor inputs are for high temperatures such as hot
 ends and heated beds, and the Dallas one-wire input is used for
-monitoring the cold end of a hot end, if you know what I mean... This
-section is used to connect a fan to one of the temperature probes, so
-for instance the fan on your extruder will start as soon as the
-temperature goes above 60 degrees. If you have a Dallas one-wire
-temperature probe connected on the board, it will show up as a file-like
-device in Linux under /sys/bus/w1/devices/. Find out the full path and
-place that in your local.cfg. All Dallas one-wire devices have a unique
-code, so yours will be different than what you see here.
+monitoring the cold end of a hot end, if you know what I mean... 
+The thermistors have their own section, which will be outlined below, 
+while any appropriate sensors attached to the Dallas one-wire input will 
+be automatically added to the list of available sensors and named 
+``ds18b20-*`` with an increasing integer index starting at 0 taking the 
+place of the *. When using one of these sensors as an input simply 
+use the appropriate name as an input, just make sure to check which 
+name corresponds to which sensor!
+
+Examples
+~~~~~~~~
+
+Here we provide some examples and an explanation of what each one achieves.
+
+**(EXAMPLE 1)**
+In this example I have connected up my extruder heater ``Heater-E`` to a
+pid control unit with an on-off range of 15 degrees. This helps to prevent
+overshoot of the target value when initially heating. The heated bed 
+``Heater-HBP`` is connected to an on-off controller. I have also defined two 
+safety units and connected one to each heater. I also have two thermistors, 
+one for each heater, and two Dallas one-wire sensors which I have attached 
+to measure water coolant temperature and ambient air temperature. My printer 
+incorporates three fans, one is a very quiet case fan and should always be on, 
+another is a part cooling fan and should be activated by M106, finally I have 
+a noisy fan on a water cooling radiator that I only want to turn on when 
+it will be useful. To achieve my desired fan behaviour I first rename each Dallas 
+sensor for ease of use and calculate the difference between the coolant and 
+ambient temperatures. I feed this difference into a proportional controller 
+with a target value of zero which outputs to the noisy radiator fan. The 
+casefan is always on and so it has a constant controller while the third fan 
+is connected to M106/M107. The fourth fan remains off by default.
 
 ::
 
-    [Cold-ends]
-    # To use the DS18B20 temp sensors, connect them like this.
-    # Enable by setting to True
-    connect-ds18b20-0-fan-0 = False
-    connect-ds18b20-1-fan-0 = False
-    connect-ds18b20-0-fan-1 = False
+    [Temperature Control]
 
-    # This list is for connecting thermistors to fans,
-    # so they are controlled automatically when reaching 60 degrees.
-    connect-therm-E-fan-0 = False
-    ...
-    connect-therm-H-fan-1 = False
-    ...
-    # For your part cooling fan, you'll want to set this to True for the correct Fan-input so your slicer can control it.
-    # If your part-cooling fan is connected to the Fan0 input, use this:
-    add-fan-0-to-M106 = True
-    ...
+    # Heater controllers
+    [[Control-E]]
+    type = pid-control
+    input = Thermistor-E
+    target_value = 0.0
+    pid_Kp = 0.0386
+    pid_Ti = 59.7652
+    pid_Td = 4.3121
+    ok_range = 1.0
+    max_value = 255
+    on_off_range = 15.0
+    sleep = 0.25
+    output = Heater-E
 
-    # If you want coolers to
-    # have a different 'keep' temp, list it here.
-    cooler_0_target_temp = 60
+    [[Control-HBP]]
+    type = on-off-control
+    input = Thermistor-HBP
+    target_value = 0.0
+    on_offset = -1.0
+    off_offset = -0.5
+    on_value = 255
+    off_value = 0
+    sleep = 0.5
+    output = Heater-HBP
 
-    # If you want the fan-thermistor connections to have a
-    # different temperature:
-    # therm-e-fan-0-target_temp = 70
+    # Heater safety units
+    [[Safety-E]]
+    type = safety
+    max_rise_rate = 10.0
+    max_fall_rate = 10.0
+    min_temp = 20.0
+    max_temp = 250.0
+    min_rise_rate = 0.05
+    min_rise_offset = 30
+    min_rise_delay = 10.0
+    input = Thermistor-E
+    heater = Heater-E
+
+    [[Safety-HBP]]
+    type = safety
+    max_rise_rate = 10.0
+    max_fall_rate = 10.0
+    min_temp = 20.0
+    max_temp = 250.0
+    min_rise_rate = 0.01
+    min_rise_offset = 20.0
+    min_rise_delay = 15.0
+    input = Thermistor-HBP
+    heater = Heater-HBP
+
+    # Fan control
+    [[AmbientTemperature]]
+    type = alias
+    input = ds18b20-0
+
+    [[CoolantTemperature]]
+    type = alias
+    input = ds18b20-1
+
+    [[CoolantWarmup]]
+    type = difference
+    input-1 = CoolantTemperature
+    input-0 = AmbientTemperature
+
+    [[CoolantFan]]
+    type = proportional-control
+    input = CoolantWarmup
+    target_value = 0
+    proportional = 0.2
+    max_value = 255
+    min_value = 127
+    ok_range = 1.0
+    sleep = 1.0
+    output = Fan-2
+
+    [[CaseFan]]
+    type = constant-control
+    value = 255
+    output = Fan-3
+
+    [[M106/M107]]
+    type = gcode
+    command = M106, M107
+    output = Fan-0
     
-    # if you have a Titan Aero (or any other all-metal) hotend, you'll want the fan on the hotend to turn on 
-    # automatically above 50C. To make the fan connected to the Fan1 input turn on when the hotend reaches 60C 
-    # (provided that the hotend is connected to "thermistor extruder 1", also referred to as E).
-    connect-therm-E-fan-1 = True
-    therm-e-fan-1-target_temp = 50
+**(EXAMPLE 2)**
+:todo:`TODO`
 
-..   _ConfigHeaters:
-
-Heaters
--------
-
-The heater section controls the PID settings and which temperature
-lookup chart to use for the thermistor. If you do not find your
-thermistor in the chart, you can find the Steinhart-Hart coefficients
-from the `NTC Calculator`__ online tool.
-
-__ http://www.thinksrs.com/downloads/programs/Therm%20Calc/NTCCalibrator/NTCcalculator.htm
-
-Some of the most common thermistor coefficients have already been
-implemented though, so you might find it here:
 
 .. _ConfigThermistors:
 
 Thermistors
 -----------
 
-An example configuration for `E`. The most
-important thing to change should be the sensor name matching the
-thermistor. The Kp, Ti and Td values will be set by the M303 auto-tune
-and the rest of the values are for advanced tuning or special cases.
+Each thermistor is named according to the
+heater to which it is expected to be attached i.e. ``Thermistor-E`` 
+is usually attached to ``Heater-E``. Thermistors measure temperature by 
+varying resistance through a wire. To map the variation in resistance with 
+temperature a chart is used. The name provided in the ``sensor`` parameter 
+thus tells redeem which pre-computed chart to use and thus provide accurate 
+readings of the temperature at the thermistors location. The ``path_adc`` 
+parameter is hardware related and should not be adjusted.
 
 ::
 
-    [Heaters]
-    sensor_E = B57560G104F
-    pid_Kp_E = 0.1
-    pid_Ti_E = 100.0
-    pid_Td_E = 0.3
-    ok_range_E = 4.0
-    max_rise_temp_E = 10.0
-    max_fall_temp_E = 10.0
-    min_temp_E = 20.0
-    max_temp_E = 250.0
-    path_adc_E = /sys/bus/iio/devices/iio:device0/in_voltage4_raw
-    mosfet_E = 5
-    onoff_E = False
-    prefix_E = T0
-    max_power_E = 1.0
+    [[Thermistor-E]]
+    sensor = B57560G104F
+    path_adc = /sys/bus/iio/devices/iio:device0/in_voltage4_raw
+    
 
-    ...
+Some of the most common thermistor coefficients have already been
+implemented though, so you might find it here:
 
 Steinhart-Heart
 ~~~~~~~~~~~~~~~
@@ -723,6 +954,11 @@ Steinhart-Heart
 | HT100K3950         | RobotDigg.com's 3950-100K thermistor (part number HT100K3950-1)   |
 +--------------------+-------------------------------------------------------------------+
 
+If you do not find your thermistor in the chart, you can find the Steinhart-Hart coefficients
+from the `NTC Calculator`__ online tool.
+
+__ http://www.thinksrs.com/downloads/programs/Therm%20Calc/NTCCalibrator/NTCcalculator.htm
+
 
 PT100 type thermistors
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -745,16 +981,49 @@ Linear v/deg Scale Thermocouple Boards
 | Tboard   | 0.005 Volts pr degree   |
 +----------+-------------------------+
 
-..  _ConfigPID:
+..   _ConfigFans:
 
-PID autotune
-------------
+Fans
+-------
 
-With version 1.2.6 and beyond, the PID autotune algorithm is fairly
-stable. To run an auto-tune, use the M-code M303. You should see the
-hot-end or heated bed temperature oscillate for a few cycles before
-completing. To set temperature, number of oscillations, which hot end to
-calibrate etc, try running “M303?” or see the description of the :ref:`M303`.
+Fans are used for blowing air around. Each sensor is named ``Fan-*`` with an
+integer identification, starting at zero, replacing the *. Different versions 
+of replicape have different numbers of fans and are connected to different channels,
+but don't worry, all that is handled for you and I am writing this information here
+simply to point out that you may only have up to ``Fan-2`` and you don't need to 
+modify the value of ``channel`` as it will be overwritten on startup anyway. The 
+``input`` for each fan allows a simple method for setting a default value for that
+fan upon startup. Otherwise connect it up to a control unit for fancier means of 
+setting how much air you are blowing around.
+
+::
+
+    [[Fan-0]]
+    type = fan
+    channel = 0
+    input = 0
+
+
+..   _ConfigHeaters:
+
+Heaters
+-------
+
+The heaters are used for making things hot. The ``mosfet`` parameter is hardware related,
+so probably don't touch that. Likewise for ``prefix`` which allows for interaction with
+OctoPrint. The ``input`` and ``safety`` give connections to control units that can be
+modfied versions of the defaults provided, or something of your choice. Note that we must
+always have a form of feedback control (on-off, proportional or PID) and a safety attached 
+to each heater. You may also have more than one safety attached to a heater if you so desire.
+
+::
+
+    [[Heater-E]]
+    type = heater
+    mosfet = 5
+    prefix = T0
+    input = Control-E
+    safety = Safety-E
 
 ..  _ConfigEndstops:
 
