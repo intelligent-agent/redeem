@@ -661,7 +661,7 @@ the value that is provided. Note that the input is assumed to lie within the ran
     [[ConstantName]]
     type = constant-control
     value = <number in range 0..255>
-    output = <name of output>
+    output = <optional output target name>
 
 **SAFETY** Safety units link temperature sensors and heaters so that a heater that misbehaves
 in any way should cause all heaters, and potentially the motion control as well, to enter an
