@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 """
-A fan is for blowing stuff away. This one is for Replicape.
+For running a fan.
 
-Author: Elias Bakken
-email: elias(dot)bakken(at)gmail(dot)com
+Author: Daryl Bond
+email: daryl(dot)bond(at)hotmail(dot)com
 Website: http://www.thing-printer.com
 License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
 
@@ -24,13 +24,55 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
 import time
 from builtins import range
 from PWM import PWM
+from configobj import Section
+import logging
+from threading import Thread
+
+from TemperatureControl import Unit, ConstantControl
 
 
-class Fan(PWM):
-
-    def __init__(self, channel):
-        """ Channel is the channel that the fan is on (0-7) """
-        self.channel = channel
+class Fan(Unit):
+    """
+    Used to move air
+    """
+    
+    def __init__(self, name, options, printer):
+        """
+        Fan initialization.
+        """
+        
+        self.name = name
+        self.options = options
+        self.printer = printer
+        
+        self.input = None
+        if "input" in self.options:
+            self.input = self.options["input"]
+            
+        self.channel = int(self.options["channel"])
+        
+        # get fan index
+        i = int(name[-1])
+        
+        self.printer.fans[i] = self
+        self.max_value = 1.0
+        
+        self.counter += 1
+            
+        return
+        
+    def connect(self, units):
+        """ Connect this unit to other units"""
+        if self.input:
+            self.input = self.get_unit(self.input, units)
+            if not self.input.output:        
+                self.input.output = self
+            
+    def check(self):
+        """ Perform any checks or logging after all connections are made"""
+        logging.info("{} --> {}".format(self.input, self.name))
+            
+        
 
     def set_PWM_frequency(self, value):
         """ Set the amount of on-time from 0..1 """
@@ -41,6 +83,7 @@ class Fan(PWM):
         """ Set the amount of on-time from 0..1 """
         self.value = value
         PWM.set_value(value, self.channel)
+        return
 
 
     def ramp_to(self, value, delay=0.01):
@@ -51,33 +94,38 @@ class Fan(PWM):
             time.sleep(delay)
         self.set_value(value)
 
-if __name__ == '__main__':
-    import os
-    import logging
+    def run_controller(self):
+        """ follow a target PWM value 0..1"""
+        
+        while self.enabled:
+            self.set_value(self.input.get_value())            		 
+            time.sleep(self.input.sleep)
+        self.disabled = True
 
-    logging.basicConfig(level=logging.DEBUG,
-                        format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
-                        datefmt='%m-%d %H:%M')
+    def disable(self):
+        """ stops the controller """
+        self.enabled = False
+        # Wait for controller to stop
+        while self.disabled == False:
+            time.sleep(0.2)
+        # The controller loop has finished
+        self.set_value(0.0)
 
-    PWM.set_frequency(100)   
-
-    fan7 = Fan(7) 
-    fan8 = Fan(8)
-    fan9 = Fan(9)
-    fan10 = Fan(10)
-
-    while 1:
-        for i in range(1, 100):
-            fan7.set_value(i/100.0)
-            fan8.set_value(i/100.0)
-            fan9.set_value(i/100.0)
-            fan10.set_value(i/100.0)
-            time.sleep(0.01)	
-        for i in range(100, 1, -1):
-            fan7.set_value(i/100.0)
-            fan8.set_value(i/100.0)
-            fan9.set_value(i/100.0)
-            fan10.set_value(i/100.0)
-            time.sleep(0.01)
-
-
+    def enable(self):
+        """ starts the controller """
+        
+        if not self.input:
+            self.enabled = False
+            self.disabled = True
+            self.set_value(0.0)
+            return
+            
+        self.enabled = True
+        self.disabled = False
+        self.t = Thread(target=self.run_controller, name=self.name)
+        self.t.daemon = True
+        self.t.start()	
+        return
+        
+    def __str__(self):
+        return self.name

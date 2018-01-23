@@ -9,3 +9,4 @@ six==1.10.0
 sh==1.12.14
 sympy==1.1.1
 testfixtures==5.1.1
+configobj==5.0.6

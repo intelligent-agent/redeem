@@ -264,6 +264,10 @@ class Stepper_00B2(Stepper_00B1):
         elif self.name == "H":
             ShiftRegister.registers[4].remove_state(0x1)
         self.enabled = True
+        
+    def reset(self):
+        self.set_disabled()
+        self.set_enabled()
 
 class Stepper_00B3(Stepper_00B2):
 
@@ -324,6 +328,12 @@ class Stepper_00B3(Stepper_00B2):
             return
         self.set_current_value(self.current_enable_value)
         self.current_enabled = True
+        
+    def reset(self):
+        self.set_disabled()
+        self.set_current_disabled()
+        self.set_enabled()
+        self.set_current_enabled()
         
 
 """
