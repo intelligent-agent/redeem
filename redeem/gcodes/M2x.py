@@ -254,12 +254,7 @@ class M23(M2X):
         fn = text.strip()
         list_location = None
         
-        mounts = {}
-        mounts['/usb'] = USB_MOUNT_LOCATION
-        mounts['/sd'] = SD_MOUNT_LOCATION
-        mounts['/lcl'] = LCL_MOUNT_LOCATION
-        
-        for key, value in mounts.items():
+        for key, value in MOUNT_LOCATIONS.items():
             if fn.startswith(key):
                 fn = fn.replace(key, value)
                 list_location = value
