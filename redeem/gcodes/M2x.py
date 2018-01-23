@@ -31,6 +31,7 @@ from __future__ import absolute_import
 import cProfile, pstats
 import logging
 import os
+import re
 import sh
 from abc import ABCMeta
 from redeem.Gcode import Gcode
@@ -233,27 +234,31 @@ class M23(M2X):
     fn = text.strip()
     list_location = None
 
-    if fn.startswith('/usb'):
-      fn = fn.replace('/usb', USB_MOUNT_LOCATION)
-      list_location = USB_MOUNT_LOCATION
-    if fn.startswith('/sd'):
-      fn = fn.replace('/sd', SD_MOUNT_LOCATION)
-      list_location = SD_MOUNT_LOCATION
-    if fn.startswith('/lcl'):
-      fn = fn.replace('/lcl', LCL_MOUNT_LOCATION)
-      list_location = LCL_MOUNT_LOCATION
+    for key, value in MOUNT_LOCATIONS.items():
+      if fn.startswith(key):
+        fn = fn.replace(key, value)
+        list_location = value
+        break
+      elif fn.startswith(key.upper()):
+        fn = fn.replace(key.upper(), value)
+        list_location = value
+        break
 
-    filemap = dict()
+    success = False
     for root, directories, filenames in os.walk(list_location):
-      for file in filenames:
-        filepath = root + os.sep + file
-        filemap[filepath.lower()] = filepath
+      for filename in filenames:
+        filepath = root + os.sep + filename
+        if re.search(fn, filepath, re.IGNORECASE):
+          fn = filepath
+          success = True
+          break
+      if success:
+        break
 
-    if fn in filemap:
-      fn = filemap[fn]
-
-    if not os.path.exists(fn):
-      self.printer.send_message(g.prot, "could not find file at '{}'".format(fn.strip()))
+    if (not os.path.exists(fn)) or (not success):
+      msg = "M23: could not find file at '{}'".format(fn.strip())
+      self.printer.send_message(g.prot, msg)
+      logging.warning(msg)
       return
 
     self.printer.sd_card_manager.load_file(fn)
