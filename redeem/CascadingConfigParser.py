@@ -276,6 +276,14 @@ class CascadingConfigParser(ConfigObj):
             cfg = cfg[s]
         return cfg[path[-1]]
         
+    def set(self, *path):
+        ''' set to last entry '''
+        cfg = self
+        for s in path[:-2]:
+            cfg = cfg[s]
+        cfg[path[-2]] = path[-1]
+        return
+        
     def has_option(self, *path):
         '''check if path exists'''
         cfg = self
