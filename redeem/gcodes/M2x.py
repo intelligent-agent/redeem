@@ -29,6 +29,7 @@ exfat - is also a file system option commonly found on USB flash drives and othe
 
 import os
 from abc import abstractmethod, ABCMeta
+import re
 
 import sh
 import logging
@@ -117,9 +118,12 @@ class M20(M2X):
         # list all files on the device
         self.printer.send_message(g.prot, "Begin file list:")
         for root, directories, filenames in os.walk(list_location):
-            for filename in filenames:
-                file_byte_count = os.stat(root + os.sep + filename).st_size
-                self.printer.send_message(g.prot, "{}/{} {}".format(device_id, filename, file_byte_count))
+            for file in filenames:
+                filepath = root + os.sep + file        
+                file_byte_count = os.stat(filepath).st_size
+                msg = "{} {}".format(filepath.replace(list_location, device_id), file_byte_count)
+                self.printer.send_message(g.prot, msg)
+                logging.info("M20: "+msg)
         self.printer.send_message(g.prot, "End file list")
 
     def get_description(self):
@@ -249,37 +253,48 @@ class M23(M2X):
 
         fn = text.strip()
         list_location = None
-
-        if fn.startswith('/usb'):
-            fn = fn.replace('/usb', USB_MOUNT_LOCATION)
-            list_location = USB_MOUNT_LOCATION
-
-        if fn.startswith('/sd'):
-            fn = fn.replace('/sd', SD_MOUNT_LOCATION)
-            list_location = SD_MOUNT_LOCATION
-
-        if fn.startswith('/lcl'):
-            fn = fn.replace('/lcl', LCL_MOUNT_LOCATION)
-            list_location = LCL_MOUNT_LOCATION
-
-        filemap = dict()
+        
+        mounts = {}
+        mounts['/usb'] = USB_MOUNT_LOCATION
+        mounts['/sd'] = SD_MOUNT_LOCATION
+        mounts['/lcl'] = LCL_MOUNT_LOCATION
+        
+        for key, value in mounts.items():
+            if fn.startswith(key):
+                fn = fn.replace(key, value)
+                list_location = value
+                break
+            elif fn.startswith(key.upper()):
+                fn = fn.replace(key.upper(), value)
+                list_location = value
+                break
+            
+        success = False
         for root, directories, filenames in os.walk(list_location):
             for file in filenames:
                 filepath = root + os.sep + file
-                filemap[filepath.lower()] = filepath
+                if re.search(fn, filepath, re.IGNORECASE):
+                    fn = filepath
+                    success = True
+                    break
+            if success:
+                break
+        
+                
 
-        if fn in filemap:
-            fn = filemap[fn]
-
-        if not os.path.exists(fn):
-            self.printer.send_message(g.prot, "could not find file at '{}'".format(fn.strip()))
+        if (not os.path.exists(fn)) or (not success):
+            msg = "M23: could not find file at '{}'".format(fn.strip())
+            self.printer.send_message(g.prot, msg)
+            logging.warning(msg)
             return
 
         self.printer.sd_card_manager.load_file(fn)
         
         nl, nb = self.printer.sd_card_manager.get_file_size()
 
-        self.printer.send_message(g.prot, "File opened:{} Lines:{} Size:{}B".format(fn, nl, nb))
+        msg = "File opened:{} Lines:{} Size:{}B".format(fn, nl, nb)
+        logging.info(msg)
+        self.printer.send_message(g.prot, msg)
         self.printer.send_message(g.prot, "File selected")
         logging.info("M23: finished gcode file processing")
 
