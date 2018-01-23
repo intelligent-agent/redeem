@@ -23,6 +23,7 @@ import os
 import logging
 import struct
 import copy
+import fnmatch
 
 #==============================================================================
 # Functions
@@ -97,7 +98,7 @@ class CascadingConfigParser(ConfigObj):
     
     parser_options = OPTION_DEFAULTS
     
-    def __init__(self, config_files, allow_new=[]):
+    def __init__(self, config_files, allow_new=[], ignore_changes=[]):
         """
         initialize the config parser
         
@@ -113,6 +114,7 @@ class CascadingConfigParser(ConfigObj):
         
         # sections which are allowed to have entries added by printer.cfg, or local.cfg
         self.allow_new = allow_new
+        self.ignore_changes = ignore_changes
 
         # Parse to real path
         self.config_files = []
@@ -205,7 +207,7 @@ class CascadingConfigParser(ConfigObj):
         """ Save the changed settings to local.cfg """
         
         # get a copy of the currently hard-coded configs
-        current = CascadingConfigParser(self.config_files)
+        current = CascadingConfigParser(self.config_files, self.allow_new, self.ignore_changes)
         
         # get a flat list of all entries in the live config
         items = []
@@ -221,9 +223,21 @@ class CascadingConfigParser(ConfigObj):
         # make a new temporary config object and load in the stuff to be saved
         local = ConfigObj(**self.parser_options)
         for item in to_save:
+            
+            path = '/'.join(item[0]+[item[1]])
+            
+            # check if we can ignore these changes
+            skip = False
+            for ignore in self.ignore_changes:
+                if fnmatch.fnmatch(path, ignore):
+                    skip = True
+                    break
+            if skip:
+                continue
+                    
             walk_down(local, item[0], item[1], item[2], allow_new=True)
             
-            path = '-'.join(item[0]+[item[1]])
+            path = '/'.join(item[0]+[item[1]])
             logging.info("Update local config: {} = {} ".format(path, item[2]))
             
         # Save changed values to file

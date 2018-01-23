@@ -147,7 +147,8 @@ class Redeem:
         
         # Parse the config files.
         printer.config = CascadingConfigParser(configs, 
-                                               allow_new = ["Temperature Control"]) # <-- this is where users are allowed to add stuff to the config 
+                                               allow_new = ["Temperature Control"], # <-- this is where users are allowed to add stuff to the config 
+                                               ignore_changes = ["Fans/*/channel"]) # <-- ignore changes to these values
 
         if not self.logging:
             # Get the revision and loglevel from the Config file
@@ -372,14 +373,13 @@ class Redeem:
                 if e in exclude:
                     continue
                 
-                input_type = options["type"]
                 try:
                     if section == "Fans":
                         unit = Fan(name, options, self.printer)
                     elif section == "Heaters":
                         unit = Heater(name, options, self.printer)
                     else:
-                        unit = control_units[input_type](name, options, self.printer)
+                        unit = control_units[options["type"]](name, options, self.printer)
                     units[name] = unit
                 except Exception as e:
                     msg = "Configuration section '{}' failed to build. Have you defined {}?".format(name, str(e))
