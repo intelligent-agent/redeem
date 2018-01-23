@@ -46,15 +46,16 @@ class M116(GCodeCommand):
                 has_parameter and heater_index != 4
             ])
 
+        stable_time = 3.0
         while True:
-            all_ok[0] |= self.printer.heaters['E'].is_target_temperature_reached()
-            all_ok[1] |= self.printer.heaters['H'].is_target_temperature_reached()
-            all_ok[2] |= self.printer.heaters['HBP'].is_target_temperature_reached()
+            all_ok[0] |= self.printer.heaters['E'].is_temperature_stable(stable_time)
+            all_ok[1] |= self.printer.heaters['H'].is_temperature_stable(stable_time)
+            all_ok[2] |= self.printer.heaters['HBP'].is_temperature_stable(stable_time)
 
             if self.printer.config.reach_revision:
-                all_ok[3] |= self.printer.heaters['A'].is_target_temperature_reached()
-                all_ok[4] |= self.printer.heaters['B'].is_target_temperature_reached()
-                all_ok[5] |= self.printer.heaters['C'].is_target_temperature_reached()
+                all_ok[3] |= self.printer.heaters['A'].is_temperature_stable(stable_time)
+                all_ok[4] |= self.printer.heaters['B'].is_temperature_stable(stable_time)
+                all_ok[5] |= self.printer.heaters['C'].is_temperature_stable(stable_time)
 
             m105 = Gcode({"message": "M105", "parent": g})
             self.printer.processor.execute(m105)
