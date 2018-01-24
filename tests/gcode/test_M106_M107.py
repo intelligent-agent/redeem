@@ -1,9 +1,11 @@
-from MockPrinter import MockPrinter
+from __future__ import absolute_import
+
 import mock
-from Gcode import Gcode
-from random import random
 import math
-from Fan import Fan
+from random import random
+from .MockPrinter import MockPrinter
+from redeem.Fan import Fan
+
 
 class M106_M107_Tests(MockPrinter):
 

@@ -1,4 +1,4 @@
-%module PathPlannerNative
+%module(directors="1") PathPlannerNative
 
 %include "typemaps.i"
 %include "std_string.i"
@@ -11,11 +11,13 @@
 %{
 #include "PathPlanner.h"
 #include "Delta.h"
+#include "AlarmCallback.h"
 %}
 
 %include "config.h"
 
 %rename(PathPlannerNative) PathPlanner;
+%rename(AlarmCallbackNative) AlarmCallback;
 
 // exception handler
 %exception {
@@ -97,6 +99,15 @@ namespace std {
   $result = list;
 }
 
+%feature("director") AlarmCallback;
+
+class AlarmCallback
+{
+public:
+  virtual void call(int alarmType, std::string message, std::string shortMessage);
+  virtual ~AlarmCallback();
+};
+
 class Delta {
  public:
   Delta();
@@ -112,7 +123,7 @@ class Delta {
 class PathPlanner {
  public:
   Delta delta_bot;
-  PathPlanner(unsigned int cacheSize);
+  PathPlanner(unsigned int cacheSize, AlarmCallback& alarmCallback);
   bool initPRU(const std::string& firmware_stepper, const std::string& firmware_endstops);
   bool queueSyncEvent(bool isBlocking = true);
   int waitUntilSyncEvent();
@@ -133,6 +144,8 @@ class PathPlanner {
   void setMaxSpeedJumps(VectorN speedJumps);
   void setSoftEndstopsMin(VectorN stops);
   void setSoftEndstopsMax(VectorN stops);
+  void setStopPrintOnSoftEndstopHit(bool stop);
+  void setStopPrintOnPhysicalEndstopHit(bool stop);
   void setBedCompensationMatrix(std::vector<FLOAT_T> matrix);
   void setAxisConfig(int axis);
   void setState(VectorN set);
@@ -141,6 +154,7 @@ class PathPlanner {
   void setBacklashCompensation(VectorN set);
   void resetBacklash();
   VectorN getState();
+  bool getLastQueueMoveStatus();
   FLOAT_T getLastProbeDistance();
   void suspend();
   void resume();

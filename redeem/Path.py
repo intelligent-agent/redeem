@@ -25,6 +25,7 @@ import numpy as np
 import sympy as sp
 import logging
 
+
 class Path:
     
     printer = None
@@ -45,9 +46,6 @@ class Path:
     X_Z_ARC_PLANE = 1
     Y_Z_ARC_PLANE = 2
 
-    # max length of any segment in an arc
-    ARC_SEGMENT_LENGTH = 1.0 / 1000  # TODO : make setting
-    
     def __init__(self, axes, speed, accel, cancelable=False, use_bed_matrix=True, use_backlash_compensation=True, enable_soft_endstops=True, is_probe=False):
         """ The axes of evil, the feed rate in m/s and ABS or REL """
         self.axes = axes
@@ -63,7 +61,7 @@ class Path:
         self.speeds = None
         self.start_pos = None
         self.end_pos = None
-        self.ideal_end_post = None
+        self.ideal_end_pos = None
 
     def is_G92(self):
         """ Special path, only set the global position on this """
@@ -109,7 +107,7 @@ class Path:
             return {'X': point[0], 'Y': point[1]}
         if self.printer.arc_plane == Path.X_Z_ARC_PLANE:
             return {'X': point[0], 'Z': point[1]}
-        # ifPath.Y_Z_ARC_PLANE
+        # if Path.Y_Z_ARC_PLANE
         return {'Y': point[0], 'Z': point[1]}
 
     def _get_offset_on_plane(self):
@@ -121,6 +119,21 @@ class Path:
         # Path.Y_Z_ARC_PLANE
         return self.J, self.K
 
+    def _get_linear_dimensions(self, point):
+        linears = {}
+        if 'E' in self.axes:
+            linears['E'] = point[self.printer.axes_absolute.index('E')]
+        if 'H' in self.axes:
+            linears['H'] = point[self.printer.axes_absolute.index('H')]
+        if self.printer.arc_plane == Path.X_Y_ARC_PLANE and 'Z' in self.axes:
+            linears['Z'] = point[self.printer.axes_absolute.index('Z')]
+        elif self.printer.arc_plane == Path.X_Z_ARC_PLANE and 'Y' in self.axes:
+            linears['Y'] = point[self.printer.axes_absolute.index('Y')]
+        elif self.printer.arc_plane == Path.Y_Z_ARC_PLANE and 'X' in self.axes:
+            linears['X'] = point[self.printer.axes_absolute.index('X')]
+
+        return linears
+
     def _find_circle_center(self, start0, start1, end0, end1, radius):
         """each circle defines all possible coordinates the arc center could be
         the two circles intersect at the possible centers of the arc radius"""
@@ -131,11 +144,10 @@ class Path:
 
         if len(intersection) < 1:
             raise Exception("radius circles do not intersect")  # TODO : proper way of handling GCode error (?)
-        if len(intersection) < 2 or r > 0:  # single intersection or "positive" radius center point
+        if len(intersection) < 2 or radius > 0:  # single intersection or "positive" radius center point
             return intersection[0].x, intersection[0].y
         return intersection[1].x, intersection[1].y  # "negative" radius center point
 
-    # Performance may not be a concern; G2/G3 seem only to be used by CNC mills/lathes which have lower gcode throughput
     # If performance is an issue, move functionality to `PathPlannerNative`
     def get_arc_segments(self):
         """Returns paths that approximated an arc."""
@@ -146,7 +158,6 @@ class Path:
         end0, end1 = self._get_point_on_plane(self.ideal_end_pos)
         logging.debug("end pos: {}".format(self.ideal_end_pos))
         logging.debug("start point: {}, end point: {}".format([start0, start1], [end0, end1]))
-
 
         # 'R' variant gives radius, need to calculate circle center
         if hasattr(self, 'R'):
@@ -167,11 +178,11 @@ class Path:
         # determine the start and end angle (in radians)
         start_theta, end_theta = np.arctan2(origin1, origin0)
 
-        # clockwise angles are always increasing, adjust for +/- pi modulus
+        # clockwise angles are always increasing, adjust for using +/- pi modulus
         if start_theta <= end_theta and self.movement is Path.G2:
             start_theta = np.pi + abs(-np.pi - start_theta)
 
-        # counter-clockwise anges are always decreasing, adjust for +/- modulus
+        # counter-clockwise angles are always decreasing, adjust for using +/- pi modulus
         if start_theta >= end_theta and self.movement is Path.G3:
             start_theta = -np.pi - abs(np.pi - start_theta)
 
@@ -179,7 +190,7 @@ class Path:
 
         # determine the length of the arc in order to determine how many segments to split into
         arc_length = radius * abs(end_theta - start_theta)
-        num_segments = int(arc_length / self.ARC_SEGMENT_LENGTH)
+        num_segments = int(arc_length / self.printer.config.getfloat('Planner', 'arc_segment_length'))
 
         # create equally spaced angles (in radians) from start to end
         arc_thetas = np.linspace(start_theta + 2 * np.pi, end_theta + 2 * np.pi, num_segments)
@@ -188,11 +199,27 @@ class Path:
         arc_0 = circle0 + radius * np.cos(arc_thetas)
         arc_1 = circle1 + radius * np.sin(arc_thetas)
 
+        # handle non-arc (linear) dimensional movements
+        start_linears = self._get_linear_dimensions(self.prev.ideal_end_pos)
+        end_linears = self._get_linear_dimensions(self.ideal_end_pos)
+
+        things_to_zip = [arc_0, arc_1]
+
+        linear_dims = {}
+
+        for key in start_linears.keys():
+            linear_dims[key] = np.linspace(start_linears[key], end_linears[key], num_segments)
+
+        zipped_dim_dicts = zip(*[[{key: value} for value in values] for key, values in linear_dims.items()])
+
         path_segments = []
 
         # for each coordinate along the arc, create a segment
         for index, segment in enumerate(zip(arc_0, arc_1)):
             segment_end = self._get_axes_point(segment)
+            if len(zipped_dim_dicts):
+                for dim in zipped_dim_dicts[index]:
+                    segment_end.update(dim)
             logging.debug("segment point: {}".format(segment_end))
             path = AbsolutePath(segment_end, self.speed, self.accel, self.cancelable, self.use_bed_matrix, False)
             # in order to set previous, printer attribute needs to be set based on the original path's printer
@@ -263,8 +290,9 @@ class RelativePath(Path):
         # In an ideal world, this is where we want to go. 
         self.ideal_end_pos = np.copy(prev.ideal_end_pos) + vec
         
-        self.end_pos = self.start_pos + vec
-        
+        self.end_pos = np.copy(self.ideal_end_pos)
+        if self.use_bed_matrix:
+            self.end_pos[:3] = self.end_pos[:3].dot(self.printer.matrix_bed_comp)        
 
 class MixedPath(Path):
     """ A path some mixed and some absolute movement axes """

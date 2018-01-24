@@ -1,5 +1,5 @@
 """
-Author: Elias Bakken
+Author: Elias Bakken & Daryl Bond
 email: elias(dot)bakken(at)gmail(dot)com
 Website: http://www.thing-printer.com
 License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
@@ -18,19 +18,101 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
  along with Redeem.  If not, see <http://www.gnu.org/licenses/>.
 """
 
-import ConfigParser
+from configobj import OPTION_DEFAULTS, ConfigObj, Section
 import os
 import logging
 import struct
+import copy
+
+#==============================================================================
+# Functions
+#==============================================================================
+
+def walk_up(section, lineage):
+    '''return the parentage of a section in list form'''
+    if section.depth == 1:
+        return lineage
+    else:
+        lineage.insert(0, section.parent.name)
+        walk_up(section.parent, lineage)
+    return lineage
+
+def walk_down(cfg, path, key, value, allow_new):
+    '''make/modify an entry of value in a dict given a list of sections and a 
+    key. New sections only allowed in allow_new'''
+    
+    if allow_new == True:
+        allow = True
+    else:
+        allow = False
+        for p in reversed(path):
+            if p in allow_new:
+                allow = True
+                break
+    
+    if cfg.depth >= len(path):
+
+        # check if we can add a value
+        if key not in cfg:
+            if not allow:
+                return True
+        
+        cfg[key] = value
+        return False
+    else:
+        # check if we can add a section
+        if path[cfg.depth] not in cfg:
+            if allow:
+                cfg[path[cfg.depth]] = {}
+            else:
+                return True
+                
+        return walk_down(cfg[path[cfg.depth]], path, key, value, allow_new)
 
 
-class CascadingConfigParser(ConfigParser.SafeConfigParser):
-    def __init__(self, config_files):
+def check_modified(cfg, path, key, value):
+    '''check if value is the same as that in a dict given a list of 
+    sections and a key'''
+    
+    if cfg.depth >= len(path):
+        if cfg[key] != value:
+            return True
+        return False
+    else:
+        if path[cfg.depth] not in cfg:
+            return True
+        else:
+            modified = check_modified(cfg[path[cfg.depth]], path, key, value)
+    return modified
 
-        ConfigParser.SafeConfigParser.__init__(self)
+#==============================================================================
+# Class
+#==============================================================================
 
-        # Write options in the case it was read.
-        # self.optionxform = str
+class CascadingConfigParser(ConfigObj):
+    """
+    Build a configuration from a hierarchy of inputs where each successive
+    input is allowed to overwrite the ones before
+    """
+    
+    parser_options = OPTION_DEFAULTS
+    
+    def __init__(self, config_files, allow_new=[]):
+        """
+        initialize the config parser
+        
+        config_files: list of paths to config files
+        allow_new: a list of sections that permit children to be added 
+            regardless of whether those children existed in the first 
+            config file 
+        """
+        
+        self.parser_options["list_values"] = False
+
+        ConfigObj.__init__(self)
+        
+        # sections which are allowed to have entries added by printer.cfg, or local.cfg
+        self.allow_new = allow_new
 
         # Parse to real path
         self.config_files = []
@@ -38,14 +120,15 @@ class CascadingConfigParser(ConfigParser.SafeConfigParser):
             self.config_files.append(os.path.realpath(config_file))
             self.config_location = os.path.dirname(os.path.realpath(config_file))
 
-        # Parse all config files in list
+        # check all config files in list
         for config_file in self.config_files:
             if os.path.isfile(config_file):
                 logging.info("Using config file " + config_file)
-                self.readfp(open(config_file))
             else:
                 logging.warning("Missing config file " + config_file)
-                # Might also add command line options for overriding stuff
+        
+        # parse config files
+        self.load()    
 
     def timestamp(self):
         """ Get the largest (newest) timestamp for all the config files. """
@@ -87,59 +170,64 @@ class CascadingConfigParser(ConfigParser.SafeConfigParser):
                 pass
         return
 
+    def load(self):
+        '''generate a config that combines all of the cascading configs in the 
+        list. Config entry (i+1) entry overwrites entry (i). Entries may be 
+        added at any level but only in allowed sections'''
+
+        for i, config_file in enumerate(self.config_files):
+            if os.path.isfile(config_file):
+                c_file = os.path.basename(config_file)
+                items = []
+                if i == 0: # generate the base config 
+                    self._initialise(self.parser_options)
+                    self._load(config_file, self._original_configspec)
+                    self.default_cfg = self.dict()
+                else:
+                    cfg = ConfigObj(config_file, **self.parser_options)
+                
+                    # get a linear list of all items
+                    items = []
+                    cfg.walk(lambda section, key : items.append(
+                        (walk_up(section,[section.name]), key, section[key])))
+                    
+                    # overwrite or add to the base config
+                    for item in items:
+                        if walk_down(self, item[0], item[1], item[2], self.allow_new):
+                            path = '/'.join(item[0]+[item[1]])
+                            msg = "Config entry not permitted : {} = {} ".format(path, item[2])
+                            logging.warning(msg)
+                        
+                
+        return
+
     def save(self, filename):
         """ Save the changed settings to local.cfg """
+        
+        # get a copy of the currently hard-coded configs
         current = CascadingConfigParser(self.config_files)
-
-        # Get list of changed values
+        
+        # get a flat list of all entries in the live config
+        items = []
+        self.walk(lambda section, key : items.append(
+            (walk_up(section,[section.name]), key, section[key])))   
+        
+        # check for differences between the live config and the hard config
         to_save = []
-        for section in self.sections():
-            #logging.debug(section)
-            for option in self.options(section):
-                if self.get(section, option) != current.get(section, option):
-                    old = current.get(section, option)
-                    val = self.get(section, option)
-                    to_save.append((section, option, val, old))
-
-        # Update local config with changed values
-        local = ConfigParser.SafeConfigParser()
-        local.readfp(open(filename, "r"))
-        for opt in to_save:
-            (section, option, value, old) = opt
-            if not local.has_section(section):
-                local.add_section(section)
-            local.set(section, option, value)
-            logging.info("Update setting: {} from {} to {} ".format(option, old, value))
-
-
+        for item in items:
+            if check_modified(current, item[0], item[1], item[2]):
+                to_save.append(item)
+        
+        # make a new temporary config object and load in the stuff to be saved
+        local = ConfigObj(**self.parser_options)
+        for item in to_save:
+            walk_down(local, item[0], item[1], item[2], allow_new=True)
+            
+            path = '-'.join(item[0]+[item[1]])
+            logging.info("Update local config: {} = {} ".format(path, item[2]))
+            
         # Save changed values to file
         local.write(open(filename, "w+"))
-
-
-    def check(self, filename):
-        """ Check the settings currently set against default.cfg """
-        default = ConfigParser.SafeConfigParser()
-        default.readfp(open(os.path.join(self.config_location, "default.cfg")))
-        local   = ConfigParser.SafeConfigParser()
-        local.readfp(open(filename))
-
-        local_ok = True
-        diff = set(local.sections())-set(default.sections())
-        for section in diff:
-            logging.warning("Section {} does not exist in {}".format(section, "default.cfg"))
-            local_ok = False
-        for section in local.sections():
-            if not default.has_section(section):
-                continue
-            diff = set(local.options(section))-set(default.options(section))
-            for option in diff:
-                logging.warning("Option {} in section {} does not exist in {}".format(option, section, "default.cfg"))
-                local_ok = False
-        if local_ok:
-            logging.info("{} is OK".format(filename))
-        else:
-            logging.warning("{} contains errors.".format(filename))
-        return local_ok
 
     def get_key(self):
         """ Get the generated key from the config or create one """
@@ -159,3 +247,58 @@ class CascadingConfigParser(ConfigParser.SafeConfigParser):
             except IOError as e:
                 logging.warning("Unable to write new key to EEPROM")
         return self.replicape_key
+        
+    def getint(self, *path):
+        ''' get integer '''
+        cfg = self
+        for s in path[:-1]:
+            cfg = cfg[s]
+        return cfg.as_int(path[-1])
+    
+    def getfloat(self, *path):
+        ''' get float '''
+        cfg = self
+        for s in path[:-1]:
+            cfg = cfg[s]
+        return cfg.as_float(path[-1])
+        
+    def getboolean(self, *path):
+        ''' get integer '''
+        cfg = self
+        for s in path[:-1]:
+            cfg = cfg[s]
+        return cfg.as_bool(path[-1])
+        
+    def get(self, *path):
+        ''' get whatever is there '''
+        cfg = self
+        for s in path[:-1]:
+            cfg = cfg[s]
+        return cfg[path[-1]]
+        
+    def has_option(self, *path):
+        '''check if path exists'''
+        cfg = self
+        try:
+            for s in path:
+                cfg = cfg[s]
+        except:
+            return False
+            
+        if not isinstance(cfg, Section):
+            return True
+        return False
+            
+    def has_section(self, *path):
+        '''check for section'''
+        cfg = self
+        try:
+            for s in path:
+                cfg = cfg[s]
+        except:
+            return False
+        
+        if isinstance(cfg, Section):
+            return True
+            
+        return False

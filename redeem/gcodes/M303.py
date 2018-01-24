@@ -14,18 +14,13 @@ Integral (Ki), and Derivative (Kd) values for the hotend or bed (E-1).
 Send the appropriate code and wait for the output to update the firmware. 
 
 """
+from __future__ import absolute_import
 
-from GCodeCommand import GCodeCommand
 import json
-
-try:
-    from Autotune import Autotune
-    from Alarm import Alarm
-except ImportError:
-    from redeem.Autotune import Autotune
-    from redeem.Alarm import Alarm
-
 import logging
+from .GCodeCommand import GCodeCommand
+from redeem.Autotune import Autotune
+from redeem.Alarm import Alarm
 
 
 class M303(GCodeCommand):
@@ -82,7 +77,8 @@ class M303(GCodeCommand):
             "and Derivative (Kd) values for the hotend or "
             "bed (E-1). Send the appropriate code and wait "
             "for the output to update the firmware. "
-            "H<0 or 1> overrides the extruder. Use P-1 for heated bed. \n"
+            "\nInputs:\n"
+            "H<0 or 1> overrides the extruder. Use H-1 for heated bed. \n"
             "Default is the 'E' extruder with index 0. \n"
             "S overrides the temperature to calibrate for. Default is 200. \n"
             "N overrides the number of cycles to run, default is 4 \n"

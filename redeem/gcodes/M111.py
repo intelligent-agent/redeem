@@ -5,13 +5,11 @@ Set debug level
 Author: Elias Bakken
 License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 """
+from __future__ import absolute_import
 
-from GCodeCommand import GCodeCommand
-try:
-    from Gcode import Gcode
-except ImportError:
-    from redeem.Gcode import Gcode
 import logging
+from .GCodeCommand import GCodeCommand
+
 
 class M111(GCodeCommand):
 

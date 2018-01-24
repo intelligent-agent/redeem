@@ -20,8 +20,9 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
  You should have received a copy of the GNU General Public License
  along with Redeem.  If not, see <http://www.gnu.org/licenses/>.
 """
+from __future__ import absolute_import
 
-from GCodeCommand import GCodeCommand
+from .GCodeCommand import GCodeCommand
 from redeem.Gcode import Gcode
 import logging
 
@@ -108,10 +109,10 @@ NOTE: G20 ignored. All units in mm.
 
 Parameters:
 
-Df  Probe move maximum length
-Ff  Probing speed
-Af  Probing acceleration
-Zf  Upward move distance before probing (default: 5 mm)
+Dn  Probe move maximum length n in mm
+Fn  Probing speed n in mm/min
+An  Probing acceleration n in mm/s^2
+Zn  Upward move distance n in mm before probing (default: n = 5)
 S   Simulate only (do not store the results)
         """
 

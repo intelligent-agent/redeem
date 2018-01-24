@@ -21,6 +21,7 @@ Author: Elias Bakken
 from threading import Thread, Lock
 import time
 import logging
+from six import iteritems
 
 class StepperWatchdog:
 
@@ -74,7 +75,7 @@ class StepperWatchdog:
         logging.debug("Stepper watchdog timeout")
         if not self.printer:
             return
-        for name, stepper in self.printer.steppers.iteritems():
+        for name, stepper in iteritems(self.printer.steppers):
             if stepper.in_use and stepper.enabled:
                 # Stepper should be enabled, but is not.
                 stepper.set_disabled(True)  # Force update

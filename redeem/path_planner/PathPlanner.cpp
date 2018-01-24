@@ -25,6 +25,7 @@
 */
 
 #include "PathPlanner.h"
+#include "AlarmCallback.h"
 #include <cmath>
 #include <assert.h>
 #include <thread>
@@ -32,10 +33,13 @@
 #include <Python.h>
 
 
-PathPlanner::PathPlanner(unsigned int cacheSize) {
+PathPlanner::PathPlanner(unsigned int cacheSize, AlarmCallback& alarmCallback)
+  : alarmCallback(alarmCallback),
+  pru([this](){this->pruAlarmCallback();})
+{
   linesPos = 0;
   linesWritePos = 0;
-  LOG( "PathPlanner " << std::endl);
+  LOGCRITICAL( "PathPlanner, loglevel " << LOGLEVEL << std::endl);
   moveCacheSize = cacheSize;
   lines.resize(moveCacheSize);
   printMoveBufferWait = 250;
@@ -43,11 +47,13 @@ PathPlanner::PathPlanner(unsigned int cacheSize) {
   linesCount = 0;
   linesTicksCount = 0;
   stop = false;
+  acceptingPaths = true;
 	
   axis_config = AXIS_CONFIG_XY;
   has_slaves = false;
   state.zero();
   lastProbeDistance = 0;
+  queue_move_fail = true;
 
   // set bed compensation matrix to identity
   matrix_bed_comp.resize(9, 0);
@@ -116,7 +122,15 @@ void PathPlanner::queueMove(VectorN endWorldPos,
   ////////////////////////////////////////////////////////////////////
   // PRE-PROCESSING
   ////////////////////////////////////////////////////////////////////
-	
+  
+  queue_move_fail = true;
+
+  if (!acceptingPaths)
+  {
+    LOG("Rejecting path because path planner is suspended" << std::endl);
+    return;
+  }
+
   LOG("NEW MOVE:\n");
   // for (int i = 0; i<NUM_AXES; ++i) {
   //   LOG("AXIS " << i << ": start = " << startPos[i] << "(" << state[i] << "), end = " << endPos[i] << "\n");
@@ -126,7 +140,19 @@ void PathPlanner::queueMove(VectorN endWorldPos,
 
   // Cap the end position based on soft end stops
   if (enable_soft_endstops) {
-    if (softEndStopApply(endWorldPos)) {
+    int endstop = softEndStopApply(endWorldPos);
+    if (endstop) {
+      LOG("soft endstop triggered - suspending path planner and triggering alarm" << std::endl);
+      acceptingPaths = false;
+      switch(endstop){
+          case 1 : alarmCallback.call(8, "Soft endstop hit", "Soft endstop hit: X min"); break;
+          case 2 : alarmCallback.call(8, "Soft endstop hit", "Soft endstop hit: Y min"); break;
+          case 3 : alarmCallback.call(8, "Soft endstop hit", "Soft endstop hit: Z min"); break;
+          case 11: alarmCallback.call(8, "Soft endstop hit", "Soft endstop hit: X max"); break;
+          case 12: alarmCallback.call(8, "Soft endstop hit", "Soft endstop hit: Y max"); break;
+          case 13: alarmCallback.call(8, "Soft endstop hit", "Soft endstop hit: Z max"); break;
+          default: alarmCallback.call(8, "Soft endstop hit", "Soft endstop hit: unknown");
+      }
       return;
     }
   }
@@ -141,7 +167,16 @@ void PathPlanner::queueMove(VectorN endWorldPos,
   handleSlaves(startWorldPos, endWorldPos);
 	
   // Get the vector to move us from where we are, to where we ideally want to be.
-  IntVectorN endPos = worldToMachine(endWorldPos);
+  bool possibleMove = true;
+  IntVectorN endPos = worldToMachine(endWorldPos, &possibleMove);
+
+  if (!possibleMove)
+  {
+    LOG("attempted move to impossible position - suspending path planner and triggering alarm" << std::endl);
+    acceptingPaths = false;
+    alarmCallback.call(9, "Move to unreachable position requested", "Move to unreachable position requested");
+    return;
+  }
 
   // This is only useful for debugging purposes - the motion platform may not move
   // directly from start to end, but the net total of steps should equal this.
@@ -232,7 +267,7 @@ void PathPlanner::queueMove(VectorN endWorldPos,
   // wait for the worker
   if(!doesPathQueueHaveSpace()){
     std::unique_lock<std::mutex> lk(line_mutex);
-    QUEUELOG( "Waiting for free move command space... Current: " << linesCount << " lines that take " << linesTicksCount / F_CPU_FLOAT << " seconds"  << std::endl);
+    LOGINFO( "Waiting for free move command space... Current: " << linesCount << " lines that take " << linesTicksCount / F_CPU_FLOAT << " seconds"  << std::endl);
     pathQueueHasSpace.wait(lk, [this] { return this->doesPathQueueHaveSpace(); });
     linesCacheRemaining = moveCacheSize - linesCount;
     linesTicksRemaining = maxBufferedMoveTime - linesTicksCount;
@@ -272,7 +307,7 @@ void PathPlanner::queueMove(VectorN endWorldPos,
   linesCacheRemaining--;
   linesTicksRemaining -= qp.getTimeInTicks();
 
-  QUEUELOG("Move queued for the worker" << std::endl);
+  LOGINFO("Move queued for the worker" << std::endl);
 
   if(linesWritePos>=moveCacheSize)
     linesWritePos = 0;
@@ -296,7 +331,7 @@ void PathPlanner::queueMove(VectorN endWorldPos,
     assert(state != startPos);
   }
 
-  
+  queue_move_fail = false;
 
   PyEval_RestoreThread(_save);
 }
@@ -519,7 +554,9 @@ void PathPlanner::waitUntilFinished() {
     }
 
 void PathPlanner::reset() {
+  LOG("path planner resetting" << std::endl);
   pru.reset();
+  acceptingPaths = true;
 }
 
 void PathPlanner::run() {
@@ -543,7 +580,7 @@ void PathPlanner::run() {
     // and we do that until the buffer is not anymore half empty.
     if(waitUntilFilledUp && !isLinesBufferFilled() && cur->getTimeInTicks() > 0) {
       unsigned lastCount = 0;
-      QUEUELOG("Waiting for buffer to fill up. " << linesCount  << " lines pending, lastCount is " << lastCount << std::endl);
+      LOGINFO("Waiting for buffer to fill up. " << linesCount  << " lines pending, lastCount is " << lastCount << std::endl);
       do {
 	lastCount = linesCount;
 	if (lastCount == 0) { // if there are no lines in the queue, we can wait indefinitely
@@ -555,14 +592,14 @@ void PathPlanner::run() {
 	  });
 	}
       } while(lastCount<linesCount && linesCount<moveCacheSize && !stop);
-      QUEUELOG("Done waiting for buffer to fill up... " << linesCount  << " lines ready. " << lastCount << std::endl);			
+      LOGINFO("Done waiting for buffer to fill up... " << linesCount  << " lines ready. " << lastCount << std::endl);			
       waitUntilFilledUp = false;
     }
 		
     //The buffer is empty, we enable again the "wait until buffer is enough full" timing procedure.
     if(linesCount<=1) {
       waitUntilFilledUp = true;
-      QUEUELOG("### Move Command Buffer Empty ###" << std::endl);
+      LOGINFO("### Move Command Buffer Empty ###" << std::endl);
     }
 
     lk.unlock();
@@ -573,7 +610,7 @@ void PathPlanner::run() {
 
     if(cur->isBlocked()){   // This step is in computation - shouldn't happen
       cur = NULL;
-      QUEUELOG( "Path planner thread: path " <<  std::dec << linesPos<< " is blocked, waiting... " << std::endl);
+      LOGINFO( "Path planner thread: path " <<  std::dec << linesPos<< " is blocked, waiting... " << std::endl);
       std::this_thread::sleep_for( std::chrono::milliseconds(100) );
       continue;
     }
@@ -721,8 +758,8 @@ void PathPlanner::runMove(
 
     if (!foundStep)
     {
-      QUEUELOG("last step at " << lastStepTime / F_CPU_FLOAT << " and final time at " << roundedStepTime / F_CPU_FLOAT
-        << " for a final delay of " << *lastDelay << std::endl);
+      /*LOGINFO("last step at " << lastStepTime / F_CPU_FLOAT << " and final time at " << roundedStepTime / F_CPU_FLOAT
+        << " for a final delay of " << *lastDelay << std::endl);*/
       break;
     }
 
@@ -895,9 +932,19 @@ VectorN PathPlanner::getState()
   return machineToWorld(state);
 }
 
-IntVectorN PathPlanner::worldToMachine(const VectorN& worldPos)
+bool PathPlanner::getLastQueueMoveStatus()
+{
+    return queue_move_fail;
+}
+
+IntVectorN PathPlanner::worldToMachine(const VectorN& worldPos, bool* possible)
 {
   IntVectorN output = (worldPos * axisStepsPerM).round();
+  
+  if (possible)
+  {
+    *possible = true;
+  }
 
   switch (axis_config)
   {
@@ -910,6 +957,12 @@ IntVectorN PathPlanner::worldToMachine(const VectorN& worldPos)
     output[0] = endMotionPos[0];
     output[1] = endMotionPos[1];
     output[2] = endMotionPos[2];
+
+    if (possible)
+    {
+      // If any of the tower positions are NaN, the move is impossible
+      *possible = !deltaEnd.hasNan();
+    }
     break;
   }
   case AXIS_CONFIG_CORE_XY:
@@ -945,3 +998,10 @@ IntVectorN PathPlanner::worldToMachine(const VectorN& worldPos)
 
   return output;
 }
+void AlarmCallback::call(int alarmType, std::string message, std::string shortMessage)
+{
+  assert(0); // this method will be overridden by child classes - SWIG takes care of it
+}
+
+AlarmCallback::~AlarmCallback()
+{}

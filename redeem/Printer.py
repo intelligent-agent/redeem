@@ -25,8 +25,11 @@ import numpy as np
 import logging
 from Delta import Delta
 from PruInterface import PruInterface
+from SDCardManager import SDCardManager
 import os
 import json
+from six import iteritems
+
 
 class Printer:
     AXES = "XYZEHABC"
@@ -41,6 +44,7 @@ class Printer:
 
     def __init__(self):
         self.config_location = None
+        self.alarms      = []
         self.steppers    = {}
         self.heaters     = {}
         self.thermistors = {}
@@ -50,6 +54,7 @@ class Printer:
         self.cold_ends   = []
         self.coolers     = []
         self.comms       = {}  # Communication channels
+        self.command_connect = {}
         self.path_planner       = None
         self.speed_factor       = 1.0
         self.unit_factor        = 1.0
@@ -57,6 +62,7 @@ class Printer:
         self.movement           = Path.ABSOLUTE
         self.axis_config        = self.AXIS_CONFIG_XY
         self.feed_rate          = 0.5
+        self.offset_z           = 0.0 # For babystepping. 
         # this rate is the one used at the beginning of startup for any moves without G1 F,
         # other than homing, which obeys it's speed correctly.
         self.accel              = 9.8
@@ -102,6 +108,8 @@ class Printer:
 
         self.axes_relative = []
 
+        self.sd_card_manager = SDCardManager()
+
     def add_slave(self, master, slave):
         ''' Make an axis copy the movement of another.
         the slave will get the same position as the axis'''
@@ -114,8 +122,8 @@ class Printer:
         """
         # Reset Stepper watchdog
         self.swd.reset()
-        # Enabe steppers
-        for name, stepper in self.steppers.iteritems():
+        # Enable steppers
+        for name, stepper in iteritems(self.steppers):
             if stepper.in_use:
                 if not stepper.enabled:
                     # Stepper should be enabled, but is not.
@@ -175,7 +183,7 @@ class Printer:
 
     def save_settings(self, filename):
         logging.debug("save_settings: setting stepper parameters")
-        for name, stepper in self.steppers.iteritems():
+        for name, stepper in iteritems(self.steppers):
             self.config.set('Steppers', 'in_use_' + name, str(stepper.in_use))
             self.config.set('Steppers', 'direction_' + name, str(stepper.direction))
             self.config.set('Endstops', 'has_' + name, str(stepper.has_endstop))
@@ -186,7 +194,7 @@ class Printer:
             self.config.set('Steppers', 'slave_' + name, str(self.slaves[name]))
 
         logging.debug("save_settings: setting heater parameters")
-        for name, heater in self.heaters.iteritems():
+        for name, heater in iteritems(self.heaters):
             self.config.set('Heaters', 'pid_Kp_'+name, str(heater.Kp))
             self.config.set('Heaters', 'pid_Ti_'+name, str(heater.Ti))
             self.config.set('Heaters', 'pid_Td_'+name, str(heater.Td))
@@ -197,11 +205,11 @@ class Printer:
 
         # Offsets
         logging.debug("save_settings: setting offsets")
-        for axis, offset in self.path_planner.center_offset.iteritems():
+        for axis, offset in iteritems(self.path_planner.center_offset):
             self.config.set('Geometry', "offset_{}".format(axis), str(offset))
         # Travel length
         logging.debug("save_settings: travel length")
-        for axis, offset in self.path_planner.travel_length.iteritems():
+        for axis, offset in iteritems(self.path_planner.travel_length):
             self.config.set('Geometry', "travel_{}".format(axis), str(offset))
 
         # Save Delta config
@@ -227,6 +235,18 @@ class Printer:
         # Only update if they are different
         if mat != self.config.get('Geometry', 'bed_compensation_matrix'):
             self.config.set('Geometry', 'bed_compensation_matrix', mat)
+            
+    def resend_alarms(self):
+        """ send all alarms that are in the alarms queue """
+            
+        for alarm in self.alarms:
+            alarm.execute()
+            #logging.info("Resent alarm : {}".format(alarm.message))
+        
+        # clear alarms
+        self.alarms = []
+        
+        return
 
     def movement_axis(self, axis):
         if self.e_axis_active and axis == "E":

@@ -7,12 +7,11 @@ email: zittix(at)xwaves(dot)net
 Website: http://www.xwaves.net
 License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 """
+from __future__ import absolute_import
 
-from GCodeCommand import GCodeCommand
-try:
-    from Path import Path
-except ImportError:
-    from redeem.Path import Path
+from .GCodeCommand import GCodeCommand
+from redeem.Path import Path
+
 
 class G90(GCodeCommand):
 

@@ -23,6 +23,7 @@ import logging
 
 from multiprocessing import JoinableQueue
 import Queue
+from six import iteritems
 
 
 class Alarm:
@@ -33,9 +34,13 @@ class Alarm:
     HEATER_FALLING_FAST = 4  # Temperature is faling too fast
     FILAMENT_JAM = 5  # If filamet sensor is installed
     WATCHDOG_ERROR = 6  # Can this be detected?
-    ENDSTOP_HIT = 7  # During print.
-    STEPPER_FAULT = 8  # Error on a stepper
-    ALARM_TEST = 9  # Testsignal, used during start-up
+    PHYSICAL_ENDSTOP_HIT = 7  # During print.
+    SOFT_ENDSTOP_HIT = 8
+    IMPOSSIBLE_MOVE_ATTEMPTED = 9
+    STEPPER_FAULT = 10  # Error on a stepper
+    ALARM_TEST = 11  # Testsignal, used during start-up
+    HEATER_RISING_SLOW = 12  # Temperature is rising too slow
+    CONFIG_ERROR = 13 # error when importing config
 
     printer = None
     executor = None
@@ -53,6 +58,8 @@ class Alarm:
             Alarm.executor.queue.put(self)
         else:
             logging.error("Enable to enqueue alarm!")
+            
+        self.printer.alarms.append(self)
 
     def execute(self):
         """ Execute the alarm """
@@ -81,6 +88,11 @@ class Alarm:
             self.inform_listeners()
             Alarm.action_command("pause")
             Alarm.action_command("alarm_heater_falling_fast", self.message)
+        elif self.type == Alarm.HEATER_RISING_SLOW:
+            self.disable_heaters()
+            self.inform_listeners()
+            Alarm.action_command("pause")
+            Alarm.action_command("alarm_heater_rising_slow", self.message)
         elif self.type == Alarm.STEPPER_FAULT:
             self.inform_listeners()
             Alarm.action_command("pause")
@@ -88,9 +100,29 @@ class Alarm:
         elif self.type == Alarm.FILAMENT_JAM:
             Alarm.action_command("pause")
             Alarm.action_command("alarm_filament_jam", self.message)
+        elif self.type == Alarm.PHYSICAL_ENDSTOP_HIT:
+            self.stop_print()
+            Alarm.action_command("pause")
+            self.inform_listeners()
+            Alarm.action_command("alarm_endstop_hit", self.message)
+        elif self.type == Alarm.SOFT_ENDSTOP_HIT:
+            self.stop_print()
+            Alarm.action_command("pause")
+            self.inform_listeners()
+            Alarm.action_command("alarm_endstop_hit", self.message)
+        elif self.type == Alarm.IMPOSSIBLE_MOVE_ATTEMPTED:
+            self.stop_print()
+            Alarm.action_command("pause")
+            self.inform_listeners()
+            Alarm.action_command("alarm_endstop_hit", self.message)
         elif self.type == Alarm.ALARM_TEST:
             logging.info("Alarm: Operational")
             Alarm.action_command("alarm_operational", self.message)
+        elif self.type == Alarm.CONFIG_ERROR:
+            self.stop_print()
+            Alarm.action_command("pause")
+            self.inform_listeners()
+            Alarm.action_command("alarm_config_error", self.message)
         else:
             logging.warning("An Alarm of unknown type was sounded!")
 
@@ -104,14 +136,14 @@ class Alarm:
 
     def disable_heaters(self):
         logging.warning("Disabling heaters")
-        for _, heater in self.printer.heaters.iteritems():
-            heater.extruder_error = True
+        for _, heater in iteritems(self.printer.heaters):
+            heater.heater_error = True
 
     def inform_listeners(self):
         """ Inform all listeners (comm channels) of the occured error """
         logging.error("Alarm: "+self.message)
         if Alarm.printer and hasattr(Alarm.printer, "comms"):
-            for name, comm in Alarm.printer.comms.iteritems():
+            for name, comm in iteritems(Alarm.printer.comms):
                 if name == "toggle":
                     comm.send_message(self.short_message)
                 else:

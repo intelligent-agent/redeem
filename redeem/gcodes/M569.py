@@ -11,10 +11,13 @@ Obviously to be used with extreme caution...
 Author: Elias Bakken
 License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 """
+from __future__ import absolute_import
 
-from GCodeCommand import GCodeCommand
-import logging
 import os
+import logging
+from six import iteritems
+
+from .GCodeCommand import GCodeCommand
 
 
 class M569(GCodeCommand):
@@ -22,7 +25,7 @@ class M569(GCodeCommand):
     def execute(self, g):
         if g.num_tokens() == 0:
             g.set_answer("ok "+", ".join([name+": "+str(stepper.direction)+" "
-                for name,stepper in sorted(self.printer.steppers.iteritems())]))            
+                for name,stepper in sorted(iteritems(self.printer.steppers))]))
         else:
             for i in range(g.num_tokens()):  # Run through all tokens
                 axis = g.token_letter(i)
@@ -38,9 +41,8 @@ class M569(GCodeCommand):
                 self.printer.config.set('Steppers', 'direction_'+axis, str(value))
                 self.printer.steppers[axis].direction = int(value)
 
-
             # Save the config file. 
-            self.printer.config.save(os.path.join(self.printer.config_location,'local.cfg'))
+            self.printer.config.save(os.path.join(self.printer.config_location, 'local.cfg'))
 
             self.printer.path_planner.wait_until_done()
 

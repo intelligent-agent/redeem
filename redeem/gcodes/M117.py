@@ -7,13 +7,11 @@ email: elias(dot)bakken(at)gmail(dot)com
 Website: http://www.thing-printer.com
 License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
 """
+from __future__ import absolute_import
 
-from GCodeCommand import GCodeCommand
+from .GCodeCommand import GCodeCommand
+from redeem.Alarm import Alarm
 
-try:
-    from Alarm import Alarm
-except ImportError:
-    from redeem.Alarm import Alarm
 
 class M117(GCodeCommand):
     def execute(self, g):

@@ -1,7 +1,9 @@
-from MockPrinter import MockPrinter
+from __future__ import absolute_import
+
 import mock
-from testfixtures import Comparison as C
-from Gcode import Gcode
+from .MockPrinter import MockPrinter
+from redeem.Gcode import Gcode
+
 
 class G34_Tests(MockPrinter):
 
@@ -17,7 +19,7 @@ class G34_Tests(MockPrinter):
         g = Gcode({"message": "G34"})
         self.assertTrue(self.printer.processor.is_buffered(g))
 
-    @mock.patch("gcodes.G34.Gcode")
+    @mock.patch("redeem.gcodes.G34.Gcode")
     def test_G34_expected_gcodes(self, mock_Gcode):
         self.printer.config.set = mock.Mock()
         self.execute_gcode("G34 Z10")
