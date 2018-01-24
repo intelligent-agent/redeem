@@ -42,6 +42,7 @@ class Heater(Unit):
         
         self.mosfet = self.options["mosfet"]
         self.prefix = self.options["prefix"]
+        self.stable_time = float(self.options["stable_time"])
         
         self.safety = None
         if self.safety in self.options:
@@ -155,8 +156,11 @@ class Heater(Unit):
         reached = err < self.input.ok_range
         return reached
 
-    def is_temperature_stable(self, seconds=10):
+    def is_temperature_stable(self, seconds=None):
         """ Returns true if the temperature has been stable for n seconds """
+        if not seconds:
+            seconds = self.stable_time
+            
         target_temp = self.get_target_temperature()
         ok_range = self.input.ok_range
         if len(self.temperatures) < int(seconds/self.input.sleep):
