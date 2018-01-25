@@ -677,3 +677,20 @@ class PIDControl(Control):
         self.error_integral = 0.0
         
         return
+        
+    def set_Kp(self, kp):
+        """ redefine the Kp value """
+        self.Kp = kp
+        self.options["pid_Kp"] = kp
+        
+    def set_Ti(self, ti):
+        """ redefine the Ti value """
+        self.Ti = ti
+        self.options["pid_Ti"] = ti
+        
+    def set_Td(self, td):
+        """ redefine the Td value """
+        self.Td = td
+        self.options["pid_Td"] = td
+        
+    
