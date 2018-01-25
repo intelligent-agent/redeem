@@ -18,6 +18,7 @@ from __future__ import absolute_import
 
 import json
 import logging
+import os
 from .GCodeCommand import GCodeCommand
 from redeem.Autotune import Autotune
 from redeem.Alarm import Alarm
@@ -36,32 +37,40 @@ class M303(GCodeCommand):
         cycles   = max(3, g.get_int_by_letter("N", 4))       
         pre_cal  = bool(g.get_int_by_letter("P", 0))
         tuning_algo_nr = g.get_int_by_letter("L", 0)
+        write_to_cfg = g.get_int_by_letter("W", 0)
         if tuning_algo_nr not in [0, 1]:
             logging.warning("Unknown tuning algorithm '{}'. Use one of 0, 1. Choosing 0.".format(tuning_algo_nr))
             tuning_algo_nr = 0
         tuning_algo = ["TL","ZN"][tuning_algo_nr]
 
         tuner = Autotune(heater, temp, cycles, g, self.printer, pre_cal, tuning_algo)
-        tuner.run()
-        logging.info("Max temp: {}, Min temp: {}, Ku: {}, Pu: {}".format(tuner.max_temp, tuner.min_temp, tuner.Ku, tuner.Pu))
-        logging.info("Kp: {}, Ti: {}, Td: {}".format(heater.Kp, heater.Ti, heater.Td))
-        self.printer.send_message(g.prot,"Max temp: {}, Min temp: {}, Ku: {}, Pu: {}".format(tuner.max_temp, tuner.min_temp, tuner.Ku, tuner.Pu))
-        self.printer.send_message(g.prot, "Kp: {}, Ti: {}, Td: {}".format(heater.Kp, heater.Ti, heater.Td))
-        self.printer.send_message(g.prot, "Settings by G-code: \n")
-        self.printer.send_message(g.prot, "M130 P{} S{:.4f}\n".format(heater_nr, heater.Kp))
-        self.printer.send_message(g.prot, "M131 P{} S{:.4f}\n".format(heater_nr, heater.Ti))
-        self.printer.send_message(g.prot, "M132 P{} S{:.4f}\n".format(heater_nr, heater.Td))
-        self.printer.send_message(g.prot, "Settings in local.cfg: \n")
-        self.printer.send_message(g.prot, "pid_{}_Kp = {:.4f}\n".format(heater_name.lower(), heater.Kp))
-        self.printer.send_message(g.prot, "pid_{}_Ti = {:.4f}\n".format(heater_name.lower(), heater.Ti))
-        self.printer.send_message(g.prot, "pid_{}_Td = {:.4f}".format(heater_name.lower(), heater.Td))
-
-        tune_data = {
-            "tune_data": tuner.plot_temps,
-            "tune_gcode": g.message,
-            "replicape_key": self.printer.replicape_key}
-
-        Alarm.action_command("pid_tune_data", json.dumps(tune_data))
+        if tuner.run():
+            logging.info("Max temp: {}, Min temp: {}, Ku: {}, Pu: {}".format(tuner.max_temp, tuner.min_temp, tuner.Ku, tuner.Pu))
+            logging.info("Kp: {}, Ti: {}, Td: {}".format(tuner.Kp, tuner.Ti, tuner.Td))
+            self.printer.send_message(g.prot,"Max temp: {}, Min temp: {}, Ku: {}, Pu: {}".format(tuner.max_temp, tuner.min_temp, tuner.Ku, tuner.Pu))
+            self.printer.send_message(g.prot, "Kp: {}, Ti: {}, Td: {}".format(tuner.Kp, tuner.Ti, tuner.Td))
+            if not write_to_cfg:
+                cfg = "Update settings by G-code: \n"
+                cfg += "M130 P{} S{:.4f}\n".format(heater_nr, tuner.Kp)
+                cfg += "M131 P{} S{:.4f}\n".format(heater_nr, tuner.Ti)
+                cfg += "M132 P{} S{:.4f}\n".format(heater_nr, tuner.Td)
+                cfg += "Save settings in local.cfg: \n"
+                cfg += "[Temperature Control]\n[[{}]]\n".format(heater.input.name)
+                cfg += "pid_Kp = {:.4f}\n".format(tuner.Kp)
+                cfg += "pid_Ti = {:.4f}\n".format(tuner.Ti)
+                cfg += "pid_Td = {:.4f}".format(tuner.Td)
+                self.printer.send_message(g.prot, cfg)
+            else:
+                # Save the config file. Tuning parameters written to config in AutoTune.py
+                self.printer.config.save(os.path.join(self.printer.config_location,'local.cfg'))
+                self.printer.send_message(g.prot,"PID settings for {} ({}) saved in local.cfg".format(heater.name, heater.input.name))
+    
+            tune_data = {
+                "tune_data": tuner.plot_temps,
+                "tune_gcode": g.message,
+                "replicape_key": self.printer.replicape_key}
+    
+            Alarm.action_command("pid_tune_data", json.dumps(tune_data))
 
     def is_buffered(self):
         return True
@@ -83,7 +92,9 @@ class M303(GCodeCommand):
             "S overrides the temperature to calibrate for. Default is 200. \n"
             "N overrides the number of cycles to run, default is 4 \n"
             "P (0,1) Enable pre-calibration. Useful for systems with very high power\n"
-            "L Tuning algorithm. 0 = Tyreus-Luyben, 1 = Zieger-Nichols classic")
+            "L Tuning algorithm. 0 = Tyreus-Luyben, 1 = Zieger-Nichols classic"
+            "W Write to local.cfg. 0 = No, 1 = Yes")
+
 
 
 

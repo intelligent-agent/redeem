@@ -28,9 +28,11 @@ from threading import Thread
 try:
     from Gcode import Gcode
     from Util import Util
+    from TemperatureControl import OnOffControl, PIDControl
 except ImportError:
     from redeem.Gcode import Gcode
     from redeem.Util import Util
+    from redeem.TemperatureControl import OnOffControl, PIDControl
 
 class Autotune:
 
@@ -65,20 +67,34 @@ class Autotune:
 
     def run(self):
         """ Start the PID autotune loop """
+        
+        if not isinstance(self.heater.input, PIDControl):
+            msg = "Cannot tune {} controller as it is not a PID controller".format(self.heater.name)
+            self.printer.send_message(self.g.prot, msg)
+            logging.warning(msg)
+            return False
+        
         # Reset found peaks
         self.running = True
 
         # Start sending thread
         self.t = Thread(target=self.send_temperatures)
         self.t.start()
+        
+        # save the original heater input
+        self.heater_input = self.heater.input
 
-        # Enable on-off control
-        self.has_onoff_control = self.heater.onoff_control
-        self.heater.onoff_control = True
+        # make an on-off control instance and attach it to the heater
+        options = {"input":self.heater_input.input,
+                   "target_value":self.heater_input.target_value,
+                   "on_offset":0.0, "off_offset":0.0,
+                   "on_value":255, "off_value":0,
+                   "sleep":self.heater_input.sleep}
+        self.on_off = OnOffControl("PID Tune OnOff", options, self.printer)
+        self.heater.input = self.on_off
 
         # Set the standard parameters
         self.d = self.bias = 0.5
-        self.heater.max_power = 1.0
 
         # Pre calibrate
         if self.pre_calibrate_enabled:
@@ -89,14 +105,16 @@ class Autotune:
         #logging.debug("Tuning data: "+str(self.temps))
 
         # Set the new PID settings
-        self.heater.Kp = self.Kp
-        self.heater.Ti = self.Ti
-        self.heater.Td = self.Td
+        self.heater_input.set_Kp(self.Kp)
+        self.heater_input.set_Ti(self.Ti)
+        self.heater_input.set_Td(self.Td)
 
         # Clean stuff up
-        self.heater.onoff_control = self.has_onoff_control
+        self.heater.input = self.heater_input
         self.running = False
         self.t.join()
+        
+        return True
 
 
     def _tune(self):

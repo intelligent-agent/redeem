@@ -23,7 +23,13 @@ class M130(GCodeCommand):
  
     def execute(self, g):
         self.get_params(g)
-        self.printer.heaters[M130.heaters[self.extr]].Kp = self.value
+        heater = self.printer.heaters[M130.heaters[self.extr]]
+        control = heater.input
+        try:
+            control.Kp = self.value
+        except:
+            msg = "set Kp failed for {} of {}".format(control.name, heater.name)
+            logging.warning("")
         
     def get_description(self):
         return "Set PID P-value, Format (M130 P0 S8.0)"
@@ -33,10 +39,15 @@ class M130(GCodeCommand):
 
 
 class M131(M130):
-
     def execute(self, g):
         self.get_params(g)
-        self.printer.heaters[M131.heaters[self.extr]].Ti = self.value
+        heater = self.printer.heaters[M131.heaters[self.extr]]
+        control = heater.input
+        try:
+            control.Ti = self.value
+        except:
+            msg = "set Ti failed for {} of {}".format(control.name, heater.name)
+            logging.warning("")
 
     def get_description(self):
         return "Set PID I-value, Format (M131 P0 S8.0)"
@@ -48,7 +59,14 @@ class M131(M130):
 class M132(M130):
     def execute(self, g):
         self.get_params(g)
-        self.printer.heaters[M132.heaters[self.extr]].Td = self.value
+        heater = self.printer.heaters[M132.heaters[self.extr]]
+        control = heater.input
+        try:
+            control.Td = self.value
+        except:
+            msg = "set Td failed for {} of {}".format(control.name, heater.name)
+            logging.warning("")
+
 
     def get_description(self):
         return "Set PID D-value, Format (M132 P0 S8.0)"
