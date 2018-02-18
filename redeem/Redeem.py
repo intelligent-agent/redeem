@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 """
 Redeem main program. This should run on the BeagleBone.
 
