@@ -293,7 +293,7 @@ class PruFirmware:
                 # stepper name is x_cw or x_ccw
                 option = 'end_stop_' + name + '_stops'
                 for stepper in self.config.get('Endstops', option).split(","):
-                    stepper = stepper.strip()
+                    stepper = stepper.strip().strip('"')
                     if stepper == "":
                         continue
                     m = re.search('^([xyzehabc])_(ccw|cw|pos|neg)$', stepper)
