@@ -16,6 +16,7 @@
 #include <string.h>
 #include <strings.h>
 #include <condition_variable>
+#include <functional>
 #include "Logger.h"
 
 //#define DEMO_PRU
