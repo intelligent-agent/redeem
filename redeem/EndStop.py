@@ -110,27 +110,24 @@ class EndStop:
             self.printer.comms["octoprint"].send_message("End stop {} hit!".format(self.name))
     
 if __name__ == "__main__":
-    print "Test endstops"
+    print("Test endstops")
     
     import time
     
     while True:
         state = PruInterface.get_shared_long(0)
-        print bin(state) + "  ", 
+        print(bin(state) + "  ",)
         if bool(state & (1 << 0)):
-            print "X1",
+            print("X1",)
         elif bool(state & (1 << 1)):
-            print "Y1",
+            print("Y1",)
         elif bool(state & (1 << 2)):
-            print "Z1",
+            print("Z1",)
         elif bool(state & (1 << 3)):
-            print "X2",
+            print("X2",)
         elif bool(state & (1 << 4)):
-            print "Y2",
+            print("Y2",)
         elif bool(state & (1 << 5)):
-            print "Z2",
-        print (" "*30)+"\r",
+            print("Z2",)
+        print((" "*30)+"\r",)
         time.sleep(0.01)
-        
-            
-    

@@ -17,17 +17,18 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
  You should have received a copy of the GNU General Public License
  along with Redeem.  If not, see <http://www.gnu.org/licenses/>.
 """
+from __future__ import absolute_import
 
-from GCodeCommand import GCodeCommand
 import logging
-
+from .GCodeCommand import GCodeCommand
 from redeem.Printer import Printer
+from six import iteritems
 
 
 class M206(GCodeCommand):
 
     def _get_offset_str(self):
-        offsets = sorted(self.printer.path_planner.center_offset.iteritems())
+        offsets = sorted(iteritems(self.printer.path_planner.center_offset))
         offset_strs = ["{}: {}".format(k, 1000. * v) for k, v
                        in offsets]
         return ", ".join(offset_strs)

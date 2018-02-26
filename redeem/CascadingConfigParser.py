@@ -87,6 +87,26 @@ class CascadingConfigParser(ConfigParser.SafeConfigParser):
                 pass
         return
 
+    def get_default_settings(self):
+        fs = []
+        for config_file in self.config_files:
+            if os.path.isfile(config_file):
+                c_file = os.path.basename(config_file)
+                cp = ConfigParser.SafeConfigParser()
+                cp.readfp(open(config_file))
+                fs.append((c_file, cp))
+
+        lines = []
+        for section in self.sections():            
+            for option in self.options(section):
+                for (name, cp) in fs:
+                    if cp.has_option(section, option):
+                        line = [name, section, option, cp.get(section, option)]
+                lines.append(line)
+
+        return lines
+
+
     def save(self, filename):
         """ Save the changed settings to local.cfg """
         current = CascadingConfigParser(self.config_files)
@@ -159,3 +179,11 @@ class CascadingConfigParser(ConfigParser.SafeConfigParser):
             except IOError as e:
                 logging.warning("Unable to write new key to EEPROM")
         return self.replicape_key
+
+
+if __name__ == '__main__':
+    logging.basicConfig(level=logging.DEBUG,
+                    format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
+                    datefmt='%m-%d %H:%M')
+    c = CascadingConfigParser(["/etc/redeem/default.cfg", "/etc/redeem/printer.cfg", "/etc/redeem/local.cfg"])
+    print(c.get_default_settings())

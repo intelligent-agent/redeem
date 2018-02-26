@@ -46,7 +46,8 @@
 #define PRU_ICSS_LEN 512*1024
 #define SHARED_RAM_START 0x00012000
 
-PruTimer::PruTimer() {
+PruTimer::PruTimer(std::function<void()> endstopAlarmCallback)
+: endstopAlarmCallback(endstopAlarmCallback) {
 	ddr_mem = 0;
 	ddr_mem_end = 0;
 	shared_mem = 0;
@@ -367,7 +368,7 @@ void PruTimer::push_block(uint8_t* blockMemory, size_t blockLen, unsigned int un
 			if(!ddr_mem || stop) return;
 
 			if (ddr_mem_used == 0) {
-				QUEUELOG("PRU DDR was empty" << std::endl);
+				LOGINFO("PRU DDR was empty" << std::endl);
 			}
 			
 			
@@ -604,6 +605,13 @@ void PruTimer::run() {
 #endif		
 		msync(ddr_nr_events, 4, MS_SYNC);
 		uint32_t nb = *ddr_nr_events;
+
+		if (nb == 0xFFFFFFFF)
+		{
+            // The PRU has stopped due to an endstop alarm.
+			endstopAlarmCallback();
+		}
+		else
 		{
 			std::lock_guard<std::mutex> lk(mutex_memory);			
 //			LOG( "NB event " << nb << " / " << currentNbEvents << "\t\tRead event from UIO = " << nbWaitedEvent << ", block in the queue: " << ddr_mem_used << std::endl);

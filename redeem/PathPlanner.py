@@ -32,18 +32,40 @@ import numpy as np
 from PruInterface import PruInterface
 from BedCompensation import BedCompensation
 from DeltaAutoCalibration import delta_auto_calibration
+from Alarm import Alarm
+from six import iteritems
+import traceback
 
 try:
-    from path_planner.PathPlannerNative import PathPlannerNative
-except Exception, e:
+    from path_planner.PathPlannerNative import PathPlannerNative, AlarmCallbackNative
+except Exception as e:
     try:
-        from _PathPlannerNative import PathPlannerNative
+        from _PathPlannerNative import PathPlannerNative, AlarmCallbackNative
     except:
         logging.error("You have to compile the native path planner before running"
                   " Redeem. Make sure you have swig installed (apt-get "
                   "install swig) and run cd ../../PathPlanner/PathPlanner && "
                   "python setup.py install")
         raise e
+
+class AlarmWrapper(AlarmCallbackNative):
+    def __init__(self):
+        AlarmCallbackNative.__init__(self)
+
+    def call(self, type, message, short_message):
+        if type == 8:
+            logging.error("{}, {}".format(message, short_message))
+        else:
+            endstop = PruInterface.get_endstop_triggered()
+            endstop_idx = int(np.log2([endstop])[0]+1)
+            if (endstop_idx < 0) or (endstop_idx > 6):
+                endstop_idx = 0
+            message += ": "+["unknown", "X1", "Y1", "Z1", "X2", "Y2", "Z2"][endstop_idx]
+            logging.error("Native path planner alarm: {} {} {}".format(type, message, short_message))
+        try:
+            a = Alarm(int(type), message, short_message)
+        except Exception:
+            logging.error(traceback.format_exc())
 
 class PathPlanner:
 
@@ -62,12 +84,13 @@ class PathPlanner:
         self.prev.set_prev(None)
 
         if pru_firmware:
-            self.__init_path_planner()
+            self._init_path_planner()
         else:
             self.native_planner = None
 
-    def __init_path_planner(self):
-        self.native_planner = PathPlannerNative(int(self.printer.move_cache_size))
+    def _init_path_planner(self):
+        self.alarm_wrapper = AlarmWrapper()
+        self.native_planner = PathPlannerNative(int(self.printer.move_cache_size), self.alarm_wrapper)
 
         fw0 = self.pru_firmware.get_firmware(0)
         fw1 = self.pru_firmware.get_firmware(1)
@@ -84,6 +107,7 @@ class PathPlanner:
         self.native_planner.setPrintMoveBufferWait(int(self.printer.print_move_buffer_wait))
         self.native_planner.setMaxBufferedMoveTime(int(self.printer.max_buffered_move_time))
         self.native_planner.setSoftEndstopsMin(tuple(self.printer.soft_min))
+        self.native_planner.setSoftEndstopsMax(tuple(self.printer.soft_max))
         self.native_planner.setSoftEndstopsMax(tuple(self.printer.soft_max))
         self.native_planner.setBedCompensationMatrix(tuple(np.identity(3).ravel()))
         self.native_planner.setAxisConfig(self.printer.axis_config)
@@ -109,7 +133,7 @@ class PathPlanner:
 
     def restart(self):
         self.native_planner.stopThread(True)        
-        self.__init_path_planner()
+        self._init_path_planner()
 
     def update_steps_pr_meter(self):
         """ Update steps pr meter from the path """
@@ -162,20 +186,22 @@ class PathPlanner:
         # Note: This method has to be thread safe as it can be called from the
         # command thread directly or from the command queue thread
         self.native_planner.suspend()
-        for name, stepper in self.printer.steppers.iteritems():
+        for name, stepper in iteritems(self.printer.steppers):
             stepper.set_disabled(True)
 
         #Create a new path planner to have everything clean when it restarts
         self.native_planner.stopThread(True)
-        self.__init_path_planner()
+        self._init_path_planner()
 
     def suspend(self):
         ''' Temporary pause of planner '''
         self.native_planner.suspend()
+        logging.info("PathPlanner: suspend")
 
     def resume(self):
         ''' resume a paused planner '''
         self.native_planner.resume()
+        logging.info("PathPlanner: resume")
 
     def _home_internal(self, axis):
         """ Private method for homing a set or a single axis """
@@ -282,10 +308,13 @@ class PathPlanner:
 
         return
 
-    def home(self, axis):
+    def home(self, axis, use_matrix=False):
         """ Home the given axis using endstops (min) """
         logging.debug("homing " + str(axis))
         
+        # Reset babystepping
+        self.printer.offset_z = 0.0
+
         # allow for endstops that may only be active during homing
         self.printer.homing(True)
 
@@ -341,6 +370,9 @@ class PathPlanner:
     def probe(self, z, speed, accel):
         self.wait_until_done()
         
+        # Reset babystepping
+        self.printer.offset_z = 0.0
+
         self.printer.ensure_steppers_enabled()
         
         # save the starting position
@@ -424,6 +456,9 @@ class PathPlanner:
         # NOTE: printing the added path slows things down SIGNIFICANTLY
         #logging.debug("path added: "+ str(new))
         
+        # Add babystepping
+        new.end_pos[2] += self.printer.offset_z
+
         if new.is_G92():
             self.native_planner.setAxisConfig(int(self.printer.axis_config))
             self.native_planner.setState(tuple(new.end_pos))
@@ -453,14 +488,19 @@ class PathPlanner:
                                       bool(new.is_probe),
                                       int(tool_axis))
                                       
+        err = self.native_planner.getLastQueueMoveStatus()
 
-        self.prev = new
-        self.prev.unlink()  # We don't want to store the entire print
-                            # in memory, so we keep only the last path.
-        
-        # make sure that the current state of the printer is correct
-        self.prev.end_pos = self.native_planner.getState()
-        #logging.debug("end pos: "+ str(self.prev.end_pos))
+        if err:
+            logging.debug("add path failed: "+ str(new))
+        else:
+            self.prev = new
+            self.prev.unlink()  # We don't want to store the entire print
+                                # in memory, so we keep only the last path.
+            
+            # make sure that the current state of the printer is correct
+            self.prev.end_pos = self.native_planner.getState()
+            
+        return
 
     def set_extruder(self, ext_nr):
         """
@@ -492,7 +532,7 @@ if __name__ == '__main__':
          133.33333333 * (2 ** 4) * 1000.0, 33.4375 * (2 ** 4) * 1000.0,
          33.4375 * (2 ** 4) * 1000.0])
 
-    print "Making steppers"
+    print("Making steppers")
 
     steppers = {}
 

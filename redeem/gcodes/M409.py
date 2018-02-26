@@ -3,9 +3,9 @@ GCode M409
 Get filament sensor status
 Author: Elias Bakken
 """
+from __future__ import absolute_import
 
-from GCodeCommand import GCodeCommand
-import logging
+from .GCodeCommand import GCodeCommand
 
 
 class M409(GCodeCommand):
@@ -37,11 +37,9 @@ class M409(GCodeCommand):
             else:
                 answer.append(sensor.get_error())
                 g.set_answer(" ".join(answer))
-                
 
     def get_description(self):
         return "Get a status report from each filament sensor connected, or enable action command"
-
 
     def get_long_description(self):
         return ("Get a status report from each filament sensor connected"

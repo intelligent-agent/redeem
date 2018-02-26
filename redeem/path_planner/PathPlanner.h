@@ -41,6 +41,8 @@
 #include "vectorN.h"
 #include "config.h"
 
+class AlarmCallback;
+
 /*
  * The path planner is fed a sequence of paths. 
  * These paths are in *ideal* coordinates. 
@@ -63,8 +65,12 @@ class PathPlanner {
   void forwardPlanner(unsigned int first);
 
   VectorN machineToWorld(const IntVectorN& machinePos);
-  IntVectorN worldToMachine(const VectorN& worldPos);
+  IntVectorN worldToMachine(const VectorN& worldPos, bool* possible = nullptr);
 	
+  void pruAlarmCallback();
+
+  AlarmCallback& alarmCallback;
+
   VectorN maxSpeeds;
   VectorN maxSpeedJumps;
   VectorN maxAccelerationStepsPerSquareSecond;
@@ -134,6 +140,7 @@ class PathPlanner {
 	
   std::thread runningThread;
   bool stop;
+  std::atomic_bool acceptingPaths;
 	
   PruTimer pru;
   void recomputeParameters();
@@ -155,12 +162,16 @@ class PathPlanner {
   void applyBedCompensation(VectorN &endPos);
   void backlashCompensation(IntVectorN &delta);
   void handleSlaves(VectorN &startPos, VectorN &endPos);
+  bool queue_move_fail;
 	
 	
   // soft endstops
   VectorN soft_endstops_min;
   VectorN soft_endstops_max;
 	
+  bool stop_on_soft_endstops_hit;
+  bool stop_on_physical_endstops_hit;
+
   // bed compensation
   std::vector<FLOAT_T> matrix_bed_comp;
 	
@@ -196,7 +207,7 @@ class PathPlanner {
    * @details Create a new path planner that is used to compute paths parameters and send it to the PRU for execution
    * @param cacheSize Size of the movement planner cache
    */
-  PathPlanner(unsigned int cacheSize);
+  PathPlanner(unsigned int cacheSize, AlarmCallback& alarmCallback);
 	
   /**
    * @brief  Init the internal PRU co-processors
@@ -348,6 +359,8 @@ class PathPlanner {
     
   void setSoftEndstopsMin(VectorN stops);
   void setSoftEndstopsMax(VectorN stops);
+  void setStopPrintOnSoftEndstopHit(bool stop);
+  void setStopPrintOnPhysicalEndstopHit(bool stop);
   void setBedCompensationMatrix(std::vector<FLOAT_T> matrix);
   void setAxisConfig(int axis);
   void setState(VectorN set);
@@ -357,6 +370,7 @@ class PathPlanner {
   void resetBacklash();
 	
   VectorN getState();
+  bool getLastQueueMoveStatus();
 
   FLOAT_T getLastProbeDistance();
 

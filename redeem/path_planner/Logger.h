@@ -73,18 +73,47 @@ public:
 	}
 };
 
-#define LOGERROR(x) Logger() << x
+// LOGLEVEL is defined in setup.py
 
-#ifdef DEBUG
-    #define LOG(x) Logger() << x
-  #else
-    #define LOG(x) //Logger() << x
+#define LOGLEVEL_CRITICAL	50
+#define LOGLEVEL_ERROR	  40
+#define LOGLEVEL_WARNING	30
+#define LOGLEVEL_INFO	    20
+#define LOGLEVEL_DEBUG    10
+#define LOGLEVEL_NOTSET   0
+
+
+#define LOGCRITICAL(x) Logger() << x
+
+#if LOGLEVEL <= LOGLEVEL_ERROR
+  #define LOGERROR(x) Logger() << x
+#else
+  #define LOGERROR(x)
 #endif
 
-#ifdef QUEUE_DEBUG
-    #define QUEUELOG(x) Logger() << x
-  #else
-    #define QUEUELOG(X)
+#if LOGLEVEL <= LOGLEVEL_WARNING
+  #define LOGWARNING(x) Logger() << x
+#else
+  #define LOGWARNING(x)
+#endif
+
+#if LOGLEVEL <= LOGLEVEL_WARNING
+  #define LOGWARNING(x) Logger() << x
+#else
+  #define LOGWARNING(x)
+#endif
+
+
+#if LOGLEVEL <= LOGLEVEL_INFO
+  #define LOGINFO(x) Logger() << x
+#else
+  #define LOGINFO(x)
+#endif
+
+#if LOGLEVEL <= LOGLEVEL_DEBUG
+  #define LOG(x) Logger() << x
+#else
+  #define LOG(x)
 #endif
 
 #endif /* defined(__PathPlanner__Logger__) */

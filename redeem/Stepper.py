@@ -224,6 +224,10 @@ class Stepper_00B1(Stepper):
         self.shift_reg.set_state(state, 0x0E)
         self.decay = value # For saving the setting with M500
 
+    def reset(self):
+        self.set_disabled()
+        self.set_enabled()
+
 class Stepper_00B2(Stepper_00B1):
 
     def __init__(self, stepPin, dirPin, faultPin, dac_channel, shiftreg_nr, name):
@@ -347,6 +351,7 @@ class Stepper_00A4(Stepper):
         self.dac        = DAC(dac_channel)
         self.dacvalue 	= 0x00   	    # The voltage value on the VREF		
         self.state      = (1<<Stepper_00A4.SLEEP)|(1<<Stepper_00A4.RESET)| (1<<Stepper_00A4.ENABLED) # The initial state of the inputs
+        self.current_enabled = True
         self.update()
 
     def set_enabled(self, force_update=False):
@@ -362,6 +367,21 @@ class Stepper_00A4(Stepper):
             self.state |= (1 << Stepper_00A4.ENABLED)
             self.enabled = False
         self.update()
+        
+    def set_current_disabled(self):
+        ''' Set the stepper in lowest current mode '''
+        if not self.current_enabled:
+            return
+
+        self.current_enable_value = self.current_value
+        self.current_enabled = False
+        self.set_current_value(0)
+
+    def set_current_enabled(self):
+        if self.current_enabled:
+            return
+        self.set_current_value(self.current_enable_value)
+        self.current_enabled = True
 
     def enable_sleepmode(self, force_update=False):
         """Logic high to enable device, logic low to enter
@@ -452,8 +472,8 @@ class Stepper_00A3(Stepper_00A4):
 if __name__ == '__main__':
     s = Stepper("GPIO0_27", "GPIO1_29", "GPIO2_4" , 0, 0, "X")
 
-    print s.get_step_pin()
-    print s.get_step_bank()
-    print s.get_dir_pin()
-    print s.get_dir_bank()
+    print(s.get_step_pin())
+    print(s.get_step_bank())
+    print(s.get_dir_pin())
+    print(s.get_dir_bank())
 

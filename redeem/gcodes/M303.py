@@ -14,18 +14,13 @@ Integral (Ki), and Derivative (Kd) values for the hotend or bed (E-1).
 Send the appropriate code and wait for the output to update the firmware. 
 
 """
+from __future__ import absolute_import
 
-from GCodeCommand import GCodeCommand
 import json
-
-try:
-    from Autotune import Autotune
-    from Alarm import Alarm
-except ImportError:
-    from redeem.Autotune import Autotune
-    from redeem.Alarm import Alarm
-
 import logging
+from .GCodeCommand import GCodeCommand
+from redeem.Autotune import Autotune
+from redeem.Alarm import Alarm
 
 
 class M303(GCodeCommand):
@@ -57,9 +52,9 @@ class M303(GCodeCommand):
         self.printer.send_message(g.prot, "M131 P{} S{:.4f}\n".format(heater_nr, heater.Ti))
         self.printer.send_message(g.prot, "M132 P{} S{:.4f}\n".format(heater_nr, heater.Td))
         self.printer.send_message(g.prot, "Settings in local.cfg: \n")
-        self.printer.send_message(g.prot, "pid_{}_Kp = {:.4f}\n".format(heater_name.lower(), heater.Kp))
-        self.printer.send_message(g.prot, "pid_{}_Ti = {:.4f}\n".format(heater_name.lower(), heater.Ti))
-        self.printer.send_message(g.prot, "pid_{}_Td = {:.4f}".format(heater_name.lower(), heater.Td))
+        self.printer.send_message(g.prot, "pid_Kp_{} = {:.4f}\n".format(heater_name.lower(), heater.Kp))
+        self.printer.send_message(g.prot, "pid_Ti_{} = {:.4f}\n".format(heater_name.lower(), heater.Ti))
+        self.printer.send_message(g.prot, "pid_Td_{} = {:.4f}".format(heater_name.lower(), heater.Td))
 
         tune_data = {
             "tune_data": tuner.plot_temps,
@@ -82,7 +77,8 @@ class M303(GCodeCommand):
             "and Derivative (Kd) values for the hotend or "
             "bed (E-1). Send the appropriate code and wait "
             "for the output to update the firmware. "
-            "H<0 or 1> overrides the extruder. Use P-1 for heated bed. \n"
+            "\nInputs:\n"
+            "H<0 or 1> overrides the extruder. Use H-1 for heated bed. \n"
             "Default is the 'E' extruder with index 0. \n"
             "S overrides the temperature to calibrate for. Default is 200. \n"
             "N overrides the number of cycles to run, default is 4 \n"

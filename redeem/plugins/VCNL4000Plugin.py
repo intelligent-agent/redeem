@@ -21,7 +21,7 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
 """
 
 
-from Adafruit_I2C import Adafruit_I2C
+from Adafruit_GPIO.I2C import Device as I2C
 import time
 import subprocess
 
@@ -32,9 +32,9 @@ class VCNL4000(object):
         kernel_version = subprocess.check_output(["uname", "-r"]).strip()
         [major, minor, rev] = kernel_version.split("-")[0].split(".")
         if (int(major) == 3 and int(minor) >= 14) or int(major) > 3 :
-            self.i2c = Adafruit_I2C(0x13, 2, False)  # Open device
+            self.i2c = I2C(0x13, 2)  # Open device
         else:
-            self.i2c = Adafruit_I2C(0x13, 1, False)  # Open device
+            self.i2c = I2C(0x13, 1)  # Open device
         rev = self.i2c.readU8(0x81)
         if rev == 0x11:
             logging.info("Found VCNL4000")
@@ -49,11 +49,11 @@ class VCNL4000(object):
         val = 0
         i = 0
         state = self.i2c.readU8(0x80)
-        print state
+        print(state)
         self.i2c.write8(0x80, (1<<3))
         while True:
             state = self.i2c.readU8(0x80)
-            print state
+            print(state)
             if (state & (1 << 5)) or i > 100:
                 val |= (self.i2c.readU8(0x87) << 8)
                 val |= (self.i2c.readU8(0x88) << 0)
@@ -87,6 +87,6 @@ if __name__ == '__main__':
 
     prox = VCNL4000()
     for i in range(100):
-        print prox.get_distance()
-        #print prox.get_ambient()
+        print(prox.get_distance())
+        #print(prox.get_ambient())
         #time.sleep(0.1)

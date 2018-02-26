@@ -7,14 +7,13 @@ email: zittix(at)xwaves(dot)net
 Website: http://www.xwaves.net
 License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 """
+from __future__ import absolute_import
 
-from GCodeCommand import GCodeCommand
-try:
-    from Gcode import Gcode
-except ImportError:
-    from redeem.Gcode import Gcode
 import time
 import logging
+from .GCodeCommand import GCodeCommand
+from redeem.Gcode import Gcode
+
 
 
 class M116(GCodeCommand):
@@ -61,7 +60,7 @@ class M116(GCodeCommand):
             self.printer.processor.execute(m105)
             if False not in all_ok or not self.printer.running_M116:
                 logging.info("Heating done.")
-                self.printer.send_message(g.prot, "Heating done.")
+                self.printer.send_message(g.prot, "ok Heating done.")
                 self.printer.running_M116 = False
                 return
             else:
@@ -75,17 +74,18 @@ class M116(GCodeCommand):
         return "Wait for a specific temperature/all temperatures to be reached"
 
     def get_long_description(self):
-        desc = ("Wait for a specific temperature/all temperatures to be reached",
-                "If no parameter is added M116 will wait for all temperatures to be reached",
-                "If P or T is set then M116 will wait for the specific Heater to reach temperature only",
-                "Possible values are: ",
-                "-1 - Heated Bed",
-                " 0 - Extruder E",
+        desc = ("Wait for a specific temperature/all temperatures to be reached"
+                "If no parameter is added M116 will wait for all temperatures to be reached"
+                "If P or T is set then M116 will wait for the specific Heater to reach temperature only"
+                "Possible values are: \n"
+                "-1 - Heated Bed \n"
+                " 0 - Extruder E\n"
                 " 1 - Extruder H")
-        if self.printer.config.reach_revision:
-            desc = desc + (" 2 - Extruder A",
-                           " 3 - Extruder B",
-                           " 4 - Extruder C")
+        # unittests and docs may not have printer set when looking for docs
+        if not self.printer or self.printer.config.reach_revision:
+            desc += (" 2 - Extruder A\n"
+                    " 3 - Extruder B\n"
+                    " 4 - Extruder C")
         return desc
 
     def is_buffered(self):

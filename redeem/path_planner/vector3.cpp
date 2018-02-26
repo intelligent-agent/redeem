@@ -88,6 +88,12 @@ IntVector3 Vector3::round() const
 {
   return IntVector3(std::llround(x), std::llround(y), std::llround(z));
 }
+
+bool Vector3::hasNan() const
+{
+  return std::isnan(x) || std::isnan(y) || std::isnan(z);
+}
+
 // Helper functions for the Vector3 class.
 
 FLOAT_T vabs( const Vector3 &v )

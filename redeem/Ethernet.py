@@ -78,7 +78,7 @@ class Ethernet:
         try:
             if self.client:
                 self.client.send(message)
-        except socket.error, (value, message):
+        except socket.error as (value, message):
             logging.error("Ethernet " + message)
 
     def read_line(self):
@@ -87,7 +87,7 @@ class Ethernet:
         while self.running:
             try:
                 char = self.client.recv(1)
-            except socket.error, (value, message):
+            except socket.error as (value, message):
                 logging.error("Ethernet " + message)
                 char = ""
             if char == "":
