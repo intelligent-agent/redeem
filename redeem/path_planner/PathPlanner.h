@@ -28,6 +28,7 @@
 #define __PathPlanner__PathPlanner__
 
 #include <iostream>
+#include <functional>
 #include <atomic>
 #include <thread>
 #include <vector>

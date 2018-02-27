@@ -10,6 +10,7 @@
 #define __PathPlanner__PruTimer__
 
 #include <iostream>
+#include <functional>
 #include <queue>
 #include <thread>
 #include <mutex>
