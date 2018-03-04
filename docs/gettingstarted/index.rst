@@ -14,11 +14,13 @@ Getting Started
 
 ..  rubric:: What will you need to get started?
 
-The **Replicape** can be ordered from `ThingPrinter`__ or `Seeed Studio`__.
+The **Replicape** can be ordered from `ThingPrinter`__, `Seeed Studio`__ or `youprintin3d`__.
 
 __ https://www.thing-printer.com/product/replicape/
 
 __ https://www.seeedstudio.com/Replicape-Rev-B-3D-printer-controller-board-p-2942.html
+
+__ https://youprintin3d.de/elektronik/32bit/831/replicape.html
 
 A `BegleBone Black`__ or `BeagleBone Black Wireless`__ from many different internet retailers:
 
