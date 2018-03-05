@@ -60,7 +60,7 @@ class EmergencyStopPlugin(AbstractPlugin):
             return
 
         action = self.printer.config.get(type(self).__name__, 'action')
-        if action not in ["shutdownOS","restartRedeem","None"]:
+        if action not in ["shutdownOS","restartRedeem","pausePrint"]:
             logging.error(__name__+": unknown input action: "+str(action))
             return
         
@@ -78,14 +78,30 @@ class EmergencyStopPlugin(AbstractPlugin):
 
         
         action = self.printer.config.get(type(self).__name__, 'action')
-        if action == "None":
-            logging.debug("Emergency Stop button triggered, but no action configured.")
+        if action == "pausePrint":
+            logging.info("Emergency Stop button triggered, pausing the print")
+            # suspend the path planner, pausing the printer
+            self.printer.path_planner.suspend()
+            # disable the steppers, copied from path_planner.emergency_interrupt()
+            # don't want to simply use that call as the print cannot be resumed
+            for name, stepper in self.printer.steppers.iteritems():
+                stepper.set_disabled(True)
+            #
+            # stop any wait loop
+            self.printer.running_M116 = False
+            #
+            # Loop through the heaters and set their temp to 0.0
+            targetTemp = 0.0
+            for heater in self.printer.heaters:
+                self.printer.heaters[heater].set_target_temperature(targetTemp)
+                logging.debug(__PLUGIN_NAME__ + ": Heater-" + heater + ' set to '+str(targetTemp))
         if action == "shutdownOS":
             logging.info("Emergency Stop button triggered, shutting down OS.")
             os.system("shutdown -h now")
         if action == "restartRedeem":
             logging.info("Emergency Stop button triggered, restarting Redeem")
             os.system("systemctl restart redeem")
+            
         
 
     def exit(self):
