@@ -20,6 +20,7 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
 """
 
 from AbstractPlugin import AbstractPlugin
+from Alarm import Alarm
 import logging
 import os
 try:
@@ -29,14 +30,14 @@ except ImportError:
     from redeem.Printer import Printer
     from redeem.Key_pin import Key_pin
 
-__PLUGIN_NAME__ = 'EmergencyStop'
+__PLUGIN_NAME__ = 'UserInterrupt'
 
 
-class EmergencyStopPlugin(AbstractPlugin):
+class UserInterruptPlugin(AbstractPlugin):
 
     @staticmethod
     def get_description():
-        return "Plugin to repurpose an end stop input as an emergency stop button"
+        return "Plugin to repurpose an end stop input as an user interrupt button"
 
     def __init__(self, printer):
         super(EmergencyStopPlugin, self).__init__(printer)
@@ -60,7 +61,7 @@ class EmergencyStopPlugin(AbstractPlugin):
             return
 
         action = self.printer.config.get(type(self).__name__, 'action')
-        if action not in ["shutdownOS","restartRedeem","pausePrint"]:
+        if action not in ["pausePrint","shutdownOS","restartRedeem"]:
             logging.error(__name__+": unknown input action: "+str(action))
             return
         
@@ -75,12 +76,12 @@ class EmergencyStopPlugin(AbstractPlugin):
 
 
     def button_pushed(self, key, event):
-        logging.debug("Emergency Stop Button pushed")
+        logging.debug(__PLUGIN_NAME__+" Button pushed")
 
         
         action = self.printer.config.get(type(self).__name__, 'action')
         if action == "pausePrint":
-            logging.info("Emergency Stop button triggered, pausing the print")
+            logging.info("User Interrupt button triggered, pausing the print")
             # suspend the path planner, pausing the printer
             self.printer.path_planner.suspend()
             # disable the steppers, copied from path_planner.emergency_interrupt()
@@ -96,11 +97,14 @@ class EmergencyStopPlugin(AbstractPlugin):
             for heater in self.printer.heaters:
                 self.printer.heaters[heater].set_target_temperature(targetTemp)
                 logging.debug(__PLUGIN_NAME__ + ": Heater-" + heater + ' set to '+str(targetTemp))
+            a = Alarm(Alarm.USERINTERRUPT, "User Interrupt Button Pressed- Print Paused")
         if action == "shutdownOS":
-            logging.info("Emergency Stop button triggered, shutting down OS.")
+            logging.info("User Interrupt button triggered, shutting down OS.")
+            a = Alarm(Alarm.USERINTERRUPT, "User Interrupt Button Pressed- System Shutdown")
             os.system("shutdown -h now")
         if action == "restartRedeem":
-            logging.info("Emergency Stop button triggered, restarting Redeem")
+            logging.info("User Interrupt button triggered, restarting Redeem")
+            a = Alarm(Alarm.USERINTERRUPT, "User Interrupt Button Pressed- Redeem Restarted")
             os.system("systemctl restart redeem")
             
         
