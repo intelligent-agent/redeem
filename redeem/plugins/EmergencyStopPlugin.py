@@ -71,6 +71,7 @@ class EmergencyStopPlugin(AbstractPlugin):
 
         self.printer.button = Key_pin(es.name, es.key_code)
         self.printer.button.callback = self.button_pushed
+        logging.info(__PLUGIN_NAME__+" loaded.  End Stop " + end_stop + " being used to trigger " + action)
 
 
     def button_pushed(self, key, event):
