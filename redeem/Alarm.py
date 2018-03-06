@@ -41,6 +41,7 @@ class Alarm:
     ALARM_TEST = 11  # Testsignal, used during start-up
     HEATER_RISING_SLOW = 12  # Temperature is rising too slow
     CONFIG_ERROR = 13 # error when importing config
+    USERINTERRUPT = 14 # UserInterrupt PlugIn
 
     printer = None
     executor = None
@@ -123,6 +124,9 @@ class Alarm:
             Alarm.action_command("pause")
             self.inform_listeners()
             Alarm.action_command("alarm_config_error", self.message)
+        elif self.type == Alarm.USERINTERRUPT:
+            Alarm.action_command("pause")
+            Alarm.action_command("alarm_user_interrupt", self.message)
         else:
             logging.warning("An Alarm of unknown type was sounded!")
 
