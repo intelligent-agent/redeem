@@ -116,6 +116,15 @@ class Printer:
         self.steppers[stepper.name] = stepper
         self.steppers_ordered.append(stepper)
 
+    def add_stepper_with_index(self, stepper, index):
+        self.steppers[stepper.name] = stepper
+        diff = index-len(self.steppers_ordered)
+        logging.debug("Index: {}".format(index))
+        logging.debug("Len: {}".format(len(self.steppers_ordered)))
+        if diff < 1:
+            self.steppers_ordered.extend([None for x in xrange(diff+1)])     
+        self.steppers_ordered[index] = stepper
+
     def add_slave(self, master, slave):
         ''' Make an axis copy the movement of another.
         the slave will get the same position as the axis'''

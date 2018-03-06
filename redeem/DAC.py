@@ -23,7 +23,7 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
  along with Redeem.  If not, see <http://www.gnu.org/licenses/>.
 """
 
-from PWM import PWM
+from PWM import PWM_PCA9685
 
 import time
 import logging
@@ -34,7 +34,7 @@ try:
 except ImportError:
     pass
 
-class PWM_DAC(PWM):
+class PWM_DAC(PWM_PCA9685):
     """ This class implements a DAC using a PWM and a second order low pass filter """
 
     def __init__(self, channel):

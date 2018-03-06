@@ -23,20 +23,22 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
 
 import time
 from builtins import range
-from PWM import PWM
+from PWM import PWM_PCA9685, PWM_AM335
 from configobj import Section
 import logging
 from threading import Thread
 
 from TemperatureControl import Unit, ConstantControl
 
-class Fan(PWM):
+#class Fan(PWM):
 
 class Fan(Unit):
     """
     Used to move air
     """
-    
+    AM335 = 0
+    PCA9685 = 1
+
     def __init__(self, name, options, printer):
         """
         Fan initialization.
@@ -45,13 +47,13 @@ class Fan(Unit):
         self.name = name
         self.options = options
         self.printer = printer
-        
+
         self.input = None
         if "input" in self.options:
             self.input = self.options["input"]
             
         self.channel = int(self.options["channel"])
-        
+        logging.debug(options)
         # get fan index
         i = int(name[-1])
         
@@ -83,7 +85,10 @@ class Fan(Unit):
     def set_value(self, value):
         """ Set the amount of on-time from 0..1 """
         self.value = value
-        PWM.set_value(value, self.channel)
+        if self.options["chip"] == Fan.PCA9685:
+            PWM_PCA9685.set_value(value, self.channel)
+        elif self.options["chip"] == Fan.AM335:
+            PWM_PCA9685.set_value(value, self.channel)
         return
 
 

@@ -124,7 +124,7 @@ class CascadingConfigParser(ConfigObj):
         for config_file in self.config_files:
             if os.path.isfile(config_file):
                 logging.info("Using config file " + config_file)
-                self.readfp(open(config_file))
+                #self.readfp(open(config_file))
             else:
                 logging.warning("Missing config file " + config_file)
         
@@ -225,6 +225,35 @@ class CascadingConfigParser(ConfigObj):
         return lines
 
 
+    def load(self):
+        '''generate a config that combines all of the cascading configs in the 
+        list. Config entry (i+1) entry overwrites entry (i). Entries may be 
+        added at any level but only in allowed sections'''
+
+        for i, config_file in enumerate(self.config_files):
+            if os.path.isfile(config_file):
+                c_file = os.path.basename(config_file)
+                logging.debug("parsing {}".format(c_file))
+                items = []
+                if i == 0: # generate the base config 
+                    self._initialise(self.parser_options)
+                    self._load(config_file, self._original_configspec)
+                    self.default_cfg = self.dict()
+                else:
+                    cfg = ConfigObj(config_file, **self.parser_options)
+                
+                    # get a linear list of all items
+                    items = []
+                    cfg.walk(lambda section, key : items.append(
+                        (walk_up(section,[section.name]), key, section[key])))
+                    
+                    # overwrite or add to the base config
+                    for item in items:
+                        if walk_down(self, item[0], item[1], item[2], self.allow_new):
+                            path = '/'.join(item[0]+[item[1]])
+                            msg = "Config entry not permitted : {} = {} ".format(path, item[2])
+                            logging.warning(msg)
+
     def save(self, filename):
         """ Save the changed settings to local.cfg """
         
@@ -278,6 +307,11 @@ class CascadingConfigParser(ConfigObj):
         else:
             logging.warning("{} contains errors.".format(filename))
         return local_ok
+
+    def make_key(self):
+        import random
+        import string
+        return ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits) for _ in range(20))
 
     def get_key(self):
         """ Get the generated key from the config or create one """

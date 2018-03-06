@@ -21,35 +21,31 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
  along with Redeem.  If not, see <http://www.gnu.org/licenses/>.
 """
 
-from PWM import PWM
-from PWM_pin import PWM_pin
+from PWM import PWM_PCA9685,PWM_AM335
 import logging
 
-class Mosfet_Pin(PWM_pin):   
-    def __init__(self, channel):
-        self.channel = channel
-        self.power = 0.0
-        self.pin = PWM_pin(channel, 100, 0.0)
-
-    def set_power(self, value):
-        """Set duty cycle between 0 and 1"""
-        #logging.debug("Setting PWM_pin value to {}".format(value))
-        self.power = value
-        self.pin.set_value(value)
-
-    def get_power(self):
-        return self.power
-
-class Mosfet(PWM):   
-    def __init__(self, channel):
+class Mosfet:
+    def __init__(self, channel, chip_type):
         """ Channel is the channel that the thing is on (0-15) """
         self.channel = channel
         self.power = 0.0
+        if chip_type == "AM335":
+            self.chip = PWM_AM335(channel, 100, 0.0)
+            self.chip_type = 0
+        elif chip_type == "PCA9685":
+            self.chip = PWM_PCA9685
+            self.chip_type = 1
 
     def set_power(self, value):
         self.power = value
         """Set duty cycle between 0 and 1"""
-        PWM.set_value(value, self.channel)
+        if self.chip_type == 0:
+            self.chip.set_value(value)
+        elif self.chip_type == 1:
+            self.chip.set_value(value, self.channel)
+        else:
+            logging.error("Mosfet: Unknown PWM chip: {}".format(self.chip))    
+
 
     def get_power(self):
         return self.power

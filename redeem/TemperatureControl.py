@@ -30,7 +30,6 @@ import logging
 from threading import Thread
 import numpy as np
 
-from PWM import PWM
 from Alarm import Alarm
 from TemperatureSensor import TemperatureSensor
 from ColdEnd import ColdEnd
