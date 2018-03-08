@@ -65,14 +65,28 @@ class UserInterruptPlugin(AbstractPlugin):
             logging.error(__name__+": unknown input action: "+str(action))
             return
         
+        if not self.printer.config.has_option(type(self).__name__, 'switch_type'):
+            logging.error(__name__+": Missing option: 'switch_type' ")
+            return
+
+        switchType = self.printer.config.get(type(self).__name__, 'switch_type')
+        if switchType not in ["NC","NO"]:
+            logging.error(__name__+": unknown input switch_type: "+str(switchType))
+            return
+        
         # Disable the end-stop on this channel
         es = self.printer.end_stops[end_stop]
         es.active = False
         es.stop()
 
-        self.printer.button = Key_pin(es.name, es.key_code)
+        if switchType == "NO":
+            edge = Key_pin.FALLING
+        else:
+            edge = Key_pin.RISING
+            
+        self.printer.button = Key_pin(es.name, es.key_code, edge)
         self.printer.button.callback = self.button_pushed
-        logging.info(__PLUGIN_NAME__+" loaded.  End Stop " + end_stop + " being used to trigger " + action)
+        logging.info(__PLUGIN_NAME__+" loaded.  " + switchType + " End Stop " + end_stop + " being used to trigger " + action)
 
 
     def button_pushed(self, key, event):
