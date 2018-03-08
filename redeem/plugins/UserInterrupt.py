@@ -40,7 +40,7 @@ class UserInterruptPlugin(AbstractPlugin):
         return "Plugin to repurpose an end stop input as an user interrupt button"
 
     def __init__(self, printer):
-        super(EmergencyStopPlugin, self).__init__(printer)
+        super(UserInterruptPlugin, self).__init__(printer)
 
         logging.debug('Activating '+__PLUGIN_NAME__+' plugin...')
 
