@@ -44,7 +44,6 @@ class PluginsController:
                 continue
 
             pluginClassName = plugin+'Plugin'
-            logging.info("cwhdiag: looking for plugin:"+pluginClassName)
 
             if  pluginClassName in pluginClasses:
                 pluginInstance = pluginClasses[pluginClassName](self.printer)
@@ -84,7 +83,6 @@ class PluginsController:
 
     @staticmethod
     def load_classes_in_module(module, classes):
-        logging.info("cwhdiag: welcome to load_classes_in_module")
         for module_name, obj in inspect.getmembers(module):
             if inspect.ismodule(obj) and (obj.__name__.startswith('plugins')
                 or obj.__name__.startswith('redeem.plugins')):
