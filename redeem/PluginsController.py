@@ -38,12 +38,19 @@ class PluginsController:
         # Load the plugins specified by the config
         pluginsToLoad = [v.strip() for v in self.printer.config.get('System', 'plugins', '').split(',')]
         pluginClasses = PluginsController.get_plugin_classes()
+        
+        # cwh diagnostics
+        logging.info("cwhdiag: PluginsController >")
+        for plugin in pluginClasses:
+            logging.info("plugin class:"+str(plugin))
+        logging.info("cwhdiag: PluginsController <")
 
         for plugin in pluginsToLoad:
             if plugin == '':
                 continue
 
             pluginClassName = plugin+'Plugin'
+            logging.info("cwhdiag: looking for plugin:"+pluginClassName)
 
             if  pluginClassName in pluginClasses:
                 pluginInstance = pluginClasses[pluginClassName](self.printer)
