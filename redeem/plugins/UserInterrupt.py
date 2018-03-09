@@ -37,7 +37,7 @@ class UserInterruptPlugin(AbstractPlugin):
 
     @staticmethod
     def get_description():
-        return "Plugin to repurpose an end stop input as an user interrupt button"
+        return "Plugin to repurpose an end stop input as an user interrupt button."
 
     def __init__(self, printer):
         super(UserInterruptPlugin, self).__init__(printer)
