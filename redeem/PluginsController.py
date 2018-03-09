@@ -39,12 +39,6 @@ class PluginsController:
         pluginsToLoad = [v.strip() for v in self.printer.config.get('System', 'plugins', '').split(',')]
         pluginClasses = PluginsController.get_plugin_classes()
         
-        # cwh diagnostics
-        logging.info("cwhdiag: PluginsController >")
-        for plugin in pluginClasses:
-            logging.info("plugin class:"+str(plugin))
-        logging.info("cwhdiag: PluginsController <")
-
         for plugin in pluginsToLoad:
             if plugin == '':
                 continue
@@ -92,14 +86,6 @@ class PluginsController:
     def load_classes_in_module(module, classes):
         logging.info("cwhdiag: welcome to load_classes_in_module")
         for module_name, obj in inspect.getmembers(module):
-            #cwhdiag>
-            if inspect.ismodule(obj):
-                logging.info("cwhdiag: ismodule:" + obj.__name__ + "<")
-            elif inspect.isclass(obj):
-                logging.info("cwhdiag: isclass:" + module_name+"<")
-            else:
-                logging.info("cwhdiag: what is it?:"+module_name+"<")
-            #cwhdiag
             if inspect.ismodule(obj) and (obj.__name__.startswith('plugins')
                 or obj.__name__.startswith('redeem.plugins')):
                 PluginsController.load_classes_in_module(obj, classes)
