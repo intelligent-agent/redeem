@@ -20,7 +20,6 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
 """
 
 from AbstractPlugin import AbstractPlugin
-from Alarm import Alarm
 import logging
 import os
 try:
