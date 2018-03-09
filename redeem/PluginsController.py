@@ -95,7 +95,7 @@ class PluginsController:
             #cwhdiag>
             if inspect.ismodule(obj):
                 logging.info("cwhdiag: ismodule:" + obj.__name__ + "<")
-            elif
+            elif inspect.isclass(obj):
                 logging.info("cwhdiag: isclass:" + module_name+"<")
             else:
                 logging.info("cwhdiag: what is it?:"+module_name+"<")
