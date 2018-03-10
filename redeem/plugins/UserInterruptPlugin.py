@@ -63,6 +63,15 @@ class UserInterruptPlugin(AbstractPlugin):
         if action not in ["pausePrint","shutdownOS","restartRedeem"]:
             logging.error(__name__+": unknown input action: "+str(action))
             return
+            
+        if action == "restartRdeem"
+            if not self.printer.config.has_option(type(self).__name__, 'rest_api_key'):
+                logging.error(__name__+": Missing option: 'rest_api_key' ")
+                return
+
+            self._api_key = self.printer.config.get(type(self).__name__, 'rest_api_key')
+            self._headers = {'Content-Type': 'application/json', 'X-Api-Key': self._api_key}
+            
         
         if not self.printer.config.has_option(type(self).__name__, 'switch_type'):
             logging.error(__name__+": Missing option: 'switch_type' ")
@@ -95,21 +104,22 @@ class UserInterruptPlugin(AbstractPlugin):
         action = self.printer.config.get(type(self).__name__, 'action')
         if action == "pausePrint":
             logging.info("User Interrupt button triggered, pausing the print")
-            # suspend the path planner, pausing the printer
-            self.printer.path_planner.suspend()
-            # disable the steppers, copied from path_planner.emergency_interrupt()
-            # don't want to simply use that call as the print cannot be resumed
-            for name, stepper in self.printer.steppers.iteritems():
-                stepper.set_disabled(True)
-            #
-            # stop any wait loop
-            self.printer.running_M116 = False
-            #
-            # Loop through the heaters and set their temp to 0.0
-            targetTemp = 0.0
-            for heater in self.printer.heaters:
-                self.printer.heaters[heater].set_target_temperature(targetTemp)
-                logging.debug(__PLUGIN_NAME__ + ": Heater-" + heater + ' set to '+str(targetTemp))
+            tell_octoprint_paused()
+#             # suspend the path planner, pausing the printer
+#             self.printer.path_planner.suspend()
+#             # disable the steppers, copied from path_planner.emergency_interrupt()
+#             # don't want to simply use that call as the print cannot be resumed
+#             for name, stepper in self.printer.steppers.iteritems():
+#                 stepper.set_disabled(True)
+#             #
+#             # stop any wait loop
+#             self.printer.running_M116 = False
+#             #
+#             # Loop through the heaters and set their temp to 0.0
+#             targetTemp = 0.0
+#             for heater in self.printer.heaters:
+#                 self.printer.heaters[heater].set_target_temperature(targetTemp)
+#                 logging.debug(__PLUGIN_NAME__ + ": Heater-" + heater + ' set to '+str(targetTemp))
         if action == "shutdownOS":
             logging.info("User Interrupt button triggered, shutting down OS.")
             os.system("shutdown -h now")
@@ -117,7 +127,20 @@ class UserInterruptPlugin(AbstractPlugin):
             logging.info("User Interrupt button triggered, restarting Redeem")
             os.system("systemctl restart redeem")
             
-        
+    def tell_octoprint_paused(self):
+        logging.info("Telling OctoPrint the print is paused")
+
+        import requests, json
+
+        url = "http://localhost:5000/api/job"
+        data = json.dumps({'command':'pause', 'action': 'pause'})
+        r = requests.post(url, data=data, headers=self._headers)
+        if r.status_code not in [200, 204,409]:
+            logging.error("Error starting job. Make sure the file exists and the API key is right!")
+            logging.debug(r.status_code)
+        elif r.status_code == 409:
+            logging.info("OctoPrint reported nothing to pause")
+
 
     def exit(self):
         pass
