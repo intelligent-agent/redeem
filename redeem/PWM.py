@@ -25,6 +25,7 @@ from Adafruit_GPIO.I2C import Device as I2C
 
 import time
 import subprocess
+import logging
 
 
 class PWM(object):
@@ -50,6 +51,7 @@ class PWM(object):
         else:
             PWM.i2c = I2C(0x70, 1)  # Open device
         PWM.i2c.write8(PWM.PCA9685_MODE1, 0x01)    # Reset
+        PWM.i2c._logger.setLevel(logging.WARNING)
 
 
     @staticmethod
@@ -83,7 +85,6 @@ class PWM(object):
 
 if __name__ == '__main__':
     import os
-    import logging
     import numpy as np
 
     logging.basicConfig(level=logging.DEBUG,

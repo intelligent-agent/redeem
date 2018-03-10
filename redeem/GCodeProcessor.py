@@ -30,6 +30,7 @@ import importlib
 from threading import Event
 from six import iteritems
 from gcodes import GCodeCommand
+import Sync
 try:
     from Gcode import Gcode
 except ImportError:
@@ -40,10 +41,12 @@ class GCodeProcessor:
     def __init__(self, printer):
         self.printer = printer
 
+        self.sync_event_needed = False
+
         self.gcodes = {}
         try:
             module = __import__("gcodes", locals(), globals())
-        except ImportError: 
+        except ImportError:
             module = importlib.import_module("redeem.gcodes")
         self.load_classes_in_module(module)
 
@@ -82,78 +85,83 @@ class GCodeProcessor:
 
         return ret
 
-    def is_buffered(self, gcode):
-        val = gcode.code()
-        if not val in self.gcodes:
-            return False
+    def resolve(self, gcode):
+        if hasattr(gcode, 'command'):
+            logging.warning(
+                "tried to resolve a gcode that's already resolved: " + gcode.message)
+            logging.error(traceback.format_stack())
+        else:
+            gcode.command = self.gcodes[gcode.code()]
 
-        return self.gcodes[val].is_buffered()
+    def is_buffered(self, gcode):
+        return gcode.command.is_buffered()
 
     def is_sync(self, gcode):
-        val = gcode.code()
-        if not val in self.gcodes:
-            return False
+        return gcode.command.is_sync()
 
-        return self.gcodes[val].is_sync()
+    def is_async(self, gcode):
+        return gcode.command.is_async()
 
     def synchronize(self, gcode):
-        val = gcode.code()
-        if not val in self.gcodes:
-            logging.error(
-                "No GCode processor for " + gcode.code() +
-                ". Message: " + gcode.message)
-            return None
-        
         try:
-            self.gcodes[val].on_sync(gcode)
-            # Forcefully check/set the readyEvent here?
+            gcode.command.on_sync(gcode)
         except Exception as e:
-            logging.error("Error while executing "+gcode.code()+": "+str(e))
+            logging.error("Error while executing " +
+                          gcode.code() + ": " + str(e))
         return gcode
 
     def execute(self, gcode):
-        val = gcode.code()
-        if not val in self.gcodes:
-            logging.error(
-                "No GCode processor for " + gcode.code() +
-                ". Message: " + gcode.message)
-            return None
-        
+        if not hasattr(gcode, 'command'):
+            logging.warning(
+                "tried to execute a gcode wasn't resolved: " + gcode.message)
+            # logging.error(traceback.format_stack())
+            self.resolve(gcode)
+
         try:
-
-            #if self.gcodes[val].is_sync():
-            #    self.gcodes[val].readyEvent = Event()
-
-            self.gcodes[val].execute(gcode)
-
-            #if self.gcodes[val].is_sync():
-            #    self.gcodes[val].readyEvent.wait()  # Block until the event has occurred.
-
+            gcode.command.execute(gcode)
         except Exception as e:
-            logging.error("Error while executing "+gcode.code()+": "+str(e))
+            logging.error("Error while executing " +
+                          gcode.code() + ": " + str(e))
             logging.error(traceback.format_exc(sys.exc_info()[2]))
         return gcode
 
     def enqueue(self, gcode):
+        self.resolve(gcode)
+
         # If an M116 is running, peek at the incoming Gcode
         if self.peek(gcode):
             return
-        if self.printer.processor.is_buffered(gcode):     
-            self.printer.commands.put(gcode)              
-            if self.printer.processor.is_sync(gcode):     
-                self.printer.sync_commands.put(gcode)    # Yes, it goes into both queues!
-        else:                                         
-            self.printer.unbuffered_commands.put(gcode)  
-        
+
+        if self.is_async(gcode):
+            self.sync_event_needed = True
+            self.printer.async_commands.put(gcode)
+
+        elif self.is_buffered(gcode):
+            # if we previously queued an async code, we need to queue an event to get back into sync
+            if self.sync_event_needed:
+                logging.info("adding sync before " + gcode.message)
+                self._make_buffered_queue_wait_for_async_queue()
+                self.sync_event_needed = False
+
+            self.printer.commands.put(gcode)
+
+            if self.is_sync(gcode):
+                # Yes, it goes into both queues!
+                self.printer.sync_commands.put(gcode)
+        else:
+            self.printer.unbuffered_commands.put(gcode)
+
+        if gcode.code() in ["M109", "M190"]:
+            self._make_async_queue_wait_for_buffered_queue()
 
     def peek(self, gcode):
-        if self.printer.running_M116 and gcode.code() in ["M108", "M104", "M140"]:
+        if self.printer.running_M116 and gcode.code() == "M108":
             self.execute(gcode)
             return True
         return False
 
     def get_long_description(self, gcode):
-        val = gcode.code()[:-1]        
+        val = gcode.code()[:-1]
         if not val in self.gcodes:
             logging.error(
                 "No GCode processor for " + gcode.code() +
@@ -162,15 +170,54 @@ class GCodeProcessor:
         try:
             return self.gcodes[val].get_long_description()
         except Exception as e:
-            logging.error("Error while getting long description on "+gcode.code()+": "+str(e))
-        return "Error getting long decription for "+str(val)
+            logging.error(
+                "Error while getting long description on " + gcode.code() + ": " + str(e))
+        return "Error getting long decription for " + str(val)
 
     def get_test_gcodes(self):
         gcodes = []
-        for name,gcode in iteritems(self.gcodes):
+        for name, gcode in iteritems(self.gcodes):
             for str in gcode.get_test_gcodes():
-                 gcodes.append( Gcode({"message": str, "prot": "Test"}) )
+                gcodes.append(Gcode({"message": str, "prot": "Test"}))
         return gcodes
+
+    def _make_buffered_queue_wait_for_async_queue(self):
+        logging.info("queueing buffered-to-async sync event")
+        state = Sync.SyncState()
+        buffered = Sync.SyncBufferedToAsync_Buffered(self.printer, state)
+        async = Sync.SyncBufferedToAsync_Async(self.printer, state)
+
+        buffered_gcode = Gcode(
+            {"message": "SyncBufferedToAsync_Buffered", "prot": "internal"})
+        buffered_gcode.command = buffered
+
+        async_gcode = Gcode(
+            {"message": "SyncBufferedToAsync_Async", "prot": "internal"})
+        async_gcode.command = async
+
+        self.printer.commands.put(buffered_gcode)
+        self.printer.sync_commands.put(async_gcode)
+        self.printer.async_commands.put(async_gcode)
+        logging.info("done queueing buffered-to-async sync event")
+
+    def _make_async_queue_wait_for_buffered_queue(self):
+        logging.info("queueing async-to-buffered sync event")
+        state = Sync.SyncState()
+        buffered = Sync.SyncAsyncToBuffered_Buffered(self.printer, state)
+        async = Sync.SyncAsyncToBuffered_Async(self.printer, state)
+
+        buffered_gcode = Gcode(
+            {"message": "SyncAsyncToBuffered_Buffered", "prot": "internal"})
+        buffered_gcode.command = buffered
+
+        async_gcode = Gcode(
+            {"message": "SyncAsyncToBuffered_Async", "prot": "internal"})
+        async_gcode.command = async
+
+        self.printer.async_commands.put(async_gcode)
+        self.printer.commands.put(buffered_gcode)
+        logging.info("done queueing async-to-buffered sync event")
+
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG,

@@ -140,6 +140,9 @@ class Printer:
 
     def send_message(self, prot, msg):
         """ Send a message back to host """
+        if prot not in self.comms:
+            return
+
         if "\n" in msg:
             for m in msg.split("\n"):
                 if len(m) > 0:

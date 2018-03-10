@@ -38,6 +38,9 @@ class G92(GCodeCommand):
     def is_buffered(self):
         return True
 
+    def is_async(self):
+        return True
+
     def get_test_gcodes(self):
         return ["G92"]
 
