@@ -67,6 +67,7 @@ setup(
         ('redeem/configs', [
             'configs/default.cfg',
             'configs/thing.cfg',
+            'configs/Anet_A8.cfg',
             'configs/makerbot_cupcake.cfg',
             'configs/maxcorexy.cfg',
             'configs/mendelmax.cfg',
