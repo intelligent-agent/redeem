@@ -64,7 +64,7 @@ class UserInterruptPlugin(AbstractPlugin):
             logging.error(__name__+": unknown input action: "+str(action))
             return
             
-        if action == "restartRdeem"
+        if action == "restartRdeem":
             if not self.printer.config.has_option(type(self).__name__, 'rest_api_key'):
                 logging.error(__name__+": Missing option: 'rest_api_key' ")
                 return
