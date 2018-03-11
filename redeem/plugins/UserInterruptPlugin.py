@@ -104,7 +104,7 @@ class UserInterruptPlugin(AbstractPlugin):
         action = self.printer.config.get(type(self).__name__, 'action')
         if action == "pausePrint":
             logging.info("User Interrupt button triggered, pausing the print")
-            tell_octoprint_paused()
+            self.tell_octoprint_paused()
 #             # suspend the path planner, pausing the printer
 #             self.printer.path_planner.suspend()
 #             # disable the steppers, copied from path_planner.emergency_interrupt()
