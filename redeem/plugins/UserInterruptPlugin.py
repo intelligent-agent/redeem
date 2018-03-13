@@ -40,34 +40,36 @@ class UserInterruptPlugin(AbstractPlugin):
 
     def __init__(self, printer):
         super(UserInterruptPlugin, self).__init__(printer)
+        configError = False
 
         logging.debug('Activating '+__PLUGIN_NAME__+' plugin...')
 
         if not self.printer.config.has_section(type(self).__name__):
             logging.error(__name__+": Missing section in config file: "+type(self).__name__)
+            configError = True
         
         if not self.printer.config.has_option(type(self).__name__, 'end_stop_input'):
             logging.error(__name__+": Missing option: 'end_stop_input' ")
-            return
+            configError = True
             
         end_stop = self.printer.config.get(type(self).__name__, 'end_stop_input')
         if end_stop not in ["X1", "X2", "Y1", "Y2", "Z1","Z2"]:
             logging.error(__name__+": Unknown input end stop: "+str(end_stop))
-            return
+            configError = True
 
         if not self.printer.config.has_option(type(self).__name__, 'action'):
             logging.error(__name__+": Missing option: 'action' ")
-            return
+            configError = True
 
         action = self.printer.config.get(type(self).__name__, 'action')
         if action not in ["pausePrint","shutdownOS","restartRedeem"]:
             logging.error(__name__+": unknown input action: "+str(action))
-            return
+            configError = True
             
         if action == "pausePrint":
             if not self.printer.config.has_option(type(self).__name__, 'rest_api_key'):
                 logging.error(__name__+": Missing option: 'rest_api_key' ")
-                return
+                configError = True
 
             self._api_key = self.printer.config.get(type(self).__name__, 'rest_api_key')
             self._headers = {'Content-Type': 'application/json', 'X-Api-Key': self._api_key}
@@ -75,11 +77,15 @@ class UserInterruptPlugin(AbstractPlugin):
         
         if not self.printer.config.has_option(type(self).__name__, 'switch_type'):
             logging.error(__name__+": Missing option: 'switch_type' ")
-            return
+            configError = True
 
         switchType = self.printer.config.get(type(self).__name__, 'switch_type')
         if switchType not in ["NC","NO"]:
             logging.error(__name__+": unknown input switch_type: "+str(switchType))
+            configError = True
+        
+        if configError:
+            logging.error(__name__+": plugin configuration error found.  Not enabling")
             return
         
         # Disable the end-stop on this channel
