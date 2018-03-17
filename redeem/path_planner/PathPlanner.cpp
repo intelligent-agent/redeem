@@ -235,7 +235,7 @@ void PathPlanner::queueMove(VectorN endWorldPos,
     return; // No steps included
   }
 
-  LOG("checking deltas...");
+  LOG("checking deltas..." << std::endl);
   std::cout.flush();
   {
     IntVectorN realDeltas;
