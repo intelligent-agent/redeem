@@ -65,7 +65,6 @@ from StepperWatchdog import StepperWatchdog
 from Key_pin import Key_pin, Key_pin_listener
 from Watchdog import Watchdog
 from six import iteritems
-from _version import __version__, __release_name__
 
 # Global vars
 printer = None
@@ -83,8 +82,9 @@ class Redeem:
          - default is installed directory
          - allows for running in a local directory when debugging
         """
+        from __init__ import __version__, __release_name__
         firmware_version = "{}~{}".format(__version__, __release_name__)
-        logging.info("Redeem initializing "+firmware_version)
+        logging.info("Redeem initializing " + firmware_version)
 
         printer = Printer()
         self.printer = printer
@@ -701,6 +701,7 @@ def profile(config_location="/etc/redeem"):
     yappi.start()
     main(config_location)
     yappi.get_func_stats().print_all()
+
 
 if __name__ == '__main__':
     if len(sys.argv) > 1 and sys.argv[1] == "profile":

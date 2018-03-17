@@ -8,16 +8,16 @@ Website: http://www.xwaves.net
 License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 """
 from __future__ import absolute_import
-
 from .GCodeCommand import GCodeCommand
-from .._version import __url__
+from redeem import __url__, __long_version__
+
 
 class M115(GCodeCommand):
     def execute(self, g):
         protocol_version = 0.1
         replicape_key = self.printer.replicape_key
         firmware_name = "Redeem"
-        firmware_version = self.printer.firmware_version
+        firmware_version = __long_version__
         firmware_url = __url__
         machine_type = self.printer.config.get('System', 'machine_type')
         extruder_count = self.printer.NUM_AXES - 3

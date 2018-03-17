@@ -1,24 +1,14 @@
-from setuptools import setup, find_packages, Extension
 import numpy as np
 import os
 import pip
 
 from distutils.sysconfig import get_config_vars
+from setuptools import setup, find_packages, Extension
 
 # Remove the strict prototpyes warnings
-(opt,) = get_config_vars('OPT')
+(opt, ) = get_config_vars('OPT')
 os.environ['OPT'] = " ".join(
-    flag for flag in opt.split() if flag != '-Wstrict-prototypes'
-)
-
-
-import os
-from distutils.sysconfig import get_config_vars
-
-(opt,) = get_config_vars('OPT')
-os.environ['OPT'] = " ".join(
-    flag for flag in opt.split() if flag != '-Wstrict-prototypes'
-)
+    flag for flag in opt.split() if flag != '-Wstrict-prototypes')
 
 # build requirements and dependencies from requirements.txt file
 INSTALL_REQUIRES = []
@@ -32,8 +22,10 @@ for item in pip.req.parse_requirements('requirements.txt', session="somesession"
         else:
             INSTALL_REQUIRES.append(str(item.req))
 
+#yapf: disable
 pathplanner = Extension(
-    '_PathPlannerNative', sources = [
+    '_PathPlannerNative',
+    sources=[
         'redeem/path_planner/PathPlannerNative.i',
         'redeem/path_planner/PathPlanner.cpp',
         'redeem/path_planner/PathPlannerSetup.cpp',
@@ -45,9 +37,9 @@ pathplanner = Extension(
         'redeem/path_planner/PruTimer.cpp',
         'redeem/path_planner/prussdrv.c',
         'redeem/path_planner/Logger.cpp'],
-    swig_opts=['-c++','-builtin'],
-    include_dirs = [np.get_include()],
-    extra_compile_args = [
+    swig_opts=['-c++', '-builtin'],
+    include_dirs=[np.get_include()],
+    extra_compile_args=[
         '-std=c++0x',
         '-g',
         '-O3',
@@ -56,15 +48,16 @@ pathplanner = Extension(
         '-DBUILD_PYTHON_EXT=1',
         '-Wno-write-strings',
         '-Wno-maybe-uninitialized',
-        '-DLOGLEVEL=30']
-)
+        '-DLOGLEVEL=30'
+    ])
 
-from redeem._version import __version__, __url__
+from redeem.__init__ import __url__
+import versioneer
 
 setup(
     name="Redeem",
-    version=__version__,
-    packages=find_packages(exclude=["redeem/path_planner"]),
+    version=versioneer.get_version(),
+    cmdclass=versioneer.get_cmdclass(),
     data_files=[
         ('redeem/firmware', [
             'redeem/firmware/firmware_runtime.c',
@@ -94,7 +87,6 @@ setup(
             'data/E3D-PT100-AMPLIFIER.cht']),
     ],
     # metadata for upload to PyPI
-
     author="Elias Bakken",
     author_email="elias@iagent.no",
     description="Replicape daemon",
@@ -103,7 +95,7 @@ setup(
     platforms=["BeagleBone"],
     install_requires=INSTALL_REQUIRES,
     dependency_links=DEPENDENCY_REQUIRES,
-    url = __url__,
+    url=__url__,
     ext_modules=[pathplanner],
     entry_points= {
         'console_scripts': [

@@ -8,3 +8,5 @@ include redeem/path_planner/numpy.i
 include Makefile
 include debian/*
 include systemd/*.service
+include versioneer.py
+include redeem/_version.py
