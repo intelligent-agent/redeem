@@ -1,27 +1,27 @@
 /*
   This file is part of Redeem - 3D Printer control software
- 
+
   Author: Mathieu Monney
   Website: http://www.xwaves.net
   License: GNU GPLv3 http://www.gnu.org/copyleft/gpl.html
- 
- 
+
+
   This file is based on Repetier-Firmware licensed under GNU GPL v3 and
   available at https://github.com/repetier/Repetier-Firmware
- 
+
   Redeem is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
   the Free Software Foundation, either version 3 of the License, or
   (at your option) any later version.
- 
+
   Redeem is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
   GNU General Public License for more details.
- 
+
   You should have received a copy of the GNU General Public License
   along with Redeem.  If not, see <http://www.gnu.org/licenses/>.
- 
+
 */
 
 #include "PathPlanner.h"
@@ -49,7 +49,7 @@ PathPlanner::PathPlanner(unsigned int cacheSize, AlarmCallback& alarmCallback)
   linesTicksCount = 0;
   stop = false;
   acceptingPaths = true;
-	
+
   axis_config = AXIS_CONFIG_XY;
   has_slaves = false;
   state.zero();
@@ -76,11 +76,11 @@ void PathPlanner::recomputeParameters() {
 
 
 bool PathPlanner::queueSyncEvent(bool isBlocking /* = true */){
-  PyThreadState *_save; 
+  PyThreadState *_save;
   _save = PyEval_SaveThread();
 
   // If the move command buffer isn't empty, make the last line a sync event
-  {	
+  {
     std::unique_lock<std::mutex> lk(line_mutex);
     if(linesCount > 0){
       unsigned int lastLine = (linesWritePos == 0) ? moveCacheSize - 1 : linesWritePos - 1;
@@ -98,32 +98,32 @@ bool PathPlanner::queueSyncEvent(bool isBlocking /* = true */){
 // Wait for a sync event on the stepper PRU
 int PathPlanner::waitUntilSyncEvent(){
   int ret;
-  PyThreadState *_save; 
+  PyThreadState *_save;
   _save = PyEval_SaveThread();
   ret = pru.waitUntilSync();
   PyEval_RestoreThread(_save);
   return ret;
 }
-                     
+
 // Clear the sync event on the stepper PRU and resume operation.
 void PathPlanner::clearSyncEvent(){
-  PyThreadState *_save; 
+  PyThreadState *_save;
   _save = PyEval_SaveThread();
   pru.resume();
   PyEval_RestoreThread(_save);
 }
 
 void PathPlanner::queueMove(VectorN endWorldPos,
-			    FLOAT_T speed, FLOAT_T accel, 
-			    bool cancelable, bool optimize, 
-			    bool enable_soft_endstops, bool use_bed_matrix, 
+			    FLOAT_T speed, FLOAT_T accel,
+			    bool cancelable, bool optimize,
+			    bool enable_soft_endstops, bool use_bed_matrix,
 			    bool use_backlash_compensation, bool is_probe,
 			    int tool_axis)
 {
   ////////////////////////////////////////////////////////////////////
   // PRE-PROCESSING
   ////////////////////////////////////////////////////////////////////
-  
+
   queue_move_fail = true;
 
   if (!acceptingPaths)
@@ -166,7 +166,7 @@ void PathPlanner::queueMove(VectorN endWorldPos,
 
   // handle any slaving activity
   handleSlaves(startWorldPos, endWorldPos);
-	
+
   // Get the vector to move us from where we are, to where we ideally want to be.
   bool possibleMove = true;
   IntVectorN endPos = worldToMachine(endWorldPos, &possibleMove);
@@ -218,8 +218,8 @@ void PathPlanner::queueMove(VectorN endWorldPos,
   ////////////////////////////////////////////////////////////////////
   // LOAD INTO QUEUE
   ////////////////////////////////////////////////////////////////////
-  
-  PyThreadState *_save; 
+
+  PyThreadState *_save;
   _save = PyEval_SaveThread();
 
   Path p;
@@ -246,8 +246,8 @@ void PathPlanner::queueMove(VectorN endWorldPos,
       for (const auto& step : axisSteps)
       {
         realDeltas[step.axis] += step.direction ? 1 : -1;
-	assert(step.time > lastTime);
-	lastTime = step.time;
+      	assert(step.time > lastTime);
+      	lastTime = step.time;
       }
     }
 
@@ -255,8 +255,8 @@ void PathPlanner::queueMove(VectorN endWorldPos,
     {
       if (state[i] + realDeltas[i] != endPos[i])
       {
-	LOG("step count sanity check failed on axis " << i << " because " << state[i] << " + " << realDeltas[i] << " != " << endPos[i] << std::endl);
-	assert(0);
+      	LOG("step count sanity check failed on axis " << i << " because " << state[i] << " + " << realDeltas[i] << " != " << endPos[i] << std::endl);
+      	assert(0);
       }
     }
   }
@@ -272,7 +272,7 @@ void PathPlanner::queueMove(VectorN endWorldPos,
     pathQueueHasSpace.wait(lk, [this] { return this->doesPathQueueHaveSpace(); });
     linesCacheRemaining = moveCacheSize - linesCount;
     linesTicksRemaining = maxBufferedMoveTime - linesTicksCount;
-  }	
+  }
   if(stop){
     PyEval_RestoreThread(_save);
     LOG( "Stopped/aborted/Cancelled while waiting for free move command space. linesCount: " << linesCount << std::endl);
@@ -283,10 +283,10 @@ void PathPlanner::queueMove(VectorN endWorldPos,
 
   // Now swap p into the path queue - note that we shouldn't refer to p after this because it won't contain anything useful
   qp = std::move(p);
-  
+
   // capture state so we can check it after a probe
   const IntVectorN startPos = state;
-  
+
   if(!is_probe)
   {
     state = endPos; // update the new state of the machine
@@ -297,12 +297,12 @@ void PathPlanner::queueMove(VectorN endWorldPos,
     LOG("probe move - not updating state" << std::endl);
   }
 
-  
+
 
   ////////////////////////////////////////////////////////////////////
   // PERFORM PLANNING
   ////////////////////////////////////////////////////////////////////
-  
+
   updateTrapezoids();
   linesWritePos++;
   linesCacheRemaining--;
@@ -340,12 +340,12 @@ void PathPlanner::queueMove(VectorN endWorldPos,
 
 /**
    This is the path planner.
- 
+
    It goes from the last entry and tries to increase the end speed of previous moves in a fashion that the maximum speed jump
    is never exceeded. If a segment with reached maximum speed is met, the planner stops. Everything left from this
    is already optimal from previous updates.
    The first 2 entries in the queue are not checked. The first is the one that is already in print and the following will likely become active.
- 
+
    The method is called before lines_count is increased!
 */
 void PathPlanner::updateTrapezoids(){
@@ -355,7 +355,7 @@ void PathPlanner::updateTrapezoids(){
   unsigned int maxfirst = linesPos; // first non fixed segment
 
   //LOG("UpdateTRapezoids:: "<<std::endl);
-    
+
   // Search last fixed element
   while(first != maxfirst && !lines[first].isEndSpeedFixed()){
     //LOG("caling previousPlannerIndex"<<std::endl);
@@ -395,7 +395,7 @@ void PathPlanner::updateTrapezoids(){
   backwardPlanner(linesWritePos,first);
   // Reduce speed to reachable speeds
   forwardPlanner(first);
-	
+
   // Update precomputed data
   do{
     lines[first].unblock();  // Flying block to release next used segment as early as possible
@@ -410,7 +410,7 @@ void PathPlanner::updateTrapezoids(){
 
 void PathPlanner::computeMaxJunctionSpeed(Path *previous, Path *current){
   FLOAT_T factor = 1;
-    
+
   LOG("Computing Max junction speed"<<std::endl);
 
   for(int i=0; i<NUM_AXES; i++){
@@ -428,19 +428,19 @@ void PathPlanner::computeMaxJunctionSpeed(Path *previous, Path *current){
 /**
    Compute the maximum speed from the last entered move.
    The backwards planner traverses the moves from last to first looking at deceleration. The RHS of the accelerate/decelerate ramp.
- 
+
    start = last line inserted
    last = last element until we check
 */
 void PathPlanner::backwardPlanner(unsigned int start, unsigned int last){
   Path *act = &lines[start],*previous;
   FLOAT_T lastJunctionSpeed = act->getEndSpeed(); // Start always with safe speed
-	
+
   // Last element is already fixed in start speed
   while(start != last){
     start = previousPlannerIndex(start);
     previous = &lines[start];
-		
+
     // Avoid speed calcs if we know we can accelerate within the line
     // acceleration is acceleration*distance*2! What can be reached if we try?
     lastJunctionSpeed = (act->willMoveReachFullSpeed() ? act->getFullSpeed() : sqrt(lastJunctionSpeed * lastJunctionSpeed + act->getAccelerationDistance2()));
@@ -448,13 +448,13 @@ void PathPlanner::backwardPlanner(unsigned int start, unsigned int last){
     if(lastJunctionSpeed >= previous->getMaxJunctionSpeed()){   // Limit is reached
       // If the previous line's end speed has not been updated to maximum speed then do it now
       if(previous->getEndSpeed() != previous->getMaxJunctionSpeed()){
-	previous->invalidateStepperPathParameters(); // Needs recomputation
-	previous->setEndSpeed(std::max(previous->getMinSpeed(),previous->getMaxJunctionSpeed())); // possibly unneeded???
+      	previous->invalidateStepperPathParameters(); // Needs recomputation
+      	previous->setEndSpeed(std::max(previous->getMinSpeed(),previous->getMaxJunctionSpeed())); // possibly unneeded???
       }
       // If actual line start speed has not been updated to maximum speed then do it now
       if(act->getStartSpeed() != previous->getMaxJunctionSpeed()){
-	act->setStartSpeed(std::max(act->getMinSpeed(),previous->getMaxJunctionSpeed())); // possibly unneeded???
-	act->invalidateStepperPathParameters();
+      	act->setStartSpeed(std::max(act->getMinSpeed(),previous->getMaxJunctionSpeed())); // possibly unneeded???
+      	act->invalidateStepperPathParameters();
       }
       lastJunctionSpeed = previous->getEndSpeed();
     }
@@ -479,21 +479,21 @@ void PathPlanner::forwardPlanner(unsigned int first){
     act = next;
     first = nextPlannerIndex(first);
     next = &lines[first];
-		
+
     // Avoid speed calcs if we know we can accelerate within the line.
     vmaxRight = (act->willMoveReachFullSpeed() ? act->getFullSpeed() : sqrt(leftSpeed * leftSpeed + act->getAccelerationDistance2()));
     if(vmaxRight > act->getEndSpeed()){   // Could be higher next run?
       if(leftSpeed < act->getMinSpeed()){
-	leftSpeed = act->getMinSpeed();
-	act->setEndSpeed(sqrt(leftSpeed * leftSpeed + act->getAccelerationDistance2()));
+      	leftSpeed = act->getMinSpeed();
+      	act->setEndSpeed(sqrt(leftSpeed * leftSpeed + act->getAccelerationDistance2()));
       }
       act->setStartSpeed(leftSpeed);
 
       leftSpeed = std::max(std::min(act->getEndSpeed(),act->getMaxJunctionSpeed()),next->getMinSpeed());
       next->setStartSpeed(leftSpeed);
-      if(act->getEndSpeed() == act->getMaxJunctionSpeed()){  // Full speed reached, don't compute again!            
-	act->setEndSpeedFixed(true);
-	next->setStartSpeedFixed(true);
+      if(act->getEndSpeed() == act->getMaxJunctionSpeed()){  // Full speed reached, don't compute again!
+      	act->setEndSpeedFixed(true);
+      	next->setStartSpeedFixed(true);
       }
       act->invalidateStepperPathParameters();
     }
@@ -501,8 +501,8 @@ void PathPlanner::forwardPlanner(unsigned int first){
       act->fixStartAndEndSpeed();
       act->invalidateStepperPathParameters();
       if(act->getMinSpeed() > leftSpeed){
-	leftSpeed = act->getMinSpeed();
-	vmaxRight = sqrt(leftSpeed * leftSpeed + act->getAccelerationDistance2());
+      	leftSpeed = act->getMinSpeed();
+      	vmaxRight = sqrt(leftSpeed * leftSpeed + act->getAccelerationDistance2());
       }
       act->setStartSpeed(leftSpeed);
       act->setEndSpeed(std::max(act->getMinSpeed(), vmaxRight));
@@ -518,7 +518,7 @@ void PathPlanner::forwardPlanner(unsigned int first){
 void PathPlanner::runThread() {
   stop=false;
   LOG("PathPlanner: starting thread" << std::endl);
-  pru.runThread();	
+  pru.runThread();
   runningThread = std::thread([this]() {
       this->run();
     });
@@ -526,7 +526,7 @@ void PathPlanner::runThread() {
 
 void PathPlanner::stopThread(bool join) {
   Py_BEGIN_ALLOW_THREADS
-    pru.stopThread(join);	
+    pru.stopThread(join);
   stop = true;
   notifyIfPathQueueIsReadyToPrint();
 
@@ -534,7 +534,7 @@ void PathPlanner::stopThread(bool join) {
     runningThread.join();
   }
   Py_END_ALLOW_THREADS
-    }
+}
 
 PathPlanner::~PathPlanner() {
   if(runningThread.joinable()) {
@@ -543,16 +543,16 @@ PathPlanner::~PathPlanner() {
 }
 
 void PathPlanner::waitUntilFinished() {
-  Py_BEGIN_ALLOW_THREADS    
+  Py_BEGIN_ALLOW_THREADS
     std::unique_lock<std::mutex> lk(line_mutex);
-  pathQueueHasSpace.wait(lk, [this] { return linesCount==0 || stop; });
-	
-  //Wait for PruTimer then
-  if(!stop) {
-    pru.waitUntilFinished();
-  }
-  Py_END_ALLOW_THREADS
+    pathQueueHasSpace.wait(lk, [this] { return linesCount==0 || stop; });
+
+    //Wait for PruTimer then
+    if(!stop) {
+      pru.waitUntilFinished();
     }
+    Py_END_ALLOW_THREADS
+}
 
 void PathPlanner::reset() {
   LOG("path planner resetting" << std::endl);
@@ -566,8 +566,8 @@ void PathPlanner::run() {
 
   const unsigned int maxCommandsPerBlock = pru.getMaxBytesPerBlock() / sizeof(SteppersCommand);
   std::unique_ptr<SteppersCommand[]> commandBlock(new SteppersCommand[maxCommandsPerBlock]);
-	
-  while(!stop) {		
+
+  while(!stop) {
     std::unique_lock<std::mutex> lk(line_mutex);
     if (!isPathQueueReadyToPrint()) {
       pathQueueReadyToPrint.wait(lk, [this] { return this->isPathQueueReadyToPrint(); });
@@ -576,27 +576,27 @@ void PathPlanner::run() {
 
     IntVectorN probeDistanceTraveled;
 
-    // If the buffer is half or more empty and the line to print is an optimized one, 
-    // wait for 500 ms again so that we can get some other path in the path planner buffer, 
+    // If the buffer is half or more empty and the line to print is an optimized one,
+    // wait for 500 ms again so that we can get some other path in the path planner buffer,
     // and we do that until the buffer is not anymore half empty.
     if(waitUntilFilledUp && !isLinesBufferFilled() && cur->getTimeInTicks() > 0) {
       unsigned lastCount = 0;
       LOGINFO("Waiting for buffer to fill up. " << linesCount  << " lines pending, lastCount is " << lastCount << std::endl);
       do {
-	lastCount = linesCount;
-	if (lastCount == 0) { // if there are no lines in the queue, we can wait indefinitely
-	  pathQueueReadyToPrint.wait(lk, [this, lastCount] { return linesCount > lastCount || stop; });
-	}
-	else { // if there are lines in the queue, we need to cap the wait at printMoveBufferWait
-	  pathQueueReadyToPrint.wait_for(lk, std::chrono::milliseconds(printMoveBufferWait), [this, lastCount] {
-	    return linesCount > lastCount || stop;
-	  });
-	}
+      	lastCount = linesCount;
+      	if (lastCount == 0) { // if there are no lines in the queue, we can wait indefinitely
+      	  pathQueueReadyToPrint.wait(lk, [this, lastCount] { return linesCount > lastCount || stop; });
+      	}
+      	else { // if there are lines in the queue, we need to cap the wait at printMoveBufferWait
+      	  pathQueueReadyToPrint.wait_for(lk, std::chrono::milliseconds(printMoveBufferWait), [this, lastCount] {
+      	    return linesCount > lastCount || stop;
+      	  });
+      	}
       } while(lastCount<linesCount && linesCount<moveCacheSize && !stop);
-      LOGINFO("Done waiting for buffer to fill up... " << linesCount  << " lines ready. " << lastCount << std::endl);			
+      LOGINFO("Done waiting for buffer to fill up... " << linesCount  << " lines ready. " << lastCount << std::endl);
       waitUntilFilledUp = false;
     }
-		
+
     //The buffer is empty, we enable again the "wait until buffer is enough full" timing procedure.
     if(linesCount<=1) {
       waitUntilFilledUp = true;
@@ -615,7 +615,7 @@ void PathPlanner::run() {
       std::this_thread::sleep_for( std::chrono::milliseconds(100) );
       continue;
     }
-		
+
     // Only enable axes that are moving. If the axis doesn't need to move then it can stay disabled depending on configuration.
     cur->fixStartAndEndSpeed();
     if(!cur->areParameterUpToDate()){  // should never happen, but with bad timings???
@@ -630,7 +630,7 @@ void PathPlanner::run() {
 
     if(cur->isCancelable()) {
       for(int i=0; i<NUM_AXES; i++)
-	cancellableMask |= (cur->isAxisMove(i) << i);
+      	cancellableMask |= (cur->isAxisMove(i) << i);
     }
 
     LOG("Cancel    mask: " << cancellableMask << std::endl);
@@ -660,7 +660,7 @@ void PathPlanner::run() {
     //LOG("Current move time " << pru.getTotalQueuedMovesTime() / (double) F_CPU << std::endl);
 
     LOG( "Done sending with " << std::dec << linesPos << std::endl);
-		
+
     removeCurrentLine();
     notifyIfPathQueueHasSpace();
   }
@@ -694,7 +694,7 @@ void PathPlanner::runMove(
   for (size_t i = 0; i < commandsLength; i++) {
     commands[i] = {};
   }
-  
+
   unsigned long long lastStepTime = 0;
 
   // sanity check - are there any steps at all?
@@ -781,16 +781,16 @@ void PathPlanner::runMove(
 
       if (axisSteps.size() > axisStepIndex && roundStepTime(axisSteps[axisStepIndex].time) == stepTime)
       {
-	const auto& step = axisSteps[axisStepIndex];
+      	const auto& step = axisSteps[axisStepIndex];
 
-	assert(!(cmd.step & (1 << i)));
-	assert(step.axis == i);
+      	assert(!(cmd.step & (1 << i)));
+      	assert(step.axis == i);
 
-	cmd.step |= 1 << i;
-	cmd.direction |= ((unsigned char)step.direction) << i;
+      	cmd.step |= 1 << i;
+      	cmd.direction |= ((unsigned char)step.direction) << i;
 
-	stepIndex[i]++;
-	finalStepTimes[i] = stepTime;
+      	stepIndex[i]++;
+      	finalStepTimes[i] = stepTime;
       }
     }
 
@@ -801,18 +801,18 @@ void PathPlanner::runMove(
 
       if (probeDistanceTraveled)
       {
-	probeSteps.reserve(probeSteps.size() + commandsIndex);
+      	probeSteps.reserve(probeSteps.size() + commandsIndex);
 
-	for (size_t i = 0; i < commandsIndex; i++)
-	{
-	  probeSteps.push_back(commands[i]);
-	}
+      	for (size_t i = 0; i < commandsIndex; i++)
+      	{
+      	  probeSteps.push_back(commands[i]);
+      	}
       }
 
       commandsIndex = 0;
 
       for (size_t i = 0; i < commandsLength; i++) {
-	commands[i] = {};
+      	commands[i] = {};
       }
     }
   }
@@ -842,7 +842,7 @@ void PathPlanner::runMove(
 
       for (size_t i = 0; i < commandsIndex; i++)
       {
-	probeSteps.push_back(commands[i]);
+      	probeSteps.push_back(commands[i]);
       }
     }
   }
@@ -853,11 +853,11 @@ void PathPlanner::runMove(
     for (int i = 0; i < NUM_AXES; i++) {
 
       if (moveMask & (1 << i)) {
-	LOG("axis " << i << " finished at " << finalStepTimes[i] / F_CPU_FLOAT << std::endl);
-	if (finalStepTimes[i] != 0) {
-	  earliestFinishTime = std::min(earliestFinishTime, finalStepTimes[i]);
-	  latestFinishTime = std::max(latestFinishTime, finalStepTimes[i]);
-	}
+      	LOG("axis " << i << " finished at " << finalStepTimes[i] / F_CPU_FLOAT << std::endl);
+      	if (finalStepTimes[i] != 0) {
+      	  earliestFinishTime = std::min(earliestFinishTime, finalStepTimes[i]);
+      	  latestFinishTime = std::max(latestFinishTime, finalStepTimes[i]);
+      	}
       }
     }
     LOG("finish times ranged from " << earliestFinishTime << " to " << latestFinishTime << ", which is "
@@ -887,14 +887,14 @@ void PathPlanner::runMove(
     {
       for (int axis = 0; axis < NUM_AXES; axis++)
       {
-	const SteppersCommand& command = probeSteps[i];
-	if (command.step & (1 << axis))
-	{
-	  deltasTraveled[axis] += (command.direction & (1 << axis)) ? 1 : -1;
-	}
+      	const SteppersCommand& command = probeSteps[i];
+      	if (command.step & (1 << axis))
+      	{
+      	  deltasTraveled[axis] += (command.direction & (1 << axis)) ? 1 : -1;
+      	}
       }
     }
-    
+
     *probeDistanceTraveled = deltasTraveled;
   }
 }
@@ -941,7 +941,7 @@ bool PathPlanner::getLastQueueMoveStatus()
 IntVectorN PathPlanner::worldToMachine(const VectorN& worldPos, bool* possible)
 {
   IntVectorN output = (worldPos * axisStepsPerM).round();
-  
+
   if (possible)
   {
     *possible = true;
