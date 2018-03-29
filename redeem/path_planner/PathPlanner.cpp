@@ -92,7 +92,7 @@ bool PathPlanner::queueSyncEvent(bool isBlocking /* = true */){
   }
 
   PyEval_RestoreThread(_save);
-  return false;	// If the move command buffer is completly empty, it's too late.
+  return false;	// If the move command buffer is completely empty, it's too late.
 }
 
 // Wait for a sync event on the stepper PRU
