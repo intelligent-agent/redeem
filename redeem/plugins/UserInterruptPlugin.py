@@ -131,6 +131,11 @@ class UserInterruptPlugin(AbstractPlugin):
             os.system("shutdown -h now")
         if action == "restartRedeem":
             logging.info("User Interrupt button triggered, restarting Redeem")
+            #
+            # stop it.  Stop it now!
+            self.printer.path_planner.emergency_interrupt()
+            #
+            # restart redeem
             os.system("systemctl restart redeem")
             
     def tell_octoprint_paused(self):
