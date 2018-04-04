@@ -100,7 +100,7 @@ class G30(GCodeCommand):
                 self.printer.probe_heights[index] = bed_dist
 
     def get_description(self):
-        return "Probe the bed at current point"
+        return "Probe the bed at the current point"
 
     def get_long_description(self):
         return ("Probe the bed at the current position, or if specified, a point "
@@ -150,7 +150,7 @@ class G30_1(GCodeCommand):
         else:
             probe_length = self.printer.config.getfloat('Probe', 'length')
 
-        # Get probe speed. If not preset, use printers curent speed.
+        # Get probe speed. If not preset, use printer's current speed.
         if g.has_letter("F"):
             probe_speed = g.get_float_by_letter("F") / 60000.0
         else:
