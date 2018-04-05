@@ -17,7 +17,6 @@ except ImportError:
 
 
 class G28(GCodeCommand):
-
     def execute(self, g):
         if g.num_tokens() == 0:  # If no token is given, home all
             axes_list = self.printer.config.get(
@@ -49,17 +48,18 @@ class G28(GCodeCommand):
         self.printer.send_message(g.prot, "ok")
 
     def get_description(self):
-        return "Move the steppers to their homing position (and find it as " \
-               "well)"
+        return "Move the steppers to their homing position" \
+               " (and find it as well)"
 
     def get_long_description(self):
-        return ("Move the steppers to their homing position. "
-                "The printer will travel a maximum length and direction"
-                "defined by travel_*. Delta printers will home both X, Y and Z "
-                "regardless of whicho of those axes were specified to home."
-                "For other printers, one or more axes can be specified. An axis will "
-                "only be homed if homing of that axis is enabled.\n"
-                "M = Add the offset from the Z-axis provided by the bed matrix")
+        return (
+            "Move the steppers to their homing position. "
+            "The printer will travel a maximum length and direction"
+            "defined by travel_*. Delta printers will home X, Y and Z "
+            "without regard to which of those axes are specified to home."
+            "For other printers, one or more axes can be specified."
+            " An axis will be homed only if homing of that axis is enabled.\n"
+            "M = Add the offset from the Z-axis provided by the bed matrix")
 
     def is_buffered(self):
         return True

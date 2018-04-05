@@ -71,7 +71,7 @@ bool PruTimer::initPRU(const std::string &firmware_stepper, const std::string &f
 	ddr_mem = (uint8_t*)malloc(ddr_size);
 	ddr_addr = (unsigned long)ddr_mem;
 	
-	LOG( "The DDR memory reserved for the PRU is 0x" << std::hex <<  ddr_size << " and has addr 0x" <<  std::hex <<  ddr_addr << std::endl);
+	LOG( "The DDR memory reserved for the PRU is 0x" << std::hex <<  ddr_size << " and has addr 0x" <<  std::hex <<  ddr_addr <<  std::dec << std::endl);
 	
 	if (ddr_mem == NULL) {
         return false;
@@ -144,7 +144,7 @@ bool PruTimer::initPRU(const std::string &firmware_stepper, const std::string &f
 		return false;
 	}
 
-	LOG( "The DDR memory reserved for the PRU is 0x" << std::hex <<  ddr_size << " and has addr 0x" <<  std::hex <<  ddr_addr << std::endl);
+	LOG( "The DDR memory reserved for the PRU is 0x" << std::hex <<  ddr_size << " and has addr 0x" <<  std::hex <<  ddr_addr << std::dec << std::endl);
 	
     /* open the device */
     mem_fd = open("/dev/mem", O_RDWR | O_SYNC);
@@ -162,7 +162,7 @@ bool PruTimer::initPRU(const std::string &firmware_stepper, const std::string &f
         return false;
     }
 	
-	LOG( "Mapped memory starting at 0x" << std::hex << (unsigned long)ddr_mem << std::endl << std::dec);
+	LOG( "Mapped memory starting at 0x" << std::hex << (unsigned long)ddr_mem  << std::dec << std::endl);
 
 	shared_mem = (uint8_t*)mmap(0, PRU_ICSS_LEN, PROT_WRITE | PROT_READ, MAP_SHARED, mem_fd, PRU_ICSS);
 

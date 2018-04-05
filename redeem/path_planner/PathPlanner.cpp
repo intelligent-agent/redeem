@@ -325,7 +325,7 @@ void PathPlanner::queueMove(VectorN endWorldPos,
 
   if(is_probe)
   {
-    LOG("Probe Move - waiting for the queue to empty");
+    LOG("Probe Move - waiting for the queue to empty" << std::endl);
     std::unique_lock<std::mutex> lk(line_mutex);
     pathQueueHasSpace.wait(lk, [this] { return linesCount==0 || stop; });
 

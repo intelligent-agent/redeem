@@ -1,6 +1,6 @@
 """ 
 Path.py - A single movement from one point to another 
-All coordinates  in this file is in meters.
+All coordinates in this file are in meters.
 
 Author: Elias Bakken
 email: elias(dot)bakken(at)gmail(dot)com
@@ -8,7 +8,7 @@ Website: http://www.thing-printer.com
 License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
 
  Redeem is free software: you can redistribute it and/or modify
-     it under the terms of the GNU General Public License as published by
+ it under the terms of the GNU General Public License as published by
  the Free Software Foundation, either version 3 of the License, or
  (at your option) any later version.
  
@@ -27,7 +27,7 @@ import logging
 
 
 class Path:
-    
+
     printer = None
 
     # Different types of paths
@@ -38,7 +38,7 @@ class Path:
     G2 = 4
     G3 = 5
 
-    # Numpy array type used throughout    
+    # Numpy array type used throughout
     DTYPE = np.float64
 
     # http://www.manufacturinget.org/2011/12/cnc-g-code-g17-g18-and-g19/
@@ -46,7 +46,15 @@ class Path:
     X_Z_ARC_PLANE = 1
     Y_Z_ARC_PLANE = 2
 
-    def __init__(self, axes, speed, accel, cancelable=False, use_bed_matrix=True, use_backlash_compensation=True, enable_soft_endstops=True, is_probe=False):
+    def __init__(self,
+                 axes,
+                 speed,
+                 accel,
+                 cancelable=False,
+                 use_bed_matrix=True,
+                 use_backlash_compensation=True,
+                 enable_soft_endstops=True,
+                 is_probe=False):
         """ The axes of evil, the feed rate in m/s and ABS or REL """
         self.axes = axes
         self.speed = speed
@@ -150,7 +158,7 @@ class Path:
 
     # If performance is an issue, move functionality to `PathPlannerNative`
     def get_arc_segments(self):
-        """Returns paths that approximated an arc."""
+        """Returns paths that approximate an arc"""
         #  reference : http://www.manufacturinget.org/2011/12/cnc-g-code-g02-and-g03/
 
         # isolate dimensions relevant for the active plane (eg X,Y for XY plane)
@@ -239,8 +247,19 @@ class Path:
 
 class AbsolutePath(Path):
     """ A path segment with absolute movement """
-    def __init__(self, axes, speed, accel, cancelable=False, use_bed_matrix=True, use_backlash_compensation=True, enable_soft_endstops=True, is_probe=False):
-        Path.__init__(self, axes, speed, accel, cancelable, use_bed_matrix, use_backlash_compensation, enable_soft_endstops, is_probe)
+
+    def __init__(self,
+                 axes,
+                 speed,
+                 accel,
+                 cancelable=False,
+                 use_bed_matrix=True,
+                 use_backlash_compensation=True,
+                 enable_soft_endstops=True,
+                 is_probe=False):
+        Path.__init__(self, axes, speed, accel, cancelable, use_bed_matrix,
+                      use_backlash_compensation, enable_soft_endstops,
+                      is_probe)
         self.movement = Path.ABSOLUTE
 
     def set_prev(self, prev):
@@ -249,20 +268,21 @@ class AbsolutePath(Path):
         prev.next = self
         self.start_pos = prev.end_pos
 
-        # Make the start, end and path vectors. 
+        # Make the start, end and path vectors.
         self.ideal_end_pos = np.copy(prev.ideal_end_pos)
         for index, axis in enumerate(self.printer.AXES):
             if axis in self.axes:
                 self.ideal_end_pos[index] = self.axes[axis]
-    
-        # Store the ideal end pos, so the target 
+
+        # Store the ideal end pos, so the target
         # coordinates are pushed forward
         self.end_pos = np.copy(self.ideal_end_pos)
         if self.use_bed_matrix:
             self.end_pos[:3] = self.end_pos[:3].dot(self.printer.matrix_bed_comp)
 
         #logging.debug("Abs before: "+str(self.ideal_end_pos[:3])+" after: "+str(self.end_pos[:3]))
-        
+
+
 class RelativePath(Path):
     """ 
     A path segment with Relative movement 
@@ -270,8 +290,19 @@ class RelativePath(Path):
       (where we actually are) -> (somewhere close to = (where we think we are + our passed in vector))
       but it should be pretty close!
     """
-    def __init__(self, axes, speed, accel, cancelable=False, use_bed_matrix=True, use_backlash_compensation=True, enable_soft_endstops=True, is_probe=False):
-        Path.__init__(self, axes, speed, accel, cancelable, use_bed_matrix, use_backlash_compensation, enable_soft_endstops, is_probe)
+
+    def __init__(self,
+                 axes,
+                 speed,
+                 accel,
+                 cancelable=False,
+                 use_bed_matrix=True,
+                 use_backlash_compensation=True,
+                 enable_soft_endstops=True,
+                 is_probe=False):
+        Path.__init__(self, axes, speed, accel, cancelable, use_bed_matrix,
+                      use_backlash_compensation, enable_soft_endstops,
+                      is_probe)
         self.movement = Path.RELATIVE
 
     def set_prev(self, prev):
@@ -286,18 +317,29 @@ class RelativePath(Path):
             if axis in self.axes:
                 vec[index] = self.axes[axis]
 
-        # Calculate the ideal end position. 
-        # In an ideal world, this is where we want to go. 
+        # Calculate the ideal end position.
+        # In an ideal world, this is where we want to go.
         self.ideal_end_pos = np.copy(prev.ideal_end_pos) + vec
-        
+
         self.end_pos = np.copy(self.ideal_end_pos)
         if self.use_bed_matrix:
             self.end_pos[:3] = self.end_pos[:3].dot(self.printer.matrix_bed_comp)        
 
 class MixedPath(Path):
     """ A path some mixed and some absolute movement axes """
-    def __init__(self, axes, speed, accel, cancelable=False, use_bed_matrix=True, use_backlash_compensation=True, enable_soft_endstops=True, is_probe=False):
-        Path.__init__(self, axes, speed, accel, cancelable, use_bed_matrix, use_backlash_compensation, enable_soft_endstops, is_probe)
+
+    def __init__(self,
+                 axes,
+                 speed,
+                 accel,
+                 cancelable=False,
+                 use_bed_matrix=True,
+                 use_backlash_compensation=True,
+                 enable_soft_endstops=True,
+                 is_probe=False):
+        Path.__init__(self, axes, speed, accel, cancelable, use_bed_matrix,
+                      use_backlash_compensation, enable_soft_endstops,
+                      is_probe)
         self.movement = Path.MIXED
 
     def set_prev(self, prev):
@@ -306,7 +348,7 @@ class MixedPath(Path):
         prev.next = self
         self.start_pos = prev.end_pos
 
-        # Make the start, end and path vectors. 
+        # Make the start, end and path vectors.
         self.ideal_end_pos = np.copy(prev.ideal_end_pos)
         for axis in self.axes:
             index = self.printer.axis_to_index(axis)
@@ -315,7 +357,7 @@ class MixedPath(Path):
             elif (axis in self.printer.axes_absolute):
                 self.ideal_end_pos[index] = self.axes[axis]
 
-        # Store the ideal end pos, so the target 
+        # Store the ideal end pos, so the target
         # coordinates are pushed forward
         self.end_pos = np.copy(self.ideal_end_pos)
         if self.use_bed_matrix:
@@ -326,10 +368,10 @@ class MixedPath(Path):
 class G92Path(Path):
     """ A reset axes path segment. No movement occurs, only global position
     setting """
+
     def __init__(self, axes, cancelable=False, use_bed_matrix=False):
         Path.__init__(self, axes, 0, 0, cancelable, use_bed_matrix)
         self.movement = Path.G92
-
 
     def set_prev(self, prev):
         """ Set the previous segment """
@@ -358,4 +400,3 @@ class G92Path(Path):
                 if axis in self.axes:
                     self.end_pos[index] = matrix_pos[index]
         #logging.debug("G92 before: "+str(self.ideal_end_pos[:3])+" after: "+str(self.end_pos[:3]))
-
