@@ -14,7 +14,8 @@ os.environ['OPT'] = " ".join(
 INSTALL_REQUIRES = []
 DEPENDENCY_REQUIRES = []
 
-for item in pip.req.parse_requirements('requirements.txt', session="somesession"):
+for item in pip.req.parse_requirements(
+        'requirements.txt', session="somesession"):
     if isinstance(item, pip.req.InstallRequirement):
         if item.link is not None:
             link = item.link.url.replace('git+', '')
@@ -58,6 +59,7 @@ setup(
     name="Redeem",
     version=versioneer.get_version(),
     cmdclass=versioneer.get_cmdclass(),
+    packages = find_packages(exclude=["redeem/path_planner"]),
     data_files=[
         ('redeem/firmware', [
             'redeem/firmware/firmware_runtime.c',
