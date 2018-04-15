@@ -20,7 +20,7 @@ class M115(GCodeCommand):
     firmware_version = __long_version__
     firmware_url = __url__
     machine_type = self.printer.config.get('System', 'machine_type')
-    extruder_count = self.printer.NUM_AXES - 3
+    extruder_count = self.printer.NUM_EXTRUDERS
     g.set_answer(
         "ok " \
         "PROTOCOL_VERSION:{} "\

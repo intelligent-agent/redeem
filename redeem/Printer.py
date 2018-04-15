@@ -36,6 +36,7 @@ class Printer:
   axes_zipped = ["X", "Y", "Z", "E", "H", "A", "B", "C"]
   MAX_AXES = 8
   NUM_AXES = 5
+  NUM_EXTRUDERS = 1
 
   AXIS_CONFIG_XY = 0
   AXIS_CONFIG_H_BELT = 1
