@@ -34,6 +34,7 @@ class G29(GCodeCommand):
           self.printer.path_planner.wait_until_done()
       else:    # Execute all
         G = Gcode({"message": gcode, "parent": g})
+        self.printer.processor.resolve(G)
         self.printer.processor.execute(G)
         self.printer.path_planner.wait_until_done()
 
