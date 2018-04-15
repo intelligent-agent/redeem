@@ -168,6 +168,8 @@ class Redeem:
     printer.enable = Enable("P9_41")
     printer.enable.set_disabled()
 
+    printer.NUM_EXTRUDERS = printer.config.getint('Steppers', 'number_of_extruders')
+
     # Init the Paths
     printer.axis_config = printer.config.getint('Geometry', 'axis_config')
 
