@@ -75,6 +75,7 @@ class G30(GCodeCommand):
         "parent":
             g
     })
+    self.printer.processor.resolve(G0)
     self.printer.processor.execute(G0)
     self.printer.path_planner.wait_until_done()
     bed_dist = round(
@@ -177,6 +178,7 @@ class G30_1(GCodeCommand):
         "parent":
             g
     })
+    self.printer.processor.resolve(G0)
     self.printer.processor.execute(G0)
     self.printer.path_planner.wait_until_done()
     bed_dist = self.printer.path_planner.probe(probe_length, probe_speed,

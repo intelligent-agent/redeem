@@ -62,6 +62,7 @@ class Autotune:
   def send_temperatures(self):
     while self.running:
       m105 = Gcode({"message": "M105", "prot": self.g.prot})
+      self.printer.processor.resolve(m105)
       self.printer.processor.execute(m105)
       answer = m105.get_answer()
       m105.set_answer(answer[2:])    # strip away the "ok"

@@ -58,6 +58,7 @@ class G34(GCodeCommand):
 
     def exec_and_wait(cmd):
       G = Gcode({"message": cmd, "parent": g})
+      self.printer.processor.resolve(G)
       self.printer.processor.execute(G)
       self.printer.path_planner.wait_until_done()
 

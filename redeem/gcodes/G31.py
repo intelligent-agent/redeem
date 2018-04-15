@@ -19,6 +19,7 @@ class G31(GCodeCommand):
     self.printer.path_planner.wait_until_done()
     for gcode in gcodes:
       G = Gcode({"message": gcode, "parent": g})
+      self.printer.processor.resolve(G)
       self.printer.processor.execute(G)
       self.printer.path_planner.wait_until_done()
 
