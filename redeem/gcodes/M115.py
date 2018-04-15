@@ -14,7 +14,7 @@ from redeem import __url__, __long_version__
 class M115(GCodeCommand):
   def execute(self, g):
     protocol_version = 0.1
-    replicape_key = self.printer.replicape_key
+    replicape_key = self.printer.config.replicape_key
     firmware_name = "Redeem"
     firmware_version = __long_version__
     firmware_url = __url__

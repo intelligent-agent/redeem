@@ -144,7 +144,6 @@ class Redeem:
     self.revision = self.printer.config.replicape_revision
     if self.revision:
       logging.info("Found Replicape rev. " + self.revision)
-      printer.replicape_key = printer.config.get_key()
     else:
       logging.warning("Oh no! No Replicape present!")
       self.revision = "0B3A"

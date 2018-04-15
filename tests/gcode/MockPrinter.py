@@ -113,7 +113,7 @@ log_to_file = False
 
     cls.R = Redeem(config_location=cfg_path)
     cls.printer = cls.R.printer
-    cls.printer.replicape_key = "TESTING_DUMMY_KEY"
+    cls.printer.config.replicape_key = "TESTING_DUMMY_KEY"
 
     cls.setUpPatch()
 

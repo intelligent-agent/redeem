@@ -32,7 +32,7 @@ class M360(GCodeCommand):
               "message_type": "info",
               "message_hide": False,
               "data_type": "config_data",
-              "replicape_key": self.printer.replicape_key,
+              "replicape_key": self.printer.config.replicape_key,
               "data": settings
           }))
 

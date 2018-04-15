@@ -85,7 +85,8 @@ class CascadingConfigParser(ConfigParser.SafeConfigParser):
             break
       except IOError as e:
         pass
-    return
+    # Parameters from the hardware
+    self.setup_key()
 
   def get_default_settings(self):
     fs = []
@@ -159,7 +160,7 @@ class CascadingConfigParser(ConfigParser.SafeConfigParser):
       logging.warning("{} contains errors.".format(filename))
     return local_ok
 
-  def get_key(self):
+  def setup_key(self):
     """ Get the generated key from the config or create one """
     self.replicape_key = "".join(struct.unpack('20c', self.replicape_data[100:120]))
     logging.debug("Found Replicape key: '" + self.replicape_key + "'")
@@ -177,7 +178,6 @@ class CascadingConfigParser(ConfigParser.SafeConfigParser):
           f.write(self.replicape_data[:120])
       except IOError as e:
         logging.warning("Unable to write new key to EEPROM")
-    return self.replicape_key
 
 
 if __name__ == '__main__':

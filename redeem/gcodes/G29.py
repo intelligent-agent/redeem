@@ -45,7 +45,7 @@ class G29(GCodeCommand):
             "z": []
         },
         "probe_type": "test" if g.has_letter("S") else "probe",
-        "replicape_key": self.printer.replicape_key
+        "replicape_key": self.printer.config.replicape_key
     }
     for k, v in enumerate(probe_data):
       bed_data["probe_data"]["x"].append(probe_data[k]["X"])
