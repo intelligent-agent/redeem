@@ -14,14 +14,13 @@ from .GCodeCommand import GCodeCommand
 
 
 class M140(GCodeCommand):
+  def execute(self, g):
+    temperature = g.get_float_by_letter("S", 0.0)
+    logging.debug("Setting bed temperature to %.1f", temperature)
+    self.printer.heaters['HBP'].set_target_temperature(temperature)
 
-    def execute(self, g):
-        temperature = g.get_float_by_letter("S", 0.0)
-        logging.debug("Setting bed temperature to %.1f", temperature)
-        self.printer.heaters['HBP'].set_target_temperature(temperature)
+  def get_description(self):
+    return "Set heated bed temperature"
 
-    def get_description(self):
-        return "Set heated bed temperature"
-
-    def is_buffered(self):
-        return True
+  def is_buffered(self):
+    return True

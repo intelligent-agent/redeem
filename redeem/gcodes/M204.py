@@ -12,7 +12,7 @@ from .GCodeCommand import GCodeCommand
 
 
 class M204(GCodeCommand):
-    """
+  """
     M204: Set default acceleration
     Parameters (RepRapFimware) Pnnn Acceleration for printing moves Tnnn Acceleration for travel moves Example M204 P500 T2000
     Use M201 to set per-axis accelerations and extruder accelerations. RepRapFirmware applies the M204 accelerations to the move as a whole, and also applies the limits set by M201 to each axis and extruder.
@@ -26,20 +26,17 @@ class M204(GCodeCommand):
     M204 Repetier is set PID, but tis is covered in M130-132 in Redeem.
     """
 
-    def execute(self, g):
+  def execute(self, g):
     # TODO: Implement set default acceleration. This is found in Slic3r Prusa i3. throws an exception and slows down
     # prints for some users.
-        pass
+    pass
 
+  def get_description(self):
+    return "Set default print acceleration, dummy MCode"
 
-    def get_description(self):
-        return "Set default print acceleration, dummy MCode"
+  # todo: fix the description of the units.
+  def get_long_description(self):
+    return ("Set default acceleration. Dummy MCode for now.")
 
-    # todo: fix the description of the units.
-    def get_long_description(self):
-        return ("Set default acceleration. Dummy MCode for now.")
-
-    def is_buffered(self):
-        return False
-    
- 
+  def is_buffered(self):
+    return False

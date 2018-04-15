@@ -14,20 +14,18 @@ import logging
 
 
 class G20(GCodeCommand):
+  def execute(self, g):
+    self.printer.unit_factor = 25.4
+    logging.debug("Set unit_factor to 25.4 (inches)")
 
-    def execute(self,g):
-        self.printer.unit_factor = 25.4
-        logging.debug("Set unit_factor to 25.4 (inches)")
-
-    def get_description(self):
-        return "Set units to inches"
+  def get_description(self):
+    return "Set units to inches"
 
 
 class G21(GCodeCommand):
+  def execute(self, g):
+    self.printer.unit_factor = 1.0
+    logging.debug("Set unit_factor to 1.0 (millimeters)")
 
-    def execute(self,g):
-        self.printer.unit_factor = 1.0
-        logging.debug("Set unit_factor to 1.0 (millimeters)")
-
-    def get_description(self):
-        return "Set units to millimeters"
+  def get_description(self):
+    return "Set units to millimeters"

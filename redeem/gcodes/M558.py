@@ -10,24 +10,22 @@ from .GCodeCommand import GCodeCommand
 
 
 class M558(GCodeCommand):
+  def execute(self, g):
+    if g.has_letter("P"):
+      t = g.get_int_by_letter("P")
+    else:
+      logging.warning("M558: Missing P-parameter")
+      return
+    if t not in [0]:    # TODO: Add more, at least proximity sensor
+      logging.warning("M558: Wrong probe type. Use 0 - Servo with switch")
+      return
+    self.printer.probe_type = t
 
-    def execute(self, g):
-        if g.has_letter("P"):
-            t = g.get_int_by_letter("P")
-        else:
-            logging.warning("M558: Missing P-parameter")
-            return         
-        if t not in [0]: # TODO: Add more, at least proximity sensor
-            logging.warning("M558: Wrong probe type. Use 0 - Servo with switch")
-            return         
-        self.printer.probe_type = t
+  def get_description(self):
+    return "Set probe type"
 
-    def get_description(self):
-        return "Set probe type"
-
-    def get_long_description(self):
-        return(
-            "Example: M558 P0 \n"
+  def get_long_description(self):
+    return ("Example: M558 P0 \n"
             "where P can be\n"
             "  0 - Servo with Switch \n"
             "  1 - IR \n"
@@ -41,5 +39,4 @@ class M558(GCodeCommand):
             "the probe type is P1. P2 specifies a modulated IR probe, where the modulation \n"
             "is commanded directly by the main board firmware using the control signal to \n"
             "the probe. P3 selects an alternative Z probe by driving the control signal to \n"
-            "the probe low. See also G31 and G32."
-            )
+            "the probe low. See also G31 and G32.")

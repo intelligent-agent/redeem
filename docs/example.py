@@ -54,7 +54,7 @@ on the first line, separated by a colon.
 
 
 def function_with_types_in_docstring(param1, param2):
-    """Example function with types documented in the docstring.
+  """Example function with types documented in the docstring.
 
     `PEP 484`_ type annotations are supported. If attribute, parameter, and
     return types are annotated according to `PEP 484`_ they do not need to be
@@ -78,7 +78,7 @@ def function_with_types_in_docstring(param1, param2):
 
 
 def function_with_pep484_type_annotations(param1, param2):
-    """Example function with PEP 484 type annotations.
+  """Example function with PEP 484 type annotations.
 
     The return type must be duplicated in the docstring to comply
     with the NumPy docstring style.
@@ -99,7 +99,7 @@ def function_with_pep484_type_annotations(param1, param2):
 
 
 def module_level_function(param1, param2=None, *args, **kwargs):
-    """This is an example of a module level function.
+  """This is an example of a module level function.
 
     Function parameters should be documented in the ``Parameters`` section.
     The name of each parameter is required. The type and description of each
@@ -157,13 +157,13 @@ def module_level_function(param1, param2=None, *args, **kwargs):
         If `param2` is equal to `param1`.
 
     """
-    if param1 == param2:
-        raise ValueError('param1 may not be equal to param2')
-    return True
+  if param1 == param2:
+    raise ValueError('param1 may not be equal to param2')
+  return True
 
 
 def example_generator(n):
-    """Generators have a ``Yields`` section instead of a ``Returns`` section.
+  """Generators have a ``Yields`` section instead of a ``Returns`` section.
 
     Parameters
     ----------
@@ -184,12 +184,12 @@ def example_generator(n):
     [0, 1, 2, 3]
 
     """
-    for i in range(n):
-        yield i
+  for i in range(n):
+    yield i
 
 
 class ExampleError(Exception):
-    """Exceptions are documented in the same way as classes.
+  """Exceptions are documented in the same way as classes.
 
     The __init__ method may be documented in either the class level
     docstring, or as a docstring on the __init__ method itself.
@@ -217,20 +217,20 @@ class ExampleError(Exception):
 
     """
 
-    def __init__(self, msg, code):
-        self.msg = msg
-        self.code = code
+  def __init__(self, msg, code):
+    self.msg = msg
+    self.code = code
 
 
 class ExampleClass(object):
-    """The summary line for a class docstring should fit on one line.
+  """The summary line for a class docstring should fit on one line.
 
     It may include what the purpose of this class is and how it should be used.
 
     """
 
-    def __init__(self, param1, param2, param3):
-        """More detail on what gets initialized
+  def __init__(self, param1, param2, param3):
+    """More detail on what gets initialized
 
         Parameters
         ----------
@@ -240,37 +240,37 @@ class ExampleClass(object):
             The second parameter.
 
         """
-        self.attr1 = param1  #: description of the various class attributes
-        self.attr2 = param2  #: Description of `attr1`
-        self.attr3 = param3  #: Doc comment *inline* with attribute
+    self.attr1 = param1    #: description of the various class attributes
+    self.attr2 = param2    #: Description of `attr1`
+    self.attr3 = param3    #: Doc comment *inline* with attribute
 
-        #: list of str: Doc comment *before* attribute, with type specified
-        self.attr4 = ["attr4"]
+    #: list of str: Doc comment *before* attribute, with type specified
+    self.attr4 = ["attr4"]
 
-        self.attr5 = None
-        """str: Docstring *after* attribute, with type specified."""
+    self.attr5 = None
+    """str: Docstring *after* attribute, with type specified."""
 
-    @property
-    def readonly_property(self):
-        """str: Properties should be documented in their getter method."""
-        return "readonly_property"
+  @property
+  def readonly_property(self):
+    """str: Properties should be documented in their getter method."""
+    return "readonly_property"
 
-    @property
-    def readwrite_property(self):
-        """:obj:`list` of :obj:`str`: Properties with both a getter and setter
+  @property
+  def readwrite_property(self):
+    """:obj:`list` of :obj:`str`: Properties with both a getter and setter
         should only be documented in their getter method.
 
         If the setter method contains notable behavior, it should be
         mentioned here.
         """
-        return ["readwrite_property"]
+    return ["readwrite_property"]
 
-    @readwrite_property.setter
-    def readwrite_property(self, value):
-        value
+  @readwrite_property.setter
+  def readwrite_property(self, value):
+    value
 
-    def example_method(self, param1, param2):
-        """Class methods are similar to regular functions.
+  def example_method(self, param1, param2):
+    """Class methods are similar to regular functions.
 
         Note
         ----
@@ -289,10 +289,10 @@ class ExampleClass(object):
             True if successful, False otherwise.
 
         """
-        return True
+    return True
 
-    def __special__(self):
-        """By default special members with docstrings are not included.
+  def __special__(self):
+    """By default special members with docstrings are not included.
 
         Special members are any methods or attributes that start with and
         end with a double underscore. Any special member with a docstring
@@ -305,13 +305,13 @@ class ExampleClass(object):
             napoleon_include_special_with_doc = True
 
         """
-        pass
+    pass
 
-    def __special_without_docstring__(self):
-        pass
+  def __special_without_docstring__(self):
+    pass
 
-    def _private(self):
-        """By default private members are not included.
+  def _private(self):
+    """By default private members are not included.
 
         Private members are any methods or attributes that start with an
         underscore and are *not* special. By default they are not included
@@ -323,7 +323,7 @@ class ExampleClass(object):
             napoleon_include_private_with_doc = True
 
         """
-        pass
+    pass
 
-    def _private_without_docstring(self):
-        pass
+  def _private_without_docstring(self):
+    pass

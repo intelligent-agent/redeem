@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import numpy as np
 import os
 import pip
@@ -7,23 +8,21 @@ from setuptools import setup, find_packages, Extension
 
 # Remove the strict prototpyes warnings
 (opt, ) = get_config_vars('OPT')
-os.environ['OPT'] = " ".join(
-    flag for flag in opt.split() if flag != '-Wstrict-prototypes')
+os.environ['OPT'] = " ".join(flag for flag in opt.split() if flag != '-Wstrict-prototypes')
 
 # build requirements and dependencies from requirements.txt file
 INSTALL_REQUIRES = []
 DEPENDENCY_REQUIRES = []
 
-for item in pip.req.parse_requirements(
-        'requirements.txt', session="somesession"):
-    if isinstance(item, pip.req.InstallRequirement):
-        if item.link is not None:
-            link = item.link.url.replace('git+', '')
-            DEPENDENCY_REQUIRES.append(link)
-        else:
-            INSTALL_REQUIRES.append(str(item.req))
+for item in pip.req.parse_requirements('requirements.txt', session="somesession"):
+  if isinstance(item, pip.req.InstallRequirement):
+    if item.link is not None:
+      link = item.link.url.replace('git+', '')
+      DEPENDENCY_REQUIRES.append(link)
+    else:
+      INSTALL_REQUIRES.append(str(item.req))
 
-#yapf: disable
+# yapf: disable
 pathplanner = Extension(
     '_PathPlannerNative',
     sources=[
@@ -106,3 +105,4 @@ setup(
         ]
     },
 )
+# yapf: enable

@@ -5,44 +5,29 @@ from distutils.core import setup, Extension
 import os
 from distutils.sysconfig import get_config_vars
 
-(opt,) = get_config_vars('OPT')
-os.environ['OPT'] = " ".join(
-    flag for flag in opt.split() if flag != '-Wstrict-prototypes'
+(opt, ) = get_config_vars('OPT')
+os.environ['OPT'] = " ".join(flag for flag in opt.split() if flag != '-Wstrict-prototypes')
+
+pathplanner = Extension(
+    '_PathPlannerNative',
+    sources=[
+        'PathPlannerNative.i', 'PathPlanner.cpp', 'PathPlannerSetup.cpp', 'Preprocessor.cpp',
+        'Path.cpp', 'Delta.cpp', 'vector3.cpp', 'vectorN.cpp', 'PruTimer.cpp', 'prussdrv.c',
+        'Logger.cpp'
+    ],
+    swig_opts=['-c++', '-builtin'],
+    include_dirs=[np.get_include()],
+    extra_compile_args=[
+        '-std=c++0x', '-g', '-O3', '-fpermissive', '-D_GLIBCXX_USE_NANOSLEEP',
+        '-DBUILD_PYTHON_EXT=1', '-Wno-write-strings', '-Wno-maybe-uninitialized', '-DLOGLEVEL=10'
+    ])
+
+setup(
+    name='PathPlannerNative',
+    version='1.0',
+    description='PathPlanner for 3D printer',
+    author='Mathieu Monney',
+    author_email='zittix@xwaves.net',
+    url='http://www.xwaves.net',
+    ext_modules=[pathplanner],
 )
-
-
-
-pathplanner = Extension('_PathPlannerNative', 
-    sources = ['PathPlannerNative.i', 
-                'PathPlanner.cpp', 
-                'PathPlannerSetup.cpp',
-                'Preprocessor.cpp',
-                'Path.cpp', 
-                'Delta.cpp',
-                'vector3.cpp',
-                'vectorN.cpp',
-                'PruTimer.cpp',
-                'prussdrv.c',
-                'Logger.cpp'],  
-    swig_opts=['-c++','-builtin'], 
-    extra_compile_args = [
-        '-std=c++0x',
-        '-g',
-        '-O2',
-        '-fpermissive',
-        '-D_GLIBCXX_USE_NANOSLEEP',
-        '-DBUILD_PYTHON_EXT=1', 
-        '-Wno-write-strings', 
-        '-Wno-maybe-uninitialized', 
-        '-Wno-format',
-        '-DQUEUE_DEBUG=1',
-        '-UNDEBUG'])
-
-setup(name='PathPlannerNative',
-      version='1.0',
-      description='PathPlanner for 3D printer',
-      author='Mathieu Monney',
-      author_email='zittix@xwaves.net',
-      url='http://www.xwaves.net',
-      ext_modules = [pathplanner],
-     )

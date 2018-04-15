@@ -14,35 +14,34 @@ from .GCodeCommand import GCodeCommand
 
 
 class M104(GCodeCommand):
+  def execute(self, g):
+    if not g.has_letter("S"):
+      logging.debug("S paramter missing")
+    target = g.get_float_by_letter("S", 0.0)
 
-    def execute(self, g):
-        if not g.has_letter("S"):
-            logging.debug("S paramter missing")
-        target = g.get_float_by_letter("S", 0.0)
+    if g.has_letter("P") or g.has_letter("T"):
+      if g.has_letter("P"):    # Set hotend temp based on the P-param
+        heater_index = g.get_int_by_letter("P", 0)
+      elif g.has_letter("T"):    # Set hotend temp based on the T-param
+        heater_index = g.get_int_by_letter("T", 0)
+      if heater_index > len(self.printer.heaters) - 1:
+        logging.warning("M104: heater index out of bounds: {}".format(heater_index))
+        return
+      heater_name = "EHABC" [heater_index]
+    else:    # Change hotend temperature based on current tool
+      heater_name = self.printer.current_tool
 
-        if g.has_letter("P") or g.has_letter("T"):
-            if g.has_letter("P"):  # Set hotend temp based on the P-param
-                heater_index = g.get_int_by_letter("P", 0)
-            elif g.has_letter("T"):  # Set hotend temp based on the T-param
-                heater_index = g.get_int_by_letter("T", 0)
-            if heater_index > len(self.printer.heaters)-1:
-                logging.warning("M104: heater index out of bounds: {}".format(heater_index))
-                return
-            heater_name = "EHABC"[heater_index]
-        else:  # Change hotend temperature based on current tool
-            heater_name = self.printer.current_tool
+    heater = self.printer.heaters[heater_name]
+    logging.debug("setting temp for {} to {}".format(heater.name, target))
+    heater.set_target_temperature(target)
 
-        heater = self.printer.heaters[heater_name]
-        logging.debug("setting temp for {} to {}".format(heater.name, target))    
-        heater.set_target_temperature(target)
+  def get_description(self):
+    return "Set extruder temperature"
 
-    def get_description(self):
-        return "Set extruder temperature"
+  def get_long_description(self):
+    return ("Set extruder temperature. "
+            "Use either T<index> or P<index> "
+            "to choose heater, use S for the target temp")
 
-    def get_long_description(self):
-        return ("Set extruder temperature. "
-                "Use either T<index> or P<index> "
-                "to choose heater, use S for the target temp")
-
-    def is_buffered(self):
-        return True
+  def is_buffered(self):
+    return True

@@ -13,12 +13,11 @@ from .GCodeCommand import GCodeCommand
 
 
 class M112(GCodeCommand):
+  def execute(self, g):
+    self.printer.path_planner.emergency_interrupt()
 
-    def execute(self, g):
-        self.printer.path_planner.emergency_interrupt()
+  def get_description(self):
+    return "Cancel all the planned moves in emergency."
 
-    def get_description(self):
-        return "Cancel all the planned moves in emergency."
-
-    def is_buffered(self):
-        return False
+  def is_buffered(self):
+    return False

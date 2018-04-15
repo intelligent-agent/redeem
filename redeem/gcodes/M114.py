@@ -14,25 +14,24 @@ from six import iteritems
 
 
 class M114(GCodeCommand):
-    def execute(self, g):
-        if g.has_letter("M"):
-            pos = self.printer.path_planner.get_current_pos(mm=True, ideal=False)
-        else:
-            pos = self.printer.path_planner.get_current_pos(mm=True, ideal=True)            
-        axis_order = ['X', 'Y', 'Z', 'E']
-        pos_ordered = [(i, pos[i]) for i in axis_order if i in pos]
-        pos_ordered.extend(sorted(i for i in iteritems(pos) if i[0] not in axis_order))
-        g.set_answer("ok C: " + ' '.join('%s:%.1f' % (i[0], i[1]) for i in pos_ordered))
+  def execute(self, g):
+    if g.has_letter("M"):
+      pos = self.printer.path_planner.get_current_pos(mm=True, ideal=False)
+    else:
+      pos = self.printer.path_planner.get_current_pos(mm=True, ideal=True)
+    axis_order = ['X', 'Y', 'Z', 'E']
+    pos_ordered = [(i, pos[i]) for i in axis_order if i in pos]
+    pos_ordered.extend(sorted(i for i in iteritems(pos) if i[0] not in axis_order))
+    g.set_answer("ok C: " + ' '.join('%s:%.1f' % (i[0], i[1]) for i in pos_ordered))
 
-    def get_description(self):
-        return "Get current printer head position"
+  def get_description(self):
+    return "Get current printer head position"
 
-    def get_long_description(self):
-        return ("Get current printer head position. "
+  def get_long_description(self):
+    return ("Get current printer head position. "
             "This is the ideal positition, without bed compensation. "
             "The returned value is in millimeters.\n"
-            "M = Return the position seen with the bed matix enabled " )
+            "M = Return the position seen with the bed matix enabled ")
 
-    def get_test_gcodes(self):
-        return ["M114"]
-
+  def get_test_gcodes(self):
+    return ["M114"]

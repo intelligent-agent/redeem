@@ -14,34 +14,32 @@ from redeem.Path import Path
 
 
 class G90(GCodeCommand):
+  def execute(self, g):
+    self.printer.axes_absolute = ["X", "Y", "Z", "E", "H", "A", "B", "C"]
+    self.printer.axes_relative = []
+    self.printer.movement = Path.ABSOLUTE
 
-    def execute(self, g):
-        self.printer.axes_absolute = ["X", "Y", "Z", "E", "H", "A", "B", "C"]
-        self.printer.axes_relative = []
-        self.printer.movement = Path.ABSOLUTE
+  def get_description(self):
+    return "Set movement mode to absolute"
 
-    def get_description(self):
-        return "Set movement mode to absolute"
+  def is_buffered(self):
+    return True
 
-    def is_buffered(self):
-        return True
-
-    def is_async(self):
-        return True
+  def is_async(self):
+    return True
 
 
 class G91(GCodeCommand):
+  def execute(self, g):
+    self.printer.axes_absolute = []
+    self.printer.axes_relative = ["X", "Y", "Z", "E", "H", "A", "B", "C"]
+    self.printer.movement = Path.RELATIVE
 
-    def execute(self, g):
-        self.printer.axes_absolute = []
-        self.printer.axes_relative = ["X", "Y", "Z", "E", "H", "A", "B", "C"]
-        self.printer.movement = Path.RELATIVE
+  def get_description(self):
+    return "Set movement mode to relative"
 
-    def get_description(self):
-        return "Set movement mode to relative"
+  def is_buffered(self):
+    return True
 
-    def is_buffered(self):
-        return True
-
-    def is_async(self):
-        return True
+  def is_async(self):
+    return True

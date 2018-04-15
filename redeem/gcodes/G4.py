@@ -15,30 +15,26 @@ import time
 
 
 class G4(GCodeCommand):
+  def execute(self, g):
+    self.printer.path_planner.wait_until_done()
+    if g.has_letter("P"):    # Milliseconds
+      sleep = g.get_float_by_letter("P") / 1000.0
+    elif g.has_letter("S"):    # Seconds
+      sleep = g.get_float_by_letter("S")
+    else:
+      logging.error("Invalid argument for G4: " + g)
+      return
 
-    def execute(self, g):
-        self.printer.path_planner.wait_until_done()
-        if g.has_letter("P"):  # Milliseconds
-            sleep = g.get_float_by_letter("P") / 1000.0
-        elif g.has_letter("S"):  # Seconds
-            sleep = g.get_float_by_letter("S")
-        else:
-            logging.error("Invalid argument for G4: " + g)
-            return
+    time.sleep(sleep)
 
-        time.sleep(sleep)
+  def get_description(self):
+    return "Dwell for P (milliseconds) or S (seconds)"
 
-    def get_description(self):
-        return "Dwell for P (milliseconds) or S (seconds)"
+  def get_long_description(self):
+    return ("Dwell/sleep for a given time. " "Use either P = milliseconds or " "S = seconds. ")
 
-    def get_long_description(self):
-        return ("Dwell/sleep for a given time. "
-                "Use either P = milliseconds or " 
-                "S = seconds. ")
+  def is_buffered(self):
+    return True
 
-    def is_buffered(self):
-        return True
-
-    def get_test_gcodes(self):
-        return ["G4 P100", "G4 S0.1"]
-
+  def get_test_gcodes(self):
+    return ["G4 P100", "G4 S0.1"]

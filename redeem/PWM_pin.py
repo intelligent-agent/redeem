@@ -26,38 +26,37 @@ import subprocess
 import os
 import logging
 import Adafruit_BBIO.PWM as PWM
-
 """ 
 """
 
 
 class PWM_pin:
-    def __init__(self, pin, frequency, duty_cycle):
-        self.pin = pin
+  def __init__(self, pin, frequency, duty_cycle):
+    self.pin = pin
 
-        # Adafruit takes duty cycles as percentages
-        PWM.start(pin, duty_cycle * 100, frequency)
+    # Adafruit takes duty cycles as percentages
+    PWM.start(pin, duty_cycle * 100, frequency)
 
-    def set_frequency(self, freq):
-        """ Set the PWM frequency for all fans connected on this PWM-chip """
-        PWM.set_frequency(self.pin, freq)
+  def set_frequency(self, freq):
+    """ Set the PWM frequency for all fans connected on this PWM-chip """
+    PWM.set_frequency(self.pin, freq)
 
-    def set_value(self, value):
-        """ Set the amount of on-time from 0..1 """
-        PWM.set_duty_cycle(self.pin, value * 100)
+  def set_value(self, value):
+    """ Set the amount of on-time from 0..1 """
+    PWM.set_duty_cycle(self.pin, value * 100)
 
 
 if __name__ == '__main__':
 
-    p1 = PWM_pin("P9_14", 50, 0.1)
-    p2 = PWM_pin("P9_16", 50, 0.1)
+  p1 = PWM_pin("P9_14", 50, 0.1)
+  p2 = PWM_pin("P9_16", 50, 0.1)
 
-    while 1:
-        for i in range(100):
-            p1.set_value(0.1 + (i * 0.001))
-            p2.set_value(0.1 + (i * 0.001))
-            time.sleep(0.03)
-        for i in range(100):
-            p1.set_value(0.2 - (i * 0.001))
-            p2.set_value(0.2 - (i * 0.001))
-            time.sleep(0.03)
+  while 1:
+    for i in range(100):
+      p1.set_value(0.1 + (i * 0.001))
+      p2.set_value(0.1 + (i * 0.001))
+      time.sleep(0.03)
+    for i in range(100):
+      p1.set_value(0.2 - (i * 0.001))
+      p2.set_value(0.2 - (i * 0.001))
+      time.sleep(0.03)

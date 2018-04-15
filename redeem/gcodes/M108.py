@@ -13,12 +13,11 @@ from .GCodeCommand import GCodeCommand
 
 
 class M108(GCodeCommand):
+  def execute(self, g):
+    self.printer.running_M116 = False
 
-    def execute(self, g):
-        self.printer.running_M116 = False
+  def get_description(self):
+    return "Break out of any running M116 loop"
 
-    def get_description(self):
-        return "Break out of any running M116 loop"
-        
-    def is_buffered(self):
-        return True
+  def is_buffered(self):
+    return True

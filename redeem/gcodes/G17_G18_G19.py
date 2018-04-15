@@ -14,39 +14,36 @@ from redeem.Path import Path
 
 
 class G17(GCodeCommand):
+  def execute(self, g):
+    self.printer.path_planner.wait_until_done()
+    self.printer.arc_plane = Path.X_Y_ARC_PLANE
 
-    def execute(self, g):
-        self.printer.path_planner.wait_until_done()
-        self.printer.arc_plane = Path.X_Y_ARC_PLANE
+  def get_description(self):
+    return "Set arc plane to X / Y"
 
-    def get_description(self):
-        return "Set arc plane to X / Y"
-
-    def is_buffered(self):
-        return True
+  def is_buffered(self):
+    return True
 
 
 class G18(GCodeCommand):
+  def execute(self, g):
+    self.printer.path_planner.wait_until_done()
+    self.printer.arc_plane = Path.X_Z_ARC_PLANE
 
-    def execute(self, g):
-        self.printer.path_planner.wait_until_done()
-        self.printer.arc_plane = Path.X_Z_ARC_PLANE
+  def get_description(self):
+    return "Set arc plane to X / Z"
 
-    def get_description(self):
-        return "Set arc plane to X / Z"
-
-    def is_buffered(self):
-        return True
+  def is_buffered(self):
+    return True
 
 
 class G19(GCodeCommand):
+  def execute(self, g):
+    self.printer.path_planner.wait_until_done()
+    self.printer.arc_plane = Path.Y_Z_ARC_PLANE
 
-    def execute(self, g):
-        self.printer.path_planner.wait_until_done()
-        self.printer.arc_plane = Path.Y_Z_ARC_PLANE
+  def get_description(self):
+    return "Set arc plane to Y / Z"
 
-    def get_description(self):
-        return "Set arc plane to Y / Z"
-
-    def is_buffered(self):
-        return True
+  def is_buffered(self):
+    return True
