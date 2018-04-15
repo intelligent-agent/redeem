@@ -110,7 +110,7 @@ class GCodeProcessor:
 
   def execute(self, gcode):
     if not hasattr(gcode, 'command'):
-      logging.warning("tried to execute a gcode wasn't resolved: " + gcode.message)
+      logging.warning("tried to execute a gcode that wasn't resolved: " + gcode.message)
       # logging.error(traceback.format_stack())
       self.resolve(gcode)
 

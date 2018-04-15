@@ -26,7 +26,7 @@ class M119(GCodeCommand):
         return
       if val not in ["S0", "S1"]:
         logging.warning("M119: Invalid invert value for " \
-            "end stop {}: {}. Use S0, to univert or S1, to invert".format(es, val))
+            "end stop {}: {}. Use S0, to uninvert or S1, to invert".format(es, val))
         return
       val = bool(int(val[1]))
       logging.info("Setting end stop inversion for " + str(es) + " to " + str(val))

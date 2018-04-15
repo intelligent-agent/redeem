@@ -30,9 +30,9 @@ class Alarm:
   THERMISTOR_ERROR = 0    # Thermistor error.
   HEATER_TOO_COLD = 1    # Temperature has fallen below the limit
   HEATER_TOO_HOT = 2    # Temperature has gone too high
-  HEATER_RISING_FAST = 3    # Temperture is rising too fast
-  HEATER_FALLING_FAST = 4    # Temperature is faling too fast
-  FILAMENT_JAM = 5    # If filamet sensor is installed
+  HEATER_RISING_FAST = 3    # Temperture is rising too rapidly
+  HEATER_FALLING_FAST = 4    # Temperature is falling too rapidly
+  FILAMENT_JAM = 5    # If filament sensor is installed
   WATCHDOG_ERROR = 6    # Can this be detected?
   PHYSICAL_ENDSTOP_HIT = 7    # During print.
   SOFT_ENDSTOP_HIT = 8

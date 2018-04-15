@@ -37,7 +37,7 @@ class Key_pin:
   RISING = 0
   FALLING = 1
 
-  listener = None    # Add this durin startup
+  listener = None    # Add this during startup
 
   def __init__(self, name, key_code, edge=1, callback=None):
     self.name = name

@@ -121,7 +121,7 @@ class PruFirmware:
 
     config_file = self.make_config_file()
 
-    # Copy the files to tmp, cos the pasm is really picky!
+    # Copy the files to tmp, because the pasm is really picky!
     tmp_name_0 = "/tmp/" + os.path.basename(self.firmware_source_file0)
     tmp_name_1 = "/tmp/" + os.path.basename(self.firmware_source_file1)
     tmp_output_name_0 = "/tmp/" + os.path.basename(self.binary_filename0)

@@ -44,7 +44,7 @@ Example: M201 X1000 Y1000 Z100 E2000"
 Values get rounded to nearest whole number, in current G20/21 units. 
 For CoreXY and HJ-belt mechines, Y value is forced to that supplied for X (Y is ignored).
 For Delta machines, X and Y values are forced to that supplied for X (Y and Z are ignored).
-In all cases, axes H, A, B and C remain independant.
+In all cases, axes H, A, B and C remain independent.
 """)
 
   def is_buffered(self):

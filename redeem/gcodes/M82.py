@@ -1,6 +1,6 @@
 """
 GCode M82
-Set the extruder mode to absoute
+Set the extruder mode to absolute
 
 Author: Elias Bakken
 email: elias(at)iagent(dot)no
