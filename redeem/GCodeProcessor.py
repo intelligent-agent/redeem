@@ -90,7 +90,8 @@ class GCodeProcessor:
       logging.warning("tried to resolve a gcode that's already resolved: " + gcode.message)
       logging.error(traceback.format_stack())
     else:
-      gcode.command = self.gcodes[gcode.code()]
+      c = gcode.code()
+      gcode.command = self.gcodes[c if not gcode.is_info_command() else c[:-1]]
 
   def is_buffered(self, gcode):
     return gcode.command.is_buffered()
