@@ -176,6 +176,8 @@ void PathPlanner::addSlave(int master_in, int slave_in)
 {
   master.push_back(master_in);
   slave.push_back(slave_in);
+
+  axes_stepping_together[master_in] |= (1 << slave_in);
 }
 
 // backlash compensation

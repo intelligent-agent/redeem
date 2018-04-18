@@ -52,6 +52,14 @@ PathPlanner::PathPlanner(unsigned int cacheSize, AlarmCallback& alarmCallback)
 
   axis_config = AXIS_CONFIG_XY;
   has_slaves = false;
+  master.clear();
+  slave.clear();
+
+  for(int axis = 0; axis < NUM_AXES; axis++)
+  {
+    axes_stepping_together[axis] = 1 << axis;
+  }
+
   state.zero();
   lastProbeDistance = 0;
   queue_move_fail = true;
@@ -164,8 +172,8 @@ void PathPlanner::queueMove(VectorN endWorldPos,
     LOG("After matrix X: "<< endWorldPos[0]<<" Y: "<< endWorldPos[1]<<" Z: "<< endWorldPos[2]<<"\n");
   }
 
-  // handle any slaving activity
-  handleSlaves(startWorldPos, endWorldPos);
+  // clear any movements on slave axes so they don't mess things up later
+  clearSlaveAxesMovements(startWorldPos, endWorldPos);
 
   // Get the vector to move us from where we are, to where we ideally want to be.
   bool possibleMove = true;
@@ -786,8 +794,8 @@ void PathPlanner::runMove(
       	assert(!(cmd.step & (1 << i)));
       	assert(step.axis == i);
 
-      	cmd.step |= 1 << i;
-      	cmd.direction |= ((unsigned char)step.direction) << i;
+      	cmd.step |= axes_stepping_together[i];
+      	cmd.direction |= (step.direction ? 0xff : 0) & axes_stepping_together[i];
 
       	stepIndex[i]++;
       	finalStepTimes[i] = stepTime;
@@ -892,6 +900,13 @@ void PathPlanner::runMove(
       	{
       	  deltasTraveled[axis] += (command.direction & (1 << axis)) ? 1 : -1;
       	}
+      }
+    }
+
+    // Zero out any slave axes - it's easier to do so here than in the loop
+    if (has_slaves) {
+      for (auto slaveAxis : slave) {
+        deltasTraveled[slaveAxis] = 0;
       }
     }
 
