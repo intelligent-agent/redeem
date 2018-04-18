@@ -162,7 +162,6 @@ class PathPlanner {
   int softEndStopApply(const VectorN &endPos);
   void applyBedCompensation(VectorN &endPos);
   void backlashCompensation(IntVectorN &delta);
-  void handleSlaves(VectorN &startPos, VectorN &endPos);
   bool queue_move_fail;
 	
 	
@@ -189,6 +188,8 @@ class PathPlanner {
   bool has_slaves;
   std::vector<int> master;
   std::vector<int> slave;
+  std::array<uint8_t, NUM_AXES> axes_stepping_together;
+  void clearSlaveAxesMovements(VectorN& startWorldPos, VectorN& stopWorldPos);
 	
   // backlash compensation
   VectorN backlash_compensation;

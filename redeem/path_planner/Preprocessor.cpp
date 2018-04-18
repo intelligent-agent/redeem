@@ -76,21 +76,11 @@ void PathPlanner::backlashCompensation(IntVectorN &delta)
   return;
 }
 
-void PathPlanner::handleSlaves(VectorN &startPos, VectorN &endPos)
+void PathPlanner::clearSlaveAxesMovements(VectorN& startWorldPos, VectorN& stopWorldPos)
 {
-  if ( has_slaves) {
-    for (size_t i=0; i<master.size(); ++i) {
-      startPos[slave[i]] = startPos[master[i]];
-      endPos[slave[i]] = endPos[master[i]];
-      if (axisStepsPerM[master[i]] == axisStepsPerM[slave[i]])
-      {
-        state[slave[i]] = state[master[i]];
-      }
-      else
-      {
-        state[slave[i]] = std::llround(state[master[i]] / axisStepsPerM[master[i]] * axisStepsPerM[slave[i]]);
-      }
-    }
+  for (auto axis : slave)
+  {
+    stopWorldPos[axis] = startWorldPos[axis];
   }
 }
 
