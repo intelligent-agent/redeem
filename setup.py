@@ -56,6 +56,7 @@ import versioneer
 
 setup(
     name="Redeem",
+    packages=find_packages(exclude=["redeem/path_planner"]),
     version=versioneer.get_version(),
     cmdclass=versioneer.get_cmdclass(),
     data_files=[
