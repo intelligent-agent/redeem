@@ -170,7 +170,7 @@ int main(void) {
 					// This move isn't cancellable, but one or more of its axes are blocked.
 					// Stop immediately and sound the alarm.
 					*events_counter = 0xFFFFFFFF;
-                    g_endstops_triggered = g_endstopState;
+					g_endstops_triggered = g_endstopState;
 					armPru0Interrupt();
 					
 					// Don't allow recovery - we have some unknown number of steps already queued up.
@@ -179,7 +179,7 @@ int main(void) {
 					{ }
 				}
 
-                g_stepsRemaining = 0;
+				g_stepsRemaining = 0;
 
 				// TODO This is carried over from the original assembly, but it's unclear
 				// whether it's actually used anywhere.

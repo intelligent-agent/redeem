@@ -40,9 +40,7 @@ except ImportError:
 class GCodeProcessor:
   def __init__(self, printer):
     self.printer = printer
-
     self.sync_event_needed = False
-
     self.gcodes = {}
     try:
       module = __import__("gcodes", locals(), globals())
@@ -75,14 +73,12 @@ class GCodeProcessor:
     ret = []
     for gcode in self.gcodes:
       ret.append(gcode)
-
     return ret
 
   def get_supported_commands_and_description(self):
     ret = {}
     for gcode in self.gcodes:
       ret[gcode] = self.gcodes[gcode].get_description()
-
     return ret
 
   def resolve(self, gcode):
@@ -114,7 +110,6 @@ class GCodeProcessor:
       logging.warning("tried to execute a gcode that wasn't resolved: " + gcode.message)
       # logging.error(traceback.format_stack())
       self.resolve(gcode)
-
     try:
       gcode.command.execute(gcode)
     except Exception as e:
@@ -124,30 +119,24 @@ class GCodeProcessor:
 
   def enqueue(self, gcode):
     self.resolve(gcode)
-
     # If an M116 is running, peek at the incoming Gcode
     if self.peek(gcode):
       return
-
     if self.is_async(gcode):
       self.sync_event_needed = True
       self.printer.async_commands.put(gcode)
-
     elif self.is_buffered(gcode):
       # if we previously queued an async code, we need to queue an event to get back into sync
       if self.sync_event_needed:
         logging.info("adding sync before " + gcode.message)
         self._make_buffered_queue_wait_for_async_queue()
         self.sync_event_needed = False
-
       self.printer.commands.put(gcode)
-
       if self.is_sync(gcode):
         # Yes, it goes into both queues!
         self.printer.sync_commands.put(gcode)
     else:
       self.printer.unbuffered_commands.put(gcode)
-
     if gcode.code() in ["M109", "M190"]:
       self._make_async_queue_wait_for_buffered_queue()
 

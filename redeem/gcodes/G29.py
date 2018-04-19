@@ -60,7 +60,7 @@ class G29(GCodeCommand):
   def get_long_description(self):
     return ("Probe the bed at specified points and "
             "update the bed compensation matrix based "
-            "on the found points. Add 'S' to only simulate "
+            "on the data collected. Add 'S' to only simulate "
             "and thus remove all lines containing the "
             "letters 'RFS' (Remove For Simulation).")
 

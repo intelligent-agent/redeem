@@ -80,10 +80,10 @@ logging.basicConfig(
 class Redeem:
   def __init__(self, config_location="/etc/redeem"):
     """
-        config_location: provide the location to look for config files.
-         - default is installed directory
-         - allows for running in a local directory when debugging
-        """
+    config_location: provide the location to look for config files.
+     - default is installed directory
+     - allows for running in a local directory when debugging
+    """
     from __init__ import __version__, __release_name__
     firmware_version = "{}~{}".format(__version__, __release_name__)
     logging.info("Redeem initializing " + firmware_version)
@@ -95,7 +95,6 @@ class Redeem:
     Gcode.printer = printer
 
     printer.firmware_version = firmware_version
-
     printer.config_location = config_location
 
     # Set up and Test the alarm framework
@@ -564,7 +563,7 @@ class Redeem:
       # Does not send "ok"
       printer.comms["testing_noret"].send_response = False
     else:
-      logging.warning("Neither tty0tty or socat is installed! No virtual tty pipes enabled")
+      logging.warning("Neither tty0tty nor socat is installed! No virtual tty pipes enabled")
 
   def start(self):
     """ Start the processes """

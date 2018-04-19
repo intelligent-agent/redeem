@@ -192,7 +192,7 @@ class G30_1(GCodeCommand):
     logging.debug("Bed dist: " + str(bed_dist) + " mm")
     logging.debug("Old Z{}, New Z{}.".format(point["Z"], Z_adjusted))
 
-    self.printer.send_message(g.prot, "Offseting Z by {} to Z{}".format(bed_dist, Z_adjusted))
+    self.printer.send_message(g.prot, "Offsetting Z by {} to Z{}".format(bed_dist, Z_adjusted))
     # wiley's advice on bypassing sending via G92
     pos = {}
     pos["Z"] = Z_adjusted / 1000.0

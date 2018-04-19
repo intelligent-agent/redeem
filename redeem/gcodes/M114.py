@@ -31,7 +31,7 @@ class M114(GCodeCommand):
     return ("Get current printer head position. "
             "This is the ideal positition, without bed compensation. "
             "The returned value is in millimeters.\n"
-            "M = Return the position seen with the bed matix enabled ")
+            "M = Return the position seen with the bed matrix enabled ")
 
   def get_test_gcodes(self):
     return ["M114"]

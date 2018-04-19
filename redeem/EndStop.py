@@ -84,6 +84,7 @@ class EndStop:
                   self.hit = False
       #else:
       #    logging.debug("End stop {} timeout".format(self.name))
+
   def read_value(self):
     """ Read the current endstop value from GPIO using PRU1 """
     state = PruInterface.get_shared_long(0)

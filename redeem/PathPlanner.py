@@ -309,7 +309,7 @@ class PathPlanner:
   def _go_to_home(self, axis):
     """
         go to the designated home position
-        do this as a separate call from _home_internal due to delta platforms 
+        do this as a separate call from _home_internal due to delta platforms
         performing home in cartesian mode
         """
 
@@ -465,11 +465,9 @@ class PathPlanner:
                                     probe_points, print_head_zs)
 
     # update the native planner with the new values
-
     self.native_planner.delta_bot.setMainDimensions(Delta.L, Delta.r)
     self.native_planner.delta_bot.setRadialError(Delta.A_radial, Delta.B_radial, Delta.C_radial)
     self.native_planner.delta_bot.setAngularError(Delta.A_angular, Delta.B_angular, Delta.C_angular)
-
     return params
 
   def add_path(self, new):
@@ -522,11 +520,8 @@ class PathPlanner:
       self.prev = new
       self.prev.unlink()    # We don't want to store the entire print
       # in memory, so we keep only the last path.
-
       # make sure that the current state of the printer is correct
       self.prev.end_pos = self.native_planner.getState()
-
-    return
 
   def set_extruder(self, ext_nr):
     """
