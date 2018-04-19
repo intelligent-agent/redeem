@@ -80,6 +80,8 @@ int main(void) {
 	uint32_t gpio2 = GPIO2_MASK;
 	uint32_t gpio3 = GPIO3_MASK;
 
+	uint32_t carriedBlockedSteppers = 0;
+
 	*GPIO0_CLEARDATAOUT = gpio0;
 	*GPIO1_CLEARDATAOUT = gpio1;
 	*GPIO2_CLEARDATAOUT = gpio2;
@@ -99,6 +101,12 @@ int main(void) {
 
 			uint32_t numCommands = *ddr_addr;
 			SteppersCommand* curCommand = (SteppersCommand*)(ddr_addr + 1);
+
+			if(!(curCommand->options & 0x04))
+			{
+				// don't carry blocked steppers
+				carriedBlockedSteppers = 0;
+			}
 
 			while(numCommands)
 			{
@@ -143,10 +151,15 @@ int main(void) {
 
 				const uint32_t dirSetTime = PRU0_CTRL.CYCLE;
 
-				const uint32_t directionsAllowedMask = g_stepperMask;
+				const uint32_t directionsAllowedMask = g_stepperMask & ~carriedBlockedSteppers;
 				const uint8_t positiveDirectionsAllowed = curCommand->direction & ((directionsAllowedMask >> 8) & 0xFF);
 				const uint8_t negativeDirectionsAllowed = ~curCommand->direction & (directionsAllowedMask & 0xFF);
 				const uint8_t allDirectionsAllowed = positiveDirectionsAllowed | negativeDirectionsAllowed;
+
+				if (curCommand->options & 0x04)
+				{
+					carriedBlockedSteppers |= ~directionsAllowedMask;
+				}
 
 				if (curCommand->cancellableMask != 0
 						&& (allDirectionsAllowed & curCommand->cancellableMask) == 0)
@@ -170,7 +183,7 @@ int main(void) {
 					// This move isn't cancellable, but one or more of its axes are blocked.
 					// Stop immediately and sound the alarm.
 					*events_counter = 0xFFFFFFFF;
-                    g_endstops_triggered = g_endstopState;
+					g_endstops_triggered = g_endstopState;
 					armPru0Interrupt();
 					
 					// Don't allow recovery - we have some unknown number of steps already queued up.
@@ -179,7 +192,7 @@ int main(void) {
 					{ }
 				}
 
-                g_stepsRemaining = 0;
+				g_stepsRemaining = 0;
 
 				// TODO This is carried over from the original assembly, but it's unclear
 				// whether it's actually used anywhere.

@@ -803,6 +803,11 @@ void PathPlanner::runMove(
     }
 
     assert(cmd.step != 0);
+    
+    if (probeDistanceTraveled)
+    {
+      cmd.options |= STEPPER_COMMAND_OPTION_CARRY_BLOCKED_STEPPERS;
+    }
 
     if (commandsIndex == commandsLength) {
       pru.push_block((uint8_t*)&commands[0], sizeof(SteppersCommand)*commandsIndex, sizeof(SteppersCommand), commandsIndex);
@@ -839,6 +844,8 @@ void PathPlanner::runMove(
     SteppersCommand& cmd = commands[commandsIndex - 1];
     if (wait) cmd.options = STEPPER_COMMAND_OPTION_SYNCWAIT_EVENT;
     else cmd.options = STEPPER_COMMAND_OPTION_SYNC_EVENT;
+
+    if (probeDistanceTraveled) cmd.options |= STEPPER_COMMAND_OPTION_CARRY_BLOCKED_STEPPERS;
   }
 
   if (commandsIndex != 0) {
@@ -891,6 +898,8 @@ void PathPlanner::runMove(
     assert(stepsRemaining < probeSteps.size());
     IntVectorN deltasTraveled;
 
+    LOG("probe took " << stepsTraveled << " of " << probeSteps.size() << " steps");
+
     for (size_t i = 0; i < stepsTraveled; i++)
     {
       for (int axis = 0; axis < NUM_AXES; axis++)
@@ -909,6 +918,8 @@ void PathPlanner::runMove(
 	deltasTraveled[slaveAxis] = 0;
       }
     }
+
+    LOG("probe deltas: " << deltasTraveled[0] << " " << deltasTraveled[1] << " " << deltasTraveled[2]);
 
     *probeDistanceTraveled = deltasTraveled;
   }

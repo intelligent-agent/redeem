@@ -27,6 +27,7 @@
 
 #define STEPPER_COMMAND_OPTION_SYNC_EVENT 1
 #define STEPPER_COMMAND_OPTION_SYNCWAIT_EVENT 3
+#define STEPPER_COMMAND_OPTION_CARRY_BLOCKED_STEPPERS 4
 
 typedef struct SteppersCommand {
 	uint8_t     step;                //Steppers are defined as 0b000HEZYX - A 1 for a stepper means we will do a step for this stepper
