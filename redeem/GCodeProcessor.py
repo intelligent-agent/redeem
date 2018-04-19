@@ -90,17 +90,12 @@ class GCodeProcessor:
       logging.warning("tried to resolve a gcode that's already resolved: " + gcode.message)
       logging.error(traceback.format_stack())
     else:
-      c = gcode.code()
-      gcode.command = self.gcodes[c if not gcode.is_info_command() else c[:-1]]
-
-  def is_buffered(self, gcode):
-    return gcode.command.is_buffered()
-
-  def is_sync(self, gcode):
-    return gcode.command.is_sync()
-
-  def is_async(self, gcode):
-    return gcode.command.is_async()
+      c = gcode.code() if not gcode.is_info_command() else gcode.code()[:-1]
+      if not c in self.gcodes:
+        logging.error("No GCode processor for " + gcode.code() + ". Message: " + gcode.message)
+        gcode.command = None
+      else:
+        gcode.command = self.gcodes[c]
 
   def synchronize(self, gcode):
     try:
@@ -114,6 +109,9 @@ class GCodeProcessor:
       logging.warning("tried to execute a gcode that wasn't resolved: " + gcode.message)
       # logging.error(traceback.format_stack())
       self.resolve(gcode)
+      
+    if gcode.command == None:
+      return
 
     try:
       gcode.command.execute(gcode)
@@ -124,16 +122,19 @@ class GCodeProcessor:
 
   def enqueue(self, gcode):
     self.resolve(gcode)
+    
+    if gcode.command == None:
+      return
 
     # If an M116 is running, peek at the incoming Gcode
     if self.peek(gcode):
       return
 
-    if self.is_async(gcode):
+    if gcode.command.is_async():
       self.sync_event_needed = True
       self.printer.async_commands.put(gcode)
 
-    elif self.is_buffered(gcode):
+    elif gcode.command.is_buffered():
       # if we previously queued an async code, we need to queue an event to get back into sync
       if self.sync_event_needed:
         logging.info("adding sync before " + gcode.message)
@@ -142,7 +143,7 @@ class GCodeProcessor:
 
       self.printer.commands.put(gcode)
 
-      if self.is_sync(gcode):
+      if gcode.command.is_sync():
         # Yes, it goes into both queues!
         self.printer.sync_commands.put(gcode)
     else:
