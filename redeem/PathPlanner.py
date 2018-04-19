@@ -354,6 +354,8 @@ class PathPlanner:
                     self.printer.axis_config == Printer.AXIS_CONFIG_H_BELT:
       for a in axis:
         self._home_internal(a)
+        # go to the designated home position so the next axis can home
+        self._go_to_home(a)
     # For delta, switch to cartesian when homing
     elif self.printer.axis_config == Printer.AXIS_CONFIG_DELTA:
       if 0 < len({"X", "Y", "Z"}.intersection(set(axis))) < 3:
