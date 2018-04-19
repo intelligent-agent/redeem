@@ -10,23 +10,29 @@ License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 from __future__ import absolute_import
 
 from .GCodeCommand import GCodeCommand
+import logging
+import threading
 
 
 class M400(GCodeCommand):
 
     def execute(self, g):
-
+        logging.info("M400 starting")
         # This needs to be a standard method somewhere
-        if not self.printer.path_planner.queue_sync_event(False):    # No blocking of the PRU, (notification only)
-            self.printer.path_planner.wait_until_done()              # The move buffer is already empty! fallback to this to ensure we're in sync.
+        # No blocking of the PRU, (notification only)
+        if not self.printer.path_planner.queue_sync_event(False):
+            logging.info(
+                "M400 failed to queue a sync event - waiting until done instead")
+            # The move buffer is already empty! fallback to this to ensure we're in sync.
+            self.printer.path_planner.wait_until_done()
             self.printer.sync_commands.get()
-            self.printer.sync_commands.task_done()                   # We should be at the front of the line.
-            self.on_sync(g)                                          # Complete execution
+            # We should be at the front of the line.
+            self.printer.sync_commands.task_done()
+        logging.info("M400 complete")
 
     def on_sync(self, g):
-        pass
+        logging.info("M400 on_sync")
         # self.printer.path_planner.clear_sync_event()  # Only needed if blocking the PRU
-        # self.readyEvent.set()                           # This is REQUIRED for synchronous commands!
 
     def get_description(self):
         return "Wait until all buffered paths are executed"
@@ -36,4 +42,3 @@ class M400(GCodeCommand):
 
     def is_sync(self):
         return True
-

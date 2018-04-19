@@ -33,13 +33,13 @@ int PathPlanner::softEndStopApply(const VectorN &endPos)
   for (size_t i = 0; i<NUM_AXES; ++i) {
     if (endPos[i] < soft_endstops_min[i]) {
       LOGERROR( "queueMove FAILED: axis " << i 
-		<< " end position outside of soft limit (end = " << endPos[i] 
-		<< ", min limit = " << soft_endstops_min[i] << ")\n");
+          << " end position outside of soft limit (end = " << endPos[i] 
+          << ", min limit = " << soft_endstops_min[i] << ")\n");
       return i+1;
     } else if (endPos[i] > soft_endstops_max[i]) {
       LOGERROR( "queueMove FAILED: axis " << i 
-		<< " end position outside of soft limit (end = " << endPos[i] 
-		<< ", max limit = " << soft_endstops_max[i] << ")\n");
+          << " end position outside of soft limit (end = " << endPos[i] 
+          << ", max limit = " << soft_endstops_max[i] << ")\n");
       return i+11;
     }
   }
@@ -65,7 +65,6 @@ inline int sgn(long long val) { return (0 < val) - (val < 0); }
 
 void PathPlanner::backlashCompensation(IntVectorN &delta)
 {
-
   int dirstate;
   for (size_t i = 0; i<NUM_AXES; ++i) {
     dirstate = sgn(delta[i]);
@@ -74,7 +73,6 @@ void PathPlanner::backlashCompensation(IntVectorN &delta)
       delta[i] += std::llround(dirstate * backlash_compensation[i] * axisStepsPerM[i]);
     }
   }
-    
   return;
 }
 
@@ -86,11 +84,11 @@ void PathPlanner::handleSlaves(VectorN &startPos, VectorN &endPos)
       endPos[slave[i]] = endPos[master[i]];
       if (axisStepsPerM[master[i]] == axisStepsPerM[slave[i]])
       {
-	state[slave[i]] = state[master[i]];
+        state[slave[i]] = state[master[i]];
       }
       else
       {
-	state[slave[i]] = std::llround(state[master[i]] / axisStepsPerM[master[i]] * axisStepsPerM[slave[i]]);
+        state[slave[i]] = std::llround(state[master[i]] / axisStepsPerM[master[i]] * axisStepsPerM[slave[i]]);
       }
     }
   }

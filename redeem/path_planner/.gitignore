@@ -4,6 +4,7 @@ tests/PathPlanner.xcodeproj/xcuserdata
 *.o
 *.dep
 PathPlannerNative_wrap.cpp
+PathPlannerNative_wrap.h
 PathPlannerNative.py
 *.so
 *.geany

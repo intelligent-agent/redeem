@@ -33,12 +33,14 @@ class G2(GCodeCommand):
             value = float(g.token_value(i)) / 1000.0
             if axis in ('E', 'H') and self.printer.extrude_factor != 1.0:
                 value *= self.printer.extrude_factor
-            smds[axis] = value        
+            smds[axis] = value
 
         if self.printer.movement == Path.ABSOLUTE:
-            path = AbsolutePath(smds, self.printer.feed_rate * self.printer.speed_factor, self.printer.accel)
+            path = AbsolutePath(smds, self.printer.feed_rate *
+                                self.printer.speed_factor, self.printer.accel)
         elif self.printer.movement == Path.RELATIVE:
-            path = RelativePath(smds, self.printer.feed_rate * self.printer.speed_factor, self.printer.accel)
+            path = RelativePath(smds, self.printer.feed_rate *
+                                self.printer.speed_factor, self.printer.accel)
         else:
             logging.error("invalid movement: " + str(self.printer.movement))
             return
@@ -49,13 +51,16 @@ class G2(GCodeCommand):
             return path
 
         if self.printer.arc_plane in [Path.X_Y_ARC_PLANE, Path.X_Z_ARC_PLANE]:
-            path.I = float(g.get_float_by_letter("I"))/1000.0 if g.has_letter("I") else 0.0
+            path.I = float(g.get_float_by_letter("I")) / \
+                1000.0 if g.has_letter("I") else 0.0
 
         if self.printer.arc_plane in [Path.X_Y_ARC_PLANE, Path.Y_Z_ARC_PLANE]:
-            path.J = float(g.get_float_by_letter("J"))/1000.0 if g.has_letter("J") else 0.0
+            path.J = float(g.get_float_by_letter("J")) / \
+                1000.0 if g.has_letter("J") else 0.0
 
         if self.printer.arc_plane in [Path.X_Z_ARC_PLANE, Path.Y_Z_ARC_PLANE]:
-            path.K = float(g.get_float_by_letter("K")) / 1000.0 if g.has_letter("K") else 0.0
+            path.K = float(g.get_float_by_letter("K")) / \
+                1000.0 if g.has_letter("K") else 0.0
 
         return path
 
@@ -65,7 +70,7 @@ class G2(GCodeCommand):
 
         # Add the path. This blocks until the path planner has capacity
         self.printer.path_planner.add_path(path)
-   
+
     def get_description(self):
         return "A circular or helical arc, clockwise"
 
@@ -100,6 +105,9 @@ YZ (``G19``)    ``Ynnn Znnn``           ``Jnnn Knnn``           ``Xnnn``
 """
 
     def is_buffered(self):
+        return True
+
+    def is_async(self):
         return True
 
     def get_test_gcodes(self):

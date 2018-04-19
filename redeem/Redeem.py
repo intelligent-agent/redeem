@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 """
 Redeem main program. This should run on the BeagleBone.
 
@@ -31,7 +31,6 @@ import os.path
 import signal
 import threading
 from threading import Thread
-from multiprocessing import JoinableQueue
 import Queue
 import numpy as np
 import sys
@@ -66,10 +65,10 @@ from StepperWatchdog import StepperWatchdog
 from Key_pin import Key_pin, Key_pin_listener
 from Watchdog import Watchdog
 from six import iteritems
-from _version import __version__, __release_name__
 
 # Global vars
 printer = None
+RedeemIsRunning = False
 
 # Default logging level is set to debug
 logging.basicConfig(level=logging.DEBUG,
@@ -84,9 +83,11 @@ class Redeem:
          - default is installed directory
          - allows for running in a local directory when debugging
         """
+        from __init__ import __version__, __release_name__
         firmware_version = "{}~{}".format(__version__, __release_name__)
-        logging.info("Redeem initializing "+firmware_version)
+        logging.info("Redeem initializing " + firmware_version)
 
+        global printer
         printer = Printer()
         self.printer = printer
         Path.printer = printer
@@ -350,7 +351,7 @@ class Redeem:
                 logging.info("Added servo "+str(servo_nr))
             servo_nr += 1
 
-        # Connect thermitors to fans
+        # Connect thermistors to fans
         for t, therm in iteritems(self.printer.heaters):
             for f, fan in enumerate(self.printer.fans):
                 if not self.printer.config.has_option('Cold-ends', "connect-therm-{}-fan-{}".format(t, f)):
@@ -401,10 +402,8 @@ class Redeem:
                         printer.coolers.append(c)
                         logging.info("Cooler connects temp sensor ds18b20 {} with fan {}".format(ce, f))
 
-        # Init roatray encs.
+        # Init encoders
         printer.filament_sensors = []
-
-        # Init rotary encoders
         printer.rotary_encoders = []
         for ex in ["E", "H", "A", "B", "C"]:
             if not printer.config.has_option('Rotary-encoders', "enable-{}".format(ex)):
@@ -425,11 +424,12 @@ class Redeem:
                 printer.filament_sensors.append(sensor)
 
         # Make a queue of commands
-        self.printer.commands = JoinableQueue(10)
+        self.printer.commands = Queue.Queue(10)
 
         # Make a queue of commands that should not be buffered
-        self.printer.sync_commands = JoinableQueue()
-        self.printer.unbuffered_commands = JoinableQueue(10)
+        self.printer.sync_commands = Queue.Queue()
+        self.printer.unbuffered_commands = Queue.Queue(10)
+        self.printer.async_commands = Queue.Queue(10)
 
         # Bed compensation matrix
         printer.matrix_bed_comp = printer.load_bed_compensation_matrix()
@@ -458,7 +458,6 @@ class Redeem:
             self.printer, "/usr/bin/clpru", "/usr/bin/pasm",
             dirname + "/firmware/AM335x_PRU.cmd",
             dirname + "/firmware/image.cmd")
-
 
         printer.move_cache_size = printer.config.getfloat('Planner', 'move_cache_size')
         printer.print_move_buffer_wait = printer.config.getfloat('Planner', 'print_move_buffer_wait')
@@ -532,7 +531,6 @@ class Redeem:
 
                 logging.info("Home position = %s"%str(printer.path_planner.home_pos))
 
-
         # Read end stop value again now that PRU is running
         for _, es in iteritems(self.printer.end_stops):
             es.read_value()
@@ -560,21 +558,26 @@ class Redeem:
 
     def start(self):
         """ Start the processes """
-        self.running = True
+        global RedeemIsRunning
+        RedeemIsRunning = True
         # Start the two processes
         p0 = Thread(target=self.loop,
                     args=(self.printer.commands, "buffered"), name="p0")
         p1 = Thread(target=self.loop,
                     args=(self.printer.unbuffered_commands, "unbuffered"), name="p1")
-        p2 = Thread(target=self.eventloop,
-                    args=(self.printer.sync_commands, "sync"), name="p2")
+        p2 = Thread(target=self.loop,
+                    args=(self.printer.async_commands, "async"), name="p2")
+        p3 = Thread(target=self.eventloop,
+                    args=(self.printer.sync_commands, "sync"), name="p3")
         p0.daemon = True
         p1.daemon = True
         p2.daemon = True
+        p3.daemon = True
 
         p0.start()
         p1.start()
         p2.start()
+        p3.start()
 
         Alarm.executor.start()
         Key_pin.listener.start()
@@ -590,27 +593,29 @@ class Redeem:
     def loop(self, queue, name):
         """ When a new gcode comes in, execute it """
         try:
-            while self.running:
+            while RedeemIsRunning:
                 try:
                     gcode = queue.get(block=True, timeout=1)
                 except Queue.Empty:
                     continue
-                #logging.debug("Executing "+gcode.code()+" from "+name + " " + gcode.message)
+                logging.debug("Executing "+gcode.code()+" from "+name + " " + gcode.message)
                 self._execute(gcode)
                 self.printer.reply(gcode)
                 queue.task_done()
+                logging.debug("Completed "+gcode.code()+" from "+name + " " + gcode.message)
         except Exception:
             logging.exception("Exception in {} loop: ".format(name))
 
     def eventloop(self, queue, name):
         """ When a new event comes in, execute the pending gcode """
         try:
-            while self.running:
+            while RedeemIsRunning:
                 # Returns False on timeout, else True
                 if self.printer.path_planner.wait_until_sync_event():
                     try:
                         gcode = queue.get(block=True, timeout=1)
                     except Queue.Empty:
+                        logging.info("spurious sync event completion")
                         continue
                     self._synchronize(gcode)
                     logging.info("Event handled for " + gcode.code() + " from " + name + " " + gcode.message)
@@ -619,10 +624,13 @@ class Redeem:
             logging.exception("Exception in {} eventloop: ".format(name))
 
     def exit(self):
-        logging.info("Redeem starting exit")
-        self.running = False
-        self.printer.path_planner.wait_until_done()
-        self.printer.path_planner.force_exit()
+        global RedeemIsRunning
+        if not RedeemIsRunning:
+            return
+        RedeemIsRunning = False
+        logging.info("Redeem Shutting Down")
+        printer.path_planner.wait_until_done()
+        printer.path_planner.force_exit()
 
         # Stops plugins
         self.printer.plugins.exit()
@@ -632,11 +640,15 @@ class Redeem:
         Stepper.commit()
 
         for name, heater in iteritems(self.printer.heaters):
-            logging.debug("closing "+name)
+            logging.debug("closing " + name)
             heater.disable()
 
+        for name, endstop in iteritems(self.printer.end_stops):
+            logging.debug("terminating " + name)
+            endstop.stop()
+
         for name, comm in iteritems(self.printer.comms):
-            logging.debug("closing "+name)
+            logging.debug("closing " + name)
             comm.close()
 
         self.printer.enable.set_disabled()
@@ -650,10 +662,7 @@ class Redeem:
         # note: some of these maybe daemons
         for t in threading.enumerate():
             logging.debug("Thread " + t.name + " is still running")
-
-        logging.info("Redeem exited")
-
-        return
+        logging.info("Redeem Exit Complete")
 
     def _execute(self, g):
         """ Execute a G-code """
@@ -667,9 +676,8 @@ class Redeem:
             self.printer.processor.execute(g)
 
     def _synchronize(self, g):
-        """ Syncrhonized execution of a G-code """
+        """ Synchronized execution of a G-code """
         self.printer.processor.synchronize(g)
-
 
 
 def main(config_location="/etc/redeem"):
@@ -681,6 +689,7 @@ def main(config_location="/etc/redeem"):
 
     # Register signal handler to allow interrupt with CTRL-C
     signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
 
     # Launch Redeem
     r.start()
@@ -689,12 +698,12 @@ def main(config_location="/etc/redeem"):
     signal.pause()
 
 
-
 def profile(config_location="/etc/redeem"):
     import yappi
     yappi.start()
     main(config_location)
     yappi.get_func_stats().print_all()
+
 
 if __name__ == '__main__':
     if len(sys.argv) > 1 and sys.argv[1] == "profile":

@@ -39,7 +39,8 @@ PathPlanner::PathPlanner(unsigned int cacheSize, AlarmCallback& alarmCallback)
 {
   linesPos = 0;
   linesWritePos = 0;
-  LOGCRITICAL( "PathPlanner, loglevel " << LOGLEVEL << std::endl);
+  // Force out a log message even if the log level would suppress it
+  Logger() << "INFO     " << "PathPlanner loglevel is " << LOGLEVEL << std::endl;
   moveCacheSize = cacheSize;
   lines.resize(moveCacheSize);
   printMoveBufferWait = 250;
@@ -63,7 +64,7 @@ PathPlanner::PathPlanner(unsigned int cacheSize, AlarmCallback& alarmCallback)
 
   recomputeParameters();
 
-  LOG( "PathPlanner initialized\n");
+  LOGINFO( "PathPlanner initialized\n");
 }
 
 void PathPlanner::recomputeParameters() {
@@ -234,7 +235,7 @@ void PathPlanner::queueMove(VectorN endWorldPos,
     return; // No steps included
   }
 
-  LOG("checking deltas...");
+  LOG("checking deltas..." << std::endl);
   std::cout.flush();
   {
     IntVectorN realDeltas;

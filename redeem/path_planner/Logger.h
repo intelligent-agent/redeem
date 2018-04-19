@@ -80,38 +80,38 @@ public:
 #define LOGLEVEL_WARNING	30
 #define LOGLEVEL_INFO	    20
 #define LOGLEVEL_DEBUG    10
-#define LOGLEVEL_NOTSET   0
+#define LOGLEVEL_NOTSET    0
 
+#ifndef LOGLEVEL
+  #define LOGLEVEL        LOGLEVEL_WARNING
+#endif
 
-#define LOGCRITICAL(x) Logger() << x
+#if LOGLEVEL <= LOGLEVEL_CRITICAL
+  #define LOGCRITICAL(x) Logger() << "CRITICAL " << x
+#else
+  #define LOGCRITICAL(x)
+#endif
 
 #if LOGLEVEL <= LOGLEVEL_ERROR
-  #define LOGERROR(x) Logger() << x
+  #define LOGERROR(x) Logger() << "ERROR    " << x
 #else
   #define LOGERROR(x)
 #endif
 
 #if LOGLEVEL <= LOGLEVEL_WARNING
-  #define LOGWARNING(x) Logger() << x
+  #define LOGWARNING(x) Logger() << "WARNING  " << x
 #else
   #define LOGWARNING(x)
 #endif
-
-#if LOGLEVEL <= LOGLEVEL_WARNING
-  #define LOGWARNING(x) Logger() << x
-#else
-  #define LOGWARNING(x)
-#endif
-
 
 #if LOGLEVEL <= LOGLEVEL_INFO
-  #define LOGINFO(x) Logger() << x
+  #define LOGINFO(x) Logger() << "INFO     " << x
 #else
   #define LOGINFO(x)
 #endif
 
 #if LOGLEVEL <= LOGLEVEL_DEBUG
-  #define LOG(x) Logger() << x
+  #define LOG(x) Logger() << "DEBUG    " << x
 #else
   #define LOG(x)
 #endif
