@@ -582,10 +582,6 @@ if __name__ == '__main__':
     printer.config = CascadingConfigParser(
         ['configs/default.cfg'])
 
-    # Get the revision from the Config file
-    printer.config.parse_capes()
-    revision = printer.config.replicape_revision
-    
     dirname = os.path.dirname(os.path.realpath(__file__))
     Printer.set_axes(5)
 
