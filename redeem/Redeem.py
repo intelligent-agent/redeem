@@ -84,9 +84,8 @@ class Redeem:
          - default is installed directory
          - allows for running in a local directory when debugging
         """
-    from __init__ import __version__, __release_name__
-    firmware_version = "{}~{}".format(__version__, __release_name__)
-    logging.info("Redeem initializing " + firmware_version)
+    from __init__ import __version__
+    logging.info("Redeem initializing {}".format(__version__))
 
     global printer
     printer = Printer()
