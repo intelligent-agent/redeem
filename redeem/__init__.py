@@ -1,5 +1,4 @@
 # coding: utf-8
-__release_name__ = 'Red Heat'
 __url__ = "https://github.com/intelligent-agent/redeem"
 
 from ._version import get_versions
