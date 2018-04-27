@@ -10,18 +10,6 @@ from setuptools import setup, find_packages, Extension
 (opt, ) = get_config_vars('OPT')
 os.environ['OPT'] = " ".join(flag for flag in opt.split() if flag != '-Wstrict-prototypes')
 
-# build requirements and dependencies from requirements.txt file
-INSTALL_REQUIRES = []
-DEPENDENCY_REQUIRES = []
-
-for item in pip.req.parse_requirements('requirements.txt', session="somesession"):
-  if isinstance(item, pip.req.InstallRequirement):
-    if item.link is not None:
-      link = item.link.url.replace('git+', '')
-      DEPENDENCY_REQUIRES.append(link)
-    else:
-      INSTALL_REQUIRES.append(str(item.req))
-
 # yapf: disable
 pathplanner = Extension(
     '_PathPlannerNative',
@@ -95,8 +83,20 @@ setup(
     license="GPLv3",
     keywords="3d printer firmware",
     platforms=["BeagleBone"],
-    install_requires=INSTALL_REQUIRES,
-    dependency_links=DEPENDENCY_REQUIRES,
+    install_requires=[
+      'docutils==0.14',
+      'funcsigs==1.0.2',
+      'adafruit_gpio',
+      'mock==2.0.0',
+      'pbr==3.1.1',
+      'py==1.4.34',
+      'pyusb==1.0.0',
+      'six==1.10.0',
+      'sh==1.12.14',
+      'sympy==1.1.1',
+      'testfixtures==5.1.1',
+      'configobj==5.0.6',
+    ],
     url=__url__,
     ext_modules=[pathplanner],
     entry_points= {
