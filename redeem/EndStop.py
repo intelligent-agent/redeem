@@ -34,17 +34,32 @@ class EndStop:
     self.printer = printer
     self.pin = pin
     self.key_code = key_code
-    self.name = name
     self.invert = invert
     self.dev = InputDevice(EndStop.inputdev)
-    self.t = Thread(target=self._wait_for_event, name=self.name)
-    self.t.daemon = True
-    self.active = True
+
+    self.name = name
+    if name == "X1":
+      self.condition_bit = (1 << 0)
+    elif name == "Y1":
+      self.condition_bit = (1 << 1)
+    elif name == "Z1":
+      self.condition_bit = (1 << 2)
+    elif name == "X2":
+      self.condition_bit = (1 << 3)
+    elif name == "Y2":
+      self.condition_bit = (1 << 4)
+    elif name == "Z2":
+      self.condition_bit = (1 << 5)
+    else:
+      raise RuntimeError('Invalid endstop name')
 
     # Update "hit" state
     self.read_value()
 
     self.running = True
+    self.t = Thread(target=self._wait_for_event, name=self.name)
+    self.t.daemon = True
+    self.active = True
     self.t.start()
 
   def get_gpio_bank_and_pin(self):
@@ -88,20 +103,7 @@ class EndStop:
   def read_value(self):
     """ Read the current endstop value from GPIO using PRU1 """
     state = PruInterface.get_shared_long(0)
-    if self.name == "X1":
-      self.hit = bool(state & (1 << 0))
-    elif self.name == "Y1":
-      self.hit = bool(state & (1 << 1))
-    elif self.name == "Z1":
-      self.hit = bool(state & (1 << 2))
-    elif self.name == "X2":
-      self.hit = bool(state & (1 << 3))
-    elif self.name == "Y2":
-      self.hit = bool(state & (1 << 4))
-    elif self.name == "Z2":
-      self.hit = bool(state & (1 << 5))
-    else:
-      raise RuntimeError('Invalid endstop name')
+    self.hit = bool(state & self.condition_bit)
 
   def callback(self):
     """ An endStop has been hit """
