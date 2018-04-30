@@ -40,6 +40,9 @@ class M280(GCodeCommand):
         else:
             logging.warning("M280: Servo index out of range "+str(index))
 
+    def is_buffered(self):
+        return True
+
     def get_description(self):
         return "Set servo position"
 
