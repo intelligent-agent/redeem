@@ -47,6 +47,9 @@ class M574(GCodeCommand):
             g.set_answer("ok "+", ".join([v.name+" stops: "+str(v.stops)+" " for _,v in sorted(iteritems(self.printer.end_stops))]))
 
 
+    def is_buffered(self):
+        return True
+
     def get_description(self):
         return "Set or get end stop config"
 
