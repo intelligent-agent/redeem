@@ -62,6 +62,10 @@ class Fan(Unit):
         
         self.counter += 1
             
+        if int(self.options["chip"]) == Fan.AM335:
+            self.pin = PWM_AM335(
+                self.options["pin"], self.options["frequency"], 0)
+            logging.debug("PWM pin created for {}".format(self.options["pin"]))
         return
         
     def connect(self, units):
@@ -84,11 +88,12 @@ class Fan(Unit):
 
     def set_value(self, value):
         """ Set the amount of on-time from 0..1 """
+        #logging.debug("Setting fan value to {}".format(value))
         self.value = value
-        if self.options["chip"] == Fan.PCA9685:
+        if int(self.options["chip"]) == Fan.PCA9685:
             PWM_PCA9685.set_value(value, self.channel)
-        elif self.options["chip"] == Fan.AM335:
-            PWM_PCA9685.set_value(value, self.channel)
+        elif int(self.options["chip"]) == Fan.AM335:
+            self.pin.set_value(value)
         return
 
 

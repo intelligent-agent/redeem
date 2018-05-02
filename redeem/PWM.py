@@ -108,16 +108,16 @@ class PWM_AM335(object):
             self.chip = 2
             self.channel = 1
         elif pin == "4:0":
-            self.chip = 4
+            self.chip = 0
             self.channel = 0
         elif pin == "5:0":
-            self.chip = 5
+            self.chip = 1
             self.channel = 0
         elif pin == "6:0":
-            self.chip = 6
+            self.chip = 2
             self.channel = 0
         elif pin == "7:0":
-            self.chip = 7
+            self.chip = 3
             self.channel = 0
         else:
             logging.error("PWM_AM335: Unrecognized pin '{}'. You may have to implement it...".format(pin))

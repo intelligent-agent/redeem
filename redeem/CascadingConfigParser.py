@@ -75,9 +75,11 @@ def check_modified(cfg, path, key, value):
     sections and a key'''
     
     if cfg.depth >= len(path):
+        if not key in cfg: 
+            return True
         if cfg[key] != value:
             return True
-        return False
+        return False    
     else:
         if path[cfg.depth] not in cfg:
             return True
@@ -279,7 +281,7 @@ class CascadingConfigParser(ConfigObj):
             path = '-'.join(item[0]+[item[1]])
             logging.info("Update local config: {} = {} ".format(path, item[2]))
             
-        # Save changed values to file
+        # Save changed values to file   
         local.write(open(filename, "w+"))
 
 
@@ -386,3 +388,6 @@ class CascadingConfigParser(ConfigObj):
             return True
             
         return False
+
+    def set(self, section, name, value):
+        self[section][name] = value

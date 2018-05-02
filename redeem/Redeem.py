@@ -49,7 +49,6 @@ from USB import USB
 from Pipe import Pipe
 from Ethernet import Ethernet
 from Extruder import Extruder, HBP
-from Cooler import Cooler
 from Path import Path
 from PathPlanner import PathPlanner
 from Gcode import Gcode
@@ -105,7 +104,6 @@ class Redeem:
             
         
         configs = [os.path.join(config_location,'default.cfg'),
-                   os.path.join(config_location,'revolve_00A0.cfg'),
                    os.path.join(config_location,'printer.cfg'),
                    os.path.join(config_location,'local.cfg')]
                    
@@ -194,7 +192,7 @@ class Redeem:
         printer.watchdog = Watchdog()
 
         # Enable PWM and steppers
-        printer.enable.set_disabled()
+        printer.enable.set_enabled()
 
         # Init the Paths
         printer.axis_config = printer.config.getint('Geometry', 'axis_config')
@@ -347,8 +345,11 @@ class Redeem:
             #self.printer.fans.append(Fan_Pin(2, 1, self.printer.config.getfloat('Fans', "fan_3_max_value")))
 
             self.printer.fans = [None]*4
+            pins = ["0:0", "0:1", "2:0", "2:1"]
             for i, c in enumerate([0,1,2,3]):
                 self.printer.config["Fans"]["Fan-{}".format(i)]["channel"] = c
+                self.printer.config["Fans"]["Fan-{}".format(i)]["pin"] = pins[i]
+                
 
         # Discover and add all DS18B20 cold ends.
         paths = glob.glob("/sys/bus/w1/devices/28-*/w1_slave")

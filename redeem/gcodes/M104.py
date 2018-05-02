@@ -32,9 +32,10 @@ class M104(GCodeCommand):
         else:  # Change hotend temperature based on current tool
             heater_name = self.printer.current_tool
 
-        heater = self.printer.heaters[heater_name]
-        logging.debug("setting temp for {} to {}".format(heater.name, target))    
-        heater.set_target_temperature(target)
+        if heater_name in self.printer.heaters:
+            heater = self.printer.heaters[heater_name]
+            logging.debug("setting temp for {} to {}".format(heater.name, target))    
+            heater.set_target_temperature(target)
 
     def get_description(self):
         return "Set extruder temperature"
