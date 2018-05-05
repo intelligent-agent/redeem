@@ -61,7 +61,7 @@ class M116(GCodeCommand):
             self.printer.processor.execute(m105)
             if False not in all_ok or not self.printer.running_M116:
                 logging.info("Heating done.")
-                self.printer.send_message(g.prot, "ok Heating done.")
+                self.printer.send_message(g.prot, "Heating done.")
                 self.printer.running_M116 = False
                 return
             else:
