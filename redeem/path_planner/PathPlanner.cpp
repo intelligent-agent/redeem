@@ -82,7 +82,7 @@ bool PathPlanner::queueSyncEvent(bool isBlocking /* = true */){
   // If the move command buffer isn't empty, make the last line a sync event
   {
     std::unique_lock<std::mutex> lk(line_mutex);
-    if(linesCount > 0){
+    if(linesCount > 1){
       unsigned int lastLine = (linesWritePos == 0) ? moveCacheSize - 1 : linesWritePos - 1;
       Path *p = &lines[lastLine];
       p->setSyncEvent(isBlocking);
