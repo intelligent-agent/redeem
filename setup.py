@@ -87,6 +87,7 @@ setup(
       'docutils==0.14',
       'funcsigs==1.0.2',
       'adafruit_gpio',
+      'Adafruit_BBIO',
       'mock==2.0.0',
       'pbr==3.1.1',
       'py==1.4.34',
