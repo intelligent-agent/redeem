@@ -1,8 +1,19 @@
-version: 2
+# Python CircleCI 2.0 configuration file
+#
+# Check https://circleci.com/docs/2.0/language-python/ for more details
+#
+version: 2.0
 jobs:
   build:
     docker:
-      - image: circleci/python:2.7.13
+      # specify the version you desire here
+      # use `-browsers` prefix for selenium tests, e.g. `3.6.1-browsers`
+      - image: circleci/python:2.7
+
+      # Specify service dependencies here if necessary
+      # CircleCI maintains a library of pre-built images
+      # documented at https://circleci.com/docs/2.0/circleci-images/
+      # - image: circleci/postgres:9.4
 
     working_directory: ~/repo
 
@@ -12,27 +23,26 @@ jobs:
       # Download and cache dependencies
       - restore_cache:
           keys:
-          - v1-dependencies-{{ checksum "requirements.txt" }}-{{ checksum "tests/requirements.txt"}}
+          - v1-dependencies-{{ checksum "requirements.txt" }}-{{ checksum "setup.py" }}
+          # fallback to using the latest cache if no exact match is found
+          - v1-dependencies-
 
-      # Install dependencies
       - run:
           name: install dependencies
           command: |
             virtualenv venv
             . venv/bin/activate
-            pip install -r requirements.txt
-            pip install -r tests/requirements.txt
-            pip install pytest-html
+            pip install yapf
+            # pip install -r requirements.txt
 
-      # Cache dependencies
       - save_cache:
           paths:
             - ./venv
-          key: v1-dependencies-{{ checksum "requirements.txt" }}--{{ checksum "tests/requirements.txt"}}
+          key: v1-dependencies-{{ checksum "requirements.txt" }}-{{ checksum "setup.py" }}
 
-      # Run tests
+      # Run style checks
       - run:
-          name: run tests
+          name: Verify styling
           command: |
             . venv/bin/activate
             cd ~/repo
