@@ -35,7 +35,7 @@ from Printer import Printer
 
 class PruFirmware:
   def __init__(self, firmware_source_file0, binary_filename0, firmware_source_file1,
-               binary_filename1, printer, compiler, assembler, linker_cmdfile, repackage_cmdfile):
+               binary_filename1, printer, compiler, linker_cmdfile, repackage_cmdfile):
     """Create and initialize a PruFirmware
 
         Parameters
@@ -50,8 +50,6 @@ class PruFirmware:
             The config parser with the config file already loaded
         compiler : string
             Path to the PRU C compiler
-        assembler : string
-            Path to the pasm assembler
         linker_cmdfile : string
             Path to the cmd file that maps the device for the linker
         repackage_cmdfile : string
@@ -65,7 +63,6 @@ class PruFirmware:
     self.config = printer.config
     self.printer = printer
     self.compiler = os.path.realpath(compiler)
-    self.assembler = os.path.realpath(assembler)
     self.linker_cmdfile = os.path.realpath(linker_cmdfile)
     self.repackage_cmdfile = os.path.realpath(repackage_cmdfile)
 
@@ -85,10 +82,6 @@ class PruFirmware:
     if not os.path.exists(self.compiler):
       logging.error('CLPRU compiler not found.')
       raise RuntimeError('CLPRU compiler not found.')
-
-    if not os.path.exists(self.assembler):
-      logging.error('PASM assembler not found.')
-      raise RuntimeError('PASM assembler not found.')
 
   def is_needing_firmware_compilation(self):
     """ Returns True if the firmware needs recompilation """
@@ -149,27 +142,6 @@ class PruFirmware:
     return True
 
   def build_firmware(self, input, output):
-    extension = os.path.splitext(input)[1]
-    if extension == ".p":
-      return self.build_firmware_assembled(input, output)
-    elif extension == ".c":
-      return self.build_firmware_compiled(input, output)
-    else:
-      raise RuntimeError("Unknown firmware extension: " + extension)
-
-  def build_firmware_assembled(self, input, output):
-    cmd = [self.assembler, '-b', input, os.path.splitext(output)[0]]
-    logging.debug("Assembling firmware with " + ' '.join(cmd))
-    try:
-      subprocess.check_output(cmd, stderr=subprocess.STDOUT)
-      logging.debug("Compilation succeeded.")
-    except subprocess.CalledProcessError as e:
-      logging.exception('Error while compiling firmware: ')
-      logging.error('Command output:' + e.output)
-      return False
-    return True
-
-  def build_firmware_compiled(self, input, output):
     obj_output = os.path.splitext(output)[0] + ".obj"
     elf_output = os.path.splitext(output)[0] + ".elf"
 
