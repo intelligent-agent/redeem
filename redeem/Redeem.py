@@ -686,17 +686,30 @@ def main(config_location="/etc/redeem"):
   r = Redeem(config_location)
 
   def signal_handler(signal, frame):
+    logging.warning("Received signal: {}, terminating".format(signal))
     r.exit()
+
+  def signal_logger(signal, frame):
+    logging.warning("Received signal: {}, ignoring".format(signal))
 
   # Register signal handler to allow interrupt with CTRL-C
   signal.signal(signal.SIGINT, signal_handler)
   signal.signal(signal.SIGTERM, signal_handler)
 
+  # Register signal handler to ignore other signals
+  signal.signal(signal.SIGHUP, signal_logger)
+
   # Launch Redeem
   r.start()
 
+  logging.info("Startup complete - main thread sleeping")
+
   # Wait for end of process signal
-  signal.pause()
+  global RedeemIsRunning
+  while RedeemIsRunning:
+    signal.pause()
+
+  logging.info("Main thread terminating")
 
 
 def profile(config_location="/etc/redeem"):
