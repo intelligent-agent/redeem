@@ -237,7 +237,7 @@ void Path::initialize(const IntVectorN& machineStart,
   assert(!std::isnan(fullSpeed));
 
   const FLOAT_T idealTimeForMove = distance / fullSpeed; // m / (m/s) = s
-  timeInTicks = F_CPU * idealTimeForMove; // ticks / s * s = ticks
+  timeInTicks = (unsigned long long)(F_CPU * idealTimeForMove); // ticks / s * s = ticks
 
   for (int i = 0; i < NUM_AXES; i++) {
     if (worldMove[i]) {

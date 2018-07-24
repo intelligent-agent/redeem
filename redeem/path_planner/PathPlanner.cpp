@@ -763,7 +763,7 @@ void PathPlanner::runMove(
     assert(stepTime - lastStepTime >= MINIMUM_STEP_INTERVAL || !foundStep);
     assert(stepTime - lastStepTime < F_CPU / 2);
 
-    *lastDelay = stepTime - lastStepTime;
+    *lastDelay = (uint32_t)(stepTime - lastStepTime);
 
     if (!foundStep)
     {
