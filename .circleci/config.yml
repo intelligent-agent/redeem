@@ -34,13 +34,17 @@ jobs:
       - run:
           name: run tests
           command: |
-            . ~/repo/venv/bin/activate
-            mkdir /tmp/pytest
-            cd ~/repo/tests
-            pytest --html=/tmp/pytest/gcode_report.html gcode/test*.py
-            pytest --html=/tmp/pytest/core_report.html core/test*.py
-
-      # Store artifacts
-      - store_artifacts:
-          path: /tmp/pytest
-          destination: pytest
+            . venv/bin/activate
+            cd ~/repo
+            yapf --diff --exclude venv/ --exclude .git/ -r .
+            FORMATTING_ERRORS=$?
+            SOURCE_FILES=`find ./redeem -name \*.cpp -type f -or -name \*.h -type f`
+            for SOURCE_FILE in $SOURCE_FILES
+            do
+              export FORMATTING_ISSUE_COUNT=`clang-format -output-replacements-xml $SOURCE_FILE | grep offset | wc -l`
+              if [ "$FORMATTING_ISSUE_COUNT" -gt "0" ]; then
+                echo "Source file $SOURCE_FILE contains formatting issues. Please use clang-format tool to resolve found issues."
+                FORMATTING_ERRORS=1
+              fi
+            done
+            exit $FORMATTING_ERRORS
