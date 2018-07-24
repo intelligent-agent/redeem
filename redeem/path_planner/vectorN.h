@@ -5,9 +5,9 @@
 
 #include "config.h"
 
-class Vector3;
-class IntVectorN;
-class IntVector3;
+struct Vector3;
+struct IntVectorN;
+struct IntVector3;
 
 struct VectorN {
   /// The Cartesian coordinates are accessible.

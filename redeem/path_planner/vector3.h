@@ -5,7 +5,7 @@
 
 #include "config.h"
 
-class IntVector3;
+struct IntVector3;
 
 struct Vector3 {
     /// The Cartesian coordinates are accessible.
