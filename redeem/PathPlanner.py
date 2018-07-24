@@ -37,10 +37,10 @@ from six import iteritems
 import traceback
 
 try:
-  from path_planner.PathPlannerNative import PathPlannerNative, AlarmCallbackNative
+  from path_planner.PathPlannerNative import PathPlannerNative, AlarmCallbackNative, SyncCallbackNative
 except Exception as e:
   try:
-    from _PathPlannerNative import PathPlannerNative, AlarmCallbackNative
+    from _PathPlannerNative import PathPlannerNative, AlarmCallbackNative, SyncCallbackNative
   except:
     logging.error("You have to compile the native path planner before running"
                   " Redeem. Make sure you have swig installed (apt-get "
@@ -67,6 +67,15 @@ class AlarmWrapper(AlarmCallbackNative):
       a = Alarm(int(type), message, short_message)
     except Exception:
       logging.error(traceback.format_exc())
+
+
+class SyncCallback(SyncCallbackNative):
+  def __init__(self, event):
+    SyncCallbackNative.__init__(self)
+    self.event = event
+
+  def syncComplete(self):
+    self.event.set()
 
 
 class PathPlanner:
@@ -132,8 +141,8 @@ class PathPlanner:
     self.native_planner.setMaxSpeeds(tuple(self.printer.max_speeds))
     self.native_planner.setAcceleration(tuple(self.printer.acceleration))
     self.native_planner.setMaxSpeedJumps(tuple(self.printer.max_speed_jumps))
-    self.native_planner.setPrintMoveBufferWait(int(self.printer.print_move_buffer_wait))
-    self.native_planner.setMaxBufferedMoveTime(int(self.printer.max_buffered_move_time))
+    #    self.native_planner.setPrintMoveBufferWait(int(self.printer.print_move_buffer_wait))
+    #    self.native_planner.setMaxBufferedMoveTime(int(self.printer.max_buffered_move_time))
     self.native_planner.setSoftEndstopsMin(tuple(self.printer.soft_min))
     self.native_planner.setSoftEndstopsMax(tuple(self.printer.soft_max))
     self.native_planner.setSoftEndstopsMax(tuple(self.printer.soft_max))

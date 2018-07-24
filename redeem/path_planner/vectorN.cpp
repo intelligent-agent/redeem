@@ -2,341 +2,342 @@
 
 #include "vectorN.h"
 #include "vector3.h"
-#include <math.h>
 #include <cmath>
+#include <math.h>
 
 VectorN::VectorN()
 {
-  zero();
+    zero();
 }
 
-VectorN::VectorN(const VectorN &v)
+VectorN::VectorN(const VectorN& v)
 {
-  for (int i = 0; i < NUM_AXES; i++)
-  {
-    values[i] = v.values[i];
-  }
+    for (int i = 0; i < NUM_AXES; i++)
+    {
+        values[i] = v.values[i];
+    }
 }
 
 VectorN::~VectorN() {}
 
 void VectorN::zero()
 {
-  for (int i = 0; i < NUM_AXES; i++)
-  {
-    values[i] = 0;
-  }
+    for (int i = 0; i < NUM_AXES; i++)
+    {
+        values[i] = 0;
+    }
 }
 
 // some combined assignment, arithmetic operators.
-VectorN& VectorN::operator+=(const VectorN &v)
+VectorN& VectorN::operator+=(const VectorN& v)
 {
-  for (int i = 0; i < NUM_AXES; i++)
-  {
-    values[i] += v.values[i];
-  }
-  return *this;
+    for (int i = 0; i < NUM_AXES; i++)
+    {
+        values[i] += v.values[i];
+    }
+    return *this;
 }
 
-VectorN& VectorN::operator-=(const VectorN &v)
+VectorN& VectorN::operator-=(const VectorN& v)
 {
-  for (int i = 0; i < NUM_AXES; i++)
-  {
-    values[i] -= v.values[i];
-  }
-  return *this;
+    for (int i = 0; i < NUM_AXES; i++)
+    {
+        values[i] -= v.values[i];
+    }
+    return *this;
 }
 
-VectorN& VectorN::operator*=(FLOAT_T v)
+VectorN& VectorN::operator*=(double v)
 {
-  for (FLOAT_T& val : values)
-  {
-    val *= v;
-  }
-  return *this;
+    for (double& val : values)
+    {
+        val *= v;
+    }
+    return *this;
 }
 
-VectorN& VectorN::operator/=(FLOAT_T v)
+VectorN& VectorN::operator/=(double v)
 {
-  for (FLOAT_T& val : values)
-  {
-    val /= v;
-  }
-  return *this;
+    for (double& val : values)
+    {
+        val /= v;
+    }
+    return *this;
 }
 
-VectorN& VectorN::operator=(const VectorN &v)
+VectorN& VectorN::operator=(const VectorN& v)
 {
-  for (int i = 0; i < NUM_AXES; i++)
-  {
-    values[i] = v.values[i];
-  }
-  return *this;
+    for (int i = 0; i < NUM_AXES; i++)
+    {
+        values[i] = v.values[i];
+    }
+    return *this;
 }
 
 VectorN& VectorN::norm()
 {
-  FLOAT_T mag = vabs(*this);
-  if (mag > 0.0) {
-    *this /= mag;
-  }
-  return *this;
+    double mag = vabs(*this);
+    if (mag > 0.0)
+    {
+        *this /= mag;
+    }
+    return *this;
 }
 
-FLOAT_T& VectorN::operator[](int i)
+double& VectorN::operator[](int i)
 {
-  return values[i];
+    return values[i];
 }
 
-const FLOAT_T& VectorN::operator[](int i) const
+const double& VectorN::operator[](int i) const
 {
-  return values[i];
+    return values[i];
 }
 
 Vector3 VectorN::toVector3() const
 {
-  return Vector3(values[0], values[1], values[2]);
+    return Vector3(values[0], values[1], values[2]);
 }
 
 IntVectorN VectorN::round() const
 {
-  IntVectorN result;
-  for (int i = 0; i < NUM_AXES; i++)
-  {
-    result[i] = std::llround(values[i]);
-  }
+    IntVectorN result;
+    for (int i = 0; i < NUM_AXES; i++)
+    {
+        result[i] = std::lround(values[i]);
+    }
 
-  return result;
+    return result;
 }
 
 // Helper functions for the VectorN class.
 
-FLOAT_T vabs(const VectorN &v)
+double vabs(const VectorN& v)
 {
-  FLOAT_T result = 0;
-  for (double val : v.values)
-  {
-    result += val * val;
-  }
-  return sqrt(result);
+    double result = 0;
+    for (double val : v.values)
+    {
+        result += val * val;
+    }
+    return sqrt(result);
 }
 
-VectorN unit(const VectorN &v)
+VectorN unit(const VectorN& v)
 {
-  return v / vabs(v);
+    return v / vabs(v);
 }
 
-VectorN operator+(const VectorN &v)
+VectorN operator+(const VectorN& v)
 {
-  return v;
+    return v;
 }
 
-VectorN operator-(const VectorN &v)
+VectorN operator-(const VectorN& v)
 {
-  return v * -1.0;
+    return v * -1.0;
 }
 
-VectorN operator+(const VectorN &v1, const VectorN &v2)
+VectorN operator+(const VectorN& v1, const VectorN& v2)
 {
-  VectorN result;
+    VectorN result;
 
-  for (int i = 0; i < NUM_AXES; i++)
-  {
-    result.values[i] = v1.values[i] + v2.values[i];
-  }
+    for (int i = 0; i < NUM_AXES; i++)
+    {
+        result.values[i] = v1.values[i] + v2.values[i];
+    }
 
-  return result;
+    return result;
 }
 
-VectorN operator-(const VectorN &v1, const VectorN &v2)
+VectorN operator-(const VectorN& v1, const VectorN& v2)
 {
-  VectorN result;
+    VectorN result;
 
-  for (int i = 0; i < NUM_AXES; i++)
-  {
-    result.values[i] = v1.values[i] - v2.values[i];
-  }
+    for (int i = 0; i < NUM_AXES; i++)
+    {
+        result.values[i] = v1.values[i] - v2.values[i];
+    }
 
-  return result;
+    return result;
 }
 
-bool equal(const VectorN &v1, const VectorN &v2, FLOAT_T tolerance)
+bool equal(const VectorN& v1, const VectorN& v2, double tolerance)
 {
-  return vabs(v1 - v2) < tolerance;
+    return vabs(v1 - v2) < tolerance;
 }
 
-VectorN operator*(const VectorN &v1, FLOAT_T v2)
+VectorN operator*(const VectorN& v1, double v2)
 {
-  VectorN result(v1);
+    VectorN result(v1);
 
-  result *= v2;
+    result *= v2;
 
-  return result;
+    return result;
 }
 
-VectorN operator*(FLOAT_T v1, const VectorN &v2)
+VectorN operator*(double v1, const VectorN& v2)
 {
-  return v2 * v1;
+    return v2 * v1;
 }
 
-VectorN operator/(const VectorN &v1, FLOAT_T v2)
+VectorN operator/(const VectorN& v1, double v2)
 {
-  VectorN result(v1);
+    VectorN result(v1);
 
-  result /= v2;
+    result /= v2;
 
-  return result;
+    return result;
 }
 
-FLOAT_T dot(const VectorN &v1, const VectorN &v2)
+double dot(const VectorN& v1, const VectorN& v2)
 {
-  FLOAT_T result = 0;
+    double result = 0;
 
-  for (int i = 0; i < NUM_AXES; i++)
-  {
-    result += v1.values[i] * v2.values[i];
-  }
+    for (int i = 0; i < NUM_AXES; i++)
+    {
+        result += v1.values[i] * v2.values[i];
+    }
 
-  return result;
+    return result;
 }
 
 VectorN operator/(const VectorN& v1, const VectorN& v2)
 {
-  VectorN v3;
-  for (int i = 0; i < NUM_AXES; i++)
-  {
-    v3[i] = v1[i] / v2[i];
-  }
-  return v3;
+    VectorN v3;
+    for (int i = 0; i < NUM_AXES; i++)
+    {
+        v3[i] = v1[i] / v2[i];
+    }
+    return v3;
 }
 
 VectorN operator*(const VectorN& v1, const VectorN& v2)
 {
-  VectorN v3;
-  for (int i = 0; i < NUM_AXES; i++)
-  {
-    v3[i] = v1[i] * v2[i];
-  }
-  return v3;
+    VectorN v3;
+    for (int i = 0; i < NUM_AXES; i++)
+    {
+        v3[i] = v1[i] * v2[i];
+    }
+    return v3;
 }
 
 IntVectorN::IntVectorN()
 {
-  zero();
+    zero();
 }
 
 void IntVectorN::zero()
 {
-  for (int i = 0; i < NUM_AXES; i++)
-  {
-    values[i] = 0;
-  }
+    for (int i = 0; i < NUM_AXES; i++)
+    {
+        values[i] = 0;
+    }
 }
 
-IntVectorN& IntVectorN::operator=(const IntVectorN &v)
+IntVectorN& IntVectorN::operator=(const IntVectorN& v)
 {
-  for (int i = 0; i < NUM_AXES; i++)
-  {
-    values[i] = v[i];
-  }
+    for (int i = 0; i < NUM_AXES; i++)
+    {
+        values[i] = v[i];
+    }
 
-  return *this;
+    return *this;
 }
 
-IntVectorN& IntVectorN::operator+=(const IntVectorN &v)
+IntVectorN& IntVectorN::operator+=(const IntVectorN& v)
 {
-  for (int i = 0; i < NUM_AXES; i++)
-  {
-    values[i] += v[i];
-  }
+    for (int i = 0; i < NUM_AXES; i++)
+    {
+        values[i] += v[i];
+    }
 
-  return *this;
+    return *this;
 }
 
-IntVectorN& IntVectorN::operator-=(const IntVectorN &v)
+IntVectorN& IntVectorN::operator-=(const IntVectorN& v)
 {
-  for (int i = 0; i < NUM_AXES; i++)
-  {
-    values[i] -= v[i];
-  }
+    for (int i = 0; i < NUM_AXES; i++)
+    {
+        values[i] -= v[i];
+    }
 
-  return *this;
+    return *this;
 }
 
-IntVectorN& IntVectorN::operator*=(long long v)
+IntVectorN& IntVectorN::operator*=(int v)
 {
-  for (int i = 0; i < NUM_AXES; i++)
-  {
-    values[i] *= v;
-  }
+    for (int i = 0; i < NUM_AXES; i++)
+    {
+        values[i] *= v;
+    }
 
-  return *this;
+    return *this;
 }
 
-long long& IntVectorN::operator[](int i)
+int& IntVectorN::operator[](int i)
 {
-  return values[i];
+    return values[i];
 }
 
-const long long& IntVectorN::operator[](int i) const
+const int& IntVectorN::operator[](int i) const
 {
-  return values[i];
+    return values[i];
 }
 
 VectorN IntVectorN::toVectorN() const
 {
-  VectorN result;
-  for (int i = 0; i < NUM_AXES; i++)
-  {
-    result[i] = values[i];
-  }
+    VectorN result;
+    for (int i = 0; i < NUM_AXES; i++)
+    {
+        result[i] = values[i];
+    }
 
-  return result;
+    return result;
 }
 
 IntVector3 IntVectorN::toIntVector3() const
 {
-  return IntVector3(values[0], values[1], values[2]);
+    return IntVector3(values[0], values[1], values[2]);
 }
 
-IntVectorN operator+(const IntVectorN& v1, const IntVectorN &v2)
+IntVectorN operator+(const IntVectorN& v1, const IntVectorN& v2)
 {
-  IntVectorN result;
+    IntVectorN result;
 
-  for (int i = 0; i < NUM_AXES; i++)
-  {
-    result[i] = v1[i] + v2[i];
-  }
-
-  return result;
-}
-
-IntVectorN operator-(const IntVectorN& v1, const IntVectorN &v2)
-{
-  IntVectorN result;
-
-  for (int i = 0; i < NUM_AXES; i++)
-  {
-    result[i] = v1[i] - v2[i];
-  }
-
-  return result;
-}
-
-bool operator==(const IntVectorN &v1, const IntVectorN &v2)
-{
-  for (int i = 0; i < NUM_AXES; i++)
-  {
-    if(v1[i] != v2[i])
+    for (int i = 0; i < NUM_AXES; i++)
     {
-      return false;
+        result[i] = v1[i] + v2[i];
     }
-  }
 
-  return true;
+    return result;
 }
 
-bool operator!=(const IntVectorN &v1, const IntVectorN &v2)
+IntVectorN operator-(const IntVectorN& v1, const IntVectorN& v2)
 {
-  return !(v1 == v2);
+    IntVectorN result;
+
+    for (int i = 0; i < NUM_AXES; i++)
+    {
+        result[i] = v1[i] - v2[i];
+    }
+
+    return result;
+}
+
+bool operator==(const IntVectorN& v1, const IntVectorN& v2)
+{
+    for (int i = 0; i < NUM_AXES; i++)
+    {
+        if (v1[i] != v2[i])
+        {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+bool operator!=(const IntVectorN& v1, const IntVectorN& v2)
+{
+    return !(v1 == v2);
 }

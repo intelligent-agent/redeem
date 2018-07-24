@@ -27,20 +27,22 @@
 #ifndef __PathPlanner__PathPlanner__
 #define __PathPlanner__PathPlanner__
 
-#include <iostream>
-#include <functional>
+#include "Delta.h"
+#include "Path.h"
+#include "PathOptimizer.h"
+#include "PathQueue.h"
+#include "PruTimer.h"
+#include "config.h"
+#include "vectorN.h"
+#include <assert.h>
 #include <atomic>
-#include <thread>
-#include <vector>
+#include <functional>
+#include <future>
+#include <iostream>
 #include <mutex>
 #include <string.h>
-#include <strings.h>
-#include <assert.h>
-#include "PruTimer.h"
-#include "Path.h"
-#include "Delta.h"
-#include "vectorN.h"
-#include "config.h"
+#include <thread>
+#include <vector>
 
 class AlarmCallback;
 
@@ -58,160 +60,101 @@ class AlarmCallback;
  * 	position.
  */
 
-class PathPlanner {
- private:
-  void updateTrapezoids();
-  void computeMaxJunctionSpeed(Path *previous,Path *current);
-  void backwardPlanner(unsigned int start,unsigned int last);
-  void forwardPlanner(unsigned int first);
+class PathPlanner
+{
+private:
+    friend class PathPlannerRunMoveTest;
+    friend class PathPlannerTest;
 
-  VectorN machineToWorld(const IntVectorN& machinePos);
-  IntVectorN worldToMachine(const VectorN& worldPos, bool* possible = nullptr);
-	
-  void pruAlarmCallback();
+    VectorN machineToWorld(const IntVectorN& machinePos);
+    IntVectorN worldToMachine(const VectorN& worldPos, bool* possible = nullptr);
 
-  AlarmCallback& alarmCallback;
+    void pruAlarmCallback();
 
-  VectorN maxSpeeds;
-  VectorN maxSpeedJumps;
-  VectorN maxAccelerationStepsPerSquareSecond;
-  VectorN maxAccelerationMPerSquareSecond;
-	
-  FLOAT_T minimumSpeed;			
-  VectorN axisStepsPerM;
+    AlarmCallback& alarmCallback;
 
-  std::atomic_uint_fast32_t linesPos; // Position for executing line movement
-  std::atomic_uint_fast32_t linesWritePos; // Position where we write the next cached line move
-  std::atomic_uint_fast32_t linesCount;      ///< Number of lines cached 0 = nothing to do.
-  std::atomic<long long> linesTicksCount;
+    VectorN maxSpeeds;
+    VectorN maxAccelerationStepsPerSquareSecond;
+    VectorN maxAccelerationMPerSquareSecond;
 
-  unsigned int moveCacheSize; // set on init
+    double minimumSpeed;
+    VectorN axisStepsPerM;
 
-  int printMoveBufferWait;
-  long long maxBufferedMoveTime;
+    std::thread runningThread;
+    bool stop;
+    std::atomic_bool acceptingPaths;
 
-  std::vector<Path> lines;
+    PruInterface& pru;
+    PathOptimizer optimizer;
+    PathQueue<PathOptimizer> pathQueue;
+    void recomputeParameters();
+    void run();
 
-  inline unsigned int previousPlannerIndex(unsigned int p){
-    return (p + moveCacheSize - 1) % moveCacheSize;
-  }
+    void runMove(
+        const int moveMask,
+        const int cancellableMask,
+        const bool sync,
+        const bool wait,
+        const double moveEndTime,
+        std::array<std::vector<Step>, NUM_AXES>& steps,
+        std::unique_ptr<SteppersCommand[]> const& commands,
+        const size_t commandsLength,
+        IntVectorN* probeDistanceTraveled = nullptr,
+        SyncCallback* syncCallback = nullptr);
 
-  inline unsigned int nextPlannerIndex(unsigned int p){
-    return (p + 1) % moveCacheSize;
-  }
+    // pre-processor functions
+    int softEndStopApply(const VectorN& endPos);
+    void applyBedCompensation(VectorN& endPos);
+    void backlashCompensation(IntVectorN& delta);
+    bool queue_move_fail;
 
-  inline void removeCurrentLine(){
-    linesTicksCount -= lines[linesPos].getTimeInTicks();
-    lines[linesPos].zero();
-    assert(linesTicksCount >= 0);
-    linesPos++;
-    if(linesPos>=moveCacheSize) 
-      linesPos=0;
-    --linesCount;
-  }
+    // soft endstops
+    VectorN soft_endstops_min;
+    VectorN soft_endstops_max;
 
-  inline bool isLinesBufferFilled(){
-    return linesTicksCount >= (F_CPU/1000)*maxBufferedMoveTime;
-  }
-	
-  std::mutex line_mutex;
-  std::condition_variable pathQueueHasSpace;
+    bool stop_on_soft_endstops_hit;
+    bool stop_on_physical_endstops_hit;
 
-  inline bool doesPathQueueHaveSpace() {
-    return stop || (linesCount < moveCacheSize && !isLinesBufferFilled());
-  }
+    // bed compensation
+    std::vector<double> matrix_bed_comp;
 
-  inline void notifyIfPathQueueHasSpace() {
-    if (doesPathQueueHaveSpace()) {
-      pathQueueHasSpace.notify_all();
-    }
-  }
+    // axis configuration (see config.h for options)
+    int axis_config;
 
-  std::condition_variable pathQueueReadyToPrint;
+    // the current state of the machine
+    IntVectorN state;
 
-  inline bool isPathQueueReadyToPrint() {
-    return stop || linesCount > 0;
-  }
+    // distance of the last bed probe movement
+    double lastProbeDistance;
 
-  inline void notifyIfPathQueueIsReadyToPrint() {
-    if (isPathQueueReadyToPrint()) {
-      pathQueueReadyToPrint.notify_all();
-    }
-  }
-	
-  std::thread runningThread;
-  bool stop;
-  std::atomic_bool acceptingPaths;
-	
-  PruTimer pru;
-  void recomputeParameters();
-  void run();
+    // slaves
+    bool has_slaves;
+    std::vector<int> master;
+    std::vector<int> slave;
+    std::array<uint8_t, NUM_AXES> axes_stepping_together;
+    void clearSlaveAxesMovements(VectorN& startWorldPos, VectorN& stopWorldPos);
 
-  void runMove(
-    const int moveMask,
-    const int cancellableMask,
-    const bool sync,
-    const bool wait,
-    const FLOAT_T moveEndTime,
-    std::array<std::vector<Step>, NUM_AXES>& steps,
-    std::unique_ptr<SteppersCommand[]> const &commands,
-    const size_t commandsLength,
-    IntVectorN* probeDistanceTraveled);
-	
-  // pre-processor functions
-  int softEndStopApply(const VectorN &endPos);
-  void applyBedCompensation(VectorN &endPos);
-  void backlashCompensation(IntVectorN &delta);
-  bool queue_move_fail;
-	
-	
-  // soft endstops
-  VectorN soft_endstops_min;
-  VectorN soft_endstops_max;
-	
-  bool stop_on_soft_endstops_hit;
-  bool stop_on_physical_endstops_hit;
+    // backlash compensation
+    VectorN backlash_compensation;
+    IntVectorN backlash_state;
 
-  // bed compensation
-  std::vector<FLOAT_T> matrix_bed_comp;
-	
-  // axis configuration (see config.h for options)
-  int axis_config;
-	
-  // the current state of the machine
-  IntVectorN state;
+    Vector3 worldToHBelt(const Vector3&);
+    Vector3 hBeltToWorld(const Vector3&);
+    Vector3 worldToCoreXY(const Vector3&);
+    Vector3 coreXYToWorld(const Vector3&);
 
-  // distance of the last bed probe movement
-  FLOAT_T lastProbeDistance;
-	
-  // slaves
-  bool has_slaves;
-  std::vector<int> master;
-  std::vector<int> slave;
-  std::array<uint8_t, NUM_AXES> axes_stepping_together;
-  void clearSlaveAxesMovements(VectorN& startWorldPos, VectorN& stopWorldPos);
-	
-  // backlash compensation
-  VectorN backlash_compensation;
-  IntVectorN backlash_state;
+public:
+    Delta delta_bot;
 
-  Vector3 worldToHBelt(const Vector3&);
-  Vector3 hBeltToWorld(const Vector3&);
-  Vector3 worldToCoreXY(const Vector3&);
-  Vector3 coreXYToWorld(const Vector3&);
-
- public:
-
-  Delta delta_bot;
-	
-  /**
+    /**
    * @brief Create a new path planner that is used to compute paths parameters and send it to the PRU for execution
    * @details Create a new path planner that is used to compute paths parameters and send it to the PRU for execution
    * @param cacheSize Size of the movement planner cache
    */
-  PathPlanner(unsigned int cacheSize, AlarmCallback& alarmCallback);
-	
-  /**
+    PathPlanner(unsigned int cacheSize, AlarmCallback& alarmCallback, PruInterface& pru);
+    PathPlanner(unsigned int cacheSize, AlarmCallback& alarmCallback);
+
+    /**
    * @brief  Init the internal PRU co-processors
    * @details Init the internal PRU co-processors with the provided firmware
    * 
@@ -220,37 +163,15 @@ class PathPlanner {
    * 
    * @return true in case of success, false otherwise.
    */
-  bool initPRU(const std::string& firmware_stepper, const std::string& firmware_endstops) {
-    return pru.initPRU(firmware_stepper, firmware_endstops);
-  }
+    bool initPRU(const std::string& firmware_stepper, const std::string& firmware_endstops)
+    {
+        return pru.initPRU(firmware_stepper, firmware_endstops);
+    }
 
-  /**
-   * @brief Sets a syncronization point to be signaled by the PRU
-   * @details Sets an option on the last queued move/segment to send a syncronization event when
-   * encountered by the PRU
-   *
-   * @ param isBlocking Causes the PRU to suspend once the sync event occurs.
-   * @ returns true if the sync event was successfully added.  False on failure.
-   */
-  bool queueSyncEvent(bool isBlocking = true);
+    void queueSyncEvent(SyncCallback& callback, bool isBlocking = false);
+    WaitEvent* queueWaitEvent();
 
-  /**
-   * @brief Blocks until a pending Sync event is encountered.
-   * @details Monitors the PRU for a sync event, then returns. Note that the event must be manually
-   * cleared before processing can continue.
-   *
-   */
-  int waitUntilSyncEvent();
-
-  /**
-   * @brief Clears a SINGLE sync event and restores normal operation of the stepper PRU
-   * @details Clears the Sync event generated by the PRU then returns. 
-   * Note that a pending event must be manually cleared before processing can continue.
-   *
-   */
-  void clearSyncEvent();
-
-  /**
+    /**
    * @brief Queue a line move for execution
    * @details Queue a line move execution in the path planner. Note that the path planner 
    * has no internal state in term of printer head position. Therefore you have 
@@ -269,75 +190,56 @@ class PathPlanner {
    * @param tool_axis which axis is our tool attached to
    * @param virgin Flag to indicate if this is a newly passed in value or if it is somewhere in a recursion loop
    */
-  void queueMove(VectorN endPos,
-		 FLOAT_T speed, FLOAT_T accel, 
-		 bool cancelable, bool optimize, 
-		 bool enable_soft_endstops, bool use_bed_matrix, 
-		 bool use_backlash_compensation, bool is_probe, int tool_axis=3);
-  /**
+    void queueMove(VectorN endPos,
+        double speed, double accel,
+        bool cancelable, bool optimize,
+        bool enable_soft_endstops, bool use_bed_matrix,
+        bool use_backlash_compensation, bool is_probe, int tool_axis = 3);
+    /**
    * @brief Run the path planner thread
    * @details Run the path planner thread that is in charge to compute the different delays and submit it to the PRU for execution.
    */
-  void runThread();
+    void runThread();
 
-  /**
+    /**
    * @brief Stop the path planner thread
    * @details Stop the path planner thread and optionnaly wait until it is stopped before returning.
    * 
    * @param join If true, the method does not return until the thread is effectively stopped.
    */
-  void stopThread(bool join);
-	
+    void stopThread(bool join);
 
-  /**
+    /**
    * @brief Wait until all queued move are finished to be executed
    * @details Wait until all queued move are finished to be executed
    */
-  void waitUntilFinished();
+    void waitUntilFinished();
 
-  /**
-   * @brief Set the print move buffer wait time
-   * @details Time to wait before processing a print command if the buffer is not full enough, expressed in milliseconds.
-   * Increasing this time will reduce the slow downs due to the path planner not having enough path in the buffer
-   * but it will increase the startup time of the print.
-   * @param dt time to wait before processing commands
-   */
-  void setPrintMoveBufferWait(int dt);
-
-  /**
-   * @brief Set the maximum buffered move time
-   * @details Time to wait before processing a print command if the buffer is not full enough, expressed in milliseconds.
-   * Increasing this time will reduce the slow downs due to the path planner not having enough path in the buffer
-   * but it will increase the startup time of the print.
-   * @param dt maximum buffered move time
-   */
-  void setMaxBufferedMoveTime(long long dt);
-
-  /**
+    /**
    * @brief Set the maximum feedrates of the different axis X,Y,Z
    * @details Set the maximum feedrates of the different axis in m/s
    * 
    * @param rates The feedrate for each of the axis, consisting of a NUM_AXES length array.
    */
-  void setMaxSpeeds(VectorN speeds);
+    void setMaxSpeeds(VectorN speeds);
 
-  /**
+    /**
    * @brief Set the number of steps required to move each axis by 1 meter
    * @details Set the number of steps required to move each axis by 1 meter
    * 
    * @param stepPerM the number of steps required to move each axis by 1 meter, consisting of a NUM_AXES length array.
    */
-  void setAxisStepsPerMeter(VectorN stepPerM);
+    void setAxisStepsPerMeter(VectorN stepPerM);
 
-  /**
+    /**
    * @brief Set the max acceleration for all moves
    * @details Set the max acceleration for moves when the extruder is activated
    * 
    * @param accel The acceleration in m/s^2
    */
-  void setAcceleration(VectorN accel);
+    void setAcceleration(VectorN accel);
 
-  /**
+    /**
    * @brief Set the maximum speed that can be used when in a corner
    * @details The speed jump determines your start speed and the maximum speed at the join of two segments.
    * 
@@ -348,40 +250,42 @@ class PathPlanner {
    *
    * @param speedJumps the maximum speed jump for each axis in m/s^2
    */
-  void setMaxSpeedJumps(VectorN speedJumps);
-	
-  void suspend() {
-    pru.suspend();
-  }
-	
-  void resume() {
-    pru.resume();
-  }
+    void setMaxSpeedJumps(VectorN speedJumps);
 
-    
-  void setSoftEndstopsMin(VectorN stops);
-  void setSoftEndstopsMax(VectorN stops);
-  void setStopPrintOnSoftEndstopHit(bool stop);
-  void setStopPrintOnPhysicalEndstopHit(bool stop);
-  void setBedCompensationMatrix(std::vector<FLOAT_T> matrix);
-  void setAxisConfig(int axis);
-  void setState(VectorN set);
-  void enableSlaves(bool enable);
-  void addSlave(int master_in, int slave_in);
-  void setBacklashCompensation(VectorN set);
-  void resetBacklash();
-	
-  VectorN getState();
-  bool getLastQueueMoveStatus();
+    void suspend()
+    {
+        pru.suspend();
+    }
 
-  FLOAT_T getLastProbeDistance();
+    void resume()
+    {
+        pru.resume();
+    }
 
-  void reset();
-	
-  virtual ~PathPlanner();
+    void setSoftEndstopsMin(VectorN stops);
+    void setSoftEndstopsMax(VectorN stops);
+    void setStopPrintOnSoftEndstopHit(bool stop);
+    void setStopPrintOnPhysicalEndstopHit(bool stop);
+    void setBedCompensationMatrix(std::vector<double> matrix);
+    void setAxisConfig(int axis);
+    void setState(VectorN set);
+    void enableSlaves(bool enable);
+    void addSlave(int master_in, int slave_in);
+    void setBacklashCompensation(VectorN set);
+    void resetBacklash();
 
+    VectorN getState();
+    bool getLastQueueMoveStatus();
+
+    double getLastProbeDistance();
+
+    void reset();
+
+    virtual ~PathPlanner();
 };
 
-class InputSizeError {};
+class InputSizeError
+{
+};
 
 #endif /* defined(__PathPlanner__PathPlanner__) */

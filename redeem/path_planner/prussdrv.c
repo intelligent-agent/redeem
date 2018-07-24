@@ -310,8 +310,8 @@ int prussdrv_pru_enable_at(unsigned int prunum, size_t addr)
     else
         return -1;
 
-	if(!prucontrolregs)
-		return -1;
+    if(!prucontrolregs)
+        return -1;
     /* address is in bytes and must be converted in 32 bits words */
     *prucontrolregs = ((uint32_t)(addr / sizeof(uint32_t)) << 16) | 2;
 
@@ -328,10 +328,10 @@ int prussdrv_pru_disable(unsigned int prunum)
         prucontrolregs = (unsigned int *) prussdrv.pru1_control_base;
     else
         return -1;
-	
-	if(!prucontrolregs)
-		return -1;
-	
+
+    if(!prucontrolregs)
+        return -1;
+
     *prucontrolregs = 1;
     return 0;
 

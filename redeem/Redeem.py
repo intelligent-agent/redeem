@@ -427,9 +427,7 @@ class Redeem:
     self.printer.commands = Queue.Queue(10)
 
     # Make a queue of commands that should not be buffered
-    self.printer.sync_commands = Queue.Queue()
     self.printer.unbuffered_commands = Queue.Queue(10)
-    self.printer.async_commands = Queue.Queue(10)
 
     # Bed compensation matrix
     printer.matrix_bed_comp = printer.load_bed_compensation_matrix()
@@ -568,17 +566,11 @@ class Redeem:
     # Start the two processes
     p0 = Thread(target=self.loop, args=(self.printer.commands, "buffered"), name="p0")
     p1 = Thread(target=self.loop, args=(self.printer.unbuffered_commands, "unbuffered"), name="p1")
-    p2 = Thread(target=self.loop, args=(self.printer.async_commands, "async"), name="p2")
-    p3 = Thread(target=self.eventloop, args=(self.printer.sync_commands, "sync"), name="p3")
     p0.daemon = True
     p1.daemon = True
-    p2.daemon = True
-    p3.daemon = True
 
     p0.start()
     p1.start()
-    p2.start()
-    p3.start()
 
     Alarm.executor.start()
     Key_pin.listener.start()
@@ -606,23 +598,6 @@ class Redeem:
         logging.debug("Completed " + gcode.code() + " from " + name + " " + gcode.message)
     except Exception:
       logging.exception("Exception in {} loop: ".format(name))
-
-  def eventloop(self, queue, name):
-    """ When a new event comes in, execute the pending gcode """
-    try:
-      while RedeemIsRunning:
-        # Returns False on timeout, else True
-        if self.printer.path_planner.wait_until_sync_event():
-          try:
-            gcode = queue.get(block=True, timeout=1)
-          except Queue.Empty:
-            logging.info("spurious sync event completion")
-            continue
-          self._synchronize(gcode)
-          logging.info("Event handled for " + gcode.code() + " from " + name + " " + gcode.message)
-          queue.task_done()
-    except Exception:
-      logging.exception("Exception in {} eventloop: ".format(name))
 
   def exit(self):
     global RedeemIsRunning
