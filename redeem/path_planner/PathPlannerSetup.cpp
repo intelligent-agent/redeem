@@ -80,7 +80,7 @@ void PathPlanner::setStopPrintOnPhysicalEndstopHit(bool stop)
 }
 
 // bed compensation
-void PathPlanner::setBedCompensationMatrix(std::vector<FLOAT_T> matrix)
+void PathPlanner::setBedCompensationMatrix(std::vector<double> matrix)
 {
   matrix_bed_comp = matrix;
 }
@@ -191,7 +191,7 @@ void PathPlanner::resetBacklash()
   backlash_state.zero();
 }
 
-FLOAT_T PathPlanner::getLastProbeDistance()
+double PathPlanner::getLastProbeDistance()
 {
   return lastProbeDistance;
 }

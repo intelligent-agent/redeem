@@ -122,7 +122,7 @@ void PathPlanner::clearSyncEvent(){
 }
 
 void PathPlanner::queueMove(VectorN endWorldPos,
-			    FLOAT_T speed, FLOAT_T accel,
+			    double speed, double accel,
 			    bool cancelable, bool optimize,
 			    bool enable_soft_endstops, bool use_bed_matrix,
 			    bool use_backlash_compensation, bool is_probe,
@@ -250,7 +250,7 @@ void PathPlanner::queueMove(VectorN endWorldPos,
 
     for (const auto& axisSteps : p.getSteps())
     {
-      FLOAT_T lastTime = 0;
+      double lastTime = 0;
       for (const auto& step : axisSteps)
       {
         realDeltas[step.axis] += step.direction ? 1 : -1;
@@ -417,12 +417,12 @@ void PathPlanner::updateTrapezoids(){
 }
 
 void PathPlanner::computeMaxJunctionSpeed(Path *previous, Path *current){
-  FLOAT_T factor = 1;
+  double factor = 1;
 
   LOG("Computing Max junction speed"<<std::endl);
 
   for(int i=0; i<NUM_AXES; i++){
-    FLOAT_T speedJump = std::fabs(current->getSpeeds()[i] - previous->getSpeeds()[i]);
+    double speedJump = std::fabs(current->getSpeeds()[i] - previous->getSpeeds()[i]);
 
     if (speedJump > maxSpeedJumps[i]){
       factor = std::min(factor, maxSpeedJumps[i] / speedJump);
@@ -442,7 +442,7 @@ void PathPlanner::computeMaxJunctionSpeed(Path *previous, Path *current){
 */
 void PathPlanner::backwardPlanner(unsigned int start, unsigned int last){
   Path *act = &lines[start],*previous;
-  FLOAT_T lastJunctionSpeed = act->getEndSpeed(); // Start always with safe speed
+  double lastJunctionSpeed = act->getEndSpeed(); // Start always with safe speed
 
   // Last element is already fixed in start speed
   while(start != last){
@@ -481,8 +481,8 @@ void PathPlanner::backwardPlanner(unsigned int start, unsigned int last){
 void PathPlanner::forwardPlanner(unsigned int first){
   Path *act;
   Path *next = &lines[first];
-  FLOAT_T vmaxRight;
-  FLOAT_T leftSpeed = next->getStartSpeed();
+  double vmaxRight;
+  double leftSpeed = next->getStartSpeed();
   while(first != linesWritePos){   // All except last segment, which has fixed end speed
     act = next;
     first = nextPlannerIndex(first);
@@ -647,7 +647,7 @@ void PathPlanner::run() {
     LOG("fullSpeed:    " << cur->getFullSpeed() << std::endl);
     LOG("acceleration: " << cur->getAcceleration() << std::endl);
 
-    const FLOAT_T moveEndTime = cur->runFinalStepCalculations();
+    const double moveEndTime = cur->runFinalStepCalculations();
 
     LOG("Sending " << std::dec << linesPos << ", Start speed=" << cur->getStartSpeed() << ", end speed=" << cur->getEndSpeed() << std::endl);
 
@@ -674,7 +674,7 @@ void PathPlanner::run() {
   }
 }
 
-inline unsigned long long roundStepTime(FLOAT_T stepTime)
+inline unsigned long long roundStepTime(double stepTime)
 {
   return std::llround(stepTime * (F_CPU_FLOAT / MINIMUM_STEP_INTERVAL)) * MINIMUM_STEP_INTERVAL;
 }
@@ -684,7 +684,7 @@ void PathPlanner::runMove(
   const int cancellableMask,
   const bool sync,
   const bool wait,
-  const FLOAT_T moveEndTime,
+  const double moveEndTime,
   std::array<std::vector<Step>, NUM_AXES>& steps,
   std::unique_ptr<SteppersCommand[]> const &commands,
   const size_t commandsLength,

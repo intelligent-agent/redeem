@@ -76,7 +76,7 @@ class PathPlanner {
   VectorN maxAccelerationStepsPerSquareSecond;
   VectorN maxAccelerationMPerSquareSecond;
 	
-  FLOAT_T minimumSpeed;			
+  double minimumSpeed;			
   VectorN axisStepsPerM;
 
   std::atomic_uint_fast32_t linesPos; // Position for executing line movement
@@ -151,7 +151,7 @@ class PathPlanner {
     const int cancellableMask,
     const bool sync,
     const bool wait,
-    const FLOAT_T moveEndTime,
+    const double moveEndTime,
     std::array<std::vector<Step>, NUM_AXES>& steps,
     std::unique_ptr<SteppersCommand[]> const &commands,
     const size_t commandsLength,
@@ -172,7 +172,7 @@ class PathPlanner {
   bool stop_on_physical_endstops_hit;
 
   // bed compensation
-  std::vector<FLOAT_T> matrix_bed_comp;
+  std::vector<double> matrix_bed_comp;
 	
   // axis configuration (see config.h for options)
   int axis_config;
@@ -181,7 +181,7 @@ class PathPlanner {
   IntVectorN state;
 
   // distance of the last bed probe movement
-  FLOAT_T lastProbeDistance;
+  double lastProbeDistance;
 	
   // slaves
   bool has_slaves;
@@ -269,7 +269,7 @@ class PathPlanner {
    * @param virgin Flag to indicate if this is a newly passed in value or if it is somewhere in a recursion loop
    */
   void queueMove(VectorN endPos,
-		 FLOAT_T speed, FLOAT_T accel, 
+		 double speed, double accel, 
 		 bool cancelable, bool optimize, 
 		 bool enable_soft_endstops, bool use_bed_matrix, 
 		 bool use_backlash_compensation, bool is_probe, int tool_axis=3);
@@ -362,7 +362,7 @@ class PathPlanner {
   void setSoftEndstopsMax(VectorN stops);
   void setStopPrintOnSoftEndstopHit(bool stop);
   void setStopPrintOnPhysicalEndstopHit(bool stop);
-  void setBedCompensationMatrix(std::vector<FLOAT_T> matrix);
+  void setBedCompensationMatrix(std::vector<double> matrix);
   void setAxisConfig(int axis);
   void setState(VectorN set);
   void enableSlaves(bool enable);
@@ -373,7 +373,7 @@ class PathPlanner {
   VectorN getState();
   bool getLastQueueMoveStatus();
 
-  FLOAT_T getLastProbeDistance();
+  double getLastProbeDistance();
 
   void reset();
 	

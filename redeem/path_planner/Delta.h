@@ -49,42 +49,42 @@ struct DeltaPathConstants
   Vector3 towerY;
   Vector3 towerX2;
   Vector3 towerY2;
-  FLOAT_T time;
-  FLOAT_T axisCore1;
-  FLOAT_T axisCore2;
+  double time;
+  double axisCore1;
+  double axisCore2;
 };
 
 class Delta {
  private:
-  FLOAT_T L; // lenth of rod
-  FLOAT_T r; // Radius of columns
+  double L; // lenth of rod
+  double r; // Radius of columns
 	
-  FLOAT_T Avx, Avy, Bvx, Bvy, Cvx, Cvy;
-  FLOAT_T A_radial, B_radial, C_radial;
-  FLOAT_T A_angular, B_angular, C_angular;
+  double Avx, Avy, Bvx, Bvy, Cvx, Cvy;
+  double A_radial, B_radial, C_radial;
+  double A_angular, B_angular, C_angular;
 
   void recalculate();
-  DeltaPathConstants calculatePathConstants(int axis, const IntVector3& deltaMotorStart, const IntVector3& deltaMotorEnd, const Vector3& stepsPerM, FLOAT_T time) const;
+  DeltaPathConstants calculatePathConstants(int axis, const IntVector3& deltaMotorStart, const IntVector3& deltaMotorEnd, const Vector3& stepsPerM, double time) const;
   void calculateSteps(int axis, const DeltaPathConstants& constants, std::vector<Step>& steps) const;
-  void calculateStepsInOneDirection(int axis, const DeltaPathConstants& constants, FLOAT_T startTime, FLOAT_T endTime, FLOAT_T towerX, FLOAT_T towerY, FLOAT_T startHeight, FLOAT_T endHeight, std::vector<Step>& steps) const;
-  FLOAT_T calculateCriticalPointTimeForAxis(int axis, const DeltaPathConstants& constants) const;
-  FLOAT_T calculateStepTime(int axis, const DeltaPathConstants& constants, FLOAT_T towerZ, FLOAT_T minTime, FLOAT_T maxTime) const;
+  void calculateStepsInOneDirection(int axis, const DeltaPathConstants& constants, double startTime, double endTime, double towerX, double towerY, double startHeight, double endHeight, std::vector<Step>& steps) const;
+  double calculateCriticalPointTimeForAxis(int axis, const DeltaPathConstants& constants) const;
+  double calculateStepTime(int axis, const DeltaPathConstants& constants, double towerZ, double minTime, double maxTime) const;
 	
  public:
   Delta();
   ~Delta();
 
-  void setMainDimensions(FLOAT_T L_in, FLOAT_T r_in);
-  void setRadialError(FLOAT_T A_radial_in, FLOAT_T B_radial_in, FLOAT_T C_radial_in);
-  void setAngularError(FLOAT_T A_angular_in, FLOAT_T B_angular_in, FLOAT_T C_angular_in);
+  void setMainDimensions(double L_in, double r_in);
+  void setRadialError(double A_radial_in, double B_radial_in, double C_radial_in);
+  void setAngularError(double A_angular_in, double B_angular_in, double C_angular_in);
 
   Vector3 worldToDelta(const Vector3& pos) const;
-  void worldToDelta(FLOAT_T X, FLOAT_T Y, FLOAT_T Z, FLOAT_T* Az, FLOAT_T* Bz, FLOAT_T* Cz);
+  void worldToDelta(double X, double Y, double Z, double* Az, double* Bz, double* Cz);
   Vector3 deltaToWorld(const Vector3& pos) const;
-  void deltaToWorld(FLOAT_T Az, FLOAT_T Bz, FLOAT_T Cz, FLOAT_T* X, FLOAT_T* Y, FLOAT_T* Z);
+  void deltaToWorld(double Az, double Bz, double Cz, double* X, double* Y, double* Z);
   IntVector3 worldToDeltaMotorPos(const Vector3& pos, const Vector3& stepsPerM);
-  void verticalOffset(FLOAT_T Az, FLOAT_T Bz, FLOAT_T Cz, FLOAT_T* offset) const;
-  void calculateMove(const IntVector3& deltaStart, const IntVector3& deltaEnd, const Vector3& stepsPerM, FLOAT_T speed, std::array<std::vector<Step>, NUM_AXES>& steps) const;
+  void verticalOffset(double Az, double Bz, double Cz, double* offset) const;
+  void calculateMove(const IntVector3& deltaStart, const IntVector3& deltaEnd, const Vector3& stepsPerM, double speed, std::array<std::vector<Step>, NUM_AXES>& steps) const;
 };
 
 #endif

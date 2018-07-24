@@ -9,7 +9,7 @@
 
 
 // Constructors accept Cartesian coordinates or another vector.
-Vector3::Vector3( FLOAT_T x, FLOAT_T y, FLOAT_T z )
+Vector3::Vector3( double x, double y, double z )
     : x(x), y(y), z(z) {}
 Vector3::Vector3( const Vector3 &v )
     : x(v.x), y(v.y), z(v.z) {}
@@ -26,12 +26,12 @@ Vector3& Vector3::operator-=( const Vector3 &v )
     x -= v.x; y -= v.y; z -= v.z;
     return *this;
 }
-Vector3& Vector3::operator*=( FLOAT_T v )
+Vector3& Vector3::operator*=( double v )
 {
     x *= v; y *= v; z *= v;
     return *this;
 }
-Vector3& Vector3::operator/=( FLOAT_T v )
+Vector3& Vector3::operator/=( double v )
 {
     x /= v; y /= v; z /= v;
     return *this;
@@ -43,13 +43,13 @@ Vector3& Vector3::operator=( const Vector3 &v )
 }
 Vector3& Vector3::norm()
 {
-    FLOAT_T mag = vabs(*this);
+    double mag = vabs(*this);
     if ( mag > 0.0 ) {
 	*this /= mag;
     }
     return *this;
 }
-FLOAT_T& Vector3::operator[](int i)
+double& Vector3::operator[](int i)
 {
   switch (i)
   {
@@ -63,7 +63,7 @@ FLOAT_T& Vector3::operator[](int i)
     throw std::out_of_range("Vector3 index out of range");
   }
 }
-const FLOAT_T& Vector3::operator[](int i) const
+const double& Vector3::operator[](int i) const
 {
   switch (i)
   {
@@ -97,7 +97,7 @@ bool Vector3::hasNan() const
 
 // Helper functions for the Vector3 class.
 
-FLOAT_T vabs( const Vector3 &v )
+double vabs( const Vector3 &v )
 {
     return sqrt(v.x*v.x + v.y*v.y + v.z*v.z);
 }
@@ -121,23 +121,23 @@ Vector3 operator-( const Vector3 &v1, const Vector3 &v2 )
 {
     return Vector3(v1.x - v2.x, v1.y - v2.y, v1.z - v2.z);
 }
-bool equal( const Vector3 &v1, const Vector3 &v2, FLOAT_T tolerance)
+bool equal( const Vector3 &v1, const Vector3 &v2, double tolerance)
 {
     return vabs(v1 - v2) < tolerance;
 }
-Vector3 operator*( const Vector3 &v1, FLOAT_T v2 )
+Vector3 operator*( const Vector3 &v1, double v2 )
 {
     return Vector3(v1.x*v2, v1.y*v2, v1.z*v2);
 }
-Vector3 operator*( FLOAT_T v1, const Vector3 &v2 )
+Vector3 operator*( double v1, const Vector3 &v2 )
 {
     return Vector3(v2.x*v1, v2.y*v1, v2.z*v1);
 }
-Vector3 operator/( const Vector3 &v1, FLOAT_T v2 )
+Vector3 operator/( const Vector3 &v1, double v2 )
 {
     return Vector3(v1.x/v2, v1.y/v2, v1.z/v2);
 }
-FLOAT_T dot( const Vector3 &v1, const Vector3 &v2 )
+double dot( const Vector3 &v1, const Vector3 &v2 )
 {
     return v1.x*v2.x + v1.y*v2.y + v1.z*v2.z;
 }
