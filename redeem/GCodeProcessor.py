@@ -29,6 +29,7 @@ import importlib
 from threading import Event
 from six import iteritems
 from gcodes import GCodeCommand
+from PathPlanner import SyncCallback
 import Sync
 try:
   from Gcode import Gcode
@@ -36,9 +37,16 @@ except ImportError:
   from redeem.Gcode import Gcode
 
 
+class GCodePerformanceCounters:
+  def __init__(self):
+    self.gcodes_executed = 0
+    self.start_time = 0
+
+
 class GCodeProcessor:
   def __init__(self, printer):
     self.printer = printer
+    self.counters = GCodePerformanceCounters()
     self.sync_event_needed = False
     self.gcodes = {}
     try:
@@ -107,6 +115,9 @@ class GCodeProcessor:
       self.resolve(gcode)
     if gcode.command is None:
       return
+
+    self.counters.gcodes_executed += 1
+
     try:
       gcode.command.execute(gcode)
     except Exception as e:
@@ -118,12 +129,14 @@ class GCodeProcessor:
     self.resolve(gcode)
     if gcode.command is None:
       return
+
     # If an M116 is running, peek at the incoming Gcode
     if self.peek(gcode):
       return
     if gcode.command.is_async():
       self.sync_event_needed = True
-      self.printer.async_commands.put(gcode)
+      self.execute(gcode)
+      self.printer.reply(gcode)
     elif gcode.command.is_buffered():
       # if we previously queued an async code, we need to queue an event to get back into sync
       if self.sync_event_needed:
@@ -131,9 +144,6 @@ class GCodeProcessor:
         self._make_buffered_queue_wait_for_async_queue()
         self.sync_event_needed = False
       self.printer.commands.put(gcode)
-      if gcode.command.is_sync():
-        # Yes, it goes into both queues!
-        self.printer.sync_commands.put(gcode)
     else:
       self.printer.unbuffered_commands.put(gcode)
     if gcode.code() in ["M109", "M190"]:
@@ -143,6 +153,8 @@ class GCodeProcessor:
     if self.printer.running_M116 and gcode.code() == "M108":
       self.execute(gcode)
       return True
+    elif gcode.code() == "M1500":
+      gcode.command.execute_custom(gcode, self.counters)
     return False
 
   def get_long_description(self, gcode):
@@ -165,34 +177,30 @@ class GCodeProcessor:
 
   def _make_buffered_queue_wait_for_async_queue(self):
     logging.info("queueing buffered-to-async sync event")
-    state = Sync.SyncState()
-    buffered = Sync.SyncBufferedToAsync_Buffered(self.printer, state)
-    async = Sync.SyncBufferedToAsync_Async(self.printer, state)
+    event = Event()
+    callback = SyncCallback(event)
 
+    self.printer.path_planner.native_planner.queueSyncEvent(callback, False)
+
+    buffered = Sync.BufferedWaitEvent(self.printer, event)
     buffered_gcode = Gcode({"message": "SyncBufferedToAsync_Buffered", "prot": "internal"})
     buffered_gcode.command = buffered
 
-    async_gcode = Gcode({"message": "SyncBufferedToAsync_Async", "prot": "internal"})
-    async_gcode.command = async
+    # buffered doesn't actually use this, but we need it to stay alive per the garbage collector
+    buffered.native_callback = callback
 
     self.printer.commands.put(buffered_gcode)
-    self.printer.sync_commands.put(async_gcode)
-    self.printer.async_commands.put(async_gcode)
     logging.info("done queueing buffered-to-async sync event")
 
   def _make_async_queue_wait_for_buffered_queue(self):
     logging.info("queueing async-to-buffered sync event")
-    state = Sync.SyncState()
-    buffered = Sync.SyncAsyncToBuffered_Buffered(self.printer, state)
-    async = Sync.SyncAsyncToBuffered_Async(self.printer, state)
 
+    wait_event = self.printer.path_planner.native_planner.queueWaitEvent()
+
+    buffered = Sync.BufferedSyncEvent(self.printer, wait_event)
     buffered_gcode = Gcode({"message": "SyncAsyncToBuffered_Buffered", "prot": "internal"})
     buffered_gcode.command = buffered
 
-    async_gcode = Gcode({"message": "SyncAsyncToBuffered_Async", "prot": "internal"})
-    async_gcode.command = async
-
-    self.printer.async_commands.put(async_gcode)
     self.printer.commands.put(buffered_gcode)
     logging.info("done queueing async-to-buffered sync event")
 

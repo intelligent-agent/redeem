@@ -27,11 +27,25 @@
 #define __PathPlanner__Path__
 
 #include "StepperCommand.h"
+#include "SyncCallback.h"
 #include "config.h"
 #include "vectorN.h"
 #include <array>
 #include <assert.h>
 #include <atomic>
+#include <future>
+#if __has_include(<optional>)
+#include <optional>
+#else
+#include <experimental/optional>
+
+// nasty hack so std::experimental::optional becomes std::optional
+namespace std
+{
+using namespace experimental;
+}
+
+#endif
 #include <stddef.h>
 #include <stdint.h>
 #include <string>
@@ -73,13 +87,30 @@
 
 class Delta;
 
+class WaitEvent
+{
+private:
+    std::promise<void> waitIsComplete;
+
+public:
+    void signalWaitComplete()
+    {
+        waitIsComplete.set_value();
+    }
+
+    std::future<void> getFuture()
+    {
+        return waitIsComplete.get_future();
+    }
+};
+
 struct Step
 {
-    FLOAT_T time;
+    double time;
     unsigned char axis;
     bool direction;
 
-    Step(FLOAT_T time, unsigned char axis, bool direction)
+    Step(double time, unsigned char axis, bool direction)
         : time(time)
         , axis(axis)
         , direction(direction)
@@ -94,22 +125,22 @@ struct Step
 
 struct StepperPathParameters
 {
-    FLOAT_T baseSpeed;
-    FLOAT_T startSpeed;
-    FLOAT_T cruiseSpeed;
-    FLOAT_T endSpeed;
-    FLOAT_T accel;
-    FLOAT_T distance;
+    double baseSpeed;
+    double startSpeed;
+    double cruiseSpeed;
+    double endSpeed;
+    double accel;
+    double distance;
 
-    FLOAT_T baseAccelEnd;
-    FLOAT_T baseCruiseEnd;
-    FLOAT_T baseMoveEnd;
+    double baseAccelEnd;
+    double baseCruiseEnd;
+    double baseMoveEnd;
 
-    FLOAT_T moveEnd;
+    double moveEnd;
 
-    mutable unsigned long long accelSteps;
-    mutable unsigned long long cruiseSteps;
-    mutable unsigned long long decelSteps;
+    mutable unsigned int accelSteps;
+    mutable unsigned int cruiseSteps;
+    mutable unsigned int decelSteps;
 
     inline void zero()
     {
@@ -124,9 +155,9 @@ struct StepperPathParameters
         decelSteps = 0;
     }
 
-    FLOAT_T dilateTime(FLOAT_T t) const;
+    double dilateTime(double t) const;
 
-    FLOAT_T finalTime() const;
+    double finalTime() const;
 };
 
 class Path
@@ -135,29 +166,33 @@ private:
     // These fields change throughout the lifecycle of a Path
     unsigned int joinFlags;
     std::atomic_uint_fast32_t flags;
-    FLOAT_T maxJunctionSpeed; /// Max. junction speed between this and next segment
+    double maxJunctionSpeed; /// Max. junction speed between this and next segment
 
     // These fields are constant after initialization
-    FLOAT_T distance; /// Total distance of the move in NUM_AXIS-dimensional space in meters
+    double distance; /// Total distance of the move in NUM_AXIS-dimensional space in meters
     unsigned char moveMask;
-    unsigned long long timeInTicks; /// Time for completing a move (optimistically assuming it runs full speed the whole time)
+    int64_t estimatedTime; /// Time for completing a move (optimistically assuming it runs full speed the whole time)
     VectorN speeds;
-    FLOAT_T fullSpeed; /// Cruising speed in m/s
-    FLOAT_T startSpeed; /// Starting speed in m/s
-    FLOAT_T endSpeed; /// Exit speed in m/s
-    FLOAT_T minSpeed; /// Minimum allowable speed for the move
-    FLOAT_T accel; /// Acceleration in m/s^2
+    VectorN worldMove;
+    double fullSpeed; /// Cruising speed in m/s
+    double startSpeed; /// Starting speed in m/s
+    double endSpeed; /// Exit speed in m/s
+    double accel; /// Acceleration in m/s^2
     IntVectorN startMachinePos; /// Starting position of the machine
 
     StepperPathParameters stepperPath;
     std::array<std::vector<Step>, NUM_AXES> steps;
 
-    FLOAT_T calculateSafeSpeed(const VectorN& worldMove, const VectorN& maxSpeedJumps);
+    SyncCallback* syncCallback;
+    std::optional<std::future<void>> waitEvent;
+
+    Path(const Path& path) = delete;
+    Path& operator=(const Path&) = delete;
 
 public:
     Path();
-    Path(const Path& path);
-    Path& operator=(const Path&);
+    Path(Path&&);
+
     Path& operator=(Path&&);
 
     void initialize(const IntVectorN& machineStart,
@@ -165,17 +200,16 @@ public:
         const VectorN& worldStart,
         const VectorN& worldEnd,
         const VectorN& stepsPerM,
-        const VectorN& maxSpeedJumps, /// Maximum allowable speed jumps in m/s
         const VectorN& maxSpeeds, /// Maximum allowable speeds in m/s
         const VectorN& maxAccelMPerSquareSecond,
-        FLOAT_T requestedSpeed,
-        FLOAT_T requestedAccel,
+        double requestedSpeed,
+        double requestedAccel,
         int axisConfig,
         const Delta& delta,
         bool cancelable,
         bool is_probe);
 
-    FLOAT_T runFinalStepCalculations();
+    double runFinalStepCalculations();
 
     void zero();
 
@@ -265,9 +299,31 @@ public:
         return flags & FLAG_SYNC_WAIT;
     }
 
-    inline void setSyncEvent(bool wait)
+    inline bool isWaitEvent()
+    {
+        return (bool)waitEvent;
+    }
+
+    std::future<void>& getWaitEvent()
+    {
+        assert(isWaitEvent());
+        return waitEvent.value();
+    }
+
+    void setWaitEvent(std::future<void>&& future)
+    {
+        waitEvent = std::move(future);
+    }
+
+    SyncCallback* getSyncCallback()
+    {
+        return syncCallback;
+    }
+
+    inline void setSyncEvent(SyncCallback& callback, bool wait)
     {
         flags |= wait ? FLAG_SYNC_WAIT : FLAG_SYNC;
+        this->syncCallback = &callback;
     }
 
     inline bool willUsePressureAdvance()
@@ -300,14 +356,14 @@ public:
         return moveMask & 255;
     }
 
-    inline unsigned long getTimeInTicks()
+    inline int64_t getEstimatedTime()
     {
-        return timeInTicks;
+        return estimatedTime;
     }
 
-    inline void setTimeInTicks(unsigned long time)
+    inline void setEstimatedTime(int64_t time)
     {
-        timeInTicks = time;
+        estimatedTime = time;
     }
 
     inline const VectorN& getSpeeds()
@@ -315,58 +371,63 @@ public:
         return speeds;
     }
 
-    inline FLOAT_T getMaxJunctionSpeed()
+    inline const VectorN& getWorldMove()
+    {
+        return worldMove;
+    }
+
+    inline double getMaxJunctionSpeed()
     {
         return maxJunctionSpeed;
     }
 
-    inline void setMaxJunctionSpeed(FLOAT_T speed)
+    inline void setMaxJunctionSpeed(double speed)
     {
         maxJunctionSpeed = speed;
     }
 
-    inline FLOAT_T getStartSpeed()
+    inline double getStartSpeed()
     {
         return startSpeed;
     }
 
-    inline void setStartSpeed(FLOAT_T speed)
+    inline void setStartSpeed(double speed)
     {
         startSpeed = speed;
         invalidateStepperPathParameters();
     }
 
-    inline FLOAT_T getFullSpeed()
+    inline double getFullSpeed()
     {
         return fullSpeed;
     }
 
-    inline FLOAT_T getEndSpeed()
+    inline double getEndSpeed()
     {
         return endSpeed;
     }
 
-    inline void setEndSpeed(FLOAT_T speed)
+    inline void setEndSpeed(double speed)
     {
         endSpeed = speed;
         invalidateStepperPathParameters();
     }
 
-    inline FLOAT_T getMinSpeed()
-    {
-        return minSpeed;
-    }
-
-    inline FLOAT_T getAcceleration()
+    inline double getAcceleration()
     {
         return accel;
+    }
+
+    inline double getDistance()
+    {
+        return distance;
     }
 
     /// Note: This magical number is present because it's useful in the formula
     /// v^2 = v0^2 + 2 * a * (r - r0)
     /// This determines final velocity from initial velocity, acceleration, and
     /// distance traveled. It's useful because it doesn't involve time.
-    inline FLOAT_T getAccelerationDistance2()
+    inline double getAccelerationDistance2()
     {
         return 2.0 * distance * accel;
     }

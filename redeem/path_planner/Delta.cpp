@@ -31,7 +31,7 @@
 #include <assert.h>
 #include <math.h>
 
-void calculateLinearMove(const int axis, const long long startStep, const long long endStep, const FLOAT_T time, std::vector<Step>& steps);
+void calculateLinearMove(const int axis, const int startStep, const int endStep, const double time, std::vector<Step>& steps);
 
 Delta::Delta()
 {
@@ -51,7 +51,7 @@ Delta::Delta()
 
 Delta::~Delta() {}
 
-void Delta::setMainDimensions(FLOAT_T L_in, FLOAT_T r_in)
+void Delta::setMainDimensions(double L_in, double r_in)
 {
     L = L_in;
     r = r_in;
@@ -59,7 +59,7 @@ void Delta::setMainDimensions(FLOAT_T L_in, FLOAT_T r_in)
     recalculate();
 }
 
-void Delta::setRadialError(FLOAT_T A_radial_in, FLOAT_T B_radial_in, FLOAT_T C_radial_in)
+void Delta::setRadialError(double A_radial_in, double B_radial_in, double C_radial_in)
 {
     A_radial = A_radial_in;
     B_radial = B_radial_in;
@@ -67,7 +67,7 @@ void Delta::setRadialError(FLOAT_T A_radial_in, FLOAT_T B_radial_in, FLOAT_T C_r
 
     recalculate();
 }
-void Delta::setAngularError(FLOAT_T A_angular_in, FLOAT_T B_angular_in, FLOAT_T C_angular_in)
+void Delta::setAngularError(double A_angular_in, double B_angular_in, double C_angular_in)
 {
     A_angular = A_angular_in;
     B_angular = B_angular_in;
@@ -76,7 +76,7 @@ void Delta::setAngularError(FLOAT_T A_angular_in, FLOAT_T B_angular_in, FLOAT_T 
     recalculate();
 }
 
-FLOAT_T degreesToRadians(FLOAT_T degrees)
+double degreesToRadians(double degrees)
 {
     return degrees * M_PI / 180.0;
 }
@@ -84,9 +84,9 @@ FLOAT_T degreesToRadians(FLOAT_T degrees)
 void Delta::recalculate(void)
 {
     // Column theta
-    const FLOAT_T At = degreesToRadians(90.0 + A_angular);
-    const FLOAT_T Bt = degreesToRadians(210.0 + B_angular);
-    const FLOAT_T Ct = degreesToRadians(330.0 + C_angular);
+    const double At = degreesToRadians(90.0 + A_angular);
+    const double Bt = degreesToRadians(210.0 + B_angular);
+    const double Ct = degreesToRadians(330.0 + C_angular);
 
     // Calculate the column positions
     Avx = (A_radial + r) * cos(At);
@@ -108,20 +108,20 @@ Vector3 Delta::worldToDelta(const Vector3& pos) const
     A, B, and C
   */
 
-    const FLOAT_T L2 = L * L;
+    const double L2 = L * L;
 
-    const FLOAT_T XA = pos.x - Avx;
-    const FLOAT_T XB = pos.x - Bvx;
-    const FLOAT_T XC = pos.x - Cvx;
+    const double XA = pos.x - Avx;
+    const double XB = pos.x - Bvx;
+    const double XC = pos.x - Cvx;
 
-    const FLOAT_T YA = pos.y - Avy;
-    const FLOAT_T YB = pos.y - Bvy;
-    const FLOAT_T YC = pos.y - Cvy;
+    const double YA = pos.y - Avy;
+    const double YB = pos.y - Bvy;
+    const double YC = pos.y - Cvy;
 
     // Calculate the translation in carriage position
-    const FLOAT_T Acz = sqrt(L2 - XA * XA - YA * YA);
-    const FLOAT_T Bcz = sqrt(L2 - XB * XB - YB * YB);
-    const FLOAT_T Ccz = sqrt(L2 - XC * XC - YC * YC);
+    const double Acz = sqrt(L2 - XA * XA - YA * YA);
+    const double Bcz = sqrt(L2 - XB * XB - YB * YB);
+    const double Ccz = sqrt(L2 - XC * XC - YC * YC);
 
     // Calculate the position of the carriages
     return Vector3(Acz + pos.z, Bcz + pos.z, Ccz + pos.z);
@@ -131,7 +131,7 @@ Vector3 Delta::worldToDelta(const Vector3& pos) const
     //~ LOG("Delta: Cz = " << *Cz << "\n");
 }
 
-void Delta::worldToDelta(FLOAT_T X, FLOAT_T Y, FLOAT_T Z, FLOAT_T* Az, FLOAT_T* Bz, FLOAT_T* Cz)
+void Delta::worldToDelta(double X, double Y, double Z, double* Az, double* Bz, double* Cz)
 {
     const Vector3 result = worldToDelta(Vector3(X, Y, Z));
     *Az = result.x;
@@ -152,28 +152,28 @@ Vector3 Delta::deltaToWorld(const Vector3& pos) const
     const Vector3 p12 = p2 - p1;
     const Vector3 p13 = p3 - p1;
 
-    const FLOAT_T d = vabs(p12);
+    const double d = vabs(p12);
 
     const Vector3 ex = p12 / d;
 
-    const FLOAT_T i = dot(ex, p13);
+    const double i = dot(ex, p13);
     const Vector3 iex = i * ex;
 
     const Vector3 ey = (p13 - iex) / vabs(p13 - iex);
     const Vector3 ez = cross(ex, ey);
 
-    const FLOAT_T j = dot(ey, p13);
+    const double j = dot(ey, p13);
 
-    const FLOAT_T x = d / 2.0;
-    const FLOAT_T y = ((i * i + j * j) / 2.0 - i * x) / j;
-    const FLOAT_T z = sqrt(L * L - x * x - y * y);
+    const double x = d / 2.0;
+    const double y = ((i * i + j * j) / 2.0 - i * x) / j;
+    const double z = sqrt(L * L - x * x - y * y);
 
     const Vector3 effector = p1 + x * ex + y * ey - z * ez;
 
     return effector;
 }
 
-void Delta::deltaToWorld(FLOAT_T Az, FLOAT_T Bz, FLOAT_T Cz, FLOAT_T* X, FLOAT_T* Y, FLOAT_T* Z)
+void Delta::deltaToWorld(double Az, double Bz, double Cz, double* X, double* Y, double* Z)
 {
     const Vector3 result = deltaToWorld(Vector3(Az, Bz, Cz));
     *X = result.x;
@@ -187,7 +187,7 @@ IntVector3 Delta::worldToDeltaMotorPos(const Vector3& pos, const Vector3& stepsP
     return (deltaPos * stepsPerM).round();
 }
 
-void Delta::verticalOffset(FLOAT_T Az, FLOAT_T Bz, FLOAT_T Cz, FLOAT_T* offset) const
+void Delta::verticalOffset(double Az, double Bz, double Cz, double* offset) const
 {
     // vertical offset between circumcenter of carriages and the effector
 
@@ -197,11 +197,11 @@ void Delta::verticalOffset(FLOAT_T Az, FLOAT_T Bz, FLOAT_T Cz, FLOAT_T* offset) 
 
     // normal to the plane
     Vector3 plane_normal = cross(p1 - p2, p2 - p3);
-    FLOAT_T plane_normal_length = vabs(plane_normal);
+    double plane_normal_length = vabs(plane_normal);
     plane_normal /= plane_normal_length;
 
     // radius of circle
-    FLOAT_T r = (vabs(p1 - p2) * vabs(p2 - p3) * vabs(p3 - p1)) / (2 * plane_normal_length);
+    double r = (vabs(p1 - p2) * vabs(p2 - p3) * vabs(p3 - p1)) / (2 * plane_normal_length);
 
     // distance below the plane
     *offset = plane_normal.z * sqrt(L * L - r * r);
@@ -209,7 +209,7 @@ void Delta::verticalOffset(FLOAT_T Az, FLOAT_T Bz, FLOAT_T Cz, FLOAT_T* offset) 
     return;
 }
 
-DeltaPathConstants Delta::calculatePathConstants(int axis, const IntVector3& deltaMotorStart, const IntVector3& deltaMotorEnd, const Vector3& stepsPerM, FLOAT_T time) const
+DeltaPathConstants Delta::calculatePathConstants(int axis, const IntVector3& deltaMotorStart, const IntVector3& deltaMotorEnd, const Vector3& stepsPerM, double time) const
 {
     DeltaPathConstants result;
     result.deltaMotorStart = deltaMotorStart;
@@ -230,25 +230,25 @@ DeltaPathConstants Delta::calculatePathConstants(int axis, const IntVector3& del
     result.towerY2 = result.towerY * result.towerY;
 
     const DeltaPathConstants& c = result;
-    const FLOAT_T& Xo = c.worldStart.x;
-    const FLOAT_T& Yo = c.worldStart.y;
-    const FLOAT_T& Zo = c.worldStart.z;
-    const FLOAT_T& Xo2 = c.worldStart2.x;
-    const FLOAT_T& Yo2 = c.worldStart2.y;
-    const FLOAT_T& Zo2 = c.worldStart2.z;
-    const FLOAT_T& Xd = c.axisSpeeds.x;
-    const FLOAT_T& Yd = c.axisSpeeds.y;
-    const FLOAT_T& Zd = c.axisSpeeds.z;
-    const FLOAT_T& Xd2 = c.axisSpeeds2.x;
-    const FLOAT_T& Yd2 = c.axisSpeeds2.y;
-    const FLOAT_T& Zd2 = c.axisSpeeds2.z;
+    const double& Xo = c.worldStart.x;
+    const double& Yo = c.worldStart.y;
+    const double& Zo = c.worldStart.z;
+    const double& Xo2 = c.worldStart2.x;
+    const double& Yo2 = c.worldStart2.y;
+    const double& Zo2 = c.worldStart2.z;
+    const double& Xd = c.axisSpeeds.x;
+    const double& Yd = c.axisSpeeds.y;
+    const double& Zd = c.axisSpeeds.z;
+    const double& Xd2 = c.axisSpeeds2.x;
+    const double& Yd2 = c.axisSpeeds2.y;
+    const double& Zd2 = c.axisSpeeds2.z;
 
-    const FLOAT_T L2 = L * L;
+    const double L2 = L * L;
 
-    const FLOAT_T& towerX = c.towerX[axis];
-    const FLOAT_T& towerY = c.towerY[axis];
-    const FLOAT_T& towerX2 = c.towerX2[axis];
-    const FLOAT_T& towerY2 = c.towerY2[axis];
+    const double& towerX = c.towerX[axis];
+    const double& towerY = c.towerY[axis];
+    const double& towerX2 = c.towerX2[axis];
+    const double& towerY2 = c.towerY2[axis];
 
     result.axisCore1 = (-Yd2 - Xd2) * Zo2 + (2 * Yd * Yo - 2 * towerY * Yd + 2 * Xd * Xo - 2 * towerX * Xd) * Zd * Zo + (-Yo2 + 2 * towerY * Yo - Xo2 + 2 * towerX * Xo + L2 - towerY2 - towerX2) * Zd2 - Xd2 * Yo2 + ((2 * Xd * Xo - 2 * towerX * Xd) * Yd + 2 * towerY * Xd2) * Yo + (-Xo2 + 2 * towerX * Xo + L2 - towerX2) * Yd2 + (2 * towerX * towerY * Xd - 2 * towerY * Xd * Xo) * Yd + (L2 - towerY2) * Xd2;
 
@@ -258,7 +258,7 @@ DeltaPathConstants Delta::calculatePathConstants(int axis, const IntVector3& del
     return result;
 }
 
-void Delta::calculateMove(const IntVector3& deltaStart, const IntVector3& deltaEnd, const Vector3& stepsPerM, FLOAT_T time, std::array<std::vector<Step>, NUM_AXES>& steps) const
+void Delta::calculateMove(const IntVector3& deltaStart, const IntVector3& deltaEnd, const Vector3& stepsPerM, double time, std::array<std::vector<Step>, NUM_AXES>& steps) const
 {
     auto const timestamp = std::chrono::system_clock::now();
     const DeltaPathConstants c = calculatePathConstants(0, deltaStart, deltaEnd, stepsPerM, time);
@@ -296,10 +296,10 @@ void Delta::calculateSteps(int axis, const DeltaPathConstants& c, std::vector<St
 {
     assert(axis >= 0 && axis <= 2);
 
-    const FLOAT_T towerX = (axis == 0 ? Avx : (axis == 1 ? Bvx : Cvx));
-    const FLOAT_T towerY = (axis == 0 ? Avy : (axis == 1 ? Bvy : Cvy));
+    const double towerX = (axis == 0 ? Avx : (axis == 1 ? Bvx : Cvx));
+    const double towerY = (axis == 0 ? Avy : (axis == 1 ? Bvy : Cvy));
 
-    const FLOAT_T criticalPointTime = calculateCriticalPointTimeForAxis(axis, c);
+    const double criticalPointTime = calculateCriticalPointTimeForAxis(axis, c);
 
     assert(steps.empty());
 
@@ -316,8 +316,8 @@ void Delta::calculateSteps(int axis, const DeltaPathConstants& c, std::vector<St
     {
         const Vector3 criticalPointCartesianPosition = c.worldStart + (c.axisSpeeds * criticalPointTime);
         const Vector3 criticalPointDeltaPosition = worldToDelta(criticalPointCartesianPosition);
-        const FLOAT_T criticalPointHeight = criticalPointDeltaPosition[axis];
-        const long long criticalPointMotorPos = std::llround(criticalPointHeight * c.stepsPerM[axis]);
+        const double criticalPointHeight = criticalPointDeltaPosition[axis];
+        const long criticalPointMotorPos = std::lround(criticalPointHeight * c.stepsPerM[axis]);
 
         LOG("axis " << axis << " has a critical point at " << criticalPointTime << " - calculating steps from " << c.deltaStart[axis] << " to " << criticalPointHeight << " to " << c.deltaEnd[axis] << std::endl);
         steps.reserve(std::abs(c.deltaMotorStart[axis] - criticalPointMotorPos) + std::abs(criticalPointMotorPos - c.deltaMotorEnd[axis]));
@@ -330,22 +330,22 @@ void Delta::calculateSteps(int axis, const DeltaPathConstants& c, std::vector<St
     }
 }
 
-void Delta::calculateStepsInOneDirection(int axis, const DeltaPathConstants& c, FLOAT_T startTime, FLOAT_T endTime, FLOAT_T towerX, FLOAT_T towerY, FLOAT_T startHeight, FLOAT_T endHeight, std::vector<Step>& steps) const
+void Delta::calculateStepsInOneDirection(int axis, const DeltaPathConstants& c, double startTime, double endTime, double towerX, double towerY, double startHeight, double endHeight, std::vector<Step>& steps) const
 {
     const bool direction = startHeight < endHeight;
 
-    const long long startStep = std::llroundl(startHeight * c.stepsPerM[axis]); // m * (steps/m) = step
-    const long long endStep = std::llroundl(endHeight * c.stepsPerM[axis]);
+    const int startStep = std::lroundl(startHeight * c.stepsPerM[axis]); // m * (steps/m) = step
+    const int endStep = std::lroundl(endHeight * c.stepsPerM[axis]);
 
-    const long long stepIncrement = direction ? 1 : -1;
-    const FLOAT_T stepOffset = stepIncrement / 2.0;
+    const int stepIncrement = direction ? 1 : -1;
+    const double stepOffset = stepIncrement / 2.0;
 
-    long long step = startStep;
-    FLOAT_T time = startTime;
+    int step = startStep;
+    double time = startTime;
 
     while (step != endStep)
     {
-        const FLOAT_T height = (step + stepOffset) / c.stepsPerM[axis];
+        const double height = (step + stepOffset) / c.stepsPerM[axis];
 
         time = calculateStepTime(axis, c, height, time, endTime);
 
@@ -360,31 +360,31 @@ void Delta::calculateStepsInOneDirection(int axis, const DeltaPathConstants& c, 
     }
 }
 
-FLOAT_T Delta::calculateCriticalPointTimeForAxis(int axis, const DeltaPathConstants& c) const
+double Delta::calculateCriticalPointTimeForAxis(int axis, const DeltaPathConstants& c) const
 {
     // These are convenience names to make the math more readable
-    const FLOAT_T& Xo = c.worldStart.x;
-    const FLOAT_T& Yo = c.worldStart.y;
-    const FLOAT_T& Xo2 = c.worldStart2.x;
-    const FLOAT_T& Yo2 = c.worldStart2.y;
-    const FLOAT_T& Xd = c.axisSpeeds.x;
-    const FLOAT_T& Yd = c.axisSpeeds.y;
-    const FLOAT_T& Zd = c.axisSpeeds.z;
-    const FLOAT_T& Xd2 = c.axisSpeeds2.x;
-    const FLOAT_T& Yd2 = c.axisSpeeds2.y;
-    const FLOAT_T& Zd2 = c.axisSpeeds2.z;
-    const FLOAT_T& Xd3 = c.axisSpeeds3.x;
-    const FLOAT_T& Yd3 = c.axisSpeeds3.y;
-    const FLOAT_T& Xd4 = c.axisSpeeds4.x;
-    const FLOAT_T& Yd4 = c.axisSpeeds4.y;
+    const double& Xo = c.worldStart.x;
+    const double& Yo = c.worldStart.y;
+    const double& Xo2 = c.worldStart2.x;
+    const double& Yo2 = c.worldStart2.y;
+    const double& Xd = c.axisSpeeds.x;
+    const double& Yd = c.axisSpeeds.y;
+    const double& Zd = c.axisSpeeds.z;
+    const double& Xd2 = c.axisSpeeds2.x;
+    const double& Yd2 = c.axisSpeeds2.y;
+    const double& Zd2 = c.axisSpeeds2.z;
+    const double& Xd3 = c.axisSpeeds3.x;
+    const double& Yd3 = c.axisSpeeds3.y;
+    const double& Xd4 = c.axisSpeeds4.x;
+    const double& Yd4 = c.axisSpeeds4.y;
     ;
 
-    const FLOAT_T L2 = L * L;
+    const double L2 = L * L;
 
-    const FLOAT_T& towerX = c.towerX[axis];
-    const FLOAT_T& towerY = c.towerY[axis];
-    const FLOAT_T& towerX2 = c.towerX2[axis];
-    const FLOAT_T& towerY2 = c.towerY2[axis];
+    const double& towerX = c.towerX[axis];
+    const double& towerY = c.towerY[axis];
+    const double& towerX2 = c.towerX2[axis];
+    const double& towerY2 = c.towerY2[axis];
 
     if (c.axisSpeeds[2] == 0)
     {
@@ -394,8 +394,8 @@ FLOAT_T Delta::calculateCriticalPointTimeForAxis(int axis, const DeltaPathConsta
     {
         // With a Z move, there are two possible solutions, but we'll only want zero or one of them.
 
-        const FLOAT_T firstT = -(std::sqrt(-Xd2 * Yo2 + ((2 * Xd * Xo - 2 * towerX * Xd) * Yd + 2 * towerY * Xd2) * Yo + (-Xo2 + 2 * towerX * Xo + L2 - towerX2) * Yd2 + (2 * towerX * towerY * Xd - 2 * towerY * Xd * Xo) * Yd + (L2 - towerY2) * Xd2) * Zd * std::sqrt(Zd2 + Yd2 + Xd2) + (Yd * Yo - towerY * Yd + Xd * Xo - towerX * Xd) * Zd2 + (Yd3 + Xd2 * Yd) * Yo - towerY * Yd3 + (Xd * Xo - towerX * Xd) * Yd2 - towerY * Xd2 * Yd + Xd3 * Xo - towerX * Xd3) / ((Yd2 + Xd2) * Zd2 + Yd4 + 2 * Xd2 * Yd2 + Xd4);
-        const FLOAT_T secondT = (std::sqrt(-Xd2 * Yo2 + ((2 * Xd * Xo - 2 * towerX * Xd) * Yd + 2 * towerY * Xd2) * Yo + (-Xo2 + 2 * towerX * Xo + L2 - towerX2) * Yd2 + (2 * towerX * towerY * Xd - 2 * towerY * Xd * Xo) * Yd + (L2 - towerY2) * Xd2) * Zd * std::sqrt(Zd2 + Yd2 + Xd2) + (-Yd * Yo + towerY * Yd - Xd * Xo + towerX * Xd) * Zd2 + (-Yd3 - Xd2 * Yd) * Yo + towerY * Yd3 + (towerX * Xd - Xd * Xo) * Yd2 + towerY * Xd2 * Yd - Xd3 * Xo + towerX * Xd3) / ((Yd2 + Xd2) * Zd2 + Yd4 + 2 * Xd2 * Yd2 + Xd4);
+        const double firstT = -(std::sqrt(-Xd2 * Yo2 + ((2 * Xd * Xo - 2 * towerX * Xd) * Yd + 2 * towerY * Xd2) * Yo + (-Xo2 + 2 * towerX * Xo + L2 - towerX2) * Yd2 + (2 * towerX * towerY * Xd - 2 * towerY * Xd * Xo) * Yd + (L2 - towerY2) * Xd2) * Zd * std::sqrt(Zd2 + Yd2 + Xd2) + (Yd * Yo - towerY * Yd + Xd * Xo - towerX * Xd) * Zd2 + (Yd3 + Xd2 * Yd) * Yo - towerY * Yd3 + (Xd * Xo - towerX * Xd) * Yd2 - towerY * Xd2 * Yd + Xd3 * Xo - towerX * Xd3) / ((Yd2 + Xd2) * Zd2 + Yd4 + 2 * Xd2 * Yd2 + Xd4);
+        const double secondT = (std::sqrt(-Xd2 * Yo2 + ((2 * Xd * Xo - 2 * towerX * Xd) * Yd + 2 * towerY * Xd2) * Yo + (-Xo2 + 2 * towerX * Xo + L2 - towerX2) * Yd2 + (2 * towerX * towerY * Xd - 2 * towerY * Xd * Xo) * Yd + (L2 - towerY2) * Xd2) * Zd * std::sqrt(Zd2 + Yd2 + Xd2) + (-Yd * Yo + towerY * Yd - Xd * Xo + towerX * Xd) * Zd2 + (-Yd3 - Xd2 * Yd) * Yo + towerY * Yd3 + (towerX * Xd - Xd * Xo) * Yd2 + towerY * Xd2 * Yd - Xd3 * Xo + towerX * Xd3) / ((Yd2 + Xd2) * Zd2 + Yd4 + 2 * Xd2 * Yd2 + Xd4);
 
         assert(!std::isnan(firstT) && !std::isnan(secondT));
 
@@ -410,22 +410,22 @@ FLOAT_T Delta::calculateCriticalPointTimeForAxis(int axis, const DeltaPathConsta
     }
 }
 
-FLOAT_T Delta::calculateStepTime(int axis, const DeltaPathConstants& c, FLOAT_T towerZ, FLOAT_T minTime, FLOAT_T maxTime) const
+double Delta::calculateStepTime(int axis, const DeltaPathConstants& c, double towerZ, double minTime, double maxTime) const
 {
-    const FLOAT_T& Xo = c.worldStart.x;
-    const FLOAT_T& Yo = c.worldStart.y;
-    const FLOAT_T& Zo = c.worldStart.z;
-    const FLOAT_T& Xd = c.axisSpeeds.x;
-    const FLOAT_T& Yd = c.axisSpeeds.y;
-    const FLOAT_T& Zd = c.axisSpeeds.z;
-    const FLOAT_T& Xd2 = c.axisSpeeds2.x;
-    const FLOAT_T& Yd2 = c.axisSpeeds2.y;
-    const FLOAT_T& Zd2 = c.axisSpeeds2.z;
+    const double& Xo = c.worldStart.x;
+    const double& Yo = c.worldStart.y;
+    const double& Zo = c.worldStart.z;
+    const double& Xd = c.axisSpeeds.x;
+    const double& Yd = c.axisSpeeds.y;
+    const double& Zd = c.axisSpeeds.z;
+    const double& Xd2 = c.axisSpeeds2.x;
+    const double& Yd2 = c.axisSpeeds2.y;
+    const double& Zd2 = c.axisSpeeds2.z;
 
-    const FLOAT_T& towerX = c.towerX[axis];
-    const FLOAT_T& towerY = c.towerY[axis];
+    const double& towerX = c.towerX[axis];
+    const double& towerY = c.towerY[axis];
 
-    const FLOAT_T towerZ2 = towerZ * towerZ;
+    const double towerZ2 = towerZ * towerZ;
     /*
   The original formula here is that a delta move from (Xo, Yo, Zo) at speed (Xd, Yd, Zd)
   will be at point (towerX, towerY, towerZ) at these times:
@@ -474,17 +474,17 @@ FLOAT_T Delta::calculateStepTime(int axis, const DeltaPathConstants& c, FLOAT_T 
 
   */
 
-    const FLOAT_T core = std::sqrt(c.axisCore1 + c.axisCore2 * towerZ - (Xd2 + Yd2) * towerZ2);
+    const double core = std::sqrt(c.axisCore1 + c.axisCore2 * towerZ - (Xd2 + Yd2) * towerZ2);
 
-    const FLOAT_T denominator = (Zd2 + Yd2 + Xd2);
+    const double denominator = (Zd2 + Yd2 + Xd2);
 
-    const FLOAT_T firstTime = -(core + Zd * Zo - towerZ * Zd + Yd * Yo - towerY * Yd + Xd * Xo - towerX * Xd) / denominator;
-    const FLOAT_T secondTime = (core + -Zd * Zo + towerZ * Zd - Yd * Yo + towerY * Yd - Xd * Xo + towerX * Xd) / denominator;
+    const double firstTime = -(core + Zd * Zo - towerZ * Zd + Yd * Yo - towerY * Yd + Xd * Xo - towerX * Xd) / denominator;
+    const double secondTime = (core + -Zd * Zo + towerZ * Zd - Yd * Yo + towerY * Yd - Xd * Xo + towerX * Xd) / denominator;
 
     assert(!std::isnan(firstTime) && !std::isnan(secondTime));
 
-    const FLOAT_T smallerTime = std::min(firstTime, secondTime);
-    const FLOAT_T largerTime = std::max(firstTime, secondTime);
+    const double smallerTime = std::min(firstTime, secondTime);
+    const double largerTime = std::max(firstTime, secondTime);
 
     if (std::isnan(firstTime))
     {

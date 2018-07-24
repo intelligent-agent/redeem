@@ -38,9 +38,6 @@
 #define F_CPU_FLOAT 200000000.0
 #define CPU_CYCLE_LENGTH (1.0 / 200000000.0) // AKA 5e-9
 
-/* Data type for floating point */
-#define FLOAT_T double
-
 /* Negligible numeric error - also 1/50th of a CPU cycle */
 #define NEGLIGIBLE_ERROR 1e-10
 

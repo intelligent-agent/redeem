@@ -53,9 +53,9 @@ int PathPlanner::softEndStopApply(const VectorN& endPos)
 void PathPlanner::applyBedCompensation(VectorN& endPos)
 {
     // matrix*vector
-    FLOAT_T x = endPos[0] * matrix_bed_comp[0] + endPos[1] * matrix_bed_comp[1] + endPos[2] * matrix_bed_comp[2];
-    FLOAT_T y = endPos[0] * matrix_bed_comp[3] + endPos[1] * matrix_bed_comp[4] + endPos[2] * matrix_bed_comp[5];
-    FLOAT_T z = endPos[0] * matrix_bed_comp[6] + endPos[1] * matrix_bed_comp[7] + endPos[2] * matrix_bed_comp[8];
+    double x = endPos[0] * matrix_bed_comp[0] + endPos[1] * matrix_bed_comp[1] + endPos[2] * matrix_bed_comp[2];
+    double y = endPos[0] * matrix_bed_comp[3] + endPos[1] * matrix_bed_comp[4] + endPos[2] * matrix_bed_comp[5];
+    double z = endPos[0] * matrix_bed_comp[6] + endPos[1] * matrix_bed_comp[7] + endPos[2] * matrix_bed_comp[8];
 
     endPos[0] = x;
     endPos[1] = y;
@@ -65,6 +65,7 @@ void PathPlanner::applyBedCompensation(VectorN& endPos)
 }
 
 inline int sgn(long long val) { return (0 < val) - (val < 0); }
+inline int sgn(int val) { return (0 < val) - (val < 0); }
 
 void PathPlanner::backlashCompensation(IntVectorN& delta)
 {
@@ -75,7 +76,7 @@ void PathPlanner::backlashCompensation(IntVectorN& delta)
         if ((dirstate != 0) && (dirstate != backlash_state[i]))
         {
             backlash_state[i] = dirstate;
-            delta[i] += std::llround(dirstate * backlash_compensation[i] * axisStepsPerM[i]);
+            delta[i] += std::lround(dirstate * backlash_compensation[i] * axisStepsPerM[i]);
         }
     }
     return;

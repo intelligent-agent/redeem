@@ -24,19 +24,20 @@ pathplanner = Extension(
         'redeem/path_planner/vectorN.cpp',
         'redeem/path_planner/PruTimer.cpp',
         'redeem/path_planner/prussdrv.c',
-        'redeem/path_planner/Logger.cpp'],
-    swig_opts=['-c++', '-builtin'],
+        'redeem/path_planner/Logger.cpp',
+        'redeem/path_planner/PathOptimizer.cpp',
+        'redeem/path_planner/PathQueue.cpp'],
+    swig_opts=['-c++', '-builtin', '-threads'],
     include_dirs=[np.get_include()],
     extra_compile_args=[
-        '-std=c++0x',
+        '-std=c++17',
         '-g',
         '-O3',
-        '-fpermissive',
-        '-D_GLIBCXX_USE_NANOSLEEP',
+        '-flto',
         '-DBUILD_PYTHON_EXT=1',
-        '-Wno-write-strings',
-        '-Wno-maybe-uninitialized',
-        '-DLOGLEVEL=30'
+        '-Wall',
+        '-DLOGLEVEL=20',
+        '-UNDEBUG',
     ])
 
 from redeem.__init__ import __url__

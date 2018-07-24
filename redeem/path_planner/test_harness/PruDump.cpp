@@ -3,7 +3,7 @@
 #include <fstream>
 #include <iostream>
 
-FLOAT_T testPath(PathPlanner& pathPlanner, FLOAT_T startTime, RenderedPath& path, std::fstream& stepOut);
+double testPath(PathPlanner& pathPlanner, double startTime, RenderedPath& path, std::fstream& stepOut);
 
 PruDump* PruDump::singleton;
 
@@ -29,7 +29,7 @@ void PruDump::test(PathPlanner& pathPlanner)
     std::fstream stepOut;
     stepOut.open(fileName.str(), std::ios::out | std::ios::trunc);
     std::cout << "writing to " << fileName.str() << std::endl;
-    FLOAT_T time = 0;
+    double time = 0;
 
     for (size_t i = 0; i < renderedPaths.size(); i++)
     {
@@ -42,9 +42,9 @@ void PruDump::test(PathPlanner& pathPlanner)
     std::cout << "Tests counted " << errors << " errors" << std::endl;
 }
 
-void PruDump::dumpPath(const RenderedPath& path)
+void PruDump::dumpPath(RenderedPath&& path)
 {
-    renderedPaths.push_back(path);
+    renderedPaths.emplace_back(std::move(path));
 }
 
 void checkPath(PathPlanner& pathPlanner, Path& path)
@@ -52,17 +52,17 @@ void checkPath(PathPlanner& pathPlanner, Path& path)
     CHECK(path.areParameterUpToDate(), "path was rendered but stepper parameters were out of date");
 }
 
-void checkAccel(int step, int axis, FLOAT_T maxAccel, FLOAT_T thirdStepTime, FLOAT_T secondStepTime, FLOAT_T firstStepTime)
+void checkAccel(int step, int axis, double maxAccel, double thirdStepTime, double secondStepTime, double firstStepTime)
 {
     /*
-  FLOAT_T firstStepSpeed = 1.0 / (secondStepTime - firstStepTime);
-  FLOAT_T secondStepSpeed = 1.0 / (thirdStepTime - secondStepTime);
+  double firstStepSpeed = 1.0 / (secondStepTime - firstStepTime);
+  double secondStepSpeed = 1.0 / (thirdStepTime - secondStepTime);
 
   // the acceleration time spans from the middle of the first step to the middle of the last step
-  FLOAT_T accelTime = thirdStepTime - firstStepTime
+  double accelTime = thirdStepTime - firstStepTime
     - 0.5 * (secondStepTime - firstStepTime)
     - 0.5 * (thirdStepTime - secondStepTime);
-  FLOAT_T accel = std::abs(
+  double accel = std::abs(
     (secondStepSpeed - firstStepSpeed) / accelTime);
 
   // allow 1% deviation from the desired acceleration
@@ -79,10 +79,10 @@ void checkAccel(int step, int axis, FLOAT_T maxAccel, FLOAT_T thirdStepTime, FLO
     //  << " steps/s to " << secondStepSpeed << " steps/s in " << accelTime << " seconds" << std::endl;
 }
 
-void checkCruise(int step, int axis, FLOAT_T speed, FLOAT_T curStepTime, FLOAT_T lastLastStepTime)
+void checkCruise(int step, int axis, double speed, double curStepTime, double lastLastStepTime)
 {
-    FLOAT_T realSpeed = 1.0 / (curStepTime - lastLastStepTime);
-    FLOAT_T error = std::abs(realSpeed / speed - 1.0);
+    double realSpeed = 1.0 / (curStepTime - lastLastStepTime);
+    double error = std::abs(realSpeed / speed - 1.0);
 
     CHECK(error < 0.01,
         "cruise speed had a " << error * 100.0 << "% error at step " << step << " - " << realSpeed << " instead of " << speed << std::endl);
@@ -90,7 +90,7 @@ void checkCruise(int step, int axis, FLOAT_T speed, FLOAT_T curStepTime, FLOAT_T
     //std::cout << realSpeed << " must be close to " << speed << std::endl;
 }
 
-void printSpeed(std::fstream& stepOut, int axis, bool direction, FLOAT_T secondStepTime, FLOAT_T firstStepTime)
+void printSpeed(std::fstream& stepOut, int axis, bool direction, double secondStepTime, double firstStepTime)
 {
     stepOut << firstStepTime << "\t";
 
@@ -109,7 +109,7 @@ void printSpeed(std::fstream& stepOut, int axis, bool direction, FLOAT_T secondS
     stepOut << std::endl;
 }
 
-void printPosition(std::fstream& stepOut, int axis, FLOAT_T position, FLOAT_T time)
+void printPosition(std::fstream& stepOut, int axis, double position, double time)
 {
     stepOut << time << "\t";
 
@@ -128,15 +128,15 @@ void printPosition(std::fstream& stepOut, int axis, FLOAT_T position, FLOAT_T ti
     stepOut << std::endl;
 }
 
-FLOAT_T checkTrapezoid(PathPlanner& pathPlanner, Path& path, std::fstream& stepOut, std::vector<SteppersCommand>& stepperCommands, FLOAT_T startTime)
+double checkTrapezoid(PathPlanner& pathPlanner, Path& path, std::fstream& stepOut, std::vector<SteppersCommand>& stepperCommands, double startTime)
 {
 
     std::vector<int> checkDeltas;
     checkDeltas.assign(NUM_AXES, 0);
-    std::vector<FLOAT_T> positions;
+    std::vector<double> positions;
     positions.assign(NUM_AXES, 0);
-    std::vector<FLOAT_T> secondStepTime;
-    std::vector<FLOAT_T> firstStepTime;
+    std::vector<double> secondStepTime;
+    std::vector<double> firstStepTime;
     std::vector<bool> secondStepDir;
     std::vector<bool> firstStepDir;
     unsigned long long curTicks = 0;
@@ -151,8 +151,8 @@ FLOAT_T checkTrapezoid(PathPlanner& pathPlanner, Path& path, std::fstream& stepO
     {
         if (path.isAxisMove(axis))
         {
-            FLOAT_T axisStartSpeed = path.startSpeed / path.fullSpeed * path.speeds[axis];
-            FLOAT_T axisStartInterval = 1.0 / axisStartSpeed;
+            double axisStartSpeed = path.startSpeed / path.fullSpeed * path.speeds[axis];
+            double axisStartInterval = 1.0 / axisStartSpeed;
             secondStepTime[axis] = -1.0 * axisStartInterval;
             secondStepDir[axis] = true;
             firstStepTime[axis] = -2.0 * axisStartInterval;
@@ -163,7 +163,7 @@ FLOAT_T checkTrapezoid(PathPlanner& pathPlanner, Path& path, std::fstream& stepO
     for (size_t i = 0; i < stepperCommands.size(); i++)
     {
         SteppersCommand& command = stepperCommands[i];
-        const FLOAT_T curStepTime = curTicks / F_CPU_FLOAT + startTime;
+        const double curStepTime = curTicks / F_CPU_FLOAT + startTime;
 
         for (int axis = 0; axis < NUM_AXES; axis++)
         {
@@ -202,14 +202,14 @@ FLOAT_T checkTrapezoid(PathPlanner& pathPlanner, Path& path, std::fstream& stepO
         curTicks += command.delay;
     }
 
-    const FLOAT_T finalStepTime = curTicks / F_CPU_FLOAT + startTime;
+    const double finalStepTime = curTicks / F_CPU_FLOAT + startTime;
 
     for (int axis = 0; axis < NUM_AXES; axis++)
     {
         if (path.isAxisMove(axis))
         {
-            //FLOAT_T axisEndSpeed = path.endSpeed / path.fullSpeed * path.speeds[axis];
-            //FLOAT_T axisEndInterval = 1.0 / axisEndSpeed;
+            //double axisEndSpeed = path.endSpeed / path.fullSpeed * path.speeds[axis];
+            //double axisEndInterval = 1.0 / axisEndSpeed;
 
             //checkAccel(stepperCommands.size(), axis, path.accels[axis], finalStepTime + 1.0 * axisEndInterval, secondStepTime[axis], firstStepTime[axis]);
             //checkAccel(stepperCommands.size() + 1, axis, path.accels[axis], finalStepTime + 2.0 * axisEndInterval, curTicks, secondStepTime[axis]);
@@ -227,7 +227,7 @@ FLOAT_T checkTrapezoid(PathPlanner& pathPlanner, Path& path, std::fstream& stepO
     return finalStepTime;
 }
 
-FLOAT_T testPath(PathPlanner& pathPlanner, FLOAT_T startTime, RenderedPath& path, std::fstream& stepOut)
+double testPath(PathPlanner& pathPlanner, double startTime, RenderedPath& path, std::fstream& stepOut)
 {
     //CHECK(path.path.getPrimaryAxisSteps() == path.stepperCommands.size(), "rendered step count doesn't match needed step count");
 

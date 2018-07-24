@@ -25,17 +25,6 @@
 
 #include "AlarmCallback.h"
 #include "PathPlanner.h"
-#include <Python.h>
-
-void PathPlanner::setPrintMoveBufferWait(int dt)
-{
-    printMoveBufferWait = dt;
-}
-
-void PathPlanner::setMaxBufferedMoveTime(long long dt)
-{
-    maxBufferedMoveTime = dt;
-}
 
 // Speeds / accels
 void PathPlanner::setMaxSpeeds(VectorN speeds)
@@ -52,7 +41,7 @@ void PathPlanner::setAcceleration(VectorN accel)
 
 void PathPlanner::setMaxSpeedJumps(VectorN speedJumps)
 {
-    maxSpeedJumps = speedJumps;
+    optimizer.setMaxSpeedJumps(speedJumps);
 }
 
 void PathPlanner::setAxisStepsPerMeter(VectorN stepPerM)
@@ -84,7 +73,7 @@ void PathPlanner::setStopPrintOnPhysicalEndstopHit(bool stop)
 }
 
 // bed compensation
-void PathPlanner::setBedCompensationMatrix(std::vector<FLOAT_T> matrix)
+void PathPlanner::setBedCompensationMatrix(std::vector<double> matrix)
 {
     matrix_bed_comp = matrix;
 }
@@ -106,17 +95,14 @@ void PathPlanner::pruAlarmCallback()
 {
     if (stop_on_physical_endstops_hit)
     {
-        LOG("PRU fired endstop alarm - disabling path planner and firing alarm" << std::endl);
+        LOGCRITICAL("PRU fired endstop alarm - disabling path planner and firing alarm" << std::endl);
         acceptingPaths = false;
     }
     else
     {
-        LOG("PRU fired endstop alarm - continuing path planner and firing alarm" << std::endl);
+        LOGCRITICAL("PRU fired endstop alarm - continuing path planner and firing alarm" << std::endl);
     }
-    PyGILState_STATE gstate;
-    gstate = PyGILState_Ensure();
     alarmCallback.call(7, "Physical Endstop hit", "Physical Endstop hit");
-    PyGILState_Release(gstate);
 }
 
 // the state of the machine
@@ -194,7 +180,7 @@ void PathPlanner::resetBacklash()
     backlash_state.zero();
 }
 
-FLOAT_T PathPlanner::getLastProbeDistance()
+double PathPlanner::getLastProbeDistance()
 {
     return lastProbeDistance;
 }

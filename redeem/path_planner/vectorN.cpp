@@ -47,18 +47,18 @@ VectorN& VectorN::operator-=(const VectorN& v)
     return *this;
 }
 
-VectorN& VectorN::operator*=(FLOAT_T v)
+VectorN& VectorN::operator*=(double v)
 {
-    for (FLOAT_T& val : values)
+    for (double& val : values)
     {
         val *= v;
     }
     return *this;
 }
 
-VectorN& VectorN::operator/=(FLOAT_T v)
+VectorN& VectorN::operator/=(double v)
 {
-    for (FLOAT_T& val : values)
+    for (double& val : values)
     {
         val /= v;
     }
@@ -76,7 +76,7 @@ VectorN& VectorN::operator=(const VectorN& v)
 
 VectorN& VectorN::norm()
 {
-    FLOAT_T mag = vabs(*this);
+    double mag = vabs(*this);
     if (mag > 0.0)
     {
         *this /= mag;
@@ -84,12 +84,12 @@ VectorN& VectorN::norm()
     return *this;
 }
 
-FLOAT_T& VectorN::operator[](int i)
+double& VectorN::operator[](int i)
 {
     return values[i];
 }
 
-const FLOAT_T& VectorN::operator[](int i) const
+const double& VectorN::operator[](int i) const
 {
     return values[i];
 }
@@ -104,7 +104,7 @@ IntVectorN VectorN::round() const
     IntVectorN result;
     for (int i = 0; i < NUM_AXES; i++)
     {
-        result[i] = std::llround(values[i]);
+        result[i] = std::lround(values[i]);
     }
 
     return result;
@@ -112,9 +112,9 @@ IntVectorN VectorN::round() const
 
 // Helper functions for the VectorN class.
 
-FLOAT_T vabs(const VectorN& v)
+double vabs(const VectorN& v)
 {
-    FLOAT_T result = 0;
+    double result = 0;
     for (double val : v.values)
     {
         result += val * val;
@@ -161,12 +161,12 @@ VectorN operator-(const VectorN& v1, const VectorN& v2)
     return result;
 }
 
-bool equal(const VectorN& v1, const VectorN& v2, FLOAT_T tolerance)
+bool equal(const VectorN& v1, const VectorN& v2, double tolerance)
 {
     return vabs(v1 - v2) < tolerance;
 }
 
-VectorN operator*(const VectorN& v1, FLOAT_T v2)
+VectorN operator*(const VectorN& v1, double v2)
 {
     VectorN result(v1);
 
@@ -175,12 +175,12 @@ VectorN operator*(const VectorN& v1, FLOAT_T v2)
     return result;
 }
 
-VectorN operator*(FLOAT_T v1, const VectorN& v2)
+VectorN operator*(double v1, const VectorN& v2)
 {
     return v2 * v1;
 }
 
-VectorN operator/(const VectorN& v1, FLOAT_T v2)
+VectorN operator/(const VectorN& v1, double v2)
 {
     VectorN result(v1);
 
@@ -189,9 +189,9 @@ VectorN operator/(const VectorN& v1, FLOAT_T v2)
     return result;
 }
 
-FLOAT_T dot(const VectorN& v1, const VectorN& v2)
+double dot(const VectorN& v1, const VectorN& v2)
 {
-    FLOAT_T result = 0;
+    double result = 0;
 
     for (int i = 0; i < NUM_AXES; i++)
     {
@@ -264,7 +264,7 @@ IntVectorN& IntVectorN::operator-=(const IntVectorN& v)
     return *this;
 }
 
-IntVectorN& IntVectorN::operator*=(long long v)
+IntVectorN& IntVectorN::operator*=(int v)
 {
     for (int i = 0; i < NUM_AXES; i++)
     {
@@ -274,12 +274,12 @@ IntVectorN& IntVectorN::operator*=(long long v)
     return *this;
 }
 
-long long& IntVectorN::operator[](int i)
+int& IntVectorN::operator[](int i)
 {
     return values[i];
 }
 
-const long long& IntVectorN::operator[](int i) const
+const int& IntVectorN::operator[](int i) const
 {
     return values[i];
 }

@@ -8,7 +8,6 @@
 #include <iostream>
 #include <mutex>
 #include <string.h>
-#include <strings.h>
 #include <thread>
 #include <vector>
 
@@ -21,6 +20,13 @@
 
 struct RenderedPath
 {
+    RenderedPath(const RenderedPath&) = delete;
+    RenderedPath(RenderedPath&& source)
+        : path(std::move(source.path))
+        , stepperCommands(std::move(source.stepperCommands))
+    {
+    }
+
     Path path;
     std::vector<SteppersCommand> stepperCommands;
 };
@@ -37,5 +43,5 @@ private:
 public:
     static PruDump* get();
     void test(PathPlanner& pathPlanner);
-    void dumpPath(const RenderedPath& path);
+    void dumpPath(RenderedPath&& path);
 };
