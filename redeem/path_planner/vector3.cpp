@@ -2,6 +2,7 @@
 
 #include <math.h>
 #include <cmath>
+#include <stdexcept>
 #include <assert.h>
 #include "vector3.h"
 #include "vectorN.h"
@@ -59,7 +60,7 @@ FLOAT_T& Vector3::operator[](int i)
   case 2:
     return z;
   default:
-    assert(0);
+    throw std::out_of_range("Vector3 index out of range");
   }
 }
 const FLOAT_T& Vector3::operator[](int i) const
@@ -73,7 +74,7 @@ const FLOAT_T& Vector3::operator[](int i) const
   case 2:
     return z;
   default:
-    assert(0);
+    throw std::out_of_range("Vector3 index out of range");
   }
 }
 
@@ -214,7 +215,7 @@ int& IntVector3::operator[](int i)
   case 2:
     return z;
   default:
-    assert(0);
+    throw std::out_of_range("IntVector3 index out of range");
   }
 }
 
@@ -229,7 +230,7 @@ const int& IntVector3::operator[](int i) const
   case 2:
     return z;
   default:
-    assert(0);
+    throw std::out_of_range("IntVector3 index out of range");
   }
 }
 
