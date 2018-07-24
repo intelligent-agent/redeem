@@ -273,7 +273,7 @@ public:
     return moveMask & 255;
   }
 
-  inline unsigned long getTimeInTicks() {
+  inline unsigned long long getTimeInTicks() {
     return timeInTicks;
   }
 
