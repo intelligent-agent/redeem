@@ -34,7 +34,6 @@
 #include <vector>
 #include <mutex>
 #include <string.h>
-#include <strings.h>
 #include <assert.h>
 #include "PruTimer.h"
 #include "Path.h"
