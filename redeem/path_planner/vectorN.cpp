@@ -103,7 +103,7 @@ IntVectorN VectorN::round() const
   IntVectorN result;
   for (int i = 0; i < NUM_AXES; i++)
   {
-    result[i] = std::llround(values[i]);
+    result[i] = std::lround(values[i]);
   }
 
   return result;
@@ -263,7 +263,7 @@ IntVectorN& IntVectorN::operator-=(const IntVectorN &v)
   return *this;
 }
 
-IntVectorN& IntVectorN::operator*=(long long v)
+IntVectorN& IntVectorN::operator*=(int v)
 {
   for (int i = 0; i < NUM_AXES; i++)
   {
@@ -273,12 +273,12 @@ IntVectorN& IntVectorN::operator*=(long long v)
   return *this;
 }
 
-long long& IntVectorN::operator[](int i)
+int& IntVectorN::operator[](int i)
 {
   return values[i];
 }
 
-const long long& IntVectorN::operator[](int i) const
+const int& IntVectorN::operator[](int i) const
 {
   return values[i];
 }

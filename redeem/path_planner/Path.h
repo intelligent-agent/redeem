@@ -106,9 +106,9 @@ struct StepperPathParameters {
 
   FLOAT_T moveEnd;
 
-  mutable unsigned long long accelSteps;
-  mutable unsigned long long cruiseSteps;
-  mutable unsigned long long decelSteps;
+  mutable unsigned int accelSteps;
+  mutable unsigned int cruiseSteps;
+  mutable unsigned int decelSteps;
 
   inline void zero() {
     startSpeed = 0;

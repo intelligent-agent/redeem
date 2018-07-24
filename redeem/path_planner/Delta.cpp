@@ -31,7 +31,7 @@
 #include <assert.h>
 #include <algorithm>
 
-void calculateLinearMove(const int axis, const long long startStep, const long long endStep, const FLOAT_T time, std::vector<Step>& steps);
+void calculateLinearMove(const int axis, const int startStep, const int endStep, const FLOAT_T time, std::vector<Step>& steps);
 
 Delta::Delta()
 {
@@ -324,7 +324,7 @@ void Delta::calculateSteps(int axis, const DeltaPathConstants& c, std::vector<St
     const Vector3 criticalPointCartesianPosition = c.worldStart + (c.axisSpeeds * criticalPointTime);
     const Vector3 criticalPointDeltaPosition = worldToDelta(criticalPointCartesianPosition);
     const FLOAT_T criticalPointHeight = criticalPointDeltaPosition[axis];
-    const long long criticalPointMotorPos = std::llround(criticalPointHeight * c.stepsPerM[axis]);
+    const long criticalPointMotorPos = std::lround(criticalPointHeight * c.stepsPerM[axis]);
 
     LOG("axis " << axis << " has a critical point at " << criticalPointTime << " - calculating steps from " << c.deltaStart[axis] << " to " << criticalPointHeight << " to " << c.deltaEnd[axis] << std::endl);
     steps.reserve(std::abs(c.deltaMotorStart[axis] - criticalPointMotorPos) + std::abs(criticalPointMotorPos - c.deltaMotorEnd[axis]));
@@ -343,13 +343,13 @@ void Delta::calculateStepsInOneDirection(int axis, const DeltaPathConstants& c, 
 {
   const bool direction = startHeight < endHeight;
 
-  const long long startStep = std::llroundl(startHeight * c.stepsPerM[axis]); // m * (steps/m) = step
-  const long long endStep = std::llroundl(endHeight * c.stepsPerM[axis]);
+  const int startStep = std::lroundl(startHeight * c.stepsPerM[axis]); // m * (steps/m) = step
+  const int endStep = std::lroundl(endHeight * c.stepsPerM[axis]);
 
-  const long long stepIncrement = direction ? 1 : -1;
+  const int stepIncrement = direction ? 1 : -1;
   const FLOAT_T stepOffset = stepIncrement / 2.0;
   
-  long long step = startStep;
+  int step = startStep;
   FLOAT_T time = startTime;
   
   while (step != endStep)

@@ -32,15 +32,15 @@
 #include "Delta.h"
 #include "Logger.h"
 
-void calculateLinearMove(const int axis, const long long startStep, const long long endStep, const FLOAT_T time, std::vector<Step>& steps)
+void calculateLinearMove(const int axis, const int startStep, const int endStep, const FLOAT_T time, std::vector<Step>& steps)
 {
   const FLOAT_T distance = endStep - startStep;
 
   const bool direction = startStep < endStep;
-  const long long stepIncrement = direction ? 1 : -1;
+  const int stepIncrement = direction ? 1 : -1;
   const FLOAT_T stepOffset = stepIncrement / 2.0;
 
-  long long step = startStep;
+  int step = startStep;
 
   steps.reserve(std::abs(endStep - startStep));
 

@@ -76,7 +76,7 @@ VectorN operator/(const VectorN& v1, const VectorN& v2);
 VectorN operator*(const VectorN& v1, const VectorN& v2);
 
 struct IntVectorN {
-  long long values[NUM_AXES];
+  int values[NUM_AXES];
 
   IntVectorN();
 
@@ -88,11 +88,11 @@ struct IntVectorN {
   /// Subtract v from this vector.
   IntVectorN& operator-=(const IntVectorN &v);
   /// Scale by v (integer)
-  IntVectorN& operator*=(long long v);
+  IntVectorN& operator*=(int v);
   /// Get a specific axis of the vector
-  long long& operator[](int i);
+  int& operator[](int i);
   /// Same thing, but const
-  const long long& operator[](int i) const;
+  const int& operator[](int i) const;
   /// Convert to floating point
   VectorN toVectorN() const;
   /// Truncate to IntVector3

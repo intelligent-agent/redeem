@@ -694,7 +694,7 @@ void PathPlanner::runMove(
   std::array<size_t, NUM_AXES> stepIndex;
   size_t commandsIndex = 0;
   std::vector<SteppersCommand> probeSteps;
-  unsigned long long totalSteps = 0;
+  unsigned int totalSteps = 0;
 
   finalStepTimes.fill(0);
   stepIndex.fill(0);
