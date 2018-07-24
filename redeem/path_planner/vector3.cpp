@@ -86,7 +86,7 @@ bool Vector3::operator==(const Vector3& o) const
 
 IntVector3 Vector3::round() const
 {
-  return IntVector3(std::llround(x), std::llround(y), std::llround(z));
+  return IntVector3(std::lround(x), std::lround(y), std::lround(z));
 }
 
 bool Vector3::hasNan() const
@@ -165,7 +165,7 @@ Vector3 operator*(const Vector3 &v1, const Vector3 &v2)
   return v3;
 }
 
-IntVector3::IntVector3(long long x, long long y, long long z)
+IntVector3::IntVector3(int x, int y, int z)
   : x(x), y(y), z(z)
 {}
 
@@ -203,7 +203,7 @@ IntVector3& IntVector3::operator-=(const IntVector3 &v)
   return *this;
 }
 
-long long& IntVector3::operator[](int i)
+int& IntVector3::operator[](int i)
 {
   switch (i)
   {
@@ -218,7 +218,7 @@ long long& IntVector3::operator[](int i)
   }
 }
 
-const long long& IntVector3::operator[](int i) const
+const int& IntVector3::operator[](int i) const
 {
   switch (i)
   {

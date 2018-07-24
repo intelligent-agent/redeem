@@ -77,13 +77,12 @@ Vector3 operator*(const Vector3 &v1, const Vector3 &v2);
 
 struct IntVector3
 {
-  // TODO I suspect it's safe to make these ints.
-  long long x;
-  long long y;
-  long long z;
+  int x;
+  int y;
+  int z;
 
   /// Constructor accept Cartesian coordinates.
-  IntVector3(long long x = 0.0, long long y = 0.0, long long z = 0.0);
+  IntVector3(int x = 0.0, int y = 0.0, int z = 0.0);
   /// Copy constructor.
   IntVector3(const IntVector3&);
   ~IntVector3();
@@ -97,9 +96,9 @@ struct IntVector3
   /// Subtract v from this vector.
   IntVector3& operator-=(const IntVector3 &v);
   /// Get a specific axis of the vector
-  long long& operator[](int i);
+  int& operator[](int i);
   /// Same thing, but const
-  const long long& operator[](int i) const;
+  const int& operator[](int i) const;
 
   bool operator==(const IntVector3& o) const;
   bool operator!=(const IntVector3& o) const { return !(*this == o); };
