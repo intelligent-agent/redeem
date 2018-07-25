@@ -44,7 +44,7 @@ TEST(PathQueueBasics, ReturnsPaths)
     path.fixStartAndEndSpeed();
     queue.addPath(std::move(path));
 
-    Path otherPath = queue.popPath();
+    Path otherPath(queue.popPath());
     EXPECT_EQ(otherPath.isStartSpeedFixed(), true);
     EXPECT_EQ(queue.availablePathSlots(), 15);
 }
@@ -62,7 +62,7 @@ TEST(PathQueueBasics, ReturnsPathsInOrder)
 
     EXPECT_EQ(queue.availablePathSlots(), 13);
 
-    Path otherPath = queue.popPath();
+    Path otherPath(queue.popPath());
     EXPECT_EQ(otherPath.isStartSpeedFixed(), true);
 
     otherPath.zero();

@@ -103,31 +103,8 @@ Path::Path() {
   zero();
 }
 
-Path::Path(const Path& path) {
-  operator=(path);
-}
-
-Path& Path::operator=(const Path& path) {
-  // assignment operator
-  joinFlags = path.joinFlags;
-  flags = path.flags.load();
-  maxJunctionSpeed = path.maxJunctionSpeed;
-
-  distance = path.distance;
-  moveMask = path.moveMask;
-  timeInTicks = path.timeInTicks;
-  speeds = path.speeds;
-  fullSpeed = path.fullSpeed;
-  startSpeed = path.startSpeed;
-  endSpeed = path.endSpeed;
-  minSpeed = path.minSpeed;
-  accel = path.accel;
-  startMachinePos = path.startMachinePos;
-
-  stepperPath = path.stepperPath;
-  steps = path.steps;
-
-  return *this;
+Path::Path(Path&& path) {
+  *this = std::move(path);
 }
 
 Path& Path::operator=(Path&& path) {

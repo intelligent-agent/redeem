@@ -151,10 +151,13 @@ private:
 
   double calculateSafeSpeed(const VectorN& worldMove, const VectorN& maxSpeedJumps);
 
+  Path(const Path& path) = delete;
+  Path& operator=(const Path&) = delete;
+
 public:
   Path();
-  Path(const Path& path);
-  Path& operator=(const Path&);
+  Path(Path&&);
+
   Path& operator=(Path&&);
 
   void initialize(const IntVectorN& machineStart,

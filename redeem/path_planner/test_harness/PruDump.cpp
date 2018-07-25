@@ -35,8 +35,8 @@ void PruDump::test(PathPlanner& pathPlanner) {
 
 
 
-void PruDump::dumpPath(const RenderedPath& path) {
-  renderedPaths.push_back(path);
+void PruDump::dumpPath(RenderedPath&& path) {
+  renderedPaths.emplace_back(std::move(path));
 }
 
 void checkPath(PathPlanner& pathPlanner, Path& path) {
