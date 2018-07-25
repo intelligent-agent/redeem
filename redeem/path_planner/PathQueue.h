@@ -11,6 +11,8 @@ class PathQueue
 {
 private:
     std::mutex mutex;
+    std::condition_variable queueHasPaths;
+    std::condition_variable queueHasSpace;
     PathOptimizerType optimizer;
     std::vector<Path> queue;
     size_t writeIndex;
@@ -29,33 +31,53 @@ public:
 
     size_t availablePathSlots()
     {
-        std::lock_guard<std::mutex> lock(mutex);
+        std::unique_lock<std::mutex> lock(mutex);
 
         return availableSlots;
     }
 
     void addPath(Path&& path)
     {
-        std::lock_guard<std::mutex> lock(mutex);
+        std::unique_lock<std::mutex> lock(mutex);
+
+        queueHasSpace.wait(lock, [this] { return availableSlots != 0; });
 
         queue[writeIndex] = std::move(path);
         writeIndex = (writeIndex + 1) % queue.size();
         availableSlots--;
 
-        optimizer.optimizeBackward(queue, readIndex, writeIndex);
+        // subtract one because the optimizer does touch the last index
+        optimizer.optimizeBackward(queue, readIndex, writeIndex - 1);
+
+        if (availableSlots == queue.size() - 1)
+        {
+            lock.unlock();
+            queueHasPaths.notify_all();
+        }
     }
 
-    Path&& popPath()
+    Path popPath()
     {
-        std::lock_guard<std::mutex> lock(mutex);
+        std::unique_lock<std::mutex> lock(mutex);
+
+        queueHasPaths.wait(lock, [this] { return availableSlots != queue.size(); });
 
         const size_t currentReadIndex = readIndex;
 
-        optimizer.optimizeForward(queue, readIndex, writeIndex);
+        // subtract one because the optimizer does touch the last index
+        optimizer.optimizeForward(queue, readIndex, writeIndex - 1);
+
+        Path result(std::move(queue[currentReadIndex]));
 
         readIndex = (readIndex + 1) % queue.size();
         availableSlots++;
 
-        return std::move(queue[currentReadIndex]);
+        if (availableSlots == 1)
+        {
+            lock.unlock();
+            queueHasSpace.notify_all();
+        }
+
+        return std::move(result);
     }
 };

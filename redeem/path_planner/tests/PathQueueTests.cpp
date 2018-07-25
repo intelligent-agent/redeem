@@ -1,5 +1,7 @@
 #define _SILENCE_TR1_NAMESPACE_DEPRECATION_WARNING
 
+#include <future>
+
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -86,6 +88,70 @@ TEST(PathQueueBasics, WrapsAround)
     }
 }
 
+template <typename T>
+bool is_ready(std::future<T> const& future)
+{
+    return future.wait_for(std::chrono::seconds(0)) == std::future_status::ready;
+}
+
+TEST(PathQueueBasics, BlocksWhenFull)
+{
+    SimplePathQueue queue(3);
+
+    Path path;
+
+    queue.addPath(std::move(path));
+    path.zero();
+    queue.addPath(std::move(path));
+    path.zero();
+    queue.addPath(std::move(path));
+
+    std::promise<void> workerRunning;
+    std::future<void> workerRunningFuture = workerRunning.get_future();
+    std::promise<void> workerFinished;
+    std::future<void> workerFinishedFuture = workerFinished.get_future();
+    std::thread worker([&workerRunning, &workerFinished, &queue]() {
+        Path path;
+        workerRunning.set_value();
+        queue.addPath(std::move(path));
+        workerFinished.set_value();
+    });
+
+    workerRunningFuture.wait();
+
+    EXPECT_EQ(is_ready(workerFinishedFuture), false);
+
+    queue.popPath();
+
+    workerFinishedFuture.wait();
+    worker.join();
+}
+
+TEST(PathQueueBasics, BlocksWhenEmpty)
+{
+    SimplePathQueue queue(3);
+
+    std::promise<void> workerRunning;
+    std::future<void> workerRunningFuture = workerRunning.get_future();
+    std::promise<void> workerFinished;
+    std::future<void> workerFinishedFuture = workerFinished.get_future();
+    std::thread worker([&workerRunning, &workerFinished, &queue]() {
+        workerRunning.set_value();
+        queue.popPath();
+        workerFinished.set_value();
+    });
+
+    workerRunningFuture.wait();
+
+    EXPECT_EQ(is_ready(workerFinishedFuture), false);
+
+    Path path;
+    queue.addPath(std::move(path));
+
+    workerFinishedFuture.wait();
+    worker.join();
+}
+
 class MockPathOptimizer : public PathOptimizerInterface
 {
 private:
@@ -116,7 +182,7 @@ TEST(PathQueueBasics, CallsBackwardOptimizerAfterAdd)
 
     Path path;
 
-    EXPECT_CALL(MockPathOptimizer::get(), optimizeBackward(::testing::_, 0, 1));
+    EXPECT_CALL(MockPathOptimizer::get(), optimizeBackward(::testing::_, 0, 0));
 
     queue.addPath(std::move(path));
 }
@@ -127,7 +193,7 @@ TEST(PathQueueBasics, CallsForwardOptimizerAfterPop)
 
     Path path;
 
-    EXPECT_CALL(MockPathOptimizer::get(), optimizeForward(::testing::_, 0, 1));
+    EXPECT_CALL(MockPathOptimizer::get(), optimizeForward(::testing::_, 0, 0));
 
     queue.addPath(std::move(path));
     path = queue.popPath();
