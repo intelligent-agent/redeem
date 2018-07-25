@@ -39,8 +39,8 @@ set(CMAKE_SWIG_FLAGS "")
 include_directories(${PYTHON_INCLUDE_DIRS})
 
 # These aren't actually built, but adding them to the target makes them appear in IDEs
-set (headers __prussdrv.h AlarmCallback.h config.h Delta.h Logger.h Path.h PathOptimizerInterface.h PathPlanner.h PathQueue.h pruss_intc_mapping.h prussdrv.h PruTimer.h StepperCommand.h vector3.h vectorN.h)
-set (sources Delta.cpp Logger.cpp Path.cpp PathPlanner.cpp PathPlannerSetup.cpp PathQueue.cpp Preprocessor.cpp vector3.cpp vectorN.cpp)
+set (headers __prussdrv.h AlarmCallback.h config.h Delta.h Logger.h Path.h PathOptimizer.h PathOptimizerInterface.h PathPlanner.h PathQueue.h pruss_intc_mapping.h prussdrv.h PruTimer.h StepperCommand.h vector3.h vectorN.h)
+set (sources Delta.cpp Logger.cpp Path.cpp PathOptimizer.cpp PathPlanner.cpp PathPlannerSetup.cpp PathQueue.cpp Preprocessor.cpp vector3.cpp vectorN.cpp)
 
 if (${USE_REAL_PRU_INTERFACE})
   set (sources ${sources} PruTimer.cpp)
