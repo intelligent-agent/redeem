@@ -14,11 +14,11 @@ public:
     {
     }
 
-    void optimizeBackward(std::vector<Path>&, size_t, size_t)
+    void onPathAdded(std::vector<Path>&, size_t, size_t)
     {
     }
 
-    void optimizeForward(std::vector<Path>&, size_t, size_t)
+    void beforePathRemoval(std::vector<Path>&, size_t, size_t)
     {
     }
 };
@@ -163,8 +163,8 @@ public:
         singleton = this;
     }
 
-    MOCK_METHOD3(optimizeBackward, void(std::vector<Path>&, size_t, size_t));
-    MOCK_METHOD3(optimizeForward, void(std::vector<Path>&, size_t, size_t));
+    MOCK_METHOD3(onPathAdded, void(std::vector<Path>&, size_t, size_t));
+    MOCK_METHOD3(beforePathRemoval, void(std::vector<Path>&, size_t, size_t));
 
     static MockPathOptimizer& get()
     {
@@ -176,24 +176,24 @@ MockPathOptimizer* MockPathOptimizer::singleton = nullptr;
 
 typedef PathQueue<MockPathOptimizer> MockPathQueue;
 
-TEST(PathQueueBasics, CallsBackwardOptimizerAfterAdd)
+TEST(PathQueueBasics, CallsOnPathAddedAfterAdd)
 {
     MockPathQueue queue(4);
 
     Path path;
 
-    EXPECT_CALL(MockPathOptimizer::get(), optimizeBackward(::testing::_, 0, 0));
+    EXPECT_CALL(MockPathOptimizer::get(), onPathAdded(::testing::_, 0, 0));
 
     queue.addPath(std::move(path));
 }
 
-TEST(PathQueueBasics, CallsForwardOptimizerAfterPop)
+TEST(PathQueueBasics, CallsBeforePathRemovalBeforePop)
 {
     MockPathQueue queue(4);
 
     Path path;
 
-    EXPECT_CALL(MockPathOptimizer::get(), optimizeForward(::testing::_, 0, 0));
+    EXPECT_CALL(MockPathOptimizer::get(), beforePathRemoval(::testing::_, 0, 0));
 
     queue.addPath(std::move(path));
     path = queue.popPath();

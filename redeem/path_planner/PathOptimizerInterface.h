@@ -7,6 +7,6 @@
 class PathOptimizerInterface
 {
 public:
-    virtual void optimizeBackward(std::vector<Path>& queue, size_t first, size_t last) = 0;
-    virtual void optimizeForward(std::vector<Path>& queue, size_t first, size_t last) = 0;
+    virtual void onPathAdded(std::vector<Path>& queue, size_t first, size_t last) = 0;
+    virtual void beforePathRemoval(std::vector<Path>& queue, size_t first, size_t last) = 0;
 };
