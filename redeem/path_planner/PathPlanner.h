@@ -28,7 +28,9 @@
 #define __PathPlanner__PathPlanner__
 
 #include "Delta.h"
+#include "PathOptimizer.h"
 #include "Path.h"
+#include "PathQueue.h"
 #include "PruTimer.h"
 #include "config.h"
 #include "vectorN.h"
@@ -60,10 +62,7 @@ class AlarmCallback;
 class PathPlanner
 {
 private:
-    void updateTrapezoids();
     void computeMaxJunctionSpeed(Path* previous, Path* current);
-    void backwardPlanner(unsigned int start, unsigned int last);
-    void forwardPlanner(unsigned int first);
 
     VectorN machineToWorld(const IntVectorN& machinePos);
     IntVectorN worldToMachine(const VectorN& worldPos, bool* possible = nullptr);
@@ -80,80 +79,12 @@ private:
     double minimumSpeed;
     VectorN axisStepsPerM;
 
-    std::atomic_uint_fast32_t linesPos; // Position for executing line movement
-    std::atomic_uint_fast32_t linesWritePos; // Position where we write the next cached line move
-    std::atomic_uint_fast32_t linesCount; ///< Number of lines cached 0 = nothing to do.
-    std::atomic<long long> linesTicksCount;
-
-    unsigned int moveCacheSize; // set on init
-
-    int printMoveBufferWait;
-    long long maxBufferedMoveTime;
-
-    std::vector<Path> lines;
-
-    inline unsigned int previousPlannerIndex(unsigned int p)
-    {
-        return (p + moveCacheSize - 1) % moveCacheSize;
-    }
-
-    inline unsigned int nextPlannerIndex(unsigned int p)
-    {
-        return (p + 1) % moveCacheSize;
-    }
-
-    inline void removeCurrentLine()
-    {
-        linesTicksCount -= lines[linesPos].getTimeInTicks();
-        lines[linesPos].zero();
-        assert(linesTicksCount >= 0);
-        linesPos++;
-        if (linesPos >= moveCacheSize)
-            linesPos = 0;
-        --linesCount;
-    }
-
-    inline bool isLinesBufferFilled()
-    {
-        return linesTicksCount >= (F_CPU / 1000) * maxBufferedMoveTime;
-    }
-
-    std::mutex line_mutex;
-    std::condition_variable pathQueueHasSpace;
-
-    inline bool doesPathQueueHaveSpace()
-    {
-        return stop || (linesCount < moveCacheSize && !isLinesBufferFilled());
-    }
-
-    inline void notifyIfPathQueueHasSpace()
-    {
-        if (doesPathQueueHaveSpace())
-        {
-            pathQueueHasSpace.notify_all();
-        }
-    }
-
-    std::condition_variable pathQueueReadyToPrint;
-
-    inline bool isPathQueueReadyToPrint()
-    {
-        return stop || linesCount > 0;
-    }
-
-    inline void notifyIfPathQueueIsReadyToPrint()
-    {
-        if (isPathQueueReadyToPrint())
-        {
-            pathQueueReadyToPrint.notify_all();
-        }
-    }
-
     std::thread runningThread;
     bool stop;
     std::atomic_bool acceptingPaths;
 
     PruTimer pru;
+    PathQueue<PathOptimizer> pathQueue;
     void recomputeParameters();
     void run();
 
@@ -302,24 +233,6 @@ public:
    * @details Wait until all queued move are finished to be executed
    */
     void waitUntilFinished();
-
-    /**
-   * @brief Set the print move buffer wait time
-   * @details Time to wait before processing a print command if the buffer is not full enough, expressed in milliseconds.
-   * Increasing this time will reduce the slow downs due to the path planner not having enough path in the buffer
-   * but it will increase the startup time of the print.
-   * @param dt time to wait before processing commands
-   */
-    void setPrintMoveBufferWait(int dt);
-
-    /**
-   * @brief Set the maximum buffered move time
-   * @details Time to wait before processing a print command if the buffer is not full enough, expressed in milliseconds.
-   * Increasing this time will reduce the slow downs due to the path planner not having enough path in the buffer
-   * but it will increase the startup time of the print.
-   * @param dt maximum buffered move time
-   */
-    void setMaxBufferedMoveTime(long long dt);
 
     /**
    * @brief Set the maximum feedrates of the different axis X,Y,Z

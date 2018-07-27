@@ -21,7 +21,7 @@ private:
 
 public:
     PathQueue(size_t size)
-        : optimizer(size)
+        : optimizer()
         , queue(size)
         , writeIndex(0)
         , readIndex(0)

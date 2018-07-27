@@ -10,7 +10,7 @@
 class DummyPathOptimizer : public PathOptimizerInterface
 {
 public:
-    DummyPathOptimizer(size_t)
+    DummyPathOptimizer()
     {
     }
 
@@ -158,7 +158,7 @@ private:
     static MockPathOptimizer* singleton;
 
 public:
-    MockPathOptimizer(size_t)
+    MockPathOptimizer()
     {
         singleton = this;
     }

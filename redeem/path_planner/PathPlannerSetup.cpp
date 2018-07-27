@@ -28,16 +28,6 @@
 #include "AlarmCallback.h"
 #include <Python.h>
 
-void PathPlanner::setPrintMoveBufferWait(int dt)
-{
-    printMoveBufferWait = dt;
-}
-
-void PathPlanner::setMaxBufferedMoveTime(long long dt)
-{
-    maxBufferedMoveTime = dt;
-}
-
 // Speeds / accels
 void PathPlanner::setMaxSpeeds(VectorN speeds)
 {
