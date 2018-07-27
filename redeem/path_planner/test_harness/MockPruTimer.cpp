@@ -22,45 +22,51 @@
 
 #include "../PruTimer.h"
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <fstream>
-#include <sys/mman.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <assert.h>
-#include <cmath>
 #include "../StepperCommand.h"
 #include "../config.h"
 #include "PruDump.h"
+#include <assert.h>
+#include <cmath>
+#include <fcntl.h>
+#include <fstream>
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
 
-PruTimer::PruTimer() {
-  assert(PruDump::singleton == nullptr);
-  PruDump::singleton = new PruDump();
-  ddr_size = 1024 * 1024;
+PruTimer::PruTimer()
+{
+    assert(PruDump::singleton == nullptr);
+    PruDump::singleton = new PruDump();
+    ddr_size = 1024 * 1024;
 }
 
-bool PruTimer::initPRU(const std::string &firmware_stepper, const std::string &firmware_endstops) {
-	return true;
+bool PruTimer::initPRU(const std::string& firmware_stepper, const std::string& firmware_endstops)
+{
+    return true;
 }
 
-void PruTimer::initalizePRURegisters() {
+void PruTimer::initalizePRURegisters()
+{
 }
 
-PruTimer::~PruTimer() {	
+PruTimer::~PruTimer()
+{
 }
 
-void PruTimer::reset() {
+void PruTimer::reset()
+{
 }
 
-void PruTimer::runThread() {
+void PruTimer::runThread()
+{
 }
 
-void PruTimer::stopThread(bool join) {
+void PruTimer::stopThread(bool join)
+{
 }
-
 
 /**
 blockMemory - the data. 
@@ -69,34 +75,41 @@ unit - stepSize in bytes.
 pathID - linespos. 
 totalTime - time it takes to complete the current block, in ticks. 
 */
-void PruTimer::push_block(uint8_t* blockMemory, size_t blockLen, unsigned int unit, unsigned long totalTime) {
-  // reverse the block back into an array of StepperCmds
+void PruTimer::push_block(uint8_t* blockMemory, size_t blockLen, unsigned int unit, unsigned long totalTime)
+{
+    // reverse the block back into an array of StepperCmds
 
-  SteppersCommand* commands = (SteppersCommand*)blockMemory;
-  assert(blockLen % sizeof(SteppersCommand) == 0);
+    SteppersCommand* commands = (SteppersCommand*)blockMemory;
+    assert(blockLen % sizeof(SteppersCommand) == 0);
 
-  RenderedPath renderedPath;
+    RenderedPath renderedPath;
 
-  renderedPath.stepperCommands.reserve(blockLen / sizeof(SteppersCommand));
-  for (size_t i = 0; i < blockLen / sizeof(SteppersCommand); i++) {
-    renderedPath.stepperCommands.push_back(commands[i]);
-  }
+    renderedPath.stepperCommands.reserve(blockLen / sizeof(SteppersCommand));
+    for (size_t i = 0; i < blockLen / sizeof(SteppersCommand); i++)
+    {
+        renderedPath.stepperCommands.push_back(commands[i]);
+    }
 
-  PruDump::get()->dumpPath(renderedPath);
+    PruDump::get()->dumpPath(renderedPath);
 }
 
-void PruTimer::waitUntilFinished() {
+void PruTimer::waitUntilFinished()
+{
 }
 
-void PruTimer::run() {
+void PruTimer::run()
+{
 }
 
-int PruTimer::waitUntilSync() {
-  return 0;
+int PruTimer::waitUntilSync()
+{
+    return 0;
 }
 
-void PruTimer::suspend() {
+void PruTimer::suspend()
+{
 }
 
-void PruTimer::resume() {
+void PruTimer::resume()
+{
 }

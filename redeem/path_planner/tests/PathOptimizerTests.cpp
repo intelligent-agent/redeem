@@ -8,7 +8,4 @@ TEST(PathOptimizerTests, NoMoves)
 {
     std::vector<Path> paths;
     PathOptimizer optimizer;
-
-	
-
 }

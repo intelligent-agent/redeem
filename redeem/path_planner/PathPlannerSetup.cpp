@@ -24,142 +24,147 @@
  
 */
 
-#include "AlarmCallback.h"
 #include "PathPlanner.h"
+#include "AlarmCallback.h"
 #include <Python.h>
 
-void PathPlanner::setPrintMoveBufferWait(int dt) {
-  printMoveBufferWait = dt;
+void PathPlanner::setPrintMoveBufferWait(int dt)
+{
+    printMoveBufferWait = dt;
 }
 
-void PathPlanner::setMaxBufferedMoveTime(long long dt) {
-  maxBufferedMoveTime = dt;
+void PathPlanner::setMaxBufferedMoveTime(long long dt)
+{
+    maxBufferedMoveTime = dt;
 }
 
 // Speeds / accels
-void PathPlanner::setMaxSpeeds(VectorN speeds){
-  maxSpeeds = speeds;
+void PathPlanner::setMaxSpeeds(VectorN speeds)
+{
+    maxSpeeds = speeds;
 }
 
-void PathPlanner::setAcceleration(VectorN accel){
-  maxAccelerationMPerSquareSecond = accel;
+void PathPlanner::setAcceleration(VectorN accel)
+{
+    maxAccelerationMPerSquareSecond = accel;
 
-  recomputeParameters();
+    recomputeParameters();
 }
 
-void PathPlanner::setMaxSpeedJumps(VectorN speedJumps){
-  maxSpeedJumps = speedJumps;
-
+void PathPlanner::setMaxSpeedJumps(VectorN speedJumps)
+{
+    maxSpeedJumps = speedJumps;
 }
 
-void PathPlanner::setAxisStepsPerMeter(VectorN stepPerM) {
-  axisStepsPerM = stepPerM;
+void PathPlanner::setAxisStepsPerMeter(VectorN stepPerM)
+{
+    axisStepsPerM = stepPerM;
 
-  recomputeParameters();
+    recomputeParameters();
 }
 
 // soft endstops
 void PathPlanner::setSoftEndstopsMin(VectorN stops)
 {
-  soft_endstops_min = stops;
+    soft_endstops_min = stops;
 }
 
 void PathPlanner::setSoftEndstopsMax(VectorN stops)
-{ 
-  soft_endstops_max = stops;
+{
+    soft_endstops_max = stops;
 }
 
 void PathPlanner::setStopPrintOnSoftEndstopHit(bool stop)
-{ 
-  stop_on_soft_endstops_hit = stop;
+{
+    stop_on_soft_endstops_hit = stop;
 }
 
 void PathPlanner::setStopPrintOnPhysicalEndstopHit(bool stop)
-{ 
-  stop_on_physical_endstops_hit = stop;
+{
+    stop_on_physical_endstops_hit = stop;
 }
 
 // bed compensation
 void PathPlanner::setBedCompensationMatrix(std::vector<double> matrix)
 {
-  matrix_bed_comp = matrix;
+    matrix_bed_comp = matrix;
 }
 
 // axis configuration
 void PathPlanner::setAxisConfig(int axis)
 {
-  if (axis_config != axis)
-  {
-    VectorN stateBefore = getState();
+    if (axis_config != axis)
+    {
+        VectorN stateBefore = getState();
 
-    axis_config = axis;
+        axis_config = axis;
 
-    setState(stateBefore);
-  }
+        setState(stateBefore);
+    }
 }
 
 void PathPlanner::pruAlarmCallback()
 {
-  if(stop_on_physical_endstops_hit){
-    LOG("PRU fired endstop alarm - disabling path planner and firing alarm" << std::endl);
-    acceptingPaths = false;
-  }
-  else{
-    LOG("PRU fired endstop alarm - continuing path planner and firing alarm" << std::endl);
-  }
-  PyGILState_STATE gstate;
-  gstate = PyGILState_Ensure();
-  alarmCallback.call(7, "Physical Endstop hit", "Physical Endstop hit");
-  PyGILState_Release(gstate);
-
+    if (stop_on_physical_endstops_hit)
+    {
+        LOG("PRU fired endstop alarm - disabling path planner and firing alarm" << std::endl);
+        acceptingPaths = false;
+    }
+    else
+    {
+        LOG("PRU fired endstop alarm - continuing path planner and firing alarm" << std::endl);
+    }
+    PyGILState_STATE gstate;
+    gstate = PyGILState_Ensure();
+    alarmCallback.call(7, "Physical Endstop hit", "Physical Endstop hit");
+    PyGILState_Release(gstate);
 }
 
 // the state of the machine
 void PathPlanner::setState(VectorN set)
 {
-  applyBedCompensation(set);
+    applyBedCompensation(set);
 
-  IntVectorN newState = (set * axisStepsPerM).round();
+    IntVectorN newState = (set * axisStepsPerM).round();
 
-  switch (axis_config)
-  {
-  case AXIS_CONFIG_XY:
-    break;
-  case AXIS_CONFIG_H_BELT:
-  {
-    const Vector3 motionPos = worldToHBelt(set.toVector3());
-    const IntVector3 motionMotorPos = (motionPos * axisStepsPerM.toVector3()).round();
-    newState[0] = motionMotorPos.x;
-    newState[1] = motionMotorPos.y;
-    newState[2] = motionMotorPos.z;
-    break;
-  }
-  case AXIS_CONFIG_CORE_XY:
-  {
-    const Vector3 motionPos = worldToCoreXY(set.toVector3());
-    const IntVector3 motionMotorPos = (motionPos * axisStepsPerM.toVector3()).round();
-    newState[0] = motionMotorPos.x;
-    newState[1] = motionMotorPos.y;
-    newState[2] = motionMotorPos.z;
-    break;
-  }
-  case AXIS_CONFIG_DELTA:
-  {
-    const Vector3 motionPos = delta_bot.worldToDelta(set.toVector3());
-    const IntVector3 motionMotorPos = (motionPos * axisStepsPerM.toVector3()).round();
-    newState[0] = motionMotorPos.x;
-    newState[1] = motionMotorPos.y;
-    newState[2] = motionMotorPos.z;
-    break;
-  }
+    switch (axis_config)
+    {
+    case AXIS_CONFIG_XY:
+        break;
+    case AXIS_CONFIG_H_BELT:
+    {
+        const Vector3 motionPos = worldToHBelt(set.toVector3());
+        const IntVector3 motionMotorPos = (motionPos * axisStepsPerM.toVector3()).round();
+        newState[0] = motionMotorPos.x;
+        newState[1] = motionMotorPos.y;
+        newState[2] = motionMotorPos.z;
+        break;
+    }
+    case AXIS_CONFIG_CORE_XY:
+    {
+        const Vector3 motionPos = worldToCoreXY(set.toVector3());
+        const IntVector3 motionMotorPos = (motionPos * axisStepsPerM.toVector3()).round();
+        newState[0] = motionMotorPos.x;
+        newState[1] = motionMotorPos.y;
+        newState[2] = motionMotorPos.z;
+        break;
+    }
+    case AXIS_CONFIG_DELTA:
+    {
+        const Vector3 motionPos = delta_bot.worldToDelta(set.toVector3());
+        const IntVector3 motionMotorPos = (motionPos * axisStepsPerM.toVector3()).round();
+        newState[0] = motionMotorPos.x;
+        newState[1] = motionMotorPos.y;
+        newState[2] = motionMotorPos.z;
+        break;
+    }
 
-  default:
-    assert(0);
-  }
+    default:
+        assert(0);
+    }
 
-  state = newState;
+    state = newState;
 }
-
 
 // slaves
 bool has_slaves;
@@ -168,30 +173,29 @@ std::vector<int> slave;
 
 void PathPlanner::enableSlaves(bool enable)
 {
-  has_slaves = enable;
+    has_slaves = enable;
 }
-
 
 void PathPlanner::addSlave(int master_in, int slave_in)
 {
-  master.push_back(master_in);
-  slave.push_back(slave_in);
+    master.push_back(master_in);
+    slave.push_back(slave_in);
 
-  axes_stepping_together[master_in] |= (1 << slave_in);
+    axes_stepping_together[master_in] |= (1 << slave_in);
 }
 
 // backlash compensation
 void PathPlanner::setBacklashCompensation(VectorN set)
 {
-  backlash_compensation = set;
+    backlash_compensation = set;
 }
 
 void PathPlanner::resetBacklash()
 {
-  backlash_state.zero();
+    backlash_state.zero();
 }
 
 double PathPlanner::getLastProbeDistance()
 {
-  return lastProbeDistance;
+    return lastProbeDistance;
 }
