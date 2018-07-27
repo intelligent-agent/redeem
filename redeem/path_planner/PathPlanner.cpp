@@ -32,6 +32,22 @@
 #include <cmath>
 #include <thread>
 
+class PythonThreadHelper final
+{
+    PyThreadState* state = nullptr;
+
+public:
+    PythonThreadHelper()
+    {
+        state = PyEval_SaveThread();
+    }
+
+    ~PythonThreadHelper()
+    {
+        PyEval_RestoreThread(state);
+    }
+};
+
 PathPlanner::PathPlanner(unsigned int cacheSize, AlarmCallback& alarmCallback)
     : alarmCallback(alarmCallback)
     , pru([this]() { this->pruAlarmCallback(); })
@@ -86,8 +102,7 @@ void PathPlanner::recomputeParameters()
 
 bool PathPlanner::queueSyncEvent(bool isBlocking /* = true */)
 {
-    PyThreadState* _save;
-    _save = PyEval_SaveThread();
+    PythonThreadHelper threadHelper;
 
     // If the move command buffer isn't empty, make the last line a sync event
     {
@@ -97,12 +112,10 @@ bool PathPlanner::queueSyncEvent(bool isBlocking /* = true */)
             unsigned int lastLine = (linesWritePos == 0) ? moveCacheSize - 1 : linesWritePos - 1;
             Path* p = &lines[lastLine];
             p->setSyncEvent(isBlocking);
-            PyEval_RestoreThread(_save);
             return true;
         }
     }
 
-    PyEval_RestoreThread(_save);
     return false; // If the move command buffer is completely empty, it's too late.
 }
 
@@ -110,20 +123,16 @@ bool PathPlanner::queueSyncEvent(bool isBlocking /* = true */)
 int PathPlanner::waitUntilSyncEvent()
 {
     int ret;
-    PyThreadState* _save;
-    _save = PyEval_SaveThread();
+    PythonThreadHelper threadHelper;
     ret = pru.waitUntilSync();
-    PyEval_RestoreThread(_save);
     return ret;
 }
 
 // Clear the sync event on the stepper PRU and resume operation.
 void PathPlanner::clearSyncEvent()
 {
-    PyThreadState* _save;
-    _save = PyEval_SaveThread();
+    PythonThreadHelper threadHelper;
     pru.resume();
-    PyEval_RestoreThread(_save);
 }
 
 void PathPlanner::queueMove(VectorN endWorldPos,
@@ -252,8 +261,7 @@ void PathPlanner::queueMove(VectorN endWorldPos,
     // LOAD INTO QUEUE
     ////////////////////////////////////////////////////////////////////
 
-    PyThreadState* _save;
-    _save = PyEval_SaveThread();
+    PythonThreadHelper threadHelper;
 
     Path p;
 
@@ -265,7 +273,6 @@ void PathPlanner::queueMove(VectorN endWorldPos,
     {
         LOG("Warning: no move path" << std::endl);
         assert(0); /// TODO We should have bailed before now
-        PyEval_RestoreThread(_save);
         return; // No steps included
     }
 
@@ -310,7 +317,6 @@ void PathPlanner::queueMove(VectorN endWorldPos,
     }
     if (stop)
     {
-        PyEval_RestoreThread(_save);
         LOG("Stopped/aborted/Cancelled while waiting for free move command space. linesCount: " << linesCount << std::endl);
         return;
     }
@@ -368,8 +374,6 @@ void PathPlanner::queueMove(VectorN endWorldPos,
     }
 
     queue_move_fail = false;
-
-    PyEval_RestoreThread(_save);
 }
 
 /**
