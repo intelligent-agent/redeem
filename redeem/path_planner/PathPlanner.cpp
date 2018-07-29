@@ -260,6 +260,11 @@ void PathPlanner::queueMove(VectorN endWorldPos,
         return; // No steps included
     }
 
+    if (is_probe)
+    {
+        p.setSyncEvent(true);
+    }
+
     /*
     LOG("checking deltas..." << std::endl);
     std::cout.flush();
@@ -315,9 +320,9 @@ void PathPlanner::queueMove(VectorN endWorldPos,
 
     if (is_probe)
     {
-        LOG("Probe Move - waiting for the queue to empty" << std::endl);
+        LOG("Probe Move - waiting for the sync event" << std::endl);
 
-        // TODO need a way to wait for the queue to empty
+        waitUntilSyncEvent();
 
         assert(state != startPos);
     }
