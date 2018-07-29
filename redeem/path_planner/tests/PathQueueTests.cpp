@@ -37,7 +37,7 @@ TEST(PathQueueBasics, AcceptsPaths)
     DummyPathOptimizer optimizer;
     SimplePathQueue queue(optimizer, 15);
     Path path;
-    queue.addPath(std::move(path));
+    ASSERT_TRUE(queue.addPath(std::move(path)));
     EXPECT_EQ(queue.availablePathSlots(), 14);
 }
 
@@ -47,9 +47,9 @@ TEST(PathQueueBasics, ReturnsPaths)
     SimplePathQueue queue(optimizer, 15);
     Path path;
     path.fixStartAndEndSpeed();
-    queue.addPath(std::move(path));
+    ASSERT_TRUE(queue.addPath(std::move(path)));
 
-    Path otherPath(queue.popPath());
+    Path otherPath(queue.popPath().value());
     EXPECT_EQ(otherPath.isStartSpeedFixed(), true);
     EXPECT_EQ(queue.availablePathSlots(), 15);
 }
@@ -60,20 +60,20 @@ TEST(PathQueueBasics, ReturnsPathsInOrder)
     SimplePathQueue queue(optimizer, 15);
     Path path;
     path.fixStartAndEndSpeed();
-    queue.addPath(std::move(path));
+    ASSERT_TRUE(queue.addPath(std::move(path)));
 
     path.zero();
     path.block();
-    queue.addPath(std::move(path));
+    ASSERT_TRUE(queue.addPath(std::move(path)));
 
     EXPECT_EQ(queue.availablePathSlots(), 13);
 
-    Path otherPath(queue.popPath());
+    Path otherPath(queue.popPath().value());
     EXPECT_EQ(otherPath.isStartSpeedFixed(), true);
 
     otherPath.zero();
 
-    otherPath = queue.popPath();
+    otherPath = queue.popPath().value();
     EXPECT_EQ(otherPath.isStartSpeedFixed(), false);
 
     EXPECT_EQ(queue.availablePathSlots(), 15);
@@ -88,8 +88,8 @@ TEST(PathQueueBasics, WrapsAround)
 
     for (int i = 0; i < 60; i++)
     {
-        queue.addPath(std::move(path));
-        path = queue.popPath();
+        ASSERT_TRUE(queue.addPath(std::move(path)));
+        path = queue.popPath().value();
     }
 }
 
@@ -106,11 +106,11 @@ TEST(PathQueueBasics, BlocksWhenFull)
 
     Path path;
 
-    queue.addPath(std::move(path));
+    ASSERT_TRUE(queue.addPath(std::move(path)));
     path.zero();
-    queue.addPath(std::move(path));
+    ASSERT_TRUE(queue.addPath(std::move(path)));
     path.zero();
-    queue.addPath(std::move(path));
+    ASSERT_TRUE(queue.addPath(std::move(path)));
 
     std::promise<void> workerRunning;
     std::future<void> workerRunningFuture = workerRunning.get_future();
@@ -119,7 +119,7 @@ TEST(PathQueueBasics, BlocksWhenFull)
     std::thread worker([&workerRunning, &workerFinished, &queue]() {
         Path path;
         workerRunning.set_value();
-        queue.addPath(std::move(path));
+        ASSERT_TRUE(queue.addPath(std::move(path)));
         workerFinished.set_value();
     });
 
@@ -153,7 +153,7 @@ TEST(PathQueueBasics, BlocksWhenEmpty)
     EXPECT_EQ(is_ready(workerFinishedFuture), false);
 
     Path path;
-    queue.addPath(std::move(path));
+    ASSERT_TRUE(queue.addPath(std::move(path)));
 
     workerFinishedFuture.wait();
     worker.join();
@@ -165,10 +165,10 @@ TEST(PathQueueBasics, BlocksUntilEmpty)
     SimplePathQueue queue(optimizer, 4);
 
     Path path;
-    queue.addPath(std::move(path));
+    ASSERT_TRUE(queue.addPath(std::move(path)));
 
     path.zero();
-    queue.addPath(std::move(path));
+    ASSERT_TRUE(queue.addPath(std::move(path)));
 
     std::promise<void> workerRunning;
     std::future<void> workerRunningFuture = workerRunning.get_future();
@@ -184,12 +184,12 @@ TEST(PathQueueBasics, BlocksUntilEmpty)
 
     EXPECT_EQ(is_ready(workerFinishedFuture), false);
 
-    path = queue.popPath();
+    path = queue.popPath().value();
 
     EXPECT_EQ(is_ready(workerFinishedFuture), false);
 
     path.zero();
-    path = queue.popPath();
+    path = queue.popPath().value();
 
     workerFinishedFuture.wait();
     worker.join();
@@ -201,11 +201,11 @@ TEST(PathQueueBasics, AddsSyncEventToLastPathSinglePath)
     SimplePathQueue queue(optimizer, 4);
 
     Path path;
-    queue.addPath(std::move(path));
+    ASSERT_TRUE(queue.addPath(std::move(path)));
 
     queue.queueSyncEvent(false);
 
-    Path result = queue.popPath();
+    Path result = queue.popPath().value();
 
     EXPECT_EQ(result.isSyncEvent(), true);
 }
@@ -216,16 +216,16 @@ TEST(PathQueueBasics, AddsSyncEventToLastPathTwoPaths)
     SimplePathQueue queue(optimizer, 4);
 
     Path path;
-    queue.addPath(std::move(path));
+    ASSERT_TRUE(queue.addPath(std::move(path)));
     path.zero();
-    queue.addPath(std::move(path));
+    ASSERT_TRUE(queue.addPath(std::move(path)));
 
     queue.queueSyncEvent(false);
 
-    Path result = queue.popPath();
+    Path result = queue.popPath().value();
     EXPECT_EQ(result.isSyncEvent(), false);
     result.zero();
-    result = queue.popPath();
+    result = queue.popPath().value();
     EXPECT_EQ(result.isSyncEvent(), true);
 }
 
@@ -240,7 +240,7 @@ TEST(PathQueueBasics, AddsSyncEventToEmptyQueue)
 
     ASSERT_EQ(queue.availablePathSlots(), 3);
 
-    Path result = queue.popPath();
+    Path result = queue.popPath().value();
     EXPECT_EQ(result.isSyncEvent(), true);
     EXPECT_EQ(result.getDistance(), 0);
     EXPECT_EQ(result.getTimeInTicks(), 0);
@@ -261,13 +261,13 @@ TEST(PathQueueBasics, AddsSyncEventIfLastPathAlreadyIsOne)
 
     ASSERT_EQ(queue.availablePathSlots(), 2);
 
-    Path result = queue.popPath();
+    Path result = queue.popPath().value();
     EXPECT_EQ(result.isSyncEvent(), true);
     EXPECT_EQ(result.getDistance(), 0);
     EXPECT_EQ(result.getTimeInTicks(), 0);
 
     result.zero();
-    result = queue.popPath();
+    result = queue.popPath().value();
     EXPECT_EQ(result.isSyncWaitEvent(), true);
     EXPECT_EQ(result.getDistance(), 0);
     EXPECT_EQ(result.getTimeInTicks(), 0);
@@ -279,13 +279,170 @@ TEST(PathQueueBasics, AddsSyncWaitEventToLastPath)
     SimplePathQueue queue(optimizer, 4);
 
     Path path;
-    queue.addPath(std::move(path));
+    ASSERT_TRUE(queue.addPath(std::move(path)));
 
     queue.queueSyncEvent(true);
 
-    Path result = queue.popPath();
+    Path result = queue.popPath().value();
 
     EXPECT_EQ(result.isSyncWaitEvent(), true);
+}
+
+TEST(PathQueueBasics, FailsToPopWhenStopping)
+{
+    DummyPathOptimizer optimizer;
+    SimplePathQueue queue(optimizer, 4);
+
+    queue.stop();
+
+    auto result = queue.popPath();
+
+    EXPECT_EQ(result.has_value(), false);
+}
+
+TEST(PathQueueBasics, FailsToAddWhenStopping)
+{
+    DummyPathOptimizer optimizer;
+    SimplePathQueue queue(optimizer, 4);
+
+    queue.stop();
+
+    Path path;
+    EXPECT_EQ(queue.addPath(std::move(path)), false);
+}
+
+TEST(PathQueueBasics, StopsBlockingAddWhenStopping)
+{
+    DummyPathOptimizer optimizer;
+    SimplePathQueue queue(optimizer, 2);
+
+    Path path;
+    ASSERT_TRUE(queue.addPath(std::move(path)));
+
+    path.zero();
+    ASSERT_TRUE(queue.addPath(std::move(path)));
+
+    ASSERT_EQ(queue.availablePathSlots(), 0);
+
+    std::promise<void> workerRunning;
+    std::future<void> workerRunningFuture = workerRunning.get_future();
+    std::promise<void> workerFinished;
+    std::future<void> workerFinishedFuture = workerFinished.get_future();
+    std::thread worker([&workerRunning, &workerFinished, &queue]() {
+        Path path;
+        workerRunning.set_value();
+        ASSERT_FALSE(queue.addPath(std::move(path)));
+        workerFinished.set_value();
+    });
+
+    workerRunningFuture.wait();
+
+    EXPECT_EQ(is_ready(workerFinishedFuture), false);
+
+    queue.stop();
+
+    workerFinishedFuture.wait();
+    worker.join();
+}
+
+TEST(PathQueueBasics, StopsBlockingPopWhenStopping)
+{
+    DummyPathOptimizer optimizer;
+    SimplePathQueue queue(optimizer, 2);
+
+    std::promise<void> workerRunning;
+    std::future<void> workerRunningFuture = workerRunning.get_future();
+    std::promise<void> workerFinished;
+    std::future<void> workerFinishedFuture = workerFinished.get_future();
+    std::thread worker([&workerRunning, &workerFinished, &queue]() {
+        workerRunning.set_value();
+        queue.popPath();
+        workerFinished.set_value();
+    });
+
+    workerRunningFuture.wait();
+
+    EXPECT_EQ(is_ready(workerFinishedFuture), false);
+
+    queue.stop();
+
+    workerFinishedFuture.wait();
+    worker.join();
+}
+
+TEST(PathQueueBasics, FailsToQueueSyncEventWhenStopping)
+{
+    DummyPathOptimizer optimizer;
+    SimplePathQueue queue(optimizer, 4);
+
+    queue.stop();
+    EXPECT_EQ(queue.queueSyncEvent(false), false);
+}
+
+TEST(PathQueueBasics, FailsToWaitForEmptyWhenStopping)
+{
+    DummyPathOptimizer optimizer;
+    SimplePathQueue queue(optimizer, 4);
+
+    queue.stop();
+    EXPECT_EQ(queue.waitForQueueToEmpty(), false);
+}
+
+TEST(PathQueueBasics, StopsBlockingWaitForEmptyWhenStopping)
+{
+    DummyPathOptimizer optimizer;
+    SimplePathQueue queue(optimizer, 4);
+
+    Path path;
+    ASSERT_EQ(queue.addPath(std::move(path)), true);
+
+    std::promise<void> workerRunning;
+    std::future<void> workerRunningFuture = workerRunning.get_future();
+    std::promise<void> workerFinished;
+    std::future<void> workerFinishedFuture = workerFinished.get_future();
+    std::thread worker([&workerRunning, &workerFinished, &queue]() {
+        workerRunning.set_value();
+        queue.waitForQueueToEmpty();
+        workerFinished.set_value();
+    });
+
+    workerRunningFuture.wait();
+
+    EXPECT_EQ(is_ready(workerFinishedFuture), false);
+
+    queue.stop();
+
+    workerFinishedFuture.wait();
+    worker.join();
+}
+
+TEST(PathQueueBasics, FailsToQueueSyncEventWhenFullAndStopping)
+{
+    DummyPathOptimizer optimizer;
+    SimplePathQueue queue(optimizer, 1);
+
+    Path path;
+    path.setSyncEvent(true);
+    ASSERT_TRUE(queue.addPath(std::move(path)));
+
+    std::promise<void> workerRunning;
+    std::future<void> workerRunningFuture = workerRunning.get_future();
+    std::promise<void> workerFinished;
+    std::future<void> workerFinishedFuture = workerFinished.get_future();
+    std::thread worker([&workerRunning, &workerFinished, &queue]() {
+        workerRunning.set_value();
+        EXPECT_FALSE(queue.queueSyncEvent(false));
+        workerFinished.set_value();
+    });
+
+    workerRunningFuture.wait();
+
+    EXPECT_EQ(is_ready(workerFinishedFuture), false);
+
+    queue.stop();
+
+    workerFinishedFuture.wait();
+    worker.join();
 }
 
 class MockPathOptimizer : public PathOptimizerInterface
@@ -306,7 +463,7 @@ TEST(PathQueueBasics, CallsOnPathAddedAfterAdd)
 
     EXPECT_CALL(optimizer, onPathAdded(::testing::_, 0, 0));
 
-    queue.addPath(std::move(path));
+    ASSERT_TRUE(queue.addPath(std::move(path)));
 }
 
 TEST(PathQueueBasics, CallsBeforePathRemovalBeforePop)
@@ -319,6 +476,6 @@ TEST(PathQueueBasics, CallsBeforePathRemovalBeforePop)
     EXPECT_CALL(optimizer, onPathAdded(::testing::_, 0, 0));
     EXPECT_CALL(optimizer, beforePathRemoval(::testing::_, 0, 0));
 
-    queue.addPath(std::move(path));
-    path = queue.popPath();
+    ASSERT_TRUE(queue.addPath(std::move(path)));
+    path = queue.popPath().value();
 }

@@ -289,7 +289,10 @@ void PathPlanner::queueMove(VectorN endWorldPos,
     LOG("done!" << std::endl);
 	*/
 
-    pathQueue.addPath(std::move(p));
+    if (!pathQueue.addPath(std::move(p)))
+    {
+        return;
+    }
 
     // capture state so we can check it after a probe
     const IntVectorN startPos = state;
@@ -383,7 +386,16 @@ void PathPlanner::run()
 
     while (!stop)
     {
-        Path cur = pathQueue.popPath();
+        auto possiblePath = pathQueue.popPath();
+
+        if (!possiblePath.has_value())
+        {
+            // the queue should only fail to give us a path if we're shutting down
+            assert(stop);
+            continue;
+        }
+        Path& cur = possiblePath.value();
+
         IntVectorN probeDistanceTraveled;
 
         if (stop)

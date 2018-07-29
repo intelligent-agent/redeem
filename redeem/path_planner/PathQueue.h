@@ -12,38 +12,25 @@ template <typename PathOptimizerType, typename std::enable_if<std::is_base_of<Pa
 class PathQueue
 {
 private:
-    std::recursive_mutex mutex;
-    std::condition_variable_any queueHasPaths;
-    std::condition_variable_any queueHasSpace;
-    std::condition_variable_any queueIsEmpty;
+    std::mutex mutex;
+    std::condition_variable queueHasPaths;
+    std::condition_variable queueHasSpace;
+    std::condition_variable queueIsEmpty;
     PathOptimizerType& optimizer;
     std::vector<Path> queue;
     size_t writeIndex;
     size_t readIndex;
     size_t availableSlots;
+    bool running;
 
-public:
-    PathQueue(PathOptimizerType& optimizer, size_t size)
-        : optimizer(optimizer)
-        , queue(size)
-        , writeIndex(0)
-        , readIndex(0)
-        , availableSlots(size)
+    bool addPathInternal(std::unique_lock<std::mutex>& lock, Path&& path)
     {
-    }
+        queueHasSpace.wait(lock, [this] { return !running || availableSlots != 0; });
 
-    size_t availablePathSlots()
-    {
-        std::unique_lock<std::recursive_mutex> lock(mutex);
-
-        return availableSlots;
-    }
-
-    void addPath(Path&& path)
-    {
-        std::unique_lock<std::recursive_mutex> lock(mutex);
-
-        queueHasSpace.wait(lock, [this] { return availableSlots != 0; });
+        if (!running)
+        {
+            return false;
+        }
 
         queue[writeIndex] = std::move(path);
         writeIndex = (writeIndex + 1) % queue.size();
@@ -57,13 +44,45 @@ public:
             lock.unlock();
             queueHasPaths.notify_all();
         }
+
+        return true;
     }
 
-    Path popPath()
+public:
+    PathQueue(PathOptimizerType& optimizer, size_t size)
+        : optimizer(optimizer)
+        , queue(size)
+        , writeIndex(0)
+        , readIndex(0)
+        , availableSlots(size)
+        , running(true)
     {
-        std::unique_lock<std::recursive_mutex> lock(mutex);
+    }
 
-        queueHasPaths.wait(lock, [this] { return availableSlots != queue.size(); });
+    size_t availablePathSlots()
+    {
+        std::unique_lock<std::mutex> lock(mutex);
+
+        return availableSlots;
+    }
+
+    bool addPath(Path&& path)
+    {
+        std::unique_lock<std::mutex> lock(mutex);
+
+        return addPathInternal(lock, std::move(path));
+    }
+
+    std::optional<Path> popPath()
+    {
+        std::unique_lock<std::mutex> lock(mutex);
+
+        queueHasPaths.wait(lock, [this] { return !running || availableSlots != queue.size(); });
+
+        if (!running)
+        {
+            return std::optional<Path>();
+        }
 
         const size_t currentReadIndex = readIndex;
 
@@ -89,9 +108,14 @@ public:
         return std::move(result);
     }
 
-    void queueSyncEvent(bool blocking)
+    bool queueSyncEvent(bool blocking)
     {
-        std::unique_lock<std::recursive_mutex> lock(mutex);
+        std::unique_lock<std::mutex> lock(mutex);
+
+        if (!running)
+        {
+            return false;
+        }
 
         const size_t lastPathIndex = (writeIndex + queue.size() - 1) % queue.size();
 
@@ -101,19 +125,33 @@ public:
         {
             Path& lastPath = queue[(writeIndex + queue.size() - 1) % queue.size()];
             lastPath.setSyncEvent(blocking);
+            return true;
         }
         else
         {
             Path dummyPath;
             dummyPath.setSyncEvent(blocking);
-            addPath(std::move(dummyPath));
+            return addPathInternal(lock, std::move(dummyPath));
         }
     }
 
-    void waitForQueueToEmpty()
+    bool waitForQueueToEmpty()
     {
-        std::unique_lock<std::recursive_mutex> lock(mutex);
+        std::unique_lock<std::mutex> lock(mutex);
 
-        queueIsEmpty.wait(lock, [this] { return availableSlots == queue.size(); });
+        queueIsEmpty.wait(lock, [this] { return !running || availableSlots == queue.size(); });
+
+        return running;
+    }
+
+    void stop()
+    {
+        std::unique_lock<std::mutex> lock(mutex);
+
+        running = false;
+
+        queueHasPaths.notify_all();
+        queueHasSpace.notify_all();
+        queueIsEmpty.notify_all();
     }
 };
