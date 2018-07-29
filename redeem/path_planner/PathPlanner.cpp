@@ -346,7 +346,7 @@ void PathPlanner::stopThread(bool join)
     pru.stopThread(join);
     stop = true;
 
-    // TODO need a way to tell the path queue to drain
+    pathQueue.stop();
 
     if (join && runningThread.joinable())
     {
