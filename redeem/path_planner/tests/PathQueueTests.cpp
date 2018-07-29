@@ -159,10 +159,138 @@ TEST(PathQueueBasics, BlocksWhenEmpty)
     worker.join();
 }
 
+TEST(PathQueueBasics, BlocksUntilEmpty)
+{
+    DummyPathOptimizer optimizer;
+    SimplePathQueue queue(optimizer, 4);
+
+    Path path;
+    queue.addPath(std::move(path));
+
+    path.zero();
+    queue.addPath(std::move(path));
+
+    std::promise<void> workerRunning;
+    std::future<void> workerRunningFuture = workerRunning.get_future();
+    std::promise<void> workerFinished;
+    std::future<void> workerFinishedFuture = workerFinished.get_future();
+    std::thread worker([&workerRunning, &workerFinished, &queue]() {
+        workerRunning.set_value();
+        queue.waitForQueueToEmpty();
+        workerFinished.set_value();
+    });
+
+    workerRunningFuture.wait();
+
+    EXPECT_EQ(is_ready(workerFinishedFuture), false);
+
+    path = queue.popPath();
+
+    EXPECT_EQ(is_ready(workerFinishedFuture), false);
+
+    path.zero();
+    path = queue.popPath();
+
+    workerFinishedFuture.wait();
+    worker.join();
+}
+
+TEST(PathQueueBasics, AddsSyncEventToLastPathSinglePath)
+{
+    DummyPathOptimizer optimizer;
+    SimplePathQueue queue(optimizer, 4);
+
+    Path path;
+    queue.addPath(std::move(path));
+
+    queue.queueSyncEvent(false);
+
+    Path result = queue.popPath();
+
+    EXPECT_EQ(result.isSyncEvent(), true);
+}
+
+TEST(PathQueueBasics, AddsSyncEventToLastPathTwoPaths)
+{
+    DummyPathOptimizer optimizer;
+    SimplePathQueue queue(optimizer, 4);
+
+    Path path;
+    queue.addPath(std::move(path));
+    path.zero();
+    queue.addPath(std::move(path));
+
+    queue.queueSyncEvent(false);
+
+    Path result = queue.popPath();
+    EXPECT_EQ(result.isSyncEvent(), false);
+    result.zero();
+    result = queue.popPath();
+    EXPECT_EQ(result.isSyncEvent(), true);
+}
+
+TEST(PathQueueBasics, AddsSyncEventToEmptyQueue)
+{
+    DummyPathOptimizer optimizer;
+    SimplePathQueue queue(optimizer, 4);
+
+    EXPECT_EQ(queue.availablePathSlots(), 4);
+
+    queue.queueSyncEvent(false);
+
+    ASSERT_EQ(queue.availablePathSlots(), 3);
+
+    Path result = queue.popPath();
+    EXPECT_EQ(result.isSyncEvent(), true);
+    EXPECT_EQ(result.getDistance(), 0);
+    EXPECT_EQ(result.getTimeInTicks(), 0);
+}
+
+TEST(PathQueueBasics, AddsSyncEventIfLastPathAlreadyIsOne)
+{
+    DummyPathOptimizer optimizer;
+    SimplePathQueue queue(optimizer, 4);
+
+    ASSERT_EQ(queue.availablePathSlots(), 4);
+
+    queue.queueSyncEvent(false);
+
+    ASSERT_EQ(queue.availablePathSlots(), 3);
+
+    queue.queueSyncEvent(true);
+
+    ASSERT_EQ(queue.availablePathSlots(), 2);
+
+    Path result = queue.popPath();
+    EXPECT_EQ(result.isSyncEvent(), true);
+    EXPECT_EQ(result.getDistance(), 0);
+    EXPECT_EQ(result.getTimeInTicks(), 0);
+
+    result.zero();
+    result = queue.popPath();
+    EXPECT_EQ(result.isSyncWaitEvent(), true);
+    EXPECT_EQ(result.getDistance(), 0);
+    EXPECT_EQ(result.getTimeInTicks(), 0);
+}
+
+TEST(PathQueueBasics, AddsSyncWaitEventToLastPath)
+{
+    DummyPathOptimizer optimizer;
+    SimplePathQueue queue(optimizer, 4);
+
+    Path path;
+    queue.addPath(std::move(path));
+
+    queue.queueSyncEvent(true);
+
+    Path result = queue.popPath();
+
+    EXPECT_EQ(result.isSyncWaitEvent(), true);
+}
+
 class MockPathOptimizer : public PathOptimizerInterface
 {
 public:
-
     MOCK_METHOD3(onPathAdded, void(std::vector<Path>&, size_t, size_t));
     MOCK_METHOD3(beforePathRemoval, void(std::vector<Path>&, size_t, size_t));
 };
@@ -188,7 +316,7 @@ TEST(PathQueueBasics, CallsBeforePathRemovalBeforePop)
 
     Path path;
 
-	EXPECT_CALL(optimizer, onPathAdded(::testing::_, 0, 0));
+    EXPECT_CALL(optimizer, onPathAdded(::testing::_, 0, 0));
     EXPECT_CALL(optimizer, beforePathRemoval(::testing::_, 0, 0));
 
     queue.addPath(std::move(path));

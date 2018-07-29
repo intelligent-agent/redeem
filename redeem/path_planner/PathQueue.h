@@ -10,9 +10,10 @@ template <typename PathOptimizerType, typename std::enable_if<std::is_base_of<Pa
 class PathQueue
 {
 private:
-    std::mutex mutex;
-    std::condition_variable queueHasPaths;
-    std::condition_variable queueHasSpace;
+    std::recursive_mutex mutex;
+    std::condition_variable_any queueHasPaths;
+    std::condition_variable_any queueHasSpace;
+    std::condition_variable_any queueIsEmpty;
     PathOptimizerType& optimizer;
     std::vector<Path> queue;
     size_t writeIndex;
@@ -31,14 +32,14 @@ public:
 
     size_t availablePathSlots()
     {
-        std::unique_lock<std::mutex> lock(mutex);
+        std::unique_lock<std::recursive_mutex> lock(mutex);
 
         return availableSlots;
     }
 
     void addPath(Path&& path)
     {
-        std::unique_lock<std::mutex> lock(mutex);
+        std::unique_lock<std::recursive_mutex> lock(mutex);
 
         queueHasSpace.wait(lock, [this] { return availableSlots != 0; });
 
@@ -58,7 +59,7 @@ public:
 
     Path popPath()
     {
-        std::unique_lock<std::mutex> lock(mutex);
+        std::unique_lock<std::recursive_mutex> lock(mutex);
 
         queueHasPaths.wait(lock, [this] { return availableSlots != queue.size(); });
 
@@ -77,7 +78,40 @@ public:
             lock.unlock();
             queueHasSpace.notify_all();
         }
+        else if (availableSlots == queue.size())
+        {
+            lock.unlock();
+            queueIsEmpty.notify_all();
+        }
 
         return std::move(result);
+    }
+
+    void queueSyncEvent(bool blocking)
+    {
+        std::unique_lock<std::recursive_mutex> lock(mutex);
+
+        const size_t lastPathIndex = (writeIndex + queue.size() - 1) % queue.size();
+
+        if (queue.size() - availableSlots > 0
+            && !queue[lastPathIndex].isSyncEvent()
+            && !queue[lastPathIndex].isSyncWaitEvent())
+        {
+            Path& lastPath = queue[(writeIndex + queue.size() - 1) % queue.size()];
+            lastPath.setSyncEvent(blocking);
+        }
+        else
+        {
+            Path dummyPath;
+            dummyPath.setSyncEvent(blocking);
+            addPath(std::move(dummyPath));
+        }
+    }
+
+    void waitForQueueToEmpty()
+    {
+        std::unique_lock<std::recursive_mutex> lock(mutex);
+
+        queueIsEmpty.wait(lock, [this] { return availableSlots == queue.size(); });
     }
 };

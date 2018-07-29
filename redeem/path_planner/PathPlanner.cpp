@@ -98,7 +98,7 @@ bool PathPlanner::queueSyncEvent(bool isBlocking /* = true */)
 {
     PythonThreadHelper threadHelper;
 
-    // TODO work out sync events for the new path queue
+    pathQueue.queueSyncEvent(isBlocking);
 
     return false; // If the move command buffer is completely empty, it's too late.
 }
@@ -358,7 +358,7 @@ void PathPlanner::waitUntilFinished()
 {
     PythonThreadHelper threadHelper;
 
-    // TODO need a way to wait until the queue empties
+    pathQueue.waitForQueueToEmpty();
 
     //Wait for PruTimer then
     if (!stop)
