@@ -1,5 +1,7 @@
 #include "PathOptimizer.h"
 
+#include <cmath>
+
 void PathOptimizer::beforePathRemoval(std::vector<Path>& queue, size_t first, size_t last)
 {
     if (first != last)
