@@ -27,13 +27,15 @@ typedef PathQueue<DummyPathOptimizer> SimplePathQueue;
 
 TEST(PathQueueBasics, ConstructsWithSize)
 {
-    SimplePathQueue queue(15);
+    DummyPathOptimizer optimizer;
+    SimplePathQueue queue(optimizer, 15);
     EXPECT_EQ(queue.availablePathSlots(), 15);
 }
 
 TEST(PathQueueBasics, AcceptsPaths)
 {
-    SimplePathQueue queue(15);
+    DummyPathOptimizer optimizer;
+    SimplePathQueue queue(optimizer, 15);
     Path path;
     queue.addPath(std::move(path));
     EXPECT_EQ(queue.availablePathSlots(), 14);
@@ -41,7 +43,8 @@ TEST(PathQueueBasics, AcceptsPaths)
 
 TEST(PathQueueBasics, ReturnsPaths)
 {
-    SimplePathQueue queue(15);
+    DummyPathOptimizer optimizer;
+    SimplePathQueue queue(optimizer, 15);
     Path path;
     path.fixStartAndEndSpeed();
     queue.addPath(std::move(path));
@@ -53,7 +56,8 @@ TEST(PathQueueBasics, ReturnsPaths)
 
 TEST(PathQueueBasics, ReturnsPathsInOrder)
 {
-    SimplePathQueue queue(15);
+    DummyPathOptimizer optimizer;
+    SimplePathQueue queue(optimizer, 15);
     Path path;
     path.fixStartAndEndSpeed();
     queue.addPath(std::move(path));
@@ -77,7 +81,8 @@ TEST(PathQueueBasics, ReturnsPathsInOrder)
 
 TEST(PathQueueBasics, WrapsAround)
 {
-    SimplePathQueue queue(4);
+    DummyPathOptimizer optimizer;
+    SimplePathQueue queue(optimizer, 4);
 
     Path path;
 
@@ -96,7 +101,8 @@ bool is_ready(std::future<T> const& future)
 
 TEST(PathQueueBasics, BlocksWhenFull)
 {
-    SimplePathQueue queue(3);
+    DummyPathOptimizer optimizer;
+    SimplePathQueue queue(optimizer, 3);
 
     Path path;
 
@@ -129,7 +135,8 @@ TEST(PathQueueBasics, BlocksWhenFull)
 
 TEST(PathQueueBasics, BlocksWhenEmpty)
 {
-    SimplePathQueue queue(3);
+    DummyPathOptimizer optimizer;
+    SimplePathQueue queue(optimizer, 3);
 
     std::promise<void> workerRunning;
     std::future<void> workerRunningFuture = workerRunning.get_future();
@@ -154,46 +161,35 @@ TEST(PathQueueBasics, BlocksWhenEmpty)
 
 class MockPathOptimizer : public PathOptimizerInterface
 {
-private:
-    static MockPathOptimizer* singleton;
-
 public:
-    MockPathOptimizer()
-    {
-        singleton = this;
-    }
 
     MOCK_METHOD3(onPathAdded, void(std::vector<Path>&, size_t, size_t));
     MOCK_METHOD3(beforePathRemoval, void(std::vector<Path>&, size_t, size_t));
-
-    static MockPathOptimizer& get()
-    {
-        return *singleton;
-    }
 };
-
-MockPathOptimizer* MockPathOptimizer::singleton = nullptr;
 
 typedef PathQueue<MockPathOptimizer> MockPathQueue;
 
 TEST(PathQueueBasics, CallsOnPathAddedAfterAdd)
 {
-    MockPathQueue queue(4);
+    MockPathOptimizer optimizer;
+    MockPathQueue queue(optimizer, 4);
 
     Path path;
 
-    EXPECT_CALL(MockPathOptimizer::get(), onPathAdded(::testing::_, 0, 0));
+    EXPECT_CALL(optimizer, onPathAdded(::testing::_, 0, 0));
 
     queue.addPath(std::move(path));
 }
 
 TEST(PathQueueBasics, CallsBeforePathRemovalBeforePop)
 {
-    MockPathQueue queue(4);
+    MockPathOptimizer optimizer;
+    MockPathQueue queue(optimizer, 4);
 
     Path path;
 
-    EXPECT_CALL(MockPathOptimizer::get(), beforePathRemoval(::testing::_, 0, 0));
+	EXPECT_CALL(optimizer, onPathAdded(::testing::_, 0, 0));
+    EXPECT_CALL(optimizer, beforePathRemoval(::testing::_, 0, 0));
 
     queue.addPath(std::move(path));
     path = queue.popPath();

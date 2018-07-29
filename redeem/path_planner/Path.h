@@ -37,7 +37,6 @@
 #include <stdint.h>
 #include <string>
 #include <vector>
-#include <vector>
 
 #define FLAG_WILL_REACH_FULL_SPEED (1 << 0)
 #define FLAG_ACCELERATION_ENABLED (1 << 1)
@@ -144,17 +143,15 @@ private:
     unsigned char moveMask;
     unsigned long long timeInTicks; /// Time for completing a move (optimistically assuming it runs full speed the whole time)
     VectorN speeds;
+    VectorN worldMove;
     double fullSpeed; /// Cruising speed in m/s
     double startSpeed; /// Starting speed in m/s
     double endSpeed; /// Exit speed in m/s
-    double minSpeed; /// Minimum allowable speed for the move
     double accel; /// Acceleration in m/s^2
     IntVectorN startMachinePos; /// Starting position of the machine
 
     StepperPathParameters stepperPath;
     std::array<std::vector<Step>, NUM_AXES> steps;
-
-    double calculateSafeSpeed(const VectorN& worldMove, const VectorN& maxSpeedJumps);
 
     Path(const Path& path) = delete;
     Path& operator=(const Path&) = delete;
@@ -170,7 +167,6 @@ public:
         const VectorN& worldStart,
         const VectorN& worldEnd,
         const VectorN& stepsPerM,
-        const VectorN& maxSpeedJumps, /// Maximum allowable speed jumps in m/s
         const VectorN& maxSpeeds, /// Maximum allowable speeds in m/s
         const VectorN& maxAccelMPerSquareSecond,
         double requestedSpeed,
@@ -320,6 +316,11 @@ public:
         return speeds;
     }
 
+    inline const VectorN& getWorldMove()
+    {
+        return worldMove;
+    }
+
     inline double getMaxJunctionSpeed()
     {
         return maxJunctionSpeed;
@@ -357,14 +358,14 @@ public:
         invalidateStepperPathParameters();
     }
 
-    inline double getMinSpeed()
-    {
-        return minSpeed;
-    }
-
     inline double getAcceleration()
     {
         return accel;
+    }
+
+    inline double getDistance()
+    {
+        return distance;
     }
 
     /// Note: This magical number is present because it's useful in the formula

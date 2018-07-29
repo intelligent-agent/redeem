@@ -21,6 +21,18 @@ struct VectorN
     /// Default constructor.
     VectorN();
 
+    VectorN(double x,
+        double y,
+        double z,
+        double e = 0.0,
+        double h = 0.0,
+        double a = 0.0,
+        double b = 0.0,
+        double c = 0.0)
+        : values{ x, y, z, e, h, a, b, c }
+    {
+    }
+
     /// Zeroes the values.
     void zero();
 

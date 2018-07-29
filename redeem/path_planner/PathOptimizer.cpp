@@ -2,8 +2,6 @@
 
 void PathOptimizer::beforePathRemoval(std::vector<Path>& queue, size_t first, size_t last)
 {
-    double leftSpeed = 0;
-
     if (first != last)
     {
         Path& firstPath = queue[first];
@@ -11,18 +9,27 @@ void PathOptimizer::beforePathRemoval(std::vector<Path>& queue, size_t first, si
 
         // Calculate the maximum possible end speed for firstPath.
         // We're using the formula vf^2 = v0^2 + 2*a*d.
-        const double maximumEndSpeed = std::sqrt(firstPath.getStartSpeed() * firstPath.getStartSpeed() + firstPath.getAccelerationDistance2());
+        const double maximumEndSpeed = std::min(firstPath.getFullSpeed(),
+            std::sqrt(firstPath.getStartSpeed() * firstPath.getStartSpeed() + firstPath.getAccelerationDistance2()));
 
         const double newJunctionSpeed = std::min(maximumEndSpeed, firstPath.getMaxJunctionSpeed());
 
-        firstPath.setEndSpeed(maximumEndSpeed);
-        secondPath.setStartSpeed(maximumEndSpeed);
+        firstPath.setEndSpeed(newJunctionSpeed);
+        secondPath.setStartSpeed(newJunctionSpeed);
         secondPath.setStartSpeedFixed(true);
     }
 }
 
 void PathOptimizer::onPathAdded(std::vector<Path>& queue, size_t first, size_t last)
 {
+    calculateSafeSpeed(queue[last]);
+
+    if (first != last)
+    {
+        // compute the junction speed for the new path
+        calculateJunctionSpeed(queue[last - 1], queue[last]);
+    }
+
     while (first != last)
     {
         // Loop through all paths in pairs and update the junctions between them.
@@ -54,4 +61,48 @@ void PathOptimizer::onPathAdded(std::vector<Path>& queue, size_t first, size_t l
             break;
         }
     }
+}
+
+void PathOptimizer::calculateJunctionSpeed(Path& previousPath, Path& newPath)
+{
+    double factor = 1;
+
+    VectorN speedJumps = newPath.getSpeeds() - previousPath.getSpeeds();
+
+    for (int i = 0; i < NUM_AXES; i++)
+    {
+        const double jump = std::abs(speedJumps[i]);
+
+        if (jump > maxSpeedJumps[i])
+        {
+            factor = std::min(factor, maxSpeedJumps[i] / jump);
+        }
+    }
+
+    const double junctionSpeed = std::min(previousPath.getFullSpeed() * factor, newPath.getFullSpeed());
+
+    previousPath.setMaxJunctionSpeed(junctionSpeed);
+}
+
+void PathOptimizer::calculateSafeSpeed(Path& path)
+{
+    double safeTime = 0;
+
+    for (int i = 0; i < NUM_AXES; i++)
+    {
+        const double safeAxisTime = std::abs(path.getWorldMove()[i]) / (maxSpeedJumps[i] / 2);
+        assert(safeAxisTime >= 0);
+        safeTime = std::max(safeTime, safeAxisTime);
+    }
+
+    const double safeSpeed = std::min(path.getDistance() / safeTime, path.getFullSpeed());
+
+	path.setStartSpeed(safeSpeed);
+    path.setEndSpeed(safeSpeed);
+	
+}
+
+void PathOptimizer::setMaxSpeedJumps(const VectorN& maxSpeedJumps)
+{
+    this->maxSpeedJumps = maxSpeedJumps;
 }

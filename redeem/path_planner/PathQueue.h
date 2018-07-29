@@ -13,15 +13,15 @@ private:
     std::mutex mutex;
     std::condition_variable queueHasPaths;
     std::condition_variable queueHasSpace;
-    PathOptimizerType optimizer;
+    PathOptimizerType& optimizer;
     std::vector<Path> queue;
     size_t writeIndex;
     size_t readIndex;
     size_t availableSlots;
 
 public:
-    PathQueue(size_t size)
-        : optimizer()
+    PathQueue(PathOptimizerType& optimizer, size_t size)
+        : optimizer(optimizer)
         , queue(size)
         , writeIndex(0)
         , readIndex(0)

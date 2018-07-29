@@ -25,9 +25,9 @@
 
 */
 
-#include "Path.h"
 #include "Delta.h"
 #include "Logger.h"
+#include "Path.h"
 #include <algorithm>
 #include <cmath>
 #include <numeric>
@@ -84,10 +84,10 @@ void Path::zero()
     moveMask = 0;
     timeInTicks = 0;
     speeds.zero();
+    worldMove.zero();
     fullSpeed = 0;
     startSpeed = 0;
     endSpeed = 0;
-    minSpeed = 0;
     accel = 0;
     startMachinePos.zero();
 
@@ -121,10 +121,10 @@ Path& Path::operator=(Path&& path)
     moveMask = path.moveMask;
     timeInTicks = path.timeInTicks;
     speeds = path.speeds;
+    worldMove = path.worldMove;
     fullSpeed = path.fullSpeed;
     startSpeed = path.startSpeed;
     endSpeed = path.endSpeed;
-    minSpeed = path.minSpeed;
     accel = path.accel;
     startMachinePos = path.startMachinePos;
 
@@ -186,7 +186,6 @@ void Path::initialize(const IntVectorN& machineStart,
     const VectorN& worldStart,
     const VectorN& worldEnd,
     const VectorN& stepsPerM,
-    const VectorN& maxSpeedJumps, /// Maximum allowable speed jumps in m/s
     const VectorN& maxSpeeds, /// Maximum allowable speeds in m/s
     const VectorN& maxAccelMPerSquareSecond,
     double requestedSpeed,
@@ -199,7 +198,7 @@ void Path::initialize(const IntVectorN& machineStart,
     this->zero();
 
     const IntVectorN machineMove = machineEnd - machineStart;
-    const VectorN worldMove = worldEnd - worldStart;
+    worldMove = worldEnd - worldStart;
     distance = vabs(worldMove);
     startMachinePos = machineStart;
 
@@ -248,8 +247,6 @@ void Path::initialize(const IntVectorN& machineStart,
         flags |= FLAG_WILL_REACH_FULL_SPEED;
     }
 
-    startSpeed = endSpeed = minSpeed = calculateSafeSpeed(worldMove, maxSpeedJumps);
-
     LOG("ideal move should be " << fullSpeed << " m/s and cover " << distance << " m in " << idealTimeForMove << " seconds" << std::endl);
 
     switch (axisConfig)
@@ -281,22 +278,6 @@ void Path::initialize(const IntVectorN& machineStart,
     LOG("Ticks :            " << timeInTicks << std::endl);
 
     invalidateStepperPathParameters();
-}
-
-double Path::calculateSafeSpeed(const VectorN& worldMove, const VectorN& maxSpeedJumps)
-{
-    double safeTime = 0;
-
-    for (int i = 0; i < NUM_AXES; i++)
-    {
-        const double safeAxisTime = std::abs(worldMove[i]) / (maxSpeedJumps[i] / 2);
-        assert(safeAxisTime >= 0);
-        safeTime = std::max(safeTime, safeAxisTime);
-    }
-
-    const double safeSpeed = distance / safeTime;
-
-    return std::min(safeSpeed, fullSpeed);
 }
 
 double Path::runFinalStepCalculations()
@@ -379,7 +360,7 @@ void Path::updateStepperPathParameters()
             // doesn't check that the end speed of a move is reachable from the start speed within
             // limits. This hasn't been a problem because it only affects moves that are only a few
             // steps in the first place. However, when it occurs, this assert will fire.
-            //assert(std::abs(cruiseDistance) < NEGLIGIBLE_ERROR);
+            assert(std::abs(cruiseDistance) < NEGLIGIBLE_ERROR);
 
             if (accelDistance == 0)
             {

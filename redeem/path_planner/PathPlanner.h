@@ -28,8 +28,8 @@
 #define __PathPlanner__PathPlanner__
 
 #include "Delta.h"
-#include "PathOptimizer.h"
 #include "Path.h"
+#include "PathOptimizer.h"
 #include "PathQueue.h"
 #include "PruTimer.h"
 #include "config.h"
@@ -62,8 +62,6 @@ class AlarmCallback;
 class PathPlanner
 {
 private:
-    void computeMaxJunctionSpeed(Path* previous, Path* current);
-
     VectorN machineToWorld(const IntVectorN& machinePos);
     IntVectorN worldToMachine(const VectorN& worldPos, bool* possible = nullptr);
 
@@ -72,7 +70,6 @@ private:
     AlarmCallback& alarmCallback;
 
     VectorN maxSpeeds;
-    VectorN maxSpeedJumps;
     VectorN maxAccelerationStepsPerSquareSecond;
     VectorN maxAccelerationMPerSquareSecond;
 
@@ -84,6 +81,7 @@ private:
     std::atomic_bool acceptingPaths;
 
     PruTimer pru;
+    PathOptimizer optimizer;
     PathQueue<PathOptimizer> pathQueue;
     void recomputeParameters();
     void run();

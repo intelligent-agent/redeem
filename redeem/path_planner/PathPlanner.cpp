@@ -50,7 +50,8 @@ public:
 
 PathPlanner::PathPlanner(unsigned int cacheSize, AlarmCallback& alarmCallback)
     : alarmCallback(alarmCallback)
-    , pathQueue(cacheSize)
+    , optimizer()
+    , pathQueue(optimizer, cacheSize)
     , pru([this]() { this->pruAlarmCallback(); })
 {
     // Force out a log message even if the log level would suppress it
@@ -249,7 +250,7 @@ void PathPlanner::queueMove(VectorN endWorldPos,
     Path p;
 
     p.initialize(state, tweakedEndPos, startWorldPos, endWorldPos, axisStepsPerM,
-        maxSpeedJumps, maxSpeeds, maxAccelerationMPerSquareSecond,
+        maxSpeeds, maxAccelerationMPerSquareSecond,
         speed, accel, axis_config, delta_bot, cancelable, is_probe);
 
     if (p.isNoMove())
@@ -319,26 +320,6 @@ void PathPlanner::queueMove(VectorN endWorldPos,
     }
 
     queue_move_fail = false;
-}
-
-void PathPlanner::computeMaxJunctionSpeed(Path* previous, Path* current)
-{
-    double factor = 1;
-
-    LOG("Computing Max junction speed" << std::endl);
-
-    for (int i = 0; i < NUM_AXES; i++)
-    {
-        double speedJump = std::fabs(current->getSpeeds()[i] - previous->getSpeeds()[i]);
-
-        if (speedJump > maxSpeedJumps[i])
-        {
-            factor = std::min(factor, maxSpeedJumps[i] / speedJump);
-        }
-    }
-
-    previous->setMaxJunctionSpeed(std::min(previous->getFullSpeed() * factor, current->getFullSpeed()));
-    LOG("PathPlanner::computeMaxJunctionSpeed: Max junction speed = " << previous->getMaxJunctionSpeed() << std::endl);
 }
 
 void PathPlanner::runThread()
