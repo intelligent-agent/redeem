@@ -479,3 +479,49 @@ TEST(PathQueueBasics, CallsBeforePathRemovalBeforePop)
     ASSERT_TRUE(queue.addPath(std::move(path)));
     path = queue.popPath().value();
 }
+
+TEST(PathQueueBasics, HandlesWrapAroundForOnPathAdded)
+{
+    MockPathOptimizer optimizer;
+    MockPathQueue queue(optimizer, 3);
+
+    Path path;
+
+    EXPECT_CALL(optimizer, onPathAdded(::testing::_, 0, 0));
+    EXPECT_CALL(optimizer, onPathAdded(::testing::_, 0, 1));
+    EXPECT_CALL(optimizer, beforePathRemoval(::testing::_, 0, 1));
+    EXPECT_CALL(optimizer, onPathAdded(::testing::_, 1, 2));
+    EXPECT_CALL(optimizer, onPathAdded(::testing::_, 1, 0));
+
+    ASSERT_TRUE(queue.addPath(std::move(path)));
+    ASSERT_TRUE(queue.addPath(std::move(path)));
+    ASSERT_TRUE(queue.popPath());
+    ASSERT_TRUE(queue.addPath(std::move(path)));
+    ASSERT_TRUE(queue.addPath(std::move(path)));
+}
+
+TEST(PathQueueBasics, HandlesWrapAroundForBeforePathRemoval)
+{
+    MockPathOptimizer optimizer;
+    MockPathQueue queue(optimizer, 3);
+
+    Path path;
+
+    EXPECT_CALL(optimizer, onPathAdded(::testing::_, 0, 0));
+    EXPECT_CALL(optimizer, onPathAdded(::testing::_, 0, 1));
+    EXPECT_CALL(optimizer, onPathAdded(::testing::_, 0, 2));
+    EXPECT_CALL(optimizer, beforePathRemoval(::testing::_, 0, 2));
+    EXPECT_CALL(optimizer, beforePathRemoval(::testing::_, 1, 2));
+    EXPECT_CALL(optimizer, onPathAdded(::testing::_, 2, 0));
+    EXPECT_CALL(optimizer, beforePathRemoval(::testing::_, 2, 0));
+    EXPECT_CALL(optimizer, beforePathRemoval(::testing::_, 0, 0));
+
+    ASSERT_TRUE(queue.addPath(std::move(path)));
+    ASSERT_TRUE(queue.addPath(std::move(path)));
+    ASSERT_TRUE(queue.addPath(std::move(path)));
+    ASSERT_TRUE(queue.popPath());
+    ASSERT_TRUE(queue.popPath());
+    ASSERT_TRUE(queue.addPath(std::move(path)));
+    ASSERT_TRUE(queue.popPath());
+    ASSERT_TRUE(queue.popPath());
+}

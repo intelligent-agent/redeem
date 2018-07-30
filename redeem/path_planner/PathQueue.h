@@ -33,11 +33,11 @@ private:
         }
 
         queue[writeIndex] = std::move(path);
+
+        optimizer.onPathAdded(queue, readIndex, writeIndex);
+
         writeIndex = (writeIndex + 1) % queue.size();
         availableSlots--;
-
-        // subtract one because the optimizer does touch the last index
-        optimizer.onPathAdded(queue, readIndex, writeIndex - 1);
 
         if (availableSlots == queue.size() - 1)
         {
@@ -87,7 +87,7 @@ public:
         const size_t currentReadIndex = readIndex;
 
         // subtract one because the optimizer does touch the last index
-        optimizer.beforePathRemoval(queue, readIndex, writeIndex - 1);
+        optimizer.beforePathRemoval(queue, readIndex, (writeIndex + queue.size() - 1) % queue.size());
 
         Path result(std::move(queue[currentReadIndex]));
 
