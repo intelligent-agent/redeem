@@ -14,7 +14,10 @@ void PathOptimizer::beforePathRemoval(std::vector<Path>& queue, size_t first, si
         const double maximumEndSpeed = std::min(firstPath.getFullSpeed(),
             std::sqrt(firstPath.getStartSpeed() * firstPath.getStartSpeed() + firstPath.getAccelerationDistance2()));
 
-        const double newJunctionSpeed = std::min(maximumEndSpeed, firstPath.getMaxJunctionSpeed());
+        // The end speed was already set in the onPathAdded loop to be the maximum we could allow
+        // while still decelerating when we run out of paths. We may need to lower it here to accelerate
+        // properly, but we can't make it faster.
+        const double newJunctionSpeed = std::min(maximumEndSpeed, firstPath.getEndSpeed());
 
         firstPath.setEndSpeed(newJunctionSpeed);
         secondPath.setStartSpeed(newJunctionSpeed);
@@ -99,9 +102,8 @@ void PathOptimizer::calculateSafeSpeed(Path& path)
 
     const double safeSpeed = std::min(path.getDistance() / safeTime, path.getFullSpeed());
 
-	path.setStartSpeed(safeSpeed);
+    path.setStartSpeed(safeSpeed);
     path.setEndSpeed(safeSpeed);
-	
 }
 
 void PathOptimizer::setMaxSpeedJumps(const VectorN& maxSpeedJumps)

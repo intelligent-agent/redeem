@@ -178,3 +178,70 @@ TEST_F(PathOptimizerTests, TwoMoves45DegreeAngle)
     EXPECT_DOUBLE_EQ(paths[1].getStartSpeed(), 0.01);
     EXPECT_DOUBLE_EQ(paths[1].getEndSpeed(), vabs(VectorN(0.005, 0.005, 0)));
 }
+
+TEST_F(PathOptimizerTests, ThreeMovesThatFormTrapezoid)
+{
+    // per vf^2 = v0^2 + 2*a*d
+    // if we start at 0.005m/s, accelerate at 0.1m/s^2, and travel 0.1m, we should reach 0.1415m/s
+
+    addPath(builder.makePath(0.1, 0, 0, 1.0));
+    addPath(builder.makePath(0.1, 0, 0, 1.0));
+    addPath(builder.makePath(0.1, 0, 0, 1.0));
+    run();
+
+    // calculated in Maxima as sqrt(v0^2 + 2*a*d)
+    EXPECT_DOUBLE_EQ(paths[0].getStartSpeed(), 0.005);
+    EXPECT_DOUBLE_EQ(paths[0].getEndSpeed(), 0.1415097169808491);
+    EXPECT_DOUBLE_EQ(paths[1].getStartSpeed(), 0.1415097169808491);
+    EXPECT_DOUBLE_EQ(paths[1].getEndSpeed(), 0.1415097169808491);
+    EXPECT_DOUBLE_EQ(paths[2].getStartSpeed(), 0.1415097169808491);
+    EXPECT_DOUBLE_EQ(paths[2].getEndSpeed(), 0.005);
+}
+
+TEST_F(PathOptimizerTests, FiveMovesThatFormTrapezoid)
+{
+    addPath(builder.makePath(0.1, 0, 0, 1.0));
+    addPath(builder.makePath(0.1, 0, 0, 1.0));
+    addPath(builder.makePath(0.1, 0, 0, 1.0));
+    addPath(builder.makePath(0.1, 0, 0, 1.0));
+    addPath(builder.makePath(0.1, 0, 0, 1.0));
+    run();
+
+    EXPECT_DOUBLE_EQ(paths[0].getStartSpeed(), 0.005);
+    EXPECT_DOUBLE_EQ(paths[0].getEndSpeed(), 0.1415097169808491);
+    EXPECT_DOUBLE_EQ(paths[1].getStartSpeed(), 0.1415097169808491);
+    EXPECT_DOUBLE_EQ(paths[1].getEndSpeed(), 0.2000624902374256);
+    EXPECT_DOUBLE_EQ(paths[2].getStartSpeed(), 0.2000624902374256);
+    EXPECT_DOUBLE_EQ(paths[2].getEndSpeed(), 0.2000624902374256);
+    EXPECT_DOUBLE_EQ(paths[3].getStartSpeed(), 0.2000624902374256);
+    EXPECT_DOUBLE_EQ(paths[3].getEndSpeed(), 0.1415097169808491);
+    EXPECT_DOUBLE_EQ(paths[4].getStartSpeed(), 0.1415097169808491);
+    EXPECT_DOUBLE_EQ(paths[4].getEndSpeed(), 0.005);
+}
+
+TEST_F(PathOptimizerTests, SevenMovesThatFormTrapezoid)
+{
+    addPath(builder.makePath(0.1, 0, 0, 1.0));
+    addPath(builder.makePath(0.1, 0, 0, 1.0));
+    addPath(builder.makePath(0.1, 0, 0, 1.0));
+    addPath(builder.makePath(0.1, 0, 0, 1.0));
+    addPath(builder.makePath(0.1, 0, 0, 1.0));
+    addPath(builder.makePath(0.1, 0, 0, 1.0));
+    addPath(builder.makePath(0.1, 0, 0, 1.0));
+    run();
+
+    EXPECT_DOUBLE_EQ(paths[0].getStartSpeed(), 0.005);
+    EXPECT_DOUBLE_EQ(paths[0].getEndSpeed(), 0.1415097169808491);
+    EXPECT_DOUBLE_EQ(paths[1].getStartSpeed(), 0.1415097169808491);
+    EXPECT_DOUBLE_EQ(paths[1].getEndSpeed(), 0.2000624902374256);
+    EXPECT_DOUBLE_EQ(paths[2].getStartSpeed(), 0.2000624902374256);
+    EXPECT_DOUBLE_EQ(paths[2].getEndSpeed(), 0.245);
+    EXPECT_DOUBLE_EQ(paths[3].getStartSpeed(), 0.245);
+    EXPECT_DOUBLE_EQ(paths[3].getEndSpeed(), 0.245);
+    EXPECT_DOUBLE_EQ(paths[4].getStartSpeed(), 0.245);
+    EXPECT_DOUBLE_EQ(paths[4].getEndSpeed(), 0.2000624902374256);
+    EXPECT_DOUBLE_EQ(paths[5].getStartSpeed(), 0.2000624902374256);
+    EXPECT_DOUBLE_EQ(paths[5].getEndSpeed(), 0.1415097169808491);
+    EXPECT_DOUBLE_EQ(paths[6].getStartSpeed(), 0.1415097169808491);
+    EXPECT_DOUBLE_EQ(paths[6].getEndSpeed(), 0.005);
+}

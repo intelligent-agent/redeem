@@ -7,7 +7,7 @@ class PathOptimizer final : public PathOptimizerInterface
 private:
     VectorN maxSpeedJumps;
 
-	void calculateJunctionSpeed(Path& previousPath, Path& newPath);
+    void calculateJunctionSpeed(Path& previousPath, Path& newPath);
     void calculateSafeSpeed(Path& path);
 
 public:
