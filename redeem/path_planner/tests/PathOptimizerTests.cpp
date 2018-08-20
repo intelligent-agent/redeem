@@ -5,80 +5,44 @@
 #include <numeric>
 
 #include "PathOptimizer.h"
+#include "TestUtils.h"
 #include "vector3.h"
 #include "vectorN.h"
-
-struct PathBuilder
-{
-    VectorN currentPosition;
-    const VectorN stepsPerM;
-    const VectorN maxSpeedJumps;
-    const VectorN maxSpeeds;
-    const VectorN maxAccelMPerSquareSecond;
-
-    PathBuilder()
-        : stepsPerM(10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000)
-        , maxSpeedJumps(0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01)
-        , maxSpeeds(1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0)
-        , maxAccelMPerSquareSecond(0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1)
-    {
-    }
-
-    Path makePath(double x, double y, double z, double speed)
-    {
-        Path result;
-
-        VectorN travel(x, y, z, 0, 0, 0, 0, 0);
-
-        VectorN endPosition = currentPosition + travel;
-
-        result.initialize(
-            (currentPosition * stepsPerM).round(), // machineStart
-            (endPosition * stepsPerM).round(), // machineEnd
-            currentPosition, // worldStart,
-            endPosition, // worldEnd
-            stepsPerM,
-            maxSpeeds,
-            maxAccelMPerSquareSecond,
-            speed,
-            std::numeric_limits<double>::infinity(),
-            AXIS_CONFIG_XY,
-            *(Delta*)nullptr,
-            false,
-            false);
-
-        return result;
-    }
-};
 
 struct PathOptimizerTests : ::testing::Test
 {
     PathBuilder builder;
     PathOptimizer optimizer;
     std::vector<Path> paths;
-    size_t pathsInUse = 0;
+    size_t firstPath = 0;
+    size_t lastPath = 0;
 
     PathOptimizerTests()
     {
+        builder = PathBuilder::CartesianBuilder();
         paths.resize(10);
         optimizer.setMaxSpeedJumps(builder.maxSpeedJumps);
     }
 
-    void addPath(Path&& p)
+    int64_t addPath(Path&& p)
     {
-        paths[pathsInUse] = std::move(p);
-        optimizer.onPathAdded(paths, 0, pathsInUse);
-        pathsInUse++;
+        paths[lastPath] = std::move(p);
+        return optimizer.onPathAdded(paths, 0, lastPath++);
     }
 
     void run()
     {
         std::vector<Path> result;
 
-        for (size_t i = 0; i < pathsInUse; i++)
+        for (size_t i = firstPath; i < lastPath; i++)
         {
-            optimizer.beforePathRemoval(paths, i, pathsInUse - 1);
+            optimizer.beforePathRemoval(paths, i, lastPath - 1);
         }
+    }
+
+    int64_t popPath()
+    {
+        return optimizer.beforePathRemoval(paths, firstPath++, lastPath - 1);
     }
 };
 
@@ -121,6 +85,18 @@ TEST_F(PathOptimizerTests, TwoMovesSameDirection)
     EXPECT_DOUBLE_EQ(paths[0].getEndSpeed(), 0.02);
     EXPECT_DOUBLE_EQ(paths[1].getStartSpeed(), 0.02);
     EXPECT_DOUBLE_EQ(paths[1].getEndSpeed(), 0.005);
+}
+
+TEST_F(PathOptimizerTests, TwoMovesSameDirectionWithSecondOneSlowerThanJerk)
+{
+    addPath(builder.makePath(0.1, 0, 0, 0.02));
+    addPath(builder.makePath(0.1, 0, 0, 0.002));
+    run();
+
+    EXPECT_DOUBLE_EQ(paths[0].getStartSpeed(), 0.005);
+    EXPECT_DOUBLE_EQ(paths[0].getEndSpeed(), 0.002);
+    EXPECT_DOUBLE_EQ(paths[1].getStartSpeed(), 0.002);
+    EXPECT_DOUBLE_EQ(paths[1].getEndSpeed(), 0.002);
 }
 
 TEST_F(PathOptimizerTests, TwoMovesRightAngle)
@@ -244,4 +220,40 @@ TEST_F(PathOptimizerTests, SevenMovesThatFormTrapezoid)
     EXPECT_DOUBLE_EQ(paths[5].getEndSpeed(), 0.1415097169808491);
     EXPECT_DOUBLE_EQ(paths[6].getStartSpeed(), 0.1415097169808491);
     EXPECT_DOUBLE_EQ(paths[6].getEndSpeed(), 0.005);
+}
+
+TEST_F(PathOptimizerTests, AddingAPathReturnsEstimatedTime)
+{
+    EXPECT_EQ(addPath(builder.makePath(0.1, 0, 0, 0.005)), 4000000000ll);
+}
+
+TEST_F(PathOptimizerTests, RemovingAPathReturnsEstimatedTime)
+{
+    addPath(builder.makePath(0.1, 0, 0, 0.005));
+    EXPECT_EQ(popPath(), -20ll * F_CPU);
+}
+
+/*
+This test is out for now - it reflects a more complicated time calculation that we can't currently do.
+TODO make move time estimations more accurate :)
+
+TEST_F(PathOptimizerTests, AddingASecondPathReturnsTimeChange)
+{
+    // this path will start and end at 0.005 but cruise at 0.105
+    // accelerating will take 1 second, during which we'll travel 0.055m
+    // that means another second to decelerate at the end and another second to cruise the remaining 0.105
+    EXPECT_EQ(addPath(builder.makePath(0.215, 0, 0, 0.105)), 3ll * F_CPU);
+
+    // adding another one in the same direction means we now travel a total of 0.320.
+    // 0.11 of that will be used in accel/decel, leaving 0.210 or 2 seconds of cruise
+    // since the total queue time is changing from 3 seconds to 4 seconds, we should only see the delta returned
+    EXPECT_EQ(addPath(builder.makePath(0.105, 0, 0, 0.105)), 1ll * F_CPU);
+}
+*/
+
+// Instead of that, let's test the simple estimation we have now
+TEST_F(PathOptimizerTests, AddingASecondPathReturnsTimeChange)
+{
+    EXPECT_EQ(addPath(builder.makePath(0.2, 0, 0, 0.1)), 2ll * F_CPU);
+    EXPECT_EQ(addPath(builder.makePath(0.2, 0, 0, 0.1)), 2ll * F_CPU);
 }

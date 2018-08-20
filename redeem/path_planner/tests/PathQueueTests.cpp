@@ -7,6 +7,8 @@
 
 #include "PathQueue.h"
 
+#include "TestUtils.h"
+
 class DummyPathOptimizer : public PathOptimizerInterface
 {
 public:
@@ -14,12 +16,14 @@ public:
     {
     }
 
-    void onPathAdded(std::vector<Path>&, size_t, size_t)
+    int64_t onPathAdded(std::vector<Path>& queue, size_t, size_t finish)
     {
+        return queue[finish].getEstimatedTime();
     }
 
-    void beforePathRemoval(std::vector<Path>&, size_t, size_t)
+    int64_t beforePathRemoval(std::vector<Path>& queue, size_t start, size_t)
     {
+        return -queue[start].getEstimatedTime();
     }
 };
 
@@ -28,14 +32,14 @@ typedef PathQueue<DummyPathOptimizer> SimplePathQueue;
 TEST(PathQueueBasics, ConstructsWithSize)
 {
     DummyPathOptimizer optimizer;
-    SimplePathQueue queue(optimizer, 15);
+    SimplePathQueue queue(optimizer, 15, 100);
     EXPECT_EQ(queue.availablePathSlots(), 15);
 }
 
 TEST(PathQueueBasics, AcceptsPaths)
 {
     DummyPathOptimizer optimizer;
-    SimplePathQueue queue(optimizer, 15);
+    SimplePathQueue queue(optimizer, 15, 100);
     Path path;
     ASSERT_TRUE(queue.addPath(std::move(path)));
     EXPECT_EQ(queue.availablePathSlots(), 14);
@@ -44,7 +48,7 @@ TEST(PathQueueBasics, AcceptsPaths)
 TEST(PathQueueBasics, ReturnsPaths)
 {
     DummyPathOptimizer optimizer;
-    SimplePathQueue queue(optimizer, 15);
+    SimplePathQueue queue(optimizer, 15, 100);
     Path path;
     path.fixStartAndEndSpeed();
     ASSERT_TRUE(queue.addPath(std::move(path)));
@@ -57,7 +61,7 @@ TEST(PathQueueBasics, ReturnsPaths)
 TEST(PathQueueBasics, ReturnsPathsInOrder)
 {
     DummyPathOptimizer optimizer;
-    SimplePathQueue queue(optimizer, 15);
+    SimplePathQueue queue(optimizer, 15, 100);
     Path path;
     path.fixStartAndEndSpeed();
     ASSERT_TRUE(queue.addPath(std::move(path)));
@@ -82,7 +86,7 @@ TEST(PathQueueBasics, ReturnsPathsInOrder)
 TEST(PathQueueBasics, WrapsAround)
 {
     DummyPathOptimizer optimizer;
-    SimplePathQueue queue(optimizer, 4);
+    SimplePathQueue queue(optimizer, 4, 100);
 
     Path path;
 
@@ -93,16 +97,10 @@ TEST(PathQueueBasics, WrapsAround)
     }
 }
 
-template <typename T>
-bool is_ready(std::future<T> const& future)
-{
-    return future.wait_for(std::chrono::seconds(0)) == std::future_status::ready;
-}
-
 TEST(PathQueueBasics, BlocksWhenFull)
 {
     DummyPathOptimizer optimizer;
-    SimplePathQueue queue(optimizer, 3);
+    SimplePathQueue queue(optimizer, 3, 100);
 
     Path path;
 
@@ -112,57 +110,39 @@ TEST(PathQueueBasics, BlocksWhenFull)
     path.zero();
     ASSERT_TRUE(queue.addPath(std::move(path)));
 
-    std::promise<void> workerRunning;
-    std::future<void> workerRunningFuture = workerRunning.get_future();
-    std::promise<void> workerFinished;
-    std::future<void> workerFinishedFuture = workerFinished.get_future();
-    std::thread worker([&workerRunning, &workerFinished, &queue]() {
+    WorkerThread thread([&queue]() {
         Path path;
-        workerRunning.set_value();
         ASSERT_TRUE(queue.addPath(std::move(path)));
-        workerFinished.set_value();
     });
 
-    workerRunningFuture.wait();
-
-    EXPECT_EQ(is_ready(workerFinishedFuture), false);
+    EXPECT_FALSE(thread.isFinished());
 
     queue.popPath();
 
-    workerFinishedFuture.wait();
-    worker.join();
+    thread.waitAndJoin();
 }
 
 TEST(PathQueueBasics, BlocksWhenEmpty)
 {
     DummyPathOptimizer optimizer;
-    SimplePathQueue queue(optimizer, 3);
+    SimplePathQueue queue(optimizer, 3, 100);
 
-    std::promise<void> workerRunning;
-    std::future<void> workerRunningFuture = workerRunning.get_future();
-    std::promise<void> workerFinished;
-    std::future<void> workerFinishedFuture = workerFinished.get_future();
-    std::thread worker([&workerRunning, &workerFinished, &queue]() {
-        workerRunning.set_value();
+    WorkerThread worker([&queue]() {
         queue.popPath();
-        workerFinished.set_value();
     });
 
-    workerRunningFuture.wait();
-
-    EXPECT_EQ(is_ready(workerFinishedFuture), false);
+    EXPECT_FALSE(worker.isFinished());
 
     Path path;
     ASSERT_TRUE(queue.addPath(std::move(path)));
 
-    workerFinishedFuture.wait();
-    worker.join();
+    worker.waitAndJoin();
 }
 
 TEST(PathQueueBasics, BlocksUntilEmpty)
 {
     DummyPathOptimizer optimizer;
-    SimplePathQueue queue(optimizer, 4);
+    SimplePathQueue queue(optimizer, 4, 100);
 
     Path path;
     ASSERT_TRUE(queue.addPath(std::move(path)));
@@ -170,35 +150,26 @@ TEST(PathQueueBasics, BlocksUntilEmpty)
     path.zero();
     ASSERT_TRUE(queue.addPath(std::move(path)));
 
-    std::promise<void> workerRunning;
-    std::future<void> workerRunningFuture = workerRunning.get_future();
-    std::promise<void> workerFinished;
-    std::future<void> workerFinishedFuture = workerFinished.get_future();
-    std::thread worker([&workerRunning, &workerFinished, &queue]() {
-        workerRunning.set_value();
+    WorkerThread worker([&queue]() {
         queue.waitForQueueToEmpty();
-        workerFinished.set_value();
     });
 
-    workerRunningFuture.wait();
-
-    EXPECT_EQ(is_ready(workerFinishedFuture), false);
+    EXPECT_FALSE(worker.isFinished());
 
     path = queue.popPath().value();
 
-    EXPECT_EQ(is_ready(workerFinishedFuture), false);
+    EXPECT_FALSE(worker.isFinished());
 
     path.zero();
     path = queue.popPath().value();
 
-    workerFinishedFuture.wait();
-    worker.join();
+    worker.waitAndJoin();
 }
 
 TEST(PathQueueBasics, AddsSyncEventToLastPathSinglePath)
 {
     DummyPathOptimizer optimizer;
-    SimplePathQueue queue(optimizer, 4);
+    SimplePathQueue queue(optimizer, 4, 100);
 
     Path path;
     ASSERT_TRUE(queue.addPath(std::move(path)));
@@ -213,7 +184,7 @@ TEST(PathQueueBasics, AddsSyncEventToLastPathSinglePath)
 TEST(PathQueueBasics, AddsSyncEventToLastPathTwoPaths)
 {
     DummyPathOptimizer optimizer;
-    SimplePathQueue queue(optimizer, 4);
+    SimplePathQueue queue(optimizer, 4, 100);
 
     Path path;
     ASSERT_TRUE(queue.addPath(std::move(path)));
@@ -232,7 +203,7 @@ TEST(PathQueueBasics, AddsSyncEventToLastPathTwoPaths)
 TEST(PathQueueBasics, AddsSyncEventToEmptyQueue)
 {
     DummyPathOptimizer optimizer;
-    SimplePathQueue queue(optimizer, 4);
+    SimplePathQueue queue(optimizer, 4, 100);
 
     EXPECT_EQ(queue.availablePathSlots(), 4);
 
@@ -243,13 +214,13 @@ TEST(PathQueueBasics, AddsSyncEventToEmptyQueue)
     Path result = queue.popPath().value();
     EXPECT_EQ(result.isSyncEvent(), true);
     EXPECT_EQ(result.getDistance(), 0);
-    EXPECT_EQ(result.getTimeInTicks(), 0);
+    EXPECT_EQ(result.getEstimatedTime(), 0);
 }
 
 TEST(PathQueueBasics, AddsSyncEventIfLastPathAlreadyIsOne)
 {
     DummyPathOptimizer optimizer;
-    SimplePathQueue queue(optimizer, 4);
+    SimplePathQueue queue(optimizer, 4, 100);
 
     ASSERT_EQ(queue.availablePathSlots(), 4);
 
@@ -264,19 +235,19 @@ TEST(PathQueueBasics, AddsSyncEventIfLastPathAlreadyIsOne)
     Path result = queue.popPath().value();
     EXPECT_EQ(result.isSyncEvent(), true);
     EXPECT_EQ(result.getDistance(), 0);
-    EXPECT_EQ(result.getTimeInTicks(), 0);
+    EXPECT_EQ(result.getEstimatedTime(), 0);
 
     result.zero();
     result = queue.popPath().value();
     EXPECT_EQ(result.isSyncWaitEvent(), true);
     EXPECT_EQ(result.getDistance(), 0);
-    EXPECT_EQ(result.getTimeInTicks(), 0);
+    EXPECT_EQ(result.getEstimatedTime(), 0);
 }
 
 TEST(PathQueueBasics, AddsSyncWaitEventToLastPath)
 {
     DummyPathOptimizer optimizer;
-    SimplePathQueue queue(optimizer, 4);
+    SimplePathQueue queue(optimizer, 4, 100);
 
     Path path;
     ASSERT_TRUE(queue.addPath(std::move(path)));
@@ -291,7 +262,7 @@ TEST(PathQueueBasics, AddsSyncWaitEventToLastPath)
 TEST(PathQueueBasics, FailsToPopWhenStopping)
 {
     DummyPathOptimizer optimizer;
-    SimplePathQueue queue(optimizer, 4);
+    SimplePathQueue queue(optimizer, 4, 100);
 
     queue.stop();
 
@@ -303,7 +274,7 @@ TEST(PathQueueBasics, FailsToPopWhenStopping)
 TEST(PathQueueBasics, FailsToAddWhenStopping)
 {
     DummyPathOptimizer optimizer;
-    SimplePathQueue queue(optimizer, 4);
+    SimplePathQueue queue(optimizer, 4, 100);
 
     queue.stop();
 
@@ -314,7 +285,7 @@ TEST(PathQueueBasics, FailsToAddWhenStopping)
 TEST(PathQueueBasics, StopsBlockingAddWhenStopping)
 {
     DummyPathOptimizer optimizer;
-    SimplePathQueue queue(optimizer, 2);
+    SimplePathQueue queue(optimizer, 2, 100);
 
     Path path;
     ASSERT_TRUE(queue.addPath(std::move(path)));
@@ -324,56 +295,38 @@ TEST(PathQueueBasics, StopsBlockingAddWhenStopping)
 
     ASSERT_EQ(queue.availablePathSlots(), 0);
 
-    std::promise<void> workerRunning;
-    std::future<void> workerRunningFuture = workerRunning.get_future();
-    std::promise<void> workerFinished;
-    std::future<void> workerFinishedFuture = workerFinished.get_future();
-    std::thread worker([&workerRunning, &workerFinished, &queue]() {
+    WorkerThread worker([&queue]() {
         Path path;
-        workerRunning.set_value();
         ASSERT_FALSE(queue.addPath(std::move(path)));
-        workerFinished.set_value();
     });
 
-    workerRunningFuture.wait();
-
-    EXPECT_EQ(is_ready(workerFinishedFuture), false);
+    EXPECT_FALSE(worker.isFinished());
 
     queue.stop();
 
-    workerFinishedFuture.wait();
-    worker.join();
+    worker.waitAndJoin();
 }
 
 TEST(PathQueueBasics, StopsBlockingPopWhenStopping)
 {
     DummyPathOptimizer optimizer;
-    SimplePathQueue queue(optimizer, 2);
+    SimplePathQueue queue(optimizer, 2, 100);
 
-    std::promise<void> workerRunning;
-    std::future<void> workerRunningFuture = workerRunning.get_future();
-    std::promise<void> workerFinished;
-    std::future<void> workerFinishedFuture = workerFinished.get_future();
-    std::thread worker([&workerRunning, &workerFinished, &queue]() {
-        workerRunning.set_value();
+    WorkerThread worker([&queue]() {
         queue.popPath();
-        workerFinished.set_value();
     });
 
-    workerRunningFuture.wait();
-
-    EXPECT_EQ(is_ready(workerFinishedFuture), false);
+    EXPECT_FALSE(worker.isFinished());
 
     queue.stop();
 
-    workerFinishedFuture.wait();
-    worker.join();
+    worker.waitAndJoin();
 }
 
 TEST(PathQueueBasics, FailsToQueueSyncEventWhenStopping)
 {
     DummyPathOptimizer optimizer;
-    SimplePathQueue queue(optimizer, 4);
+    SimplePathQueue queue(optimizer, 4, 100);
 
     queue.stop();
     EXPECT_EQ(queue.queueSyncEvent(false), false);
@@ -382,7 +335,7 @@ TEST(PathQueueBasics, FailsToQueueSyncEventWhenStopping)
 TEST(PathQueueBasics, FailsToWaitForEmptyWhenStopping)
 {
     DummyPathOptimizer optimizer;
-    SimplePathQueue queue(optimizer, 4);
+    SimplePathQueue queue(optimizer, 4, 100);
 
     queue.stop();
     EXPECT_EQ(queue.waitForQueueToEmpty(), false);
@@ -391,73 +344,80 @@ TEST(PathQueueBasics, FailsToWaitForEmptyWhenStopping)
 TEST(PathQueueBasics, StopsBlockingWaitForEmptyWhenStopping)
 {
     DummyPathOptimizer optimizer;
-    SimplePathQueue queue(optimizer, 4);
+    SimplePathQueue queue(optimizer, 4, 100);
 
     Path path;
     ASSERT_EQ(queue.addPath(std::move(path)), true);
 
-    std::promise<void> workerRunning;
-    std::future<void> workerRunningFuture = workerRunning.get_future();
-    std::promise<void> workerFinished;
-    std::future<void> workerFinishedFuture = workerFinished.get_future();
-    std::thread worker([&workerRunning, &workerFinished, &queue]() {
-        workerRunning.set_value();
+    WorkerThread worker([&queue]() {
         queue.waitForQueueToEmpty();
-        workerFinished.set_value();
     });
 
-    workerRunningFuture.wait();
-
-    EXPECT_EQ(is_ready(workerFinishedFuture), false);
+	EXPECT_FALSE(worker.isFinished());
 
     queue.stop();
 
-    workerFinishedFuture.wait();
-    worker.join();
+    worker.waitAndJoin();
 }
 
 TEST(PathQueueBasics, FailsToQueueSyncEventWhenFullAndStopping)
 {
     DummyPathOptimizer optimizer;
-    SimplePathQueue queue(optimizer, 1);
+    SimplePathQueue queue(optimizer, 1, 100);
 
     Path path;
     path.setSyncEvent(true);
     ASSERT_TRUE(queue.addPath(std::move(path)));
 
-    std::promise<void> workerRunning;
-    std::future<void> workerRunningFuture = workerRunning.get_future();
-    std::promise<void> workerFinished;
-    std::future<void> workerFinishedFuture = workerFinished.get_future();
-    std::thread worker([&workerRunning, &workerFinished, &queue]() {
-        workerRunning.set_value();
+    WorkerThread worker([&queue]() {
         EXPECT_FALSE(queue.queueSyncEvent(false));
-        workerFinished.set_value();
     });
 
-    workerRunningFuture.wait();
-
-    EXPECT_EQ(is_ready(workerFinishedFuture), false);
+	EXPECT_FALSE(worker.isFinished());
 
     queue.stop();
 
-    workerFinishedFuture.wait();
-    worker.join();
+    worker.waitAndJoin();
 }
 
 class MockPathOptimizer : public PathOptimizerInterface
 {
 public:
-    MOCK_METHOD3(onPathAdded, void(std::vector<Path>&, size_t, size_t));
-    MOCK_METHOD3(beforePathRemoval, void(std::vector<Path>&, size_t, size_t));
+    MOCK_METHOD3(onPathAdded, int64_t(std::vector<Path>&, size_t, size_t));
+    MOCK_METHOD3(beforePathRemoval, int64_t(std::vector<Path>&, size_t, size_t));
 };
 
 typedef PathQueue<MockPathOptimizer> MockPathQueue;
 
+TEST(PathQueueBasics, BlocksWhenFullByTime)
+{
+    MockPathOptimizer optimizer;
+    MockPathQueue queue(optimizer, 10, 30ll * F_CPU);
+
+	Path path;
+    EXPECT_CALL(optimizer, onPathAdded(::testing::_, 0, 0)).WillOnce(::testing::Return(31ll * F_CPU));
+    queue.addPath(std::move(path));
+
+	EXPECT_CALL(optimizer, onPathAdded);
+    EXPECT_CALL(optimizer, beforePathRemoval).WillOnce(::testing::Return(-31ll * F_CPU));
+
+    WorkerThread thread([&queue]() {
+        Path path;
+        EXPECT_TRUE(queue.addPath(std::move(path)));
+    });
+
+    EXPECT_FALSE(thread.isFinished());
+
+    queue.popPath();
+
+    thread.waitAndJoin();
+}
+
+
 TEST(PathQueueBasics, CallsOnPathAddedAfterAdd)
 {
     MockPathOptimizer optimizer;
-    MockPathQueue queue(optimizer, 4);
+    MockPathQueue queue(optimizer, 4, 100);
 
     Path path;
 
@@ -469,7 +429,7 @@ TEST(PathQueueBasics, CallsOnPathAddedAfterAdd)
 TEST(PathQueueBasics, CallsBeforePathRemovalBeforePop)
 {
     MockPathOptimizer optimizer;
-    MockPathQueue queue(optimizer, 4);
+    MockPathQueue queue(optimizer, 4, 100);
 
     Path path;
 
@@ -483,7 +443,7 @@ TEST(PathQueueBasics, CallsBeforePathRemovalBeforePop)
 TEST(PathQueueBasics, HandlesWrapAroundForOnPathAdded)
 {
     MockPathOptimizer optimizer;
-    MockPathQueue queue(optimizer, 3);
+    MockPathQueue queue(optimizer, 3, 100);
 
     Path path;
 
@@ -503,7 +463,7 @@ TEST(PathQueueBasics, HandlesWrapAroundForOnPathAdded)
 TEST(PathQueueBasics, HandlesWrapAroundForBeforePathRemoval)
 {
     MockPathOptimizer optimizer;
-    MockPathQueue queue(optimizer, 3);
+    MockPathQueue queue(optimizer, 3, 100);
 
     Path path;
 

@@ -2,8 +2,10 @@
 
 #include <cmath>
 
-void PathOptimizer::beforePathRemoval(std::vector<Path>& queue, size_t first, size_t last)
+int64_t PathOptimizer::beforePathRemoval(std::vector<Path>& queue, size_t first, size_t last)
 {
+    int64_t timeChange = -queue[first].getEstimatedTime();
+
     if (first != last)
     {
         Path& firstPath = queue[first];
@@ -11,7 +13,7 @@ void PathOptimizer::beforePathRemoval(std::vector<Path>& queue, size_t first, si
 
         // Calculate the maximum possible end speed for firstPath.
         // We're using the formula vf^2 = v0^2 + 2*a*d.
-        const double maximumEndSpeed = std::min(firstPath.getFullSpeed(),
+        const double maximumEndSpeed = std::min(std::min(firstPath.getFullSpeed(), secondPath.getFullSpeed()),
             std::sqrt(firstPath.getStartSpeed() * firstPath.getStartSpeed() + firstPath.getAccelerationDistance2()));
 
         // The end speed was already set in the onPathAdded loop to be the maximum we could allow
@@ -23,11 +25,15 @@ void PathOptimizer::beforePathRemoval(std::vector<Path>& queue, size_t first, si
         secondPath.setStartSpeed(newJunctionSpeed);
         secondPath.setStartSpeedFixed(true);
     }
+
+    return timeChange;
 }
 
-void PathOptimizer::onPathAdded(std::vector<Path>& queue, size_t first, size_t last)
+int64_t PathOptimizer::onPathAdded(std::vector<Path>& queue, size_t first, size_t last)
 {
     calculateSafeSpeed(queue[last]);
+
+	int64_t timeChange = queue[last].getEstimatedTime();
 
     if (first != last)
     {
@@ -66,6 +72,8 @@ void PathOptimizer::onPathAdded(std::vector<Path>& queue, size_t first, size_t l
             break;
         }
     }
+
+    return timeChange;
 }
 
 void PathOptimizer::calculateJunctionSpeed(Path& previousPath, Path& newPath)

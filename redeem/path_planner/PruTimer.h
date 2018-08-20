@@ -10,6 +10,7 @@
 #define __PathPlanner__PruTimer__
 
 #include "Logger.h"
+#include "PruInterface.h"
 #include <condition_variable>
 #include <functional>
 #include <iostream>
@@ -22,7 +23,7 @@
 
 class Path;
 
-class PruTimer
+class PruTimer : public PruInterface
 {
 
     class BlockDef
@@ -42,7 +43,8 @@ class PruTimer
     /* Should be locked when used */
     std::queue<BlockDef> blocksID;
     size_t ddr_mem_used;
-    size_t totalQueuedMovesTime;
+    uint64_t totalQueuedMovesTime;
+    uint64_t maxQueuedMovesTime = 2 * F_CPU;
 
     unsigned long ddr_addr;
     unsigned long ddr_size;
@@ -93,6 +95,21 @@ class PruTimer
         }
     }
 
+    std::condition_variable pruQueueIsntFullByTime;
+
+    inline bool isPruQueueFullByTime()
+    {
+        return totalQueuedMovesTime >= maxQueuedMovesTime;
+    }
+
+    inline void notifyIfPruQueueIsntFullByTime()
+    {
+        if (!isPruQueueFullByTime())
+        {
+            pruQueueIsntFullByTime.notify_all();
+        }
+    }
+
     std::thread runningThread;
     bool stop;
 
@@ -119,7 +136,7 @@ public:
         return ddr_size - ddr_mem_used - 4;
     }
 
-    unsigned long getTotalQueuedMovesTime()
+    uint64_t getTotalQueuedMovesTime()
     {
         std::lock_guard<std::mutex> lk(mutex_memory);
         return totalQueuedMovesTime;
@@ -138,7 +155,7 @@ public:
 
     void reset();
 
-    void push_block(uint8_t* blockMemory, size_t blockLen, unsigned int unit, unsigned long totalTime);
+    void push_block(uint8_t* blockMemory, size_t blockLen, unsigned int unit, uint64_t totalTime);
 
     size_t getStepsRemaining();
 };

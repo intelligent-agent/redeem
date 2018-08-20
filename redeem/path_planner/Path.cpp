@@ -82,7 +82,7 @@ void Path::zero()
 
     distance = 0;
     moveMask = 0;
-    timeInTicks = 0;
+    estimatedTime = 0;
     speeds.zero();
     worldMove.zero();
     fullSpeed = 0;
@@ -119,7 +119,7 @@ Path& Path::operator=(Path&& path)
 
     distance = path.distance;
     moveMask = path.moveMask;
-    timeInTicks = path.timeInTicks;
+    estimatedTime = path.estimatedTime;
     speeds = path.speeds;
     worldMove = path.worldMove;
     fullSpeed = path.fullSpeed;
@@ -220,7 +220,7 @@ void Path::initialize(const IntVectorN& machineStart,
     assert(!std::isnan(fullSpeed));
 
     const double idealTimeForMove = distance / fullSpeed; // m / (m/s) = s
-    timeInTicks = (unsigned long long)(F_CPU * idealTimeForMove); // ticks / s * s = ticks
+    estimatedTime = (unsigned long long)(F_CPU * idealTimeForMove); // ticks / s * s = ticks
 
     for (int i = 0; i < NUM_AXES; i++)
     {
@@ -275,7 +275,7 @@ void Path::initialize(const IntVectorN& machineStart,
     LOG("Distance in m:     " << distance << std::endl);
     LOG("Speed in m/s:      " << fullSpeed << " requested: " << requestedSpeed << std::endl);
     LOG("Accel in m/s:     " << accel << " requested: " << requestedAccel << std::endl);
-    LOG("Ticks :            " << timeInTicks << std::endl);
+    LOG("Ticks :            " << estimatedTime << std::endl);
 
     invalidateStepperPathParameters();
 }
@@ -305,7 +305,7 @@ Computes the acceleration/decelleration steps and advanced parameter associated.
 */
 void Path::updateStepperPathParameters()
 {
-    if (areParameterUpToDate())
+    if (areParameterUpToDate() || fullSpeed == 0)
         return;
 
     double cruiseSpeed = fullSpeed;

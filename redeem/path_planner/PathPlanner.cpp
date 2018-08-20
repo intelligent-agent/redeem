@@ -48,11 +48,11 @@ public:
     }
 };
 
-PathPlanner::PathPlanner(unsigned int cacheSize, AlarmCallback& alarmCallback)
+PathPlanner::PathPlanner(unsigned int cacheSize, AlarmCallback& alarmCallback, PruInterface& pru)
     : alarmCallback(alarmCallback)
     , optimizer()
-    , pathQueue(optimizer, cacheSize)
-    , pru([this]() { this->pruAlarmCallback(); })
+    , pathQueue(optimizer, cacheSize, 10 * F_CPU) // TODO pass time
+    , pru(pru)
 {
     // Force out a log message even if the log level would suppress it
     Logger() << "INFO     "
@@ -476,6 +476,9 @@ void PathPlanner::runMove(
     size_t commandsIndex = 0;
     std::vector<SteppersCommand> probeSteps;
     unsigned int totalSteps = 0;
+    uint64_t currentBlockStartTime = 0;
+
+    assert(commandsLength > 1); // we do not handle single-index command buffers correctly
 
     finalStepTimes.fill(0);
     stepIndex.fill(0);
@@ -514,12 +517,13 @@ void PathPlanner::runMove(
     // a command that doesn't step anything shouldn't count towards the number of cancelled commands.
 
     bool foundStep = true;
+    uint64_t stepTime = 0;
     while (foundStep)
     {
         foundStep = false;
 
         // find a step time
-        unsigned long long stepTime = UINT64_MAX;
+        stepTime = UINT64_MAX;
 
         for (int i = 0; i < NUM_AXES; i++)
         {
@@ -547,6 +551,25 @@ void PathPlanner::runMove(
 
         *lastDelay = (uint32_t)(stepTime - lastStepTime);
 
+        // find a command to hold the step we're about to take
+        if (commandsIndex == commandsLength)
+        {
+            pru.push_block((uint8_t*)&commands[0], sizeof(SteppersCommand) * commandsIndex, sizeof(SteppersCommand), stepTime - currentBlockStartTime);
+
+            if (probeDistanceTraveled)
+            {
+                probeSteps.insert(probeSteps.end(), &commands[0], &commands[commandsLength]);
+            }
+
+            commandsIndex = 0;
+            currentBlockStartTime = stepTime;
+
+            for (size_t i = 0; i < commandsLength; i++)
+            {
+                commands[i] = {};
+            }
+        }
+
         if (!foundStep)
         {
             /*LOGINFO("last step at " << lastStepTime / F_CPU_FLOAT << " and final time at " << roundedStepTime / F_CPU_FLOAT
@@ -573,7 +596,7 @@ void PathPlanner::runMove(
             {
                 const auto& step = axisSteps[axisStepIndex];
 
-                assert(!(cmd.step & (1 << i)));
+                assert(!(cmd.step & (1 << i))); // this means we're double-stepping an axis
                 assert(step.axis == i);
 
                 cmd.step |= axes_stepping_together[i];
@@ -585,28 +608,6 @@ void PathPlanner::runMove(
         }
 
         assert(cmd.step != 0);
-
-        if (commandsIndex == commandsLength)
-        {
-            pru.push_block((uint8_t*)&commands[0], sizeof(SteppersCommand) * commandsIndex, sizeof(SteppersCommand), commandsIndex);
-
-            if (probeDistanceTraveled)
-            {
-                probeSteps.reserve(probeSteps.size() + commandsIndex);
-
-                for (size_t i = 0; i < commandsIndex; i++)
-                {
-                    probeSteps.push_back(commands[i]);
-                }
-            }
-
-            commandsIndex = 0;
-
-            for (size_t i = 0; i < commandsLength; i++)
-            {
-                commands[i] = {};
-            }
-        }
     }
 
     if (sync)
@@ -631,40 +632,12 @@ void PathPlanner::runMove(
 
     if (commandsIndex != 0)
     {
-        pru.push_block((uint8_t*)&commands[0], sizeof(SteppersCommand) * commandsIndex, sizeof(SteppersCommand), commandsIndex);
+        pru.push_block((uint8_t*)&commands[0], sizeof(SteppersCommand) * commandsIndex, sizeof(SteppersCommand), stepTime - currentBlockStartTime);
 
         if (probeDistanceTraveled)
         {
-            probeSteps.reserve(probeSteps.size() + commandsIndex);
-
-            for (size_t i = 0; i < commandsIndex; i++)
-            {
-                probeSteps.push_back(commands[i]);
-            }
+            probeSteps.insert(probeSteps.end(), &commands[0], &commands[commandsIndex]);
         }
-    }
-
-    {
-        unsigned long long earliestFinishTime = ULLONG_MAX;
-        unsigned long long latestFinishTime = 0;
-        for (int i = 0; i < NUM_AXES; i++)
-        {
-
-            if (moveMask & (1 << i))
-            {
-                LOG("axis " << i << " finished at " << finalStepTimes[i] / F_CPU_FLOAT << std::endl);
-                if (finalStepTimes[i] != 0)
-                {
-                    earliestFinishTime = std::min(earliestFinishTime, finalStepTimes[i]);
-                    latestFinishTime = std::max(latestFinishTime, finalStepTimes[i]);
-                }
-            }
-        }
-        LOG("finish times ranged from " << earliestFinishTime << " to " << latestFinishTime << ", which is "
-                                        << latestFinishTime - earliestFinishTime << " ticks or " << (latestFinishTime - earliestFinishTime) / F_CPU_FLOAT << " seconds"
-                                        << std::endl);
-
-        //assert((latestFinishTime - earliestFinishTime) / F_CPU_FLOAT < 10 * CPU_CYCLE_LENGTH); // all axes should finish within 10 PRU cycles
     }
 
     LOG("move needed " << totalSteps << " steps" << std::endl);

@@ -205,9 +205,9 @@ bool PruTimer::initPRU(const std::string& firmware_stepper, const std::string& f
         LOG("[WARNING] Unable to execute firmware on PRU1" << std::endl);
     }
 
-//std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
+        //std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
 
-/*prussdrv_pru_wait_event (PRU_EVTOUT_0);
+        /*prussdrv_pru_wait_event (PRU_EVTOUT_0);
 
 	 printf("\tINFO: PRU0 completed transfer of endstop.\r\n");
 
@@ -334,11 +334,18 @@ blockLen - number of data bytes.
 unit - stepSize in bytes.
 totalTime - time it takes to complete the current block, in ticks.
 */
-void PruTimer::push_block(uint8_t* blockMemory, size_t blockLen, unsigned int unit, unsigned long totalTime)
+void PruTimer::push_block(uint8_t* blockMemory, size_t blockLen, unsigned int unit, uint64_t totalTime)
 {
 
     if (!ddr_write_location)
         return;
+
+    //If the caller specified a time of 0, bump it to 1
+    //This has a negligible effect on queue accounting but makes queue leaks much easier to find
+    if (totalTime == 0)
+    {
+        totalTime = 1;
+    }
 
     //Split the block in smaller blocks if needed
     size_t nbBlocks = ceil((blockLen + 12) / ((ddr_size / 4.0) - 12.0));
@@ -380,7 +387,23 @@ void PruTimer::push_block(uint8_t* blockMemory, size_t blockLen, unsigned int un
 
             std::unique_lock<std::mutex> lk(mutex_memory);
             blockSizeToWaitFor = currentBlockSize;
-            pruMemoryAvailable.wait(lk, [this, currentBlockSize] { return isPruMemoryAvailable(); });
+            pruMemoryAvailable.wait(lk, [this] { return isPruMemoryAvailable(); });
+
+            static int logBlock = 10;
+            bool logged = false;
+            if (logBlock && isPruQueueFullByTime())
+            {
+                LOG("PRU Queue is full by time - " << totalQueuedMovesTime << "/" << maxQueuedMovesTime);
+                logBlock--;
+                logged = true;
+            }
+
+            pruQueueIsntFullByTime.wait(lk, [this] { return !isPruQueueFullByTime(); });
+
+            if (logged)
+            {
+                LOGWARNING("PRU Queue has space again" << std::endl);
+            }
 
             if (!ddr_mem || stop)
                 return;
@@ -618,7 +641,7 @@ void PruTimer::run()
         if (stop)
             break;
 
-/*
+            /*
 		if (nbWaitedEvent)
 			LOG( ("\tINFO: PRU0 completed transfer.\r\n"));
 		else
@@ -640,6 +663,11 @@ void PruTimer::run()
         else
         {
             std::lock_guard<std::mutex> lk(mutex_memory);
+
+            const bool wasMemoryAvailable = isPruMemoryAvailable();
+            const bool wasMemoryEmpty = isPruMemoryEmpty();
+            const bool wasQueueFullByTime = wasQueueFullByTime();
+
             //			LOG( "NB event " << nb << " / " << currentNbEvents << "\t\tRead event from UIO = " << nbWaitedEvent << ", block in the queue: " << ddr_mem_used << std::endl);
             while (currentNbEvents != nb && !blocksID.empty())
             { //We use != to handle the overflow case
@@ -647,13 +675,33 @@ void PruTimer::run()
                 ddr_mem_used -= front.size;
                 totalQueuedMovesTime -= front.totalTime;
                 assert(ddr_mem_used < ddr_size);
+
+                if ((ddr_mem_used == 0) != (totalQueuedMovesTime == 0))
+                {
+                    LOGERROR("PRU is leaking move time - memory used is " << ddr_mem_used << " but queued move time is " << totalQueuedMovesTime << std::endl);
+                    assert((ddr_mem_used == 0) == (totalQueuedMovesTime == 0));
+                }
+
                 //				LOG( "Block of size " << std::dec << front.size << " and time " << front.totalTime << " done." << std::endl);
                 blocksID.pop();
                 currentNbEvents++;
             }
             currentNbEvents = nb;
-            notifyIfPruMemoryIsAvailable();
-            notifyIfPruMemoryIsEmpty();
+
+            if (!wasMemoryAvailable)
+            {
+                notifyIfPruMemoryIsAvailable();
+            }
+
+            if (!wasMemoryEmpty)
+            {
+                notifyIfPruMemoryIsEmpty();
+            }
+
+            if (wasQueueFullByTime)
+            {
+                notifyIfPruQueueIsntFullByTime();
+            }
         }
         //		LOG( "NB event after " << std::dec << nb << " / " << currentNbEvents << std::endl);
         //		LOG( std::dec <<ddr_mem_used << " bytes used, free: " <<std::dec <<  ddr_size-ddr_mem_used<< "." << std::endl);

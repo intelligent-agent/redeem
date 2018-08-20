@@ -62,6 +62,8 @@ class AlarmCallback;
 class PathPlanner
 {
 private:
+    friend class PathPlannerTest;
+
     VectorN machineToWorld(const IntVectorN& machinePos);
     IntVectorN worldToMachine(const VectorN& worldPos, bool* possible = nullptr);
 
@@ -80,7 +82,7 @@ private:
     bool stop;
     std::atomic_bool acceptingPaths;
 
-    PruTimer pru;
+    PruInterface& pru;
     PathOptimizer optimizer;
     PathQueue<PathOptimizer> pathQueue;
     void recomputeParameters();
@@ -146,7 +148,7 @@ public:
    * @details Create a new path planner that is used to compute paths parameters and send it to the PRU for execution
    * @param cacheSize Size of the movement planner cache
    */
-    PathPlanner(unsigned int cacheSize, AlarmCallback& alarmCallback);
+    PathPlanner(unsigned int cacheSize, AlarmCallback& alarmCallback, PruInterface& pru);
 
     /**
    * @brief  Init the internal PRU co-processors

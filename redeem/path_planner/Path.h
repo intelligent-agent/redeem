@@ -141,7 +141,7 @@ private:
     // These fields are constant after initialization
     double distance; /// Total distance of the move in NUM_AXIS-dimensional space in meters
     unsigned char moveMask;
-    unsigned long long timeInTicks; /// Time for completing a move (optimistically assuming it runs full speed the whole time)
+    int64_t estimatedTime; /// Time for completing a move (optimistically assuming it runs full speed the whole time)
     VectorN speeds;
     VectorN worldMove;
     double fullSpeed; /// Cruising speed in m/s
@@ -301,14 +301,14 @@ public:
         return moveMask & 255;
     }
 
-    inline unsigned long long getTimeInTicks()
+    inline int64_t getEstimatedTime()
     {
-        return timeInTicks;
+        return estimatedTime;
     }
 
-    inline void setTimeInTicks(unsigned long time)
+    inline void setEstimatedTime(int64_t time)
     {
-        timeInTicks = time;
+        estimatedTime = time;
     }
 
     inline const VectorN& getSpeeds()

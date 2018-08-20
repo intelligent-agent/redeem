@@ -5,6 +5,7 @@
 #include <optional>
 #include <vector>
 
+#include "Logger.h"
 #include "Path.h"
 #include "PathOptimizerInterface.h"
 
@@ -18,14 +19,35 @@ private:
     std::condition_variable queueIsEmpty;
     PathOptimizerType& optimizer;
     std::vector<Path> queue;
+    uint64_t maxTime;
+    uint64_t curTime;
     size_t writeIndex;
     size_t readIndex;
     size_t availableSlots;
     bool running;
 
+    bool doesQueueHaveSpace()
+    {
+        return availableSlots != 0 && curTime < maxTime;
+    }
+
     bool addPathInternal(std::unique_lock<std::mutex>& lock, Path&& path)
     {
-        queueHasSpace.wait(lock, [this] { return !running || availableSlots != 0; });
+        static int logBlock = 10;
+        bool logged = false;
+        if (logBlock && !doesQueueHaveSpace())
+        {
+            LOGWARNING("path queue blocking - slots: " << availableSlots << "/" << queue.size() << " time: " << curTime << "/" << maxTime << std::endl);
+            logBlock--;
+            logged = true;
+        }
+
+        queueHasSpace.wait(lock, [this] { return !running || doesQueueHaveSpace(); });
+
+        if (logged)
+        {
+            LOGWARNING("path queue has space again" << std::endl);
+        }
 
         if (!running)
         {
@@ -34,7 +56,7 @@ private:
 
         queue[writeIndex] = std::move(path);
 
-        optimizer.onPathAdded(queue, readIndex, writeIndex);
+        curTime += optimizer.onPathAdded(queue, readIndex, writeIndex);
 
         writeIndex = (writeIndex + 1) % queue.size();
         availableSlots--;
@@ -49,9 +71,11 @@ private:
     }
 
 public:
-    PathQueue(PathOptimizerType& optimizer, size_t size)
+    PathQueue(PathOptimizerType& optimizer, size_t size, uint64_t maxTime)
         : optimizer(optimizer)
         , queue(size)
+        , maxTime(maxTime)
+        , curTime(0)
         , writeIndex(0)
         , readIndex(0)
         , availableSlots(size)
@@ -85,16 +109,17 @@ public:
         }
 
         const size_t currentReadIndex = readIndex;
+        const bool addPathMightBeBlocking = !doesQueueHaveSpace();
 
         // subtract one because the optimizer does touch the last index
-        optimizer.beforePathRemoval(queue, readIndex, (writeIndex + queue.size() - 1) % queue.size());
+        curTime += optimizer.beforePathRemoval(queue, readIndex, (writeIndex + queue.size() - 1) % queue.size());
 
         Path result(std::move(queue[currentReadIndex]));
 
         readIndex = (readIndex + 1) % queue.size();
         availableSlots++;
 
-        if (availableSlots == 1)
+        if (addPathMightBeBlocking && doesQueueHaveSpace())
         {
             lock.unlock();
             queueHasSpace.notify_all();
