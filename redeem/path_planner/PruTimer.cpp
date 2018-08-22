@@ -334,7 +334,7 @@ blockLen - number of data bytes.
 unit - stepSize in bytes.
 totalTime - time it takes to complete the current block, in ticks.
 */
-void PruTimer::push_block(uint8_t* blockMemory, size_t blockLen, unsigned int unit, uint64_t totalTime)
+void PruTimer::pushBlock(uint8_t* blockMemory, size_t blockLen, unsigned int unit, uint64_t totalTime, SyncCallback* callback)
 {
 
     if (!ddr_write_location)
@@ -393,7 +393,7 @@ void PruTimer::push_block(uint8_t* blockMemory, size_t blockLen, unsigned int un
             bool logged = false;
             if (logBlock && isPruQueueFullByTime())
             {
-                LOG("PRU Queue is full by time - " << totalQueuedMovesTime << "/" << maxQueuedMovesTime);
+                LOGWARNING("PRU Queue is full by time - " << totalQueuedMovesTime << "/" << maxQueuedMovesTime << std::endl);
                 logBlock--;
                 logged = true;
             }
@@ -461,11 +461,15 @@ void PruTimer::push_block(uint8_t* blockMemory, size_t blockLen, unsigned int un
                 }
 
                 assert(maxSize > 0);
-                unsigned long t = currentBlockSize - maxSize > 0 ? totalTime / 2 : totalTime;
-                blocksID.emplace(maxSize + 4, t); //FIXME: TotalTime is not /2 but doesn't it to be precise to make it work...
+
+                bool moreToWrite = currentBlockSize > maxSize;
+
+                unsigned long timeSoFar = moreToWrite ? totalTime / 2 : totalTime;
+
+                blocksID.emplace(maxSize + 4, timeSoFar, moreToWrite ? nullptr : callback); //FIXME: TotalTime is not /2 but doesn't it to be precise to make it work...
 
                 ddr_mem_used += maxSize + 4;
-                totalQueuedMovesTime += t;
+                totalQueuedMovesTime += timeSoFar;
 
                 //First copy the data
                 //LOG( std::dec << "Writing " << maxSize+4 << " bytes to 0x" << std::hex << (unsigned long)ddr_write_location << std::endl);
@@ -526,13 +530,14 @@ void PruTimer::push_block(uint8_t* blockMemory, size_t blockLen, unsigned int un
 
                 if (remainingSize)
                 {
+                    assert(moreToWrite);
 
                     assert(remainingSize == (remainingSize / unit) * unit);
 
-                    blocksID.emplace(remainingSize + 4, totalTime - t); //FIXME: TotalTime is not /2 but doesn't it to be precise to make it work...
+                    blocksID.emplace(remainingSize + 4, totalTime - timeSoFar, callback); //FIXME: TotalTime is not /2 but doesn't it to be precise to make it work...
 
                     ddr_mem_used += remainingSize + 4;
-                    totalQueuedMovesTime += totalTime - t;
+                    totalQueuedMovesTime += totalTime - timeSoFar;
 
                     assert(ddr_write_location + remainingSize + sizeof(nb) * 2 <= ddr_mem_end);
 
@@ -571,7 +576,7 @@ void PruTimer::push_block(uint8_t* blockMemory, size_t blockLen, unsigned int un
             }
             else
             {
-                blocksID.emplace(currentBlockSize + 4, totalTime); //FIXME: TotalTime is not /2 but doesn't it to be precise to make it work...
+                blocksID.emplace(currentBlockSize + 4, totalTime, callback); //FIXME: TotalTime is not /2 but doesn't it to be precise to make it work...
                 ddr_mem_used += currentBlockSize + 4;
                 totalQueuedMovesTime += totalTime;
                 //First copy the data
@@ -666,7 +671,7 @@ void PruTimer::run()
 
             const bool wasMemoryAvailable = isPruMemoryAvailable();
             const bool wasMemoryEmpty = isPruMemoryEmpty();
-            const bool wasQueueFullByTime = wasQueueFullByTime();
+            const bool wasQueueFullByTime = isPruQueueFullByTime();
 
             //			LOG( "NB event " << nb << " / " << currentNbEvents << "\t\tRead event from UIO = " << nbWaitedEvent << ", block in the queue: " << ddr_mem_used << std::endl);
             while (currentNbEvents != nb && !blocksID.empty())
@@ -680,6 +685,11 @@ void PruTimer::run()
                 {
                     LOGERROR("PRU is leaking move time - memory used is " << ddr_mem_used << " but queued move time is " << totalQueuedMovesTime << std::endl);
                     assert((ddr_mem_used == 0) == (totalQueuedMovesTime == 0));
+                }
+
+                if (front.callback != nullptr)
+                {
+                    front.callback->syncComplete();
                 }
 
                 //				LOG( "Block of size " << std::dec << front.size << " and time " << front.totalTime << " done." << std::endl);
@@ -702,20 +712,15 @@ void PruTimer::run()
             {
                 notifyIfPruQueueIsntFullByTime();
             }
+
+            if (isPruMemoryEmpty())
+            {
+                assert(totalQueuedMovesTime == 0);
+            }
         }
         //		LOG( "NB event after " << std::dec << nb << " / " << currentNbEvents << std::endl);
         //		LOG( std::dec <<ddr_mem_used << " bytes used, free: " <<std::dec <<  ddr_size-ddr_mem_used<< "." << std::endl);
     }
-}
-
-int PruTimer::waitUntilSync()
-{
-    int ret;
-    // Wait until the PRU sends a sync event.
-    ret = prussdrv_pru_wait_event(PRU_EVTOUT_1, 1000);
-    if (ret != 0)
-        prussdrv_pru_clear_event(PRU_EVTOUT_1, PRU1_ARM_INTERRUPT);
-    return ret;
 }
 
 void PruTimer::suspend()

@@ -28,11 +28,25 @@
 #define __PathPlanner__Path__
 
 #include "StepperCommand.h"
+#include "SyncCallback.h"
 #include "config.h"
 #include "vectorN.h"
 #include <array>
 #include <assert.h>
 #include <atomic>
+#include <future>
+#if __has_include(<optional>)
+#include <optional>
+#else
+#include <experimental/optional>
+
+// nasty hack so std::experimental::optional becomes std::optional
+namespace std
+{
+    using namespace experimental;
+}
+
+#endif
 #include <stddef.h>
 #include <stdint.h>
 #include <string>
@@ -73,6 +87,23 @@
 #endif
 
 class Delta;
+
+class WaitEvent
+{
+private:
+    std::promise<void> waitIsComplete;
+
+public:
+    void signalWaitComplete()
+    {
+        waitIsComplete.set_value();
+    }
+
+    std::future<void> getFuture()
+    {
+        return waitIsComplete.get_future();
+    }
+};
 
 struct Step
 {
@@ -152,6 +183,9 @@ private:
 
     StepperPathParameters stepperPath;
     std::array<std::vector<Step>, NUM_AXES> steps;
+
+    SyncCallback* syncCallback;
+    std::optional<std::future<void>> waitEvent;
 
     Path(const Path& path) = delete;
     Path& operator=(const Path&) = delete;
@@ -266,9 +300,31 @@ public:
         return flags & FLAG_SYNC_WAIT;
     }
 
-    inline void setSyncEvent(bool wait)
+    inline bool isWaitEvent()
+    {
+        return (bool)waitEvent;
+    }
+
+    std::future<void>& getWaitEvent()
+    {
+        assert(isWaitEvent());
+        return waitEvent.value();
+    }
+
+    void setWaitEvent(std::future<void>&& future)
+    {
+        waitEvent = std::move(future);
+    }
+
+    SyncCallback* getSyncCallback()
+    {
+        return syncCallback;
+    }
+
+    inline void setSyncEvent(SyncCallback& callback, bool wait)
     {
         flags |= wait ? FLAG_SYNC_WAIT : FLAG_SYNC;
+        this->syncCallback = &callback;
     }
 
     inline bool willUsePressureAdvance()

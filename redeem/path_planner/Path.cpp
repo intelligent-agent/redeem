@@ -98,6 +98,9 @@ void Path::zero()
         std::vector<Step> empty;
         stepVector.swap(empty);
     }
+
+    syncCallback = nullptr;
+    waitEvent = std::optional<std::future<void>>();
 }
 
 Path::Path()
@@ -130,6 +133,9 @@ Path& Path::operator=(Path&& path)
 
     stepperPath = path.stepperPath;
     steps = std::move(path.steps);
+
+    syncCallback = path.syncCallback;
+    waitEvent = std::move(path.waitEvent);
 
     return *this;
 }
@@ -474,4 +480,10 @@ double StepperPathParameters::dilateTime(double t) const
 double StepperPathParameters::finalTime() const
 {
     return moveEnd;
+}
+
+void SyncCallback::syncComplete()
+{
+    // this should never be called - this class will be extended in python
+    assert(0);
 }

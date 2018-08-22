@@ -166,53 +166,67 @@ TEST(PathQueueBasics, BlocksUntilEmpty)
     worker.waitAndJoin();
 }
 
+class DummySyncCallback : public SyncCallback
+{
+public:
+    void syncComplete() override
+    {
+    }
+};
+
 TEST(PathQueueBasics, AddsSyncEventToLastPathSinglePath)
 {
     DummyPathOptimizer optimizer;
     SimplePathQueue queue(optimizer, 4, 100);
+    DummySyncCallback callback;
 
     Path path;
     ASSERT_TRUE(queue.addPath(std::move(path)));
 
-    queue.queueSyncEvent(false);
+    queue.queueSyncEvent(callback, false);
 
     Path result = queue.popPath().value();
 
     EXPECT_EQ(result.isSyncEvent(), true);
+    EXPECT_EQ(result.getSyncCallback(), &callback);
 }
 
 TEST(PathQueueBasics, AddsSyncEventToLastPathTwoPaths)
 {
     DummyPathOptimizer optimizer;
     SimplePathQueue queue(optimizer, 4, 100);
+    DummySyncCallback callback;
 
     Path path;
     ASSERT_TRUE(queue.addPath(std::move(path)));
     path.zero();
     ASSERT_TRUE(queue.addPath(std::move(path)));
 
-    queue.queueSyncEvent(false);
+    queue.queueSyncEvent(callback, false);
 
     Path result = queue.popPath().value();
     EXPECT_EQ(result.isSyncEvent(), false);
     result.zero();
     result = queue.popPath().value();
     EXPECT_EQ(result.isSyncEvent(), true);
+    EXPECT_EQ(result.getSyncCallback(), &callback);
 }
 
 TEST(PathQueueBasics, AddsSyncEventToEmptyQueue)
 {
     DummyPathOptimizer optimizer;
     SimplePathQueue queue(optimizer, 4, 100);
+    DummySyncCallback callback;
 
     EXPECT_EQ(queue.availablePathSlots(), 4);
 
-    queue.queueSyncEvent(false);
+    queue.queueSyncEvent(callback, false);
 
     ASSERT_EQ(queue.availablePathSlots(), 3);
 
     Path result = queue.popPath().value();
     EXPECT_EQ(result.isSyncEvent(), true);
+    EXPECT_EQ(result.getSyncCallback(), &callback);
     EXPECT_EQ(result.getDistance(), 0);
     EXPECT_EQ(result.getEstimatedTime(), 0);
 }
@@ -221,25 +235,29 @@ TEST(PathQueueBasics, AddsSyncEventIfLastPathAlreadyIsOne)
 {
     DummyPathOptimizer optimizer;
     SimplePathQueue queue(optimizer, 4, 100);
+    DummySyncCallback firstCallback;
+    DummySyncCallback secondCallback;
 
     ASSERT_EQ(queue.availablePathSlots(), 4);
 
-    queue.queueSyncEvent(false);
+    queue.queueSyncEvent(firstCallback, false);
 
     ASSERT_EQ(queue.availablePathSlots(), 3);
 
-    queue.queueSyncEvent(true);
+    queue.queueSyncEvent(secondCallback, true);
 
     ASSERT_EQ(queue.availablePathSlots(), 2);
 
     Path result = queue.popPath().value();
     EXPECT_EQ(result.isSyncEvent(), true);
+    EXPECT_EQ(result.getSyncCallback(), &firstCallback);
     EXPECT_EQ(result.getDistance(), 0);
     EXPECT_EQ(result.getEstimatedTime(), 0);
 
     result.zero();
     result = queue.popPath().value();
     EXPECT_EQ(result.isSyncWaitEvent(), true);
+    EXPECT_EQ(result.getSyncCallback(), &secondCallback);
     EXPECT_EQ(result.getDistance(), 0);
     EXPECT_EQ(result.getEstimatedTime(), 0);
 }
@@ -248,11 +266,12 @@ TEST(PathQueueBasics, AddsSyncWaitEventToLastPath)
 {
     DummyPathOptimizer optimizer;
     SimplePathQueue queue(optimizer, 4, 100);
+    DummySyncCallback callback;
 
     Path path;
     ASSERT_TRUE(queue.addPath(std::move(path)));
 
-    queue.queueSyncEvent(true);
+    queue.queueSyncEvent(callback, true);
 
     Path result = queue.popPath().value();
 
@@ -268,7 +287,7 @@ TEST(PathQueueBasics, FailsToPopWhenStopping)
 
     auto result = queue.popPath();
 
-    EXPECT_EQ(result.has_value(), false);
+    EXPECT_EQ((bool)result, false);
 }
 
 TEST(PathQueueBasics, FailsToAddWhenStopping)
@@ -327,9 +346,10 @@ TEST(PathQueueBasics, FailsToQueueSyncEventWhenStopping)
 {
     DummyPathOptimizer optimizer;
     SimplePathQueue queue(optimizer, 4, 100);
+    DummySyncCallback callback;
 
     queue.stop();
-    EXPECT_EQ(queue.queueSyncEvent(false), false);
+    EXPECT_EQ(queue.queueSyncEvent(callback, false), false);
 }
 
 TEST(PathQueueBasics, FailsToWaitForEmptyWhenStopping)
@@ -353,7 +373,7 @@ TEST(PathQueueBasics, StopsBlockingWaitForEmptyWhenStopping)
         queue.waitForQueueToEmpty();
     });
 
-	EXPECT_FALSE(worker.isFinished());
+    EXPECT_FALSE(worker.isFinished());
 
     queue.stop();
 
@@ -364,20 +384,46 @@ TEST(PathQueueBasics, FailsToQueueSyncEventWhenFullAndStopping)
 {
     DummyPathOptimizer optimizer;
     SimplePathQueue queue(optimizer, 1, 100);
+    DummySyncCallback callback;
 
     Path path;
-    path.setSyncEvent(true);
+    path.setSyncEvent(callback, true);
     ASSERT_TRUE(queue.addPath(std::move(path)));
 
     WorkerThread worker([&queue]() {
-        EXPECT_FALSE(queue.queueSyncEvent(false));
+        DummySyncCallback otherCallback;
+        EXPECT_FALSE(queue.queueSyncEvent(otherCallback, false));
     });
 
-	EXPECT_FALSE(worker.isFinished());
+    EXPECT_FALSE(worker.isFinished());
 
     queue.stop();
 
     worker.waitAndJoin();
+}
+
+TEST(PathQueueBasics, QueuesWaitEvents)
+{
+    DummyPathOptimizer optimizer;
+    SimplePathQueue queue(optimizer, 4, 100);
+
+    std::promise<void> promise;
+
+    ASSERT_TRUE(queue.queueWaitEvent(promise.get_future()));
+
+    auto optionalPath = queue.popPath();
+
+    ASSERT_TRUE(optionalPath);
+    auto& path = optionalPath.value();
+    ASSERT_TRUE(path.isWaitEvent());
+
+    auto& future = path.getWaitEvent();
+
+    EXPECT_FALSE(is_ready(future));
+
+    promise.set_value();
+
+    EXPECT_TRUE(is_ready(future));
 }
 
 class MockPathOptimizer : public PathOptimizerInterface
@@ -394,11 +440,11 @@ TEST(PathQueueBasics, BlocksWhenFullByTime)
     MockPathOptimizer optimizer;
     MockPathQueue queue(optimizer, 10, 30ll * F_CPU);
 
-	Path path;
+    Path path;
     EXPECT_CALL(optimizer, onPathAdded(::testing::_, 0, 0)).WillOnce(::testing::Return(31ll * F_CPU));
     queue.addPath(std::move(path));
 
-	EXPECT_CALL(optimizer, onPathAdded);
+    EXPECT_CALL(optimizer, onPathAdded);
     EXPECT_CALL(optimizer, beforePathRemoval).WillOnce(::testing::Return(-31ll * F_CPU));
 
     WorkerThread thread([&queue]() {
@@ -412,7 +458,6 @@ TEST(PathQueueBasics, BlocksWhenFullByTime)
 
     thread.waitAndJoin();
 }
-
 
 TEST(PathQueueBasics, CallsOnPathAddedAfterAdd)
 {

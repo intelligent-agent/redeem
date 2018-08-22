@@ -18,6 +18,7 @@
 #include <queue>
 #include <string.h>
 #include <thread>
+#include "config.h"
 
 //#define DEMO_PRU
 
@@ -31,9 +32,11 @@ class PruTimer : public PruInterface
     public:
         unsigned long size;
         unsigned long totalTime;
-        BlockDef(unsigned long size, unsigned long totalTime)
+        SyncCallback* callback;
+        BlockDef(unsigned long size, unsigned long totalTime, SyncCallback* callback)
             : size(size)
             , totalTime(totalTime)
+            , callback(callback)
         {
         }
     };
@@ -122,42 +125,40 @@ class PruTimer : public PruInterface
 public:
     PruTimer(std::function<void()> endstopAlarmCallback);
     virtual ~PruTimer();
-    bool initPRU(const std::string& firmware_stepper, const std::string& firmware_endstops);
+    bool initPRU(const std::string& firmware_stepper, const std::string& firmware_endstops) override;
 
-    void run();
+    void run() override;
 
-    void runThread();
-    void stopThread(bool join);
-    void waitUntilFinished();
+    void runThread() override;
+    void stopThread(bool join) override;
+    void waitUntilFinished() override;
 
-    size_t getFreeMemory()
+    size_t getFreeMemory() override
     {
         std::lock_guard<std::mutex> lk(mutex_memory);
         return ddr_size - ddr_mem_used - 4;
     }
 
-    uint64_t getTotalQueuedMovesTime()
+    uint64_t getTotalQueuedMovesTime() override
     {
         std::lock_guard<std::mutex> lk(mutex_memory);
         return totalQueuedMovesTime;
     }
 
-    unsigned int getMaxBytesPerBlock()
+    size_t getMaxBytesPerBlock() override
     {
         return (ddr_size / 4) - 12;
     }
 
-    int waitUntilSync();
+    void suspend() override;
 
-    void suspend();
+    void resume() override;
 
-    void resume();
+    void reset() override;
 
-    void reset();
+    void pushBlock(uint8_t* blockMemory, size_t blockLen, unsigned int unit, uint64_t totalTime, SyncCallback* callback = nullptr) override;
 
-    void push_block(uint8_t* blockMemory, size_t blockLen, unsigned int unit, uint64_t totalTime);
-
-    size_t getStepsRemaining();
+    size_t getStepsRemaining() override;
 };
 
 #endif /* defined(__PathPlanner__PruTimer__) */

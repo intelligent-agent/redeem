@@ -3,6 +3,8 @@
 #include <cstdint>
 #include <string>
 
+#include "SyncCallback.h"
+
 class PruInterface
 {
 public:
@@ -23,15 +25,13 @@ public:
 
     virtual size_t getMaxBytesPerBlock() = 0;
 
-    virtual int waitUntilSync() = 0;
-
     virtual void suspend() = 0;
 
     virtual void resume() = 0;
 
     virtual void reset() = 0;
 
-    virtual void push_block(uint8_t* blockMemory, size_t blockLen, unsigned int unit, uint64_t totalTime) = 0;
+    virtual void pushBlock(uint8_t* blockMemory, size_t blockLen, unsigned int unit, uint64_t totalTime, SyncCallback* callback = nullptr) = 0;
 
     virtual size_t getStepsRemaining() = 0;
 };

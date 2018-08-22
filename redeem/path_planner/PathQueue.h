@@ -2,7 +2,15 @@
 #include <condition_variable>
 #include <cstdint>
 #include <mutex>
+#if __has_include(<optional>)
 #include <optional>
+#else
+#include <experimental/optional>
+namespace std
+{
+using namespace experimental;    
+}
+#endif
 #include <vector>
 
 #include "Logger.h"
@@ -83,6 +91,13 @@ public:
     {
     }
 
+    uint64_t getQueuedMoveTime()
+    {
+        std::unique_lock<std::mutex> lock(mutex);
+
+        return curTime;
+    }
+
     size_t availablePathSlots()
     {
         std::unique_lock<std::mutex> lock(mutex);
@@ -100,6 +115,11 @@ public:
     std::optional<Path> popPath()
     {
         std::unique_lock<std::mutex> lock(mutex);
+
+        if (availableSlots == queue.size())
+        {
+            //LOGINFO("path queue underrun" << std::endl);
+        }
 
         queueHasPaths.wait(lock, [this] { return !running || availableSlots != queue.size(); });
 
@@ -133,7 +153,7 @@ public:
         return std::move(result);
     }
 
-    bool queueSyncEvent(bool blocking)
+    bool queueSyncEvent(SyncCallback& callback, bool blocking)
     {
         std::unique_lock<std::mutex> lock(mutex);
 
@@ -149,15 +169,24 @@ public:
             && !queue[lastPathIndex].isSyncWaitEvent())
         {
             Path& lastPath = queue[(writeIndex + queue.size() - 1) % queue.size()];
-            lastPath.setSyncEvent(blocking);
+            lastPath.setSyncEvent(callback, blocking);
             return true;
         }
         else
         {
             Path dummyPath;
-            dummyPath.setSyncEvent(blocking);
+            dummyPath.setSyncEvent(callback, blocking);
             return addPathInternal(lock, std::move(dummyPath));
         }
+    }
+
+    bool queueWaitEvent(std::future<void>&& future)
+    {
+        std::unique_lock<std::mutex> lock(mutex);
+
+        Path dummyPath;
+        dummyPath.setWaitEvent(std::move(future));
+        return addPathInternal(lock, std::move(dummyPath));
     }
 
     bool waitForQueueToEmpty()

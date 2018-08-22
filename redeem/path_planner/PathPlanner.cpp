@@ -26,33 +26,17 @@
 
 #include "AlarmCallback.h"
 #include "PathPlanner.h"
-#include <Python.h>
+#include <algorithm>
 #include <array>
 #include <assert.h>
 #include <cmath>
 #include <thread>
 
-class PythonThreadHelper final
-{
-    PyThreadState* state = nullptr;
-
-public:
-    PythonThreadHelper()
-    {
-        state = PyEval_SaveThread();
-    }
-
-    ~PythonThreadHelper()
-    {
-        PyEval_RestoreThread(state);
-    }
-};
-
 PathPlanner::PathPlanner(unsigned int cacheSize, AlarmCallback& alarmCallback, PruInterface& pru)
     : alarmCallback(alarmCallback)
+    , pru(pru)
     , optimizer()
     , pathQueue(optimizer, cacheSize, 10 * F_CPU) // TODO pass time
-    , pru(pru)
 {
     // Force out a log message even if the log level would suppress it
     Logger() << "INFO     "
@@ -85,6 +69,11 @@ PathPlanner::PathPlanner(unsigned int cacheSize, AlarmCallback& alarmCallback, P
     LOGINFO("PathPlanner initialized\n");
 }
 
+PathPlanner::PathPlanner(unsigned int cacheSize, AlarmCallback& alarmCallback)
+    : PathPlanner(cacheSize, alarmCallback, *new PruTimer([this](){this->pruAlarmCallback();}))
+{
+}
+
 void PathPlanner::recomputeParameters()
 {
     for (int i = 0; i < NUM_AXES; i++)
@@ -94,29 +83,18 @@ void PathPlanner::recomputeParameters()
     }
 }
 
-bool PathPlanner::queueSyncEvent(bool isBlocking /* = true */)
+void PathPlanner::queueSyncEvent(SyncCallback& callback, bool isBlocking)
 {
-    PythonThreadHelper threadHelper;
-
-    pathQueue.queueSyncEvent(isBlocking);
-
-    return false; // If the move command buffer is completely empty, it's too late.
+    pathQueue.queueSyncEvent(callback, isBlocking);
 }
 
-// Wait for a sync event on the stepper PRU
-int PathPlanner::waitUntilSyncEvent()
+WaitEvent* PathPlanner::queueWaitEvent()
 {
-    int ret;
-    PythonThreadHelper threadHelper;
-    ret = pru.waitUntilSync();
-    return ret;
-}
+    WaitEvent* waitEvent = new WaitEvent();
 
-// Clear the sync event on the stepper PRU and resume operation.
-void PathPlanner::clearSyncEvent()
-{
-    PythonThreadHelper threadHelper;
-    pru.resume();
+    pathQueue.queueWaitEvent(waitEvent->getFuture());
+
+    return waitEvent;
 }
 
 void PathPlanner::queueMove(VectorN endWorldPos,
@@ -245,8 +223,6 @@ void PathPlanner::queueMove(VectorN endWorldPos,
     // LOAD INTO QUEUE
     ////////////////////////////////////////////////////////////////////
 
-    PythonThreadHelper threadHelper;
-
     Path p;
 
     p.initialize(state, tweakedEndPos, startWorldPos, endWorldPos, axisStepsPerM,
@@ -260,9 +236,30 @@ void PathPlanner::queueMove(VectorN endWorldPos,
         return; // No steps included
     }
 
+    class ProbeSyncCallback : public SyncCallback
+    {
+    private:
+        std::promise<void> event;
+
+    public:
+        void syncComplete() override
+        {
+            event.set_value();
+        }
+
+        void waitUntilComplete()
+        {
+            auto future = event.get_future();
+            future.wait();
+        }
+    };
+
+    std::optional<ProbeSyncCallback> probeSyncCallback;
+
     if (is_probe)
     {
-        p.setSyncEvent(true);
+        probeSyncCallback.emplace();
+        p.setSyncEvent(probeSyncCallback.value(), true);
     }
 
     /*
@@ -316,13 +313,14 @@ void PathPlanner::queueMove(VectorN endWorldPos,
     // PERFORM PLANNING
     ////////////////////////////////////////////////////////////////////
 
-    LOGINFO("Move queued for the worker" << std::endl);
+    //    LOGINFO("Move queued for the worker" << std::endl);
 
     if (is_probe)
     {
         LOG("Probe Move - waiting for the sync event" << std::endl);
 
-        waitUntilSyncEvent();
+        probeSyncCallback.value().waitUntilComplete();
+        // TODO do we need to resume the PRU?
 
         assert(state != startPos);
     }
@@ -342,7 +340,6 @@ void PathPlanner::runThread()
 
 void PathPlanner::stopThread(bool join)
 {
-    PythonThreadHelper threadHelper;
     pru.stopThread(join);
     stop = true;
 
@@ -364,8 +361,6 @@ PathPlanner::~PathPlanner()
 
 void PathPlanner::waitUntilFinished()
 {
-    PythonThreadHelper threadHelper;
-
     pathQueue.waitForQueueToEmpty();
 
     //Wait for PruTimer then
@@ -393,7 +388,7 @@ void PathPlanner::run()
     {
         auto possiblePath = pathQueue.popPath();
 
-        if (!possiblePath.has_value())
+        if (!possiblePath)
         {
             // the queue should only fail to give us a path if we're shutting down
             assert(stop);
@@ -401,12 +396,9 @@ void PathPlanner::run()
         }
         Path& cur = possiblePath.value();
 
-        IntVectorN probeDistanceTraveled;
+        // TODO check for wait events and wait (with tests)
 
-        if (stop)
-        {
-            break;
-        }
+        IntVectorN probeDistanceTraveled;
 
         assert(!cur.isBlocked());
 
@@ -425,6 +417,11 @@ void PathPlanner::run()
 
         const double moveEndTime = cur.runFinalStepCalculations();
 
+        if (cur.isWaitEvent())
+        {
+            cur.getWaitEvent().wait();
+        }
+
         LOG("Sending " << std::dec << linesPos << ", Start speed=" << cur.getStartSpeed() << ", end speed=" << cur.getEndSpeed() << std::endl);
 
         runMove(cur.getAxisMoveMask(),
@@ -435,7 +432,8 @@ void PathPlanner::run()
             cur.getSteps(),
             commandBlock,
             maxCommandsPerBlock,
-            cur.isProbeMove() ? &probeDistanceTraveled : nullptr);
+            cur.isProbeMove() ? &probeDistanceTraveled : nullptr,
+            cur.getSyncCallback());
 
         if (cur.isProbeMove())
         {
@@ -454,9 +452,9 @@ void PathPlanner::run()
     }
 }
 
-inline unsigned long long roundStepTime(double stepTime)
+inline uint64_t roundStepTime(double stepTime)
 {
-    return std::llround(stepTime * (F_CPU_FLOAT / MINIMUM_STEP_INTERVAL)) * MINIMUM_STEP_INTERVAL;
+    return static_cast<uint64_t>(std::llround(stepTime * (F_CPU_FLOAT / MINIMUM_STEP_INTERVAL))) * MINIMUM_STEP_INTERVAL;
 }
 
 void PathPlanner::runMove(
@@ -468,7 +466,8 @@ void PathPlanner::runMove(
     std::array<std::vector<Step>, NUM_AXES>& steps,
     std::unique_ptr<SteppersCommand[]> const& commands,
     const size_t commandsLength,
-    IntVectorN* probeDistanceTraveled)
+    IntVectorN* probeDistanceTraveled,
+    SyncCallback* callback)
 {
 
     std::array<unsigned long long, NUM_AXES> finalStepTimes;
@@ -489,24 +488,6 @@ void PathPlanner::runMove(
     }
 
     unsigned long long lastStepTime = 0;
-
-    // sanity check - are there any steps at all?
-    {
-        bool haveSteps = false;
-        for (const auto& axisSteps : steps)
-        {
-            if (!axisSteps.empty())
-            {
-                haveSteps = true;
-            }
-        }
-
-        if (!haveSteps)
-        {
-            assert(0);
-            return;
-        }
-    }
 
     // reserve a command to be an opening delay with no steps
     uint32_t* lastDelay = &commands[commandsIndex].delay;
@@ -554,7 +535,7 @@ void PathPlanner::runMove(
         // find a command to hold the step we're about to take
         if (commandsIndex == commandsLength)
         {
-            pru.push_block((uint8_t*)&commands[0], sizeof(SteppersCommand) * commandsIndex, sizeof(SteppersCommand), stepTime - currentBlockStartTime);
+            pru.pushBlock((uint8_t*)&commands[0], sizeof(SteppersCommand) * commandsIndex, sizeof(SteppersCommand), stepTime - currentBlockStartTime);
 
             if (probeDistanceTraveled)
             {
@@ -572,8 +553,6 @@ void PathPlanner::runMove(
 
         if (!foundStep)
         {
-            /*LOGINFO("last step at " << lastStepTime / F_CPU_FLOAT << " and final time at " << roundedStepTime / F_CPU_FLOAT
-        << " for a final delay of " << *lastDelay << std::endl);*/
             break;
         }
 
@@ -610,8 +589,9 @@ void PathPlanner::runMove(
         assert(cmd.step != 0);
     }
 
-    if (sync)
+    if (sync || callback != nullptr)
     {
+        // if we have a callback, we need to make sure there's at least one more command to push
         if (commandsIndex == 0)
         {
             commandsIndex = 1;
@@ -625,18 +605,28 @@ void PathPlanner::runMove(
 
         SteppersCommand& cmd = commands[commandsIndex - 1];
         if (wait)
+        {
             cmd.options = STEPPER_COMMAND_OPTION_SYNCWAIT_EVENT;
-        else
+        }
+
+        if (sync)
+        {
             cmd.options = STEPPER_COMMAND_OPTION_SYNC_EVENT;
+        }
     }
 
     if (commandsIndex != 0)
     {
-        pru.push_block((uint8_t*)&commands[0], sizeof(SteppersCommand) * commandsIndex, sizeof(SteppersCommand), stepTime - currentBlockStartTime);
+        pru.pushBlock((uint8_t*)&commands[0], sizeof(SteppersCommand) * commandsIndex, sizeof(SteppersCommand), stepTime - currentBlockStartTime, callback);
 
         if (probeDistanceTraveled)
         {
             probeSteps.insert(probeSteps.end(), &commands[0], &commands[commandsIndex]);
+        }
+
+        for (size_t i = 0; i < commandsLength; i++)
+        {
+            commands[i] = {};
         }
     }
 

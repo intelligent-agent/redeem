@@ -26,7 +26,6 @@
 
 #include "PathPlanner.h"
 #include "AlarmCallback.h"
-#include <Python.h>
 
 // Speeds / accels
 void PathPlanner::setMaxSpeeds(VectorN speeds)
@@ -104,10 +103,7 @@ void PathPlanner::pruAlarmCallback()
     {
         LOG("PRU fired endstop alarm - continuing path planner and firing alarm" << std::endl);
     }
-    PyGILState_STATE gstate;
-    gstate = PyGILState_Ensure();
     alarmCallback.call(7, "Physical Endstop hit", "Physical Endstop hit");
-    PyGILState_Release(gstate);
 }
 
 // the state of the machine
