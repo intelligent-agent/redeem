@@ -72,7 +72,7 @@ def _python(args, cwd, python_executable, sudo=False):
 
 
 def _make():
-  command = ["sudo", "make", "-C", "/usr/src/redeem", "install"]
+  command = ["sudo", "make", "-C", "/usr/local/src/redeem", "install"]
   try:
     p = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
   except:
@@ -141,7 +141,7 @@ def install_source(python_executable, folder, user=False, sudo=False):
     print("Continuing anyways")
   print(stdout)
 
-  print(">>> Running: make -C /usr/src/redeem install")
+  print(">>> Running: make -C /usr/local/src/redeem install")
   returncode, stdout = _make()
   if returncode != 0:
     raise RuntimeError("Could not update, \"make install\" failed with returncode %d: %s" %
