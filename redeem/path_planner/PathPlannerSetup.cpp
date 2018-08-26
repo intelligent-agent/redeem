@@ -96,12 +96,12 @@ void PathPlanner::pruAlarmCallback()
 {
     if (stop_on_physical_endstops_hit)
     {
-        LOG("PRU fired endstop alarm - disabling path planner and firing alarm" << std::endl);
+        LOGCRITICAL("PRU fired endstop alarm - disabling path planner and firing alarm" << std::endl);
         acceptingPaths = false;
     }
     else
     {
-        LOG("PRU fired endstop alarm - continuing path planner and firing alarm" << std::endl);
+        LOGCRITICAL("PRU fired endstop alarm - continuing path planner and firing alarm" << std::endl);
     }
     alarmCallback.call(7, "Physical Endstop hit", "Physical Endstop hit");
 }

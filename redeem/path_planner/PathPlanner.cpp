@@ -112,7 +112,7 @@ void PathPlanner::queueMove(VectorN endWorldPos,
 
     if (!acceptingPaths)
     {
-        LOG("Rejecting path because path planner is suspended" << std::endl);
+        LOGWARNING("Rejecting path because path planner is suspended" << std::endl);
         return;
     }
 
@@ -129,7 +129,7 @@ void PathPlanner::queueMove(VectorN endWorldPos,
         int endstop = softEndStopApply(endWorldPos);
         if (endstop)
         {
-            LOG("soft endstop triggered - suspending path planner and triggering alarm" << std::endl);
+            LOGERROR("soft endstop triggered - suspending path planner and triggering alarm" << std::endl);
             acceptingPaths = false;
             switch (endstop)
             {
@@ -174,7 +174,7 @@ void PathPlanner::queueMove(VectorN endWorldPos,
 
     if (!possibleMove)
     {
-        LOG("attempted move to impossible position - suspending path planner and triggering alarm" << std::endl);
+        LOGERROR("attempted move to impossible position - suspending path planner and triggering alarm" << std::endl);
         acceptingPaths = false;
         alarmCallback.call(9, "Move to unreachable position requested", "Move to unreachable position requested");
         return;
@@ -204,7 +204,7 @@ void PathPlanner::queueMove(VectorN endWorldPos,
     // check for a no-move
     if (!move)
     {
-        LOG("no move" << std::endl);
+        LOGINFO("no move" << std::endl);
         return;
     }
 
@@ -231,7 +231,7 @@ void PathPlanner::queueMove(VectorN endWorldPos,
 
     if (p.isNoMove())
     {
-        LOG("Warning: no move path" << std::endl);
+        LOGINFO("Warning: no move path" << std::endl);
         assert(0); /// TODO We should have bailed before now
         return; // No steps included
     }
@@ -317,7 +317,7 @@ void PathPlanner::queueMove(VectorN endWorldPos,
 
     if (is_probe)
     {
-        LOG("Probe Move - waiting for the sync event" << std::endl);
+        LOGINFO("Probe Move - waiting for the sync event" << std::endl);
 
         probeSyncCallback.value().waitUntilComplete();
         // TODO do we need to resume the PRU?
@@ -331,7 +331,7 @@ void PathPlanner::queueMove(VectorN endWorldPos,
 void PathPlanner::runThread()
 {
     stop = false;
-    LOG("PathPlanner: starting thread" << std::endl);
+    LOGINFO("PathPlanner: starting thread" << std::endl);
     pru.runThread();
     runningThread = std::thread([this]() {
         this->run();
@@ -372,14 +372,14 @@ void PathPlanner::waitUntilFinished()
 
 void PathPlanner::reset()
 {
-    LOG("path planner resetting" << std::endl);
+    LOGINFO("path planner resetting" << std::endl);
     pru.reset();
     acceptingPaths = true;
 }
 
 void PathPlanner::run()
 {
-    LOG("PathPlanner loop starting" << std::endl);
+    LOGINFO("PathPlanner loop starting" << std::endl);
 
     const unsigned int maxCommandsPerBlock = pru.getMaxBytesPerBlock() / sizeof(SteppersCommand);
     std::unique_ptr<SteppersCommand[]> commandBlock(new SteppersCommand[maxCommandsPerBlock]);
@@ -419,10 +419,12 @@ void PathPlanner::run()
 
         if (cur.isWaitEvent())
         {
+            LOGINFO("wait event - path planner thread waiting" << std::endl);
             cur.getWaitEvent().wait();
+            LOGINFO("wait event done - path planner thread continuing" << std::endl);
         }
 
-        LOG("Sending " << std::dec << linesPos << ", Start speed=" << cur.getStartSpeed() << ", end speed=" << cur.getEndSpeed() << std::endl);
+        LOG("Sending, Start speed=" << cur.getStartSpeed() << ", end speed=" << cur.getEndSpeed() << std::endl);
 
         runMove(cur.getAxisMoveMask(),
             cur.isCancelable() ? cur.getAxisMoveMask() : 0,
@@ -448,7 +450,7 @@ void PathPlanner::run()
 
         //LOG("Current move time " << pru.getTotalQueuedMovesTime() / (double) F_CPU << std::endl);
 
-        LOG("Done sending with " << std::dec << linesPos << std::endl);
+        LOG("Done sending" << std::endl);
     }
 }
 
@@ -522,6 +524,7 @@ void PathPlanner::runMove(
         {
             assert(stepTime == UINT64_MAX);
             stepTime = roundStepTime(moveEndTime);
+            LOG("last step - previousStepTime was " << lastStepTime << " and the move should end at " << stepTime << std::endl);
         }
 
         // set the previous delay
