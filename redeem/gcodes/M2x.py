@@ -306,7 +306,7 @@ class M24(GCodeCommand):
       line = line.strip()
       if not line or line.startswith(';'):
         continue
-      file_g = Gcode({"message": line, "parent": g})
+      file_g = Gcode({"message": line})
       self.printer.processor.enqueue(file_g)
 
     if self.printer.sd_card_manager.get_status():
