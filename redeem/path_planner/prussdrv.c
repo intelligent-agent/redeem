@@ -37,7 +37,6 @@
  *
 */
 
-
 /*
  * ============================================================================
  * Copyright (c) Texas Instruments Inc 2010-12
@@ -47,13 +46,12 @@
  * ============================================================================
  */
 
-
 #include "prussdrv.h"
 #include "__prussdrv.h"
 #include <stdio.h>
 
 #ifdef __DEBUG
-#define DEBUG_PRINTF(FORMAT, ...) fprintf(stderr, FORMAT, ## __VA_ARGS__)
+#define DEBUG_PRINTF(FORMAT, ...) fprintf(stderr, FORMAT, ##__VA_ARGS__)
 #else
 #define DEBUG_PRINTF(FORMAT, ...)
 #endif
@@ -69,8 +67,10 @@ int __prussdrv_memmap_init(void)
     int i, fd;
     char hexstring[PRUSS_UIO_PARAM_VAL_LEN];
 
-    if (prussdrv.mmap_fd == 0) {
-        for (i = 0; i < NUM_PRU_HOSTIRQS; i++) {
+    if (prussdrv.mmap_fd == 0)
+    {
+        for (i = 0; i < NUM_PRU_HOSTIRQS; i++)
+        {
             if (prussdrv.fd[i])
                 break;
         }
@@ -80,215 +80,190 @@ int __prussdrv_memmap_init(void)
             prussdrv.mmap_fd = prussdrv.fd[i];
     }
     fd = open(PRUSS_UIO_DRV_PRUSS_BASE, O_RDONLY);
-    if (fd >= 0) {
-        if(read(fd, hexstring, PRUSS_UIO_PARAM_VAL_LEN) == 0)
+    if (fd >= 0)
+    {
+        if (read(fd, hexstring, PRUSS_UIO_PARAM_VAL_LEN) == 0)
             ;
-        prussdrv.pruss_phys_base =
-            strtoul(hexstring, NULL, HEXA_DECIMAL_BASE);
+        prussdrv.pruss_phys_base = strtoul(hexstring, NULL, HEXA_DECIMAL_BASE);
         close(fd);
-    } else
+    }
+    else
         return -1;
     fd = open(PRUSS_UIO_DRV_PRUSS_SIZE, O_RDONLY);
-    if (fd >= 0) {
-        if(read(fd, hexstring, PRUSS_UIO_PARAM_VAL_LEN) == 0)
+    if (fd >= 0)
+    {
+        if (read(fd, hexstring, PRUSS_UIO_PARAM_VAL_LEN) == 0)
             ;
-        prussdrv.pruss_map_size =
-            strtoul(hexstring, NULL, HEXA_DECIMAL_BASE);
+        prussdrv.pruss_map_size = strtoul(hexstring, NULL, HEXA_DECIMAL_BASE);
         close(fd);
-    } else
+    }
+    else
         return -1;
 
     prussdrv.pru0_dataram_base = (char*)
         mmap(0, prussdrv.pruss_map_size, PROT_READ | PROT_WRITE,
-             MAP_SHARED, prussdrv.mmap_fd, PRUSS_UIO_MAP_OFFSET_PRUSS);
-    prussdrv.version =
-        __pruss_detect_hw_version((unsigned int*)prussdrv.pru0_dataram_base);
+            MAP_SHARED, prussdrv.mmap_fd, PRUSS_UIO_MAP_OFFSET_PRUSS);
+    prussdrv.version = __pruss_detect_hw_version((unsigned int*)prussdrv.pru0_dataram_base);
 
-    switch (prussdrv.version) {
+    switch (prussdrv.version)
+    {
     case PRUSS_V1:
-        {
-            DEBUG_PRINTF(PRUSS_V1_STR "\n");
-            prussdrv.pru0_dataram_phy_base = AM18XX_DATARAM0_PHYS_BASE;
-            prussdrv.pru1_dataram_phy_base = AM18XX_DATARAM1_PHYS_BASE;
-            prussdrv.intc_phy_base = AM18XX_INTC_PHYS_BASE;
-            prussdrv.pru0_control_phy_base = AM18XX_PRU0CONTROL_PHYS_BASE;
-            prussdrv.pru0_debug_phy_base = AM18XX_PRU0DEBUG_PHYS_BASE;
-            prussdrv.pru1_control_phy_base = AM18XX_PRU1CONTROL_PHYS_BASE;
-            prussdrv.pru1_debug_phy_base = AM18XX_PRU1DEBUG_PHYS_BASE;
-            prussdrv.pru0_iram_phy_base = AM18XX_PRU0IRAM_PHYS_BASE;
-            prussdrv.pru1_iram_phy_base = AM18XX_PRU1IRAM_PHYS_BASE;
-        }
-        break;
+    {
+        DEBUG_PRINTF(PRUSS_V1_STR "\n");
+        prussdrv.pru0_dataram_phy_base = AM18XX_DATARAM0_PHYS_BASE;
+        prussdrv.pru1_dataram_phy_base = AM18XX_DATARAM1_PHYS_BASE;
+        prussdrv.intc_phy_base = AM18XX_INTC_PHYS_BASE;
+        prussdrv.pru0_control_phy_base = AM18XX_PRU0CONTROL_PHYS_BASE;
+        prussdrv.pru0_debug_phy_base = AM18XX_PRU0DEBUG_PHYS_BASE;
+        prussdrv.pru1_control_phy_base = AM18XX_PRU1CONTROL_PHYS_BASE;
+        prussdrv.pru1_debug_phy_base = AM18XX_PRU1DEBUG_PHYS_BASE;
+        prussdrv.pru0_iram_phy_base = AM18XX_PRU0IRAM_PHYS_BASE;
+        prussdrv.pru1_iram_phy_base = AM18XX_PRU1IRAM_PHYS_BASE;
+    }
+    break;
     case PRUSS_V2:
-        {
-            DEBUG_PRINTF(PRUSS_V2_STR "\n");
-            prussdrv.pru0_dataram_phy_base = AM33XX_DATARAM0_PHYS_BASE;
-            prussdrv.pru1_dataram_phy_base = AM33XX_DATARAM1_PHYS_BASE;
-            prussdrv.intc_phy_base = AM33XX_INTC_PHYS_BASE;
-            prussdrv.pru0_control_phy_base = AM33XX_PRU0CONTROL_PHYS_BASE;
-            prussdrv.pru0_debug_phy_base = AM33XX_PRU0DEBUG_PHYS_BASE;
-            prussdrv.pru1_control_phy_base = AM33XX_PRU1CONTROL_PHYS_BASE;
-            prussdrv.pru1_debug_phy_base = AM33XX_PRU1DEBUG_PHYS_BASE;
-            prussdrv.pru0_iram_phy_base = AM33XX_PRU0IRAM_PHYS_BASE;
-            prussdrv.pru1_iram_phy_base = AM33XX_PRU1IRAM_PHYS_BASE;
-            prussdrv.pruss_sharedram_phy_base =
-                AM33XX_PRUSS_SHAREDRAM_BASE;
-            prussdrv.pruss_cfg_phy_base = AM33XX_PRUSS_CFG_BASE;
-            prussdrv.pruss_uart_phy_base = AM33XX_PRUSS_UART_BASE;
-            prussdrv.pruss_iep_phy_base = AM33XX_PRUSS_IEP_BASE;
-            prussdrv.pruss_ecap_phy_base = AM33XX_PRUSS_ECAP_BASE;
-            prussdrv.pruss_miirt_phy_base = AM33XX_PRUSS_MIIRT_BASE;
-            prussdrv.pruss_mdio_phy_base = AM33XX_PRUSS_MDIO_BASE;
-        }
-        break;
+    {
+        DEBUG_PRINTF(PRUSS_V2_STR "\n");
+        prussdrv.pru0_dataram_phy_base = AM33XX_DATARAM0_PHYS_BASE;
+        prussdrv.pru1_dataram_phy_base = AM33XX_DATARAM1_PHYS_BASE;
+        prussdrv.intc_phy_base = AM33XX_INTC_PHYS_BASE;
+        prussdrv.pru0_control_phy_base = AM33XX_PRU0CONTROL_PHYS_BASE;
+        prussdrv.pru0_debug_phy_base = AM33XX_PRU0DEBUG_PHYS_BASE;
+        prussdrv.pru1_control_phy_base = AM33XX_PRU1CONTROL_PHYS_BASE;
+        prussdrv.pru1_debug_phy_base = AM33XX_PRU1DEBUG_PHYS_BASE;
+        prussdrv.pru0_iram_phy_base = AM33XX_PRU0IRAM_PHYS_BASE;
+        prussdrv.pru1_iram_phy_base = AM33XX_PRU1IRAM_PHYS_BASE;
+        prussdrv.pruss_sharedram_phy_base = AM33XX_PRUSS_SHAREDRAM_BASE;
+        prussdrv.pruss_cfg_phy_base = AM33XX_PRUSS_CFG_BASE;
+        prussdrv.pruss_uart_phy_base = AM33XX_PRUSS_UART_BASE;
+        prussdrv.pruss_iep_phy_base = AM33XX_PRUSS_IEP_BASE;
+        prussdrv.pruss_ecap_phy_base = AM33XX_PRUSS_ECAP_BASE;
+        prussdrv.pruss_miirt_phy_base = AM33XX_PRUSS_MIIRT_BASE;
+        prussdrv.pruss_mdio_phy_base = AM33XX_PRUSS_MDIO_BASE;
+    }
+    break;
     default:
         DEBUG_PRINTF(PRUSS_UNKNOWN_STR "\n");
     }
 
-    prussdrv.pru1_dataram_base =
-        prussdrv.pru0_dataram_base + prussdrv.pru1_dataram_phy_base -
-        prussdrv.pru0_dataram_phy_base;
-    prussdrv.intc_base =
-        prussdrv.pru0_dataram_base + prussdrv.intc_phy_base -
-        prussdrv.pru0_dataram_phy_base;
-    prussdrv.pru0_control_base =
-        prussdrv.pru0_dataram_base + prussdrv.pru0_control_phy_base -
-        prussdrv.pru0_dataram_phy_base;
-    prussdrv.pru0_debug_base =
-        prussdrv.pru0_dataram_base + prussdrv.pru0_debug_phy_base -
-        prussdrv.pru0_dataram_phy_base;
-    prussdrv.pru1_control_base =
-        prussdrv.pru0_dataram_base + prussdrv.pru1_control_phy_base -
-        prussdrv.pru0_dataram_phy_base;
-    prussdrv.pru1_debug_base =
-        prussdrv.pru0_dataram_base + prussdrv.pru1_debug_phy_base -
-        prussdrv.pru0_dataram_phy_base;
-    prussdrv.pru0_iram_base =
-        prussdrv.pru0_dataram_base + prussdrv.pru0_iram_phy_base -
-        prussdrv.pru0_dataram_phy_base;
-    prussdrv.pru1_iram_base =
-        prussdrv.pru0_dataram_base + prussdrv.pru1_iram_phy_base -
-        prussdrv.pru0_dataram_phy_base;
-    if (prussdrv.version == PRUSS_V2) {
-        prussdrv.pruss_sharedram_base =
-            prussdrv.pru0_dataram_base +
-            prussdrv.pruss_sharedram_phy_base -
-            prussdrv.pru0_dataram_phy_base;
-        prussdrv.pruss_cfg_base =
-            prussdrv.pru0_dataram_base + prussdrv.pruss_cfg_phy_base -
-            prussdrv.pru0_dataram_phy_base;
-        prussdrv.pruss_uart_base =
-            prussdrv.pru0_dataram_base + prussdrv.pruss_uart_phy_base -
-            prussdrv.pru0_dataram_phy_base;
-        prussdrv.pruss_iep_base =
-            prussdrv.pru0_dataram_base + prussdrv.pruss_iep_phy_base -
-            prussdrv.pru0_dataram_phy_base;
-        prussdrv.pruss_ecap_base =
-            prussdrv.pru0_dataram_base + prussdrv.pruss_ecap_phy_base -
-            prussdrv.pru0_dataram_phy_base;
-        prussdrv.pruss_miirt_base =
-            prussdrv.pru0_dataram_base + prussdrv.pruss_miirt_phy_base -
-            prussdrv.pru0_dataram_phy_base;
-        prussdrv.pruss_mdio_base =
-            prussdrv.pru0_dataram_base + prussdrv.pruss_mdio_phy_base -
-            prussdrv.pru0_dataram_phy_base;
+    prussdrv.pru1_dataram_base = prussdrv.pru0_dataram_base + prussdrv.pru1_dataram_phy_base - prussdrv.pru0_dataram_phy_base;
+    prussdrv.intc_base = prussdrv.pru0_dataram_base + prussdrv.intc_phy_base - prussdrv.pru0_dataram_phy_base;
+    prussdrv.pru0_control_base = prussdrv.pru0_dataram_base + prussdrv.pru0_control_phy_base - prussdrv.pru0_dataram_phy_base;
+    prussdrv.pru0_debug_base = prussdrv.pru0_dataram_base + prussdrv.pru0_debug_phy_base - prussdrv.pru0_dataram_phy_base;
+    prussdrv.pru1_control_base = prussdrv.pru0_dataram_base + prussdrv.pru1_control_phy_base - prussdrv.pru0_dataram_phy_base;
+    prussdrv.pru1_debug_base = prussdrv.pru0_dataram_base + prussdrv.pru1_debug_phy_base - prussdrv.pru0_dataram_phy_base;
+    prussdrv.pru0_iram_base = prussdrv.pru0_dataram_base + prussdrv.pru0_iram_phy_base - prussdrv.pru0_dataram_phy_base;
+    prussdrv.pru1_iram_base = prussdrv.pru0_dataram_base + prussdrv.pru1_iram_phy_base - prussdrv.pru0_dataram_phy_base;
+    if (prussdrv.version == PRUSS_V2)
+    {
+        prussdrv.pruss_sharedram_base = prussdrv.pru0_dataram_base + prussdrv.pruss_sharedram_phy_base - prussdrv.pru0_dataram_phy_base;
+        prussdrv.pruss_cfg_base = prussdrv.pru0_dataram_base + prussdrv.pruss_cfg_phy_base - prussdrv.pru0_dataram_phy_base;
+        prussdrv.pruss_uart_base = prussdrv.pru0_dataram_base + prussdrv.pruss_uart_phy_base - prussdrv.pru0_dataram_phy_base;
+        prussdrv.pruss_iep_base = prussdrv.pru0_dataram_base + prussdrv.pruss_iep_phy_base - prussdrv.pru0_dataram_phy_base;
+        prussdrv.pruss_ecap_base = prussdrv.pru0_dataram_base + prussdrv.pruss_ecap_phy_base - prussdrv.pru0_dataram_phy_base;
+        prussdrv.pruss_miirt_base = prussdrv.pru0_dataram_base + prussdrv.pruss_miirt_phy_base - prussdrv.pru0_dataram_phy_base;
+        prussdrv.pruss_mdio_base = prussdrv.pru0_dataram_base + prussdrv.pruss_mdio_phy_base - prussdrv.pru0_dataram_phy_base;
     }
 #ifndef DISABLE_L3RAM_SUPPORT
     fd = open(PRUSS_UIO_DRV_L3RAM_BASE, O_RDONLY);
-    if (fd >= 0) {
+    if (fd >= 0)
+    {
         read(fd, hexstring, PRUSS_UIO_PARAM_VAL_LEN);
-        prussdrv.l3ram_phys_base =
-            strtoul(hexstring, NULL, HEXA_DECIMAL_BASE);
+        prussdrv.l3ram_phys_base = strtoul(hexstring, NULL, HEXA_DECIMAL_BASE);
         close(fd);
-    } else
+    }
+    else
         return -1;
-
 
     fd = open(PRUSS_UIO_DRV_L3RAM_SIZE, O_RDONLY);
-    if (fd >= 0) {
+    if (fd >= 0)
+    {
         read(fd, hexstring, PRUSS_UIO_PARAM_VAL_LEN);
-        prussdrv.l3ram_map_size =
-            strtoul(hexstring, NULL, HEXA_DECIMAL_BASE);
+        prussdrv.l3ram_map_size = strtoul(hexstring, NULL, HEXA_DECIMAL_BASE);
         close(fd);
-    } else
+    }
+    else
         return -1;
 
-    prussdrv.l3ram_base =
-        mmap(0, prussdrv.l3ram_map_size, PROT_READ | PROT_WRITE,
-             MAP_SHARED, prussdrv.mmap_fd, PRUSS_UIO_MAP_OFFSET_L3RAM);
+    prussdrv.l3ram_base = mmap(0, prussdrv.l3ram_map_size, PROT_READ | PROT_WRITE,
+        MAP_SHARED, prussdrv.mmap_fd, PRUSS_UIO_MAP_OFFSET_L3RAM);
 #endif
 
     fd = open(PRUSS_UIO_DRV_EXTRAM_BASE, O_RDONLY);
-    if (fd >= 0) {
-        if(read(fd, hexstring, PRUSS_UIO_PARAM_VAL_LEN) == 0)
+    if (fd >= 0)
+    {
+        if (read(fd, hexstring, PRUSS_UIO_PARAM_VAL_LEN) == 0)
             ;
-        prussdrv.extram_phys_base =
-            strtoul(hexstring, NULL, HEXA_DECIMAL_BASE);
+        prussdrv.extram_phys_base = strtoul(hexstring, NULL, HEXA_DECIMAL_BASE);
         close(fd);
-    } else
+    }
+    else
         return -1;
 
     fd = open(PRUSS_UIO_DRV_EXTRAM_SIZE, O_RDONLY);
-    if (fd >= 0) {
-        if(read(fd, hexstring, PRUSS_UIO_PARAM_VAL_LEN) == 0)
+    if (fd >= 0)
+    {
+        if (read(fd, hexstring, PRUSS_UIO_PARAM_VAL_LEN) == 0)
             ;
-        prussdrv.extram_map_size =
-            strtoul(hexstring, NULL, HEXA_DECIMAL_BASE);
+        prussdrv.extram_map_size = strtoul(hexstring, NULL, HEXA_DECIMAL_BASE);
         close(fd);
-    } else
+    }
+    else
         return -1;
-
 
     prussdrv.extram_base = (char*)
         mmap(0, prussdrv.extram_map_size, PROT_READ | PROT_WRITE,
-             MAP_SHARED, prussdrv.mmap_fd, PRUSS_UIO_MAP_OFFSET_EXTRAM);
+            MAP_SHARED, prussdrv.mmap_fd, PRUSS_UIO_MAP_OFFSET_EXTRAM);
 
     return 0;
-
 }
 
 int prussdrv_init(void)
 {
     memset(&prussdrv, 0, sizeof(prussdrv));
     return 0;
-
 }
 
 int prussdrv_open(unsigned int host_interrupt)
 {
     char name[PRUSS_UIO_PRAM_PATH_LEN];
-    if (!prussdrv.fd[host_interrupt]) {
+    if (!prussdrv.fd[host_interrupt])
+    {
         sprintf(name, "/dev/uio%d", host_interrupt);
         prussdrv.fd[host_interrupt] = open(name, O_RDWR | O_SYNC);
         return __prussdrv_memmap_init();
-    } else {
+    }
+    else
+    {
         return -1;
-
     }
 }
 
-int prussdrv_version(void) {
+int prussdrv_version(void)
+{
     return prussdrv.version;
 }
 
-const char * prussdrv_strversion(int version) {
-    switch (version) {
-        case PRUSS_V1:
-            return PRUSS_V1_STR;
-        case PRUSS_V2:
-            return PRUSS_V2_STR;
-        default:
-            return PRUSS_UNKNOWN_STR;
+const char* prussdrv_strversion(int version)
+{
+    switch (version)
+    {
+    case PRUSS_V1:
+        return PRUSS_V1_STR;
+    case PRUSS_V2:
+        return PRUSS_V2_STR;
+    default:
+        return PRUSS_UNKNOWN_STR;
     }
 }
 
 int prussdrv_pru_reset(unsigned int prunum)
 {
-    unsigned int *prucontrolregs;
+    unsigned int* prucontrolregs;
     if (prunum == 0)
-        prucontrolregs = (unsigned int *) prussdrv.pru0_control_base;
+        prucontrolregs = (unsigned int*)prussdrv.pru0_control_base;
     else if (prunum == 1)
-        prucontrolregs = (unsigned int *) prussdrv.pru1_control_base;
+        prucontrolregs = (unsigned int*)prussdrv.pru1_control_base;
     else
         return -1;
     *prucontrolregs = 0;
@@ -297,134 +272,131 @@ int prussdrv_pru_reset(unsigned int prunum)
 
 int prussdrv_pru_enable(unsigned int prunum)
 {
-  return prussdrv_pru_enable_at(prunum, 0);
+    return prussdrv_pru_enable_at(prunum, 0);
 }
 
 int prussdrv_pru_enable_at(unsigned int prunum, size_t addr)
 {
     volatile uint32_t* prucontrolregs;
     if (prunum == 0)
-        prucontrolregs = (volatile uint32_t *) prussdrv.pru0_control_base;
+        prucontrolregs = (volatile uint32_t*)prussdrv.pru0_control_base;
     else if (prunum == 1)
-        prucontrolregs = (volatile uint32_t *) prussdrv.pru1_control_base;
+        prucontrolregs = (volatile uint32_t*)prussdrv.pru1_control_base;
     else
         return -1;
 
-	if(!prucontrolregs)
-		return -1;
+    if (!prucontrolregs)
+        return -1;
     /* address is in bytes and must be converted in 32 bits words */
     *prucontrolregs = ((uint32_t)(addr / sizeof(uint32_t)) << 16) | 2;
 
     return 0;
-
 }
 
 int prussdrv_pru_disable(unsigned int prunum)
 {
-    unsigned int *prucontrolregs;
+    unsigned int* prucontrolregs;
     if (prunum == 0)
-        prucontrolregs = (unsigned int *) prussdrv.pru0_control_base;
+        prucontrolregs = (unsigned int*)prussdrv.pru0_control_base;
     else if (prunum == 1)
-        prucontrolregs = (unsigned int *) prussdrv.pru1_control_base;
+        prucontrolregs = (unsigned int*)prussdrv.pru1_control_base;
     else
         return -1;
-	
-	if(!prucontrolregs)
-		return -1;
-	
+
+    if (!prucontrolregs)
+        return -1;
+
     *prucontrolregs = 1;
     return 0;
-
 }
 
 int prussdrv_pru_write_memory(unsigned int pru_ram_id,
-                              unsigned int wordoffset,
-                              const unsigned int *memarea,
-                              unsigned int bytelength)
+    unsigned int wordoffset,
+    const unsigned int* memarea,
+    unsigned int bytelength)
 {
     unsigned int *pruramarea, i, wordlength;
-    switch (pru_ram_id) {
+    switch (pru_ram_id)
+    {
     case PRUSS0_PRU0_IRAM:
-        pruramarea = (unsigned int *) prussdrv.pru0_iram_base;
+        pruramarea = (unsigned int*)prussdrv.pru0_iram_base;
         break;
     case PRUSS0_PRU1_IRAM:
-        pruramarea = (unsigned int *) prussdrv.pru1_iram_base;
+        pruramarea = (unsigned int*)prussdrv.pru1_iram_base;
         break;
     case PRUSS0_PRU0_DATARAM:
-        pruramarea = (unsigned int *) prussdrv.pru0_dataram_base;
+        pruramarea = (unsigned int*)prussdrv.pru0_dataram_base;
         break;
     case PRUSS0_PRU1_DATARAM:
-        pruramarea = (unsigned int *) prussdrv.pru1_dataram_base;
+        pruramarea = (unsigned int*)prussdrv.pru1_dataram_base;
         break;
     case PRUSS0_SHARED_DATARAM:
         if (prussdrv.version != PRUSS_V2)
             return -1;
-        pruramarea = (unsigned int *) prussdrv.pruss_sharedram_base;
+        pruramarea = (unsigned int*)prussdrv.pruss_sharedram_base;
         break;
     default:
         return -1;
     }
 
-
     wordlength = (bytelength + 3) >> 2; //Adjust length as multiple of 4 bytes
-    for (i = 0; i < wordlength; i++) {
+    for (i = 0; i < wordlength; i++)
+    {
         *(pruramarea + i + wordoffset) = *(memarea + i);
     }
     return wordlength;
-
 }
 
-
-int prussdrv_pruintc_init(const tpruss_intc_initdata *prussintc_init_data)
+int prussdrv_pruintc_init(const tpruss_intc_initdata* prussintc_init_data)
 {
-    volatile unsigned int *pruintc_io = (volatile unsigned int *) prussdrv.intc_base;
+    volatile unsigned int* pruintc_io = (volatile unsigned int*)prussdrv.intc_base;
     unsigned int i, mask1, mask2;
 
     pruintc_io[PRU_INTC_SIPR1_REG >> 2] = 0xFFFFFFFF;
     pruintc_io[PRU_INTC_SIPR2_REG >> 2] = 0xFFFFFFFF;
 
-    for (i = 0; i < (NUM_PRU_SYS_EVTS + 3) >> 2; i++)
+    for (i = 0; i<(NUM_PRU_SYS_EVTS + 3)>> 2; i++)
         pruintc_io[(PRU_INTC_CMR1_REG >> 2) + i] = 0;
     for (i = 0;
          ((prussintc_init_data->sysevt_to_channel_map[i].sysevt != -1)
-          && (prussintc_init_data->sysevt_to_channel_map[i].channel !=
-              -1)); i++) {
+             && (prussintc_init_data->sysevt_to_channel_map[i].channel != -1));
+         i++)
+    {
         __prussintc_set_cmr(pruintc_io,
-                            prussintc_init_data->sysevt_to_channel_map[i].
-                            sysevt,
-                            prussintc_init_data->sysevt_to_channel_map[i].
-                            channel);
+            prussintc_init_data->sysevt_to_channel_map[i].sysevt,
+            prussintc_init_data->sysevt_to_channel_map[i].channel);
     }
-    for (i = 0; i < (NUM_PRU_HOSTS + 3) >> 2; i++)
+    for (i = 0; i<(NUM_PRU_HOSTS + 3)>> 2; i++)
         pruintc_io[(PRU_INTC_HMR1_REG >> 2) + i] = 0;
     for (i = 0;
          ((prussintc_init_data->channel_to_host_map[i].channel != -1)
-          && (prussintc_init_data->channel_to_host_map[i].host != -1));
-         i++) {
+             && (prussintc_init_data->channel_to_host_map[i].host != -1));
+         i++)
+    {
 
         __prussintc_set_hmr(pruintc_io,
-                            prussintc_init_data->channel_to_host_map[i].
-                            channel,
-                            prussintc_init_data->channel_to_host_map[i].
-                            host);
+            prussintc_init_data->channel_to_host_map[i].channel,
+            prussintc_init_data->channel_to_host_map[i].host);
     }
 
     pruintc_io[PRU_INTC_SITR1_REG >> 2] = 0x0;
     pruintc_io[PRU_INTC_SITR2_REG >> 2] = 0x0;
 
-
     mask1 = mask2 = 0;
-    for (i = 0; prussintc_init_data->sysevts_enabled[i] != 255; i++) {
-        if (prussintc_init_data->sysevts_enabled[i] < 32) {
-            mask1 =
-                mask1 + (1 << (prussintc_init_data->sysevts_enabled[i]));
-        } else if (prussintc_init_data->sysevts_enabled[i] < 64) {
-            mask2 =
-                mask2 +
-                (1 << (prussintc_init_data->sysevts_enabled[i] - 32));
-        } else {
+    for (i = 0; prussintc_init_data->sysevts_enabled[i] != 255; i++)
+    {
+        if (prussintc_init_data->sysevts_enabled[i] < 32)
+        {
+            mask1 = mask1 + (1 << (prussintc_init_data->sysevts_enabled[i]));
+        }
+        else if (prussintc_init_data->sysevts_enabled[i] < 64)
+        {
+            mask2 = mask2 + (1 << (prussintc_init_data->sysevts_enabled[i] - 32));
+        }
+        else
+        {
             DEBUG_PRINTF("Error: SYS_EVT%d out of range\n",
-             prussintc_init_data->sysevts_enabled[i]);
+                prussintc_init_data->sysevts_enabled[i]);
             return -1;
         }
     }
@@ -434,38 +406,37 @@ int prussdrv_pruintc_init(const tpruss_intc_initdata *prussintc_init_data)
     pruintc_io[PRU_INTC_SECR2_REG >> 2] = mask2;
 
     for (i = 0; i < MAX_HOSTS_SUPPORTED; i++)
-        if (prussintc_init_data->host_enable_bitmask & (1 << i)) {
+        if (prussintc_init_data->host_enable_bitmask & (1 << i))
+        {
             pruintc_io[PRU_INTC_HIEISR_REG >> 2] = i;
         }
 
     pruintc_io[PRU_INTC_GER_REG >> 2] = 0x1;
 
     // Stash a copy of the intc settings
-    memcpy( &prussdrv.intc_data, prussintc_init_data,
-            sizeof(prussdrv.intc_data) );
+    memcpy(&prussdrv.intc_data, prussintc_init_data,
+        sizeof(prussdrv.intc_data));
 
     return 0;
 }
 
-short prussdrv_get_event_to_channel_map( unsigned int eventnum )
+short prussdrv_get_event_to_channel_map(unsigned int eventnum)
 {
     unsigned int i;
-    for (i = 0; i < NUM_PRU_SYS_EVTS &&
-                prussdrv.intc_data.sysevt_to_channel_map[i].sysevt  !=-1 &&
-                prussdrv.intc_data.sysevt_to_channel_map[i].channel !=-1; ++i) {
-        if ( eventnum == prussdrv.intc_data.sysevt_to_channel_map[i].sysevt )
+    for (i = 0; i < NUM_PRU_SYS_EVTS && prussdrv.intc_data.sysevt_to_channel_map[i].sysevt != -1 && prussdrv.intc_data.sysevt_to_channel_map[i].channel != -1; ++i)
+    {
+        if (eventnum == prussdrv.intc_data.sysevt_to_channel_map[i].sysevt)
             return prussdrv.intc_data.sysevt_to_channel_map[i].channel;
     }
     return -1;
 }
 
-short prussdrv_get_channel_to_host_map( unsigned int channel )
+short prussdrv_get_channel_to_host_map(unsigned int channel)
 {
     unsigned int i;
-    for (i = 0; i < NUM_PRU_CHANNELS &&
-                prussdrv.intc_data.channel_to_host_map[i].channel != -1 &&
-                prussdrv.intc_data.channel_to_host_map[i].host    != -1; ++i) {
-        if ( channel == prussdrv.intc_data.channel_to_host_map[i].channel )
+    for (i = 0; i < NUM_PRU_CHANNELS && prussdrv.intc_data.channel_to_host_map[i].channel != -1 && prussdrv.intc_data.channel_to_host_map[i].host != -1; ++i)
+    {
+        if (channel == prussdrv.intc_data.channel_to_host_map[i].channel)
             /** -2 is because first two host interrupts are reserved
              * for PRU0 and PRU1 */
             return prussdrv.intc_data.channel_to_host_map[i].host - 2;
@@ -473,16 +444,17 @@ short prussdrv_get_channel_to_host_map( unsigned int channel )
     return -1;
 }
 
-short prussdrv_get_event_to_host_map( unsigned int eventnum )
+short prussdrv_get_event_to_host_map(unsigned int eventnum)
 {
-    short ans = prussdrv_get_event_to_channel_map( eventnum );
-    if (ans < 0) return ans;
-    return prussdrv_get_channel_to_host_map( ans );
+    short ans = prussdrv_get_event_to_channel_map(eventnum);
+    if (ans < 0)
+        return ans;
+    return prussdrv_get_channel_to_host_map(ans);
 }
 
 int prussdrv_pru_send_event(unsigned int eventnum)
 {
-    volatile unsigned int *pruintc_io = (volatile unsigned int *) prussdrv.intc_base;
+    volatile unsigned int* pruintc_io = (volatile unsigned int*)prussdrv.intc_base;
     if (eventnum < 32)
         pruintc_io[PRU_INTC_SRSR1_REG >> 2] = 1 << eventnum;
     else
@@ -493,41 +465,39 @@ int prussdrv_pru_send_event(unsigned int eventnum)
 unsigned int prussdrv_pru_wait_event(unsigned int host_interrupt, unsigned int timeout)
 {
     unsigned int event_count = 0;
-	
-	int fd = prussdrv.fd[host_interrupt];
 
-	
-	
-	if(timeout) {
-		fd_set rfds;
-		struct timeval tv;
-		int retval;
-		
-		/* Watch stdin (fd 0) to see when it has input. */
-		FD_ZERO(&rfds);
-		FD_SET(fd, &rfds);
-		
-		/* Wait up to five seconds. */
-		tv.tv_sec = 0;
-		tv.tv_usec = timeout*1000;
+    int fd = prussdrv.fd[host_interrupt];
 
-		//Wait until some data available
-		retval = select(fd+1, &rfds, NULL, NULL, &tv);
-		/* Don't rely on the value of tv now! */
-		
-		if (retval == -1)
-			return 0; //Error
-		else if(retval==0) {
-			
-			return 0; //Timeout
-		}
+    if (timeout)
+    {
+        fd_set rfds;
+        struct timeval tv;
+        int retval;
 
+        /* Watch stdin (fd 0) to see when it has input. */
+        FD_ZERO(&rfds);
+        FD_SET(fd, &rfds);
 
-	}
-	
-	if(read(fd, &event_count, sizeof(unsigned int)) == 0)
+        /* Wait up to five seconds. */
+        tv.tv_sec = 0;
+        tv.tv_usec = timeout * 1000;
+
+        //Wait until some data available
+        retval = select(fd + 1, &rfds, NULL, NULL, &tv);
+        /* Don't rely on the value of tv now! */
+
+        if (retval == -1)
+            return 0; //Error
+        else if (retval == 0)
+        {
+
+            return 0; //Timeout
+        }
+    }
+
+    if (read(fd, &event_count, sizeof(unsigned int)) == 0)
         ;
-	
+
     return event_count;
 }
 
@@ -541,7 +511,7 @@ int prussdrv_pru_event_fd(unsigned int host_interrupt)
 
 int prussdrv_pru_clear_event(unsigned int host_interrupt, unsigned int sysevent)
 {
-    volatile unsigned int *pruintc_io = (volatile unsigned int *) prussdrv.intc_base;
+    volatile unsigned int* pruintc_io = (volatile unsigned int*)prussdrv.intc_base;
     if (sysevent < 32)
         pruintc_io[PRU_INTC_SECR1_REG >> 2] = 1 << sysevent;
     else
@@ -552,36 +522,31 @@ int prussdrv_pru_clear_event(unsigned int host_interrupt, unsigned int sysevent)
     // See Section 6.4.9 of Reference manual about HIEISR register.
     // The +2 is because the first two host interrupts are reserved for
     // PRU0 and PRU1.
-    pruintc_io[PRU_INTC_HIEISR_REG >> 2] = host_interrupt+2;
+    pruintc_io[PRU_INTC_HIEISR_REG >> 2] = host_interrupt + 2;
     return 0;
 }
 
 int prussdrv_pru_send_wait_clear_event(unsigned int send_eventnum,
-                                       unsigned int host_interrupt,
-                                       unsigned int ack_eventnum)
+    unsigned int host_interrupt,
+    unsigned int ack_eventnum)
 {
     prussdrv_pru_send_event(send_eventnum);
-    prussdrv_pru_wait_event(host_interrupt,0);
+    prussdrv_pru_wait_event(host_interrupt, 0);
     prussdrv_pru_clear_event(host_interrupt, ack_eventnum);
     return 0;
-
 }
 
-
-int prussdrv_map_l3mem(void **address)
+int prussdrv_map_l3mem(void** address)
 {
     *address = prussdrv.l3ram_base;
     return 0;
 }
 
-
-
-int prussdrv_map_extmem(void **address)
+int prussdrv_map_extmem(void** address)
 {
 
     *address = prussdrv.extram_base;
     return 0;
-
 }
 
 unsigned int prussdrv_extmem_size(void)
@@ -589,9 +554,10 @@ unsigned int prussdrv_extmem_size(void)
     return prussdrv.extram_map_size;
 }
 
-int prussdrv_map_prumem(unsigned int pru_ram_id, void **address)
+int prussdrv_map_prumem(unsigned int pru_ram_id, void** address)
 {
-    switch (pru_ram_id) {
+    switch (pru_ram_id)
+    {
     case PRUSS0_PRU0_DATARAM:
         *address = prussdrv.pru0_dataram_base;
         break;
@@ -610,12 +576,13 @@ int prussdrv_map_prumem(unsigned int pru_ram_id, void **address)
     return 0;
 }
 
-int prussdrv_map_peripheral_io(unsigned int per_id, void **address)
+int prussdrv_map_peripheral_io(unsigned int per_id, void** address)
 {
     if (prussdrv.version != PRUSS_V2)
         return -1;
 
-    switch (per_id) {
+    switch (per_id)
+    {
     case PRUSS0_CFG:
         *address = prussdrv.pruss_cfg_base;
         break;
@@ -641,55 +608,47 @@ int prussdrv_map_peripheral_io(unsigned int per_id, void **address)
     return 0;
 }
 
-unsigned int prussdrv_get_phys_addr(const void *address)
+unsigned int prussdrv_get_phys_addr(const void* address)
 {
     unsigned int retaddr = 0;
-    if ((address >= (void *) prussdrv.pru0_dataram_base)
-        && (address < (void *) prussdrv.pru0_dataram_base + prussdrv.pruss_map_size)) {
-        retaddr =
-            ((unsigned int) ((char*)address - prussdrv.pru0_dataram_base) +
-             prussdrv.pru0_dataram_phy_base);
-    } else if ((address >= (void *) prussdrv.l3ram_base)
-               && (address < (void *) prussdrv.l3ram_base + prussdrv.l3ram_map_size)) {
-        retaddr =
-            ((unsigned int) ((char*)address - prussdrv.l3ram_base) +
-             prussdrv.l3ram_phys_base);
-    } else if ((address >= (void *) prussdrv.extram_base)
-               && (address < (void *) prussdrv.extram_base + prussdrv.extram_map_size)) {
-        retaddr =
-            ((unsigned int) ((char*)address - prussdrv.extram_base) +
-             prussdrv.extram_phys_base);
+    if ((address >= (void*)prussdrv.pru0_dataram_base)
+        && (address < (void*)prussdrv.pru0_dataram_base + prussdrv.pruss_map_size))
+    {
+        retaddr = ((unsigned int)((char*)address - prussdrv.pru0_dataram_base) + prussdrv.pru0_dataram_phy_base);
+    }
+    else if ((address >= (void*)prussdrv.l3ram_base)
+        && (address < (void*)prussdrv.l3ram_base + prussdrv.l3ram_map_size))
+    {
+        retaddr = ((unsigned int)((char*)address - prussdrv.l3ram_base) + prussdrv.l3ram_phys_base);
+    }
+    else if ((address >= (void*)prussdrv.extram_base)
+        && (address < (void*)prussdrv.extram_base + prussdrv.extram_map_size))
+    {
+        retaddr = ((unsigned int)((char*)address - prussdrv.extram_base) + prussdrv.extram_phys_base);
     }
     return retaddr;
-
 }
 
-void *prussdrv_get_virt_addr(unsigned int phyaddr)
+void* prussdrv_get_virt_addr(unsigned int phyaddr)
 {
-    void *address = 0;
+    void* address = 0;
     if ((phyaddr >= prussdrv.pru0_dataram_phy_base)
-        && (phyaddr <
-            prussdrv.pru0_dataram_phy_base + prussdrv.pruss_map_size)) {
-        address =
-            (void *) ((unsigned long) prussdrv.pru0_dataram_base +
-                      (phyaddr - prussdrv.pru0_dataram_phy_base));
-    } else if ((phyaddr >= prussdrv.l3ram_phys_base)
-               && (phyaddr <
-                   prussdrv.l3ram_phys_base + prussdrv.l3ram_map_size)) {
-        address =
-            (void *) ((unsigned long) prussdrv.l3ram_base +
-                      (phyaddr - prussdrv.l3ram_phys_base));
-    } else if ((phyaddr >= prussdrv.extram_phys_base)
-               && (phyaddr <
-                   prussdrv.extram_phys_base + prussdrv.extram_map_size)) {
-        address =
-            (void *) ((unsigned long) prussdrv.extram_base +
-                      (phyaddr - prussdrv.extram_phys_base));
+        && (phyaddr < prussdrv.pru0_dataram_phy_base + prussdrv.pruss_map_size))
+    {
+        address = (void*)((unsigned long)prussdrv.pru0_dataram_base + (phyaddr - prussdrv.pru0_dataram_phy_base));
+    }
+    else if ((phyaddr >= prussdrv.l3ram_phys_base)
+        && (phyaddr < prussdrv.l3ram_phys_base + prussdrv.l3ram_map_size))
+    {
+        address = (void*)((unsigned long)prussdrv.l3ram_base + (phyaddr - prussdrv.l3ram_phys_base));
+    }
+    else if ((phyaddr >= prussdrv.extram_phys_base)
+        && (phyaddr < prussdrv.extram_phys_base + prussdrv.extram_map_size))
+    {
+        address = (void*)((unsigned long)prussdrv.extram_base + (phyaddr - prussdrv.extram_phys_base));
     }
     return address;
-
 }
-
 
 int prussdrv_exit()
 {
@@ -697,70 +656,76 @@ int prussdrv_exit()
     munmap(prussdrv.pru0_dataram_base, prussdrv.pruss_map_size);
     munmap(prussdrv.l3ram_base, prussdrv.l3ram_map_size);
     munmap(prussdrv.extram_base, prussdrv.extram_map_size);
-    for (i = 0; i < NUM_PRU_HOSTIRQS; i++) {
-        if (prussdrv.fd[i]) {
+    for (i = 0; i < NUM_PRU_HOSTIRQS; i++)
+    {
+        if (prussdrv.fd[i])
+        {
             close(prussdrv.fd[i]);
-			prussdrv.fd[i] = 0;
-		}
+            prussdrv.fd[i] = 0;
+        }
     }
     return 0;
 }
 
-int prussdrv_exec_program(int prunum, const char *filename)
+int prussdrv_exec_program(int prunum, const char* filename)
 {
     return prussdrv_exec_program_at(prunum, filename, 0);
 }
 
-
-int prussdrv_exec_program_at(int prunum, const char *filename, size_t addr)
+int prussdrv_exec_program_at(int prunum, const char* filename, size_t addr)
 {
-	FILE *fPtr;
-	unsigned char fileDataArray[PRUSS_MAX_IRAM_SIZE];
-	long fileSize = 0;
-	
-	// Open an File from the hard drive
-	fPtr = fopen(filename, "rb");
-	if (fPtr == NULL) {
-		DEBUG_PRINTF("File %s open failed\n", filename);
-		return -1;
-	} else {
-		DEBUG_PRINTF("File %s open passed\n", filename);
-	}
-	// Read file size
-	fseek(fPtr, 0, SEEK_END);
-	fileSize = ftell(fPtr);
-	
-	if (fileSize == 0) {
-		DEBUG_PRINTF("File read failed.. Closing program\n");
-		fclose(fPtr);
-		return -1;
-	} else if (fileSize > PRUSS_MAX_IRAM_SIZE) {
-                DEBUG_PRINTF("File is too large: %ld > %d\n", fileSize, PRUSS_MAX_IRAM_SIZE);
-                fclose(fPtr);
-                return -1;
-        }
-	
-	fseek(fPtr, 0, SEEK_SET);
-	
-	if (fileSize !=
-		fread((unsigned char *) fileDataArray, 1, fileSize, fPtr)) {
-		DEBUG_PRINTF("WARNING: File Size mismatch\n");
-		fclose(fPtr);
-		return -1;
-	}
-	
-	fclose(fPtr);
-	
-	return prussdrv_exec_code_at(prunum, (const unsigned int *) fileDataArray, (int)fileSize, addr);
+    FILE* fPtr;
+    unsigned char fileDataArray[PRUSS_MAX_IRAM_SIZE];
+    long fileSize = 0;
+
+    // Open an File from the hard drive
+    fPtr = fopen(filename, "rb");
+    if (fPtr == NULL)
+    {
+        DEBUG_PRINTF("File %s open failed\n", filename);
+        return -1;
+    }
+    else
+    {
+        DEBUG_PRINTF("File %s open passed\n", filename);
+    }
+    // Read file size
+    fseek(fPtr, 0, SEEK_END);
+    fileSize = ftell(fPtr);
+
+    if (fileSize == 0)
+    {
+        DEBUG_PRINTF("File read failed.. Closing program\n");
+        fclose(fPtr);
+        return -1;
+    }
+    else if (fileSize > PRUSS_MAX_IRAM_SIZE)
+    {
+        DEBUG_PRINTF("File is too large: %ld > %d\n", fileSize, PRUSS_MAX_IRAM_SIZE);
+        fclose(fPtr);
+        return -1;
+    }
+
+    fseek(fPtr, 0, SEEK_SET);
+
+    if (fileSize != fread((unsigned char*)fileDataArray, 1, fileSize, fPtr))
+    {
+        DEBUG_PRINTF("WARNING: File Size mismatch\n");
+        fclose(fPtr);
+        return -1;
+    }
+
+    fclose(fPtr);
+
+    return prussdrv_exec_code_at(prunum, (const unsigned int*)fileDataArray, (int)fileSize, addr);
 }
 
-
-int prussdrv_exec_code(int prunum, const unsigned int *code, int codelen)
+int prussdrv_exec_code(int prunum, const unsigned int* code, int codelen)
 {
-  return prussdrv_exec_code_at(prunum, code, codelen, 0);
+    return prussdrv_exec_code_at(prunum, code, codelen, 0);
 }
 
-int prussdrv_exec_code_at(int prunum, const unsigned int *code, int codelen, size_t addr)
+int prussdrv_exec_code_at(int prunum, const unsigned int* code, int codelen, size_t addr)
 {
     unsigned int pru_ram_id;
 
@@ -779,25 +744,29 @@ int prussdrv_exec_code_at(int prunum, const unsigned int *code, int codelen, siz
     return 0;
 }
 
-int prussdrv_load_datafile(int prunum, const char *filename)
+int prussdrv_load_datafile(int prunum, const char* filename)
 {
-    FILE *fPtr;
+    FILE* fPtr;
     unsigned char fileDataArray[PRUSS_MAX_IRAM_SIZE];
     int fileSize = 0;
 
     // Open an File from the hard drive
     fPtr = fopen(filename, "rb");
-    if (fPtr == NULL) {
+    if (fPtr == NULL)
+    {
         DEBUG_PRINTF("File %s open failed\n", filename);
-    return -1;
-    } else {
+        return -1;
+    }
+    else
+    {
         DEBUG_PRINTF("File %s open passed\n", filename);
     }
     // Read file size
     fseek(fPtr, 0, SEEK_END);
     fileSize = ftell(fPtr);
 
-    if (fileSize == 0) {
+    if (fileSize == 0)
+    {
         DEBUG_PRINTF("File read failed.. Closing program\n");
         fclose(fPtr);
         return -1;
@@ -805,19 +774,19 @@ int prussdrv_load_datafile(int prunum, const char *filename)
 
     fseek(fPtr, 0, SEEK_SET);
 
-    if (fileSize !=
-        fread((unsigned char *) fileDataArray, 1, fileSize, fPtr)) {
+    if (fileSize != fread((unsigned char*)fileDataArray, 1, fileSize, fPtr))
+    {
         DEBUG_PRINTF("WARNING: File Size mismatch\n");
-    fclose(fPtr);
-    return -1;
+        fclose(fPtr);
+        return -1;
     }
 
     fclose(fPtr);
 
-    return prussdrv_load_data(prunum, (const unsigned int *) fileDataArray, fileSize);
+    return prussdrv_load_data(prunum, (const unsigned int*)fileDataArray, fileSize);
 }
 
-int prussdrv_load_data(int prunum, const unsigned int *code, int codelen)
+int prussdrv_load_data(int prunum, const unsigned int* code, int codelen)
 {
     unsigned int pru_ram_id;
 

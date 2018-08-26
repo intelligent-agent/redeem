@@ -1,4 +1,4 @@
-# Work in progres - ARC
+# Work in progress - ARC
 import unittest
 import mock    # use mock.Mock etc
 from USB import USB

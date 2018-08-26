@@ -46,18 +46,18 @@ class Gcode:
         self.gcode = "No-Gcode"
         return
       """
-            Tokenize gcode "words" per RS274/NFC v3
+      Tokenize gcode "words" per RS274/NFC v3
 
-            Redeem's built-in help '?' after a primary word is also supported.
+      Redeem's built-in help '?' after a primary word is also supported.
 
-            M117 Exception: Text supplied to legacy malformed M117 should not
-            be capitalized or stripped of its whitespace. The first leading
-            space after M117 is optional (and ignored) so long as the first
-            charcter is not a digit (0-9) or a period (.). Example: M117this
-            will work.
+      M117 Exception: Text supplied to legacy malformed M117 should not
+      be capitalized or stripped of its whitespace. The first leading
+      space after M117 is optional (and ignored) so long as the first
+      charcter is not a digit (0-9) or a period (.). Example: M117this
+      will work.
 
-            CRC (*nn), "(comment)"s are also removed.
-            """
+      CRC (*nn), "(comment)"s are also removed.
+      """
       # strip gcode comments
       self.message = re.sub(r"\(.*\)", "", self.message)
       self.tokens = re.findall(
@@ -79,9 +79,9 @@ class Gcode:
         self.message = self.message.\
             split("*")[0][(1+len(line_num))::].strip(" ")
       """
-            Retrieve primary gcode, exchanging any '.' for '_' for Python
-            class name compliance. Example: G29_1
-            """
+      Retrieve primary gcode, exchanging any '.' for '_' for Python
+      class name compliance. Example: G29_1
+      """
       self.gcode = self.tokens.pop(0).replace('.', '_')
 
     except Exception as e:
@@ -121,9 +121,9 @@ class Gcode:
 
   def get_message(self):
     """ 
-        Return raw received message (minus line numbers, CRC and gcode comments).
-        Useful for processing non-gcode-standards commands, like M117 and M574
-        """
+    Return raw received message (minus line numbers, CRC and gcode comments).
+    Useful for processing non-gcode-standards commands, like M117 and M574
+    """
     return self.message
 
   def has_letter(self, letter):

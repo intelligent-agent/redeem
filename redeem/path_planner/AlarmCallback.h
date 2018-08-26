@@ -22,6 +22,6 @@ along with Redeem.  If not, see <http://www.gnu.org/licenses/>.
 class AlarmCallback
 {
 public:
-  virtual void call(int alarmType, std::string message, std::string shortMessage);
-  virtual ~AlarmCallback();
+    virtual void call(int alarmType, std::string message, std::string shortMessage);
+    virtual ~AlarmCallback();
 };

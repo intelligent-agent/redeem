@@ -259,8 +259,8 @@ class PathPlanner:
         path_search[a] = -self.travel_length[a]
         path_center[a] = -self.center_offset[a]
 
-      backoff_length = -np.sign(path_search[a]) * self.printer.home_backoff_offset[
-          Printer.axis_to_index(a)]
+      backoff_length = -np.sign(
+          path_search[a]) * self.printer.home_backoff_offset[Printer.axis_to_index(a)]
       path_backoff[a] = backoff_length
       path_fine_search[a] = -backoff_length * 1.2
 

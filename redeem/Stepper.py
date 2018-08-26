@@ -113,8 +113,8 @@ class Stepper(object):
     pass
 
   def fault_callback(self, key, event):
-    Alarm(Alarm.STEPPER_FAULT, "Stepper {}<br>Most likely the stepper is over heated.".format(
-        self.name))
+    Alarm(Alarm.STEPPER_FAULT,
+          "Stepper {}<br>Most likely the stepper is over heated.".format(self.name))
 
 
 """
@@ -192,8 +192,8 @@ class Stepper_00B1(Stepper):
 
     v_iref = 2.5 * (i_rms / 1.92)
     if (v_iref > 2.5):
-      logging.warning(
-          "Current ref for stepper " + self.name + " above limit (2.5 V). Setting to 2.5 V")
+      logging.warning("Current ref for stepper " + self.name +
+                      " above limit (2.5 V). Setting to 2.5 V")
       v_iref = 2.5
     logging.debug("Setting votage to " + str(v_iref) + " for " + self.name)
     self.dac.set_voltage(v_iref)

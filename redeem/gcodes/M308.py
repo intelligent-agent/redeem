@@ -32,14 +32,14 @@ class M308(GCodeCommand):
           except ValueError:
             logging.error("Unable to convert value to float for axis {}: {}".format(axis, value))
         else:
-          logging.warning("Axis does not exis: {}".format(axis))
+          logging.warning("Axis does not exist: {}".format(axis))
 
   def get_description(self):
     return "Set or get direction and search length for end stops"
 
   def get_long_description(self):
     return ("Set or get direction and search length for end stops\n"
-            "If not tokens are given, return the end stop travel search length in mm.\n"
+            "If no tokens are given, return the end stop travel search length in mm.\n"
             "If tokens are given, they must be a space separated list of <axis><value> pairs.\n"
             "Example: 'M308 X250 Y220'. This will set the travel search length for the \n"
             "X nd Y axis to 250 and 220 mm. Th values will appear in the config file in meters, "

@@ -4,8 +4,6 @@ import unittest
 import mock
 import sys
 
-from redeem.Extruder import Heater
-
 sys.modules['evdev'] = mock.Mock()
 sys.modules['spidev'] = mock.MagicMock()
 sys.modules['redeem.RotaryEncoder'] = mock.Mock()
@@ -38,6 +36,7 @@ sys.modules['redeem.PWM'] = mock.Mock()
 from redeem.CascadingConfigParser import CascadingConfigParser
 from redeem.Redeem import *
 from redeem.EndStop import EndStop
+from redeem.Extruder import Heater
 """
 Override CascadingConfigParser methods to set self. variables
 """
@@ -51,34 +50,34 @@ class CascadingConfigParserWedge(CascadingConfigParser):
 
 class MockPrinter(unittest.TestCase):
   """
-    MockPrinter, in combination with the many sys.module[...] = Mock() statements
-    above, creates a mock Redeem instance. The mock instance has only what is
-    needed for our tests and does not access any BBB hardware IOs.
-    """
+  MockPrinter, in combination with the many sys.module[...] = Mock() statements
+  above, creates a mock Redeem instance. The mock instance has only what is
+  needed for our tests and does not access any BBB hardware IOs.
+  """
 
   @classmethod
   def setUpPatch(cls):
     """"
-        Override this method for mocking something other than the path planner
-        """
+    Override this method for mocking something other than the path planner
+    """
     cls.printer.path_planner = mock.MagicMock()
 
   @classmethod
   def setUpConfigFiles(cls, path):
     """
-        This seems like the best way to add to or change stuff in default.cfg,
-        without actually messing with the prestine file. Overwrite if you want
-        different printer.cfg and/or local.cfg files. For example, copy example filles...
+    This seems like the best way to add to or change stuff in default.cfg,
+    without actually messing with the prestine file. Overwrite if you want
+    different printer.cfg and/or local.cfg files. For example, copy example filles...
 
-        copyfile(os.path.join(os.path.dirname(__file__), "my_test_local.cfg"), os.path.join(path, 'local.cfg'))
-        copyfile(os.path.join(os.path.dirname(__file__), "my_test_printer.cfg"), os.path.join(path, 'printer.cfg'))
+    copyfile(os.path.join(os.path.dirname(__file__), "my_test_local.cfg"), os.path.join(path, 'local.cfg'))
+    copyfile(os.path.join(os.path.dirname(__file__), "my_test_printer.cfg"), os.path.join(path, 'printer.cfg'))
 
-        """
+    """
     tf = open("../configs/local.cfg", "w")
     lines = """
 [System]
 log_to_file = False
-        """
+    """
     tf.write(lines)
     tf.close()
 
@@ -91,8 +90,8 @@ log_to_file = False
   @mock.patch("redeem.CascadingConfigParser", new=CascadingConfigParserWedge)
   def setUpClass(cls, mock_init_path_planner):
     """
-        Allow Extruder or HBP instantiation without crashing 'cause not BBB/Replicape
-        """
+    Allow Extruder or HBP instantiation without crashing 'cause not BBB/Replicape
+    """
 
     def disabled_extruder_enable(self):
       self.avg = 1
@@ -129,11 +128,11 @@ log_to_file = False
     Path.printer = cls.printer
 
     cls.printer.speed_factor = 1.0
-    """ 
-        We want to ensure that printer.factor is always obeyed correctly
-        For convenience, we'll set it to mm/inch and check that resulting 
-        paths have the correct meter values, converted from inch input.
-        """
+    """
+    We want to ensure that printer.factor is always obeyed correctly
+    For convenience, we'll set it to mm/inch and check that resulting
+    paths have the correct meter values, converted from inch input.
+    """
     cls.printer.unit_factor = cls.f = 25.4    # inches
 
     cls.printer.probe_points = []

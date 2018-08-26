@@ -48,10 +48,9 @@ class FilamentSensor:
     self.t.start()
 
   def execute_alarm(self):
-    a = Alarm(Alarm.FILAMENT_JAM,
-              "Filament deviation above limit ({0:.2f} mm) for extruder {1} ".format(
-                  self.error_pos * 1000, self.ext_nr), "Filament jam on ext. {}".format(
-                      self.ext_nr))
+    a = Alarm(
+        Alarm.FILAMENT_JAM, "Filament deviation above limit ({0:.2f} mm) for extruder {1} ".format(
+            self.error_pos * 1000, self.ext_nr), "Filament jam on ext. {}".format(self.ext_nr))
     logging.warning("Extruder {0} has reported too large deviation: {1:.2f} mm".format(
         self.ext_nr, self.error_pos * 1000))
 

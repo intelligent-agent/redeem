@@ -219,11 +219,11 @@ class PruFirmware:
         step_bank = str(stepper.get_step_bank())
         dir_pin = str(stepper.get_dir_pin())
         dir_bank = str(stepper.get_dir_bank())
-        configFile.write(
-            '#define STEPPER_' + name + '_STEP_BANK\t\t' + "STEPPER_GPIO_" + step_bank + '\n')
+        configFile.write('#define STEPPER_' + name + '_STEP_BANK\t\t' + "STEPPER_GPIO_" +
+                         step_bank + '\n')
         configFile.write('#define STEPPER_' + name + '_STEP_PIN\t\t' + step_pin + '\n')
-        configFile.write(
-            '#define STEPPER_' + name + '_DIR_BANK\t\t' + "STEPPER_GPIO_" + dir_bank + '\n')
+        configFile.write('#define STEPPER_' + name + '_DIR_BANK\t\t' + "STEPPER_GPIO_" + dir_bank +
+                         '\n')
         configFile.write('#define STEPPER_' + name + '_DIR_PIN\t\t' + dir_pin + '\n')
 
         # Define direction
@@ -246,8 +246,8 @@ class PruFirmware:
       for name, endstop in iteritems(self.printer.end_stops):
         bank, pin = endstop.get_gpio_bank_and_pin()
         configFile.write('#define STEPPER_' + name + '_END_PIN\t\t' + str(pin) + '\n')
-        configFile.write(
-            '#define STEPPER_' + name + '_END_BANK\t\t' + "GPIO_" + str(bank) + '_IN\n')
+        configFile.write('#define STEPPER_' + name + '_END_BANK\t\t' + "GPIO_" + str(bank) +
+                         '_IN\n')
 
       configFile.write('\n')
 
@@ -327,8 +327,8 @@ class PruFirmware:
         configFile.write(
             "#define MINIMUM_DELAY_AFTER_STEP 24\n")    # t_SL with t_DSH added for safety
       else:
-        raise RuntimeError(
-            "Unknown Replicape revision " + revision + ", cannot determine stepper delays")
+        raise RuntimeError("Unknown Replicape revision " + revision +
+                           ", cannot determine stepper delays")
     return configFile_0
 
 

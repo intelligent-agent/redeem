@@ -228,16 +228,18 @@ class Heater(object):
                 "Temperature falling too quickly ({} degrees) for {}".format(temp_delta, self.name))
     # Check that temperature has not fallen below a certain setpoint from target
     if self.min_temp_enabled and self.current_temp < (self.target_temp - self.min_temp):
-      a = Alarm(Alarm.HEATER_TOO_COLD, "Temperature below min set point ({} degrees) for {}".format(
-          self.min_temp, self.name), "Alarm: Heater {}".format(self.name))
+      a = Alarm(
+          Alarm.HEATER_TOO_COLD, "Temperature below min set point ({} degrees) for {}".format(
+              self.min_temp, self.name), "Alarm: Heater {}".format(self.name))
     # Check if the temperature has gone beyond the max value
     if self.current_temp > self.max_temp:
       a = Alarm(Alarm.HEATER_TOO_HOT, "Temperature beyond max ({} degrees) for {}".format(
           self.max_temp, self.name))
     # Check the time diff, only warn if something is off.
     if self.time_diff > 4:
-      logging.warning("Heater time update large: " + self.name + " temp: " + str(self.current_temp)
-                      + " time delta: " + str(self.current_time - self.prev_time))
+      logging.warning("Heater time update large: " + self.name + " temp: " +
+                      str(self.current_temp) + " time delta: " +
+                      str(self.current_time - self.prev_time))
 
 
 class Extruder(Heater):

@@ -22,84 +22,87 @@
 
 #include "PruTimer.h"
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <fstream>
-#include <sys/mman.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <assert.h>
-#include "prussdrv.h"
-#include "pruss_intc_mapping.h"
-#include <cmath>
 #include "StepperCommand.h"
 #include "config.h"
+#include "pruss_intc_mapping.h"
+#include "prussdrv.h"
+#include <assert.h>
+#include <cmath>
+#include <fcntl.h>
+#include <fstream>
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
 
-#define PRU_NUM0	  0
-#define PRU_NUM1	  1
+#define PRU_NUM0 0
+#define PRU_NUM1 1
 
-#define DDR_MAGIC			0xbabe7175
+#define DDR_MAGIC 0xbabe7175
 
 #define PRU_ICSS 0x4A300000
-#define PRU_ICSS_LEN 512*1024
+#define PRU_ICSS_LEN 512 * 1024
 #define SHARED_RAM_START 0x00012000
 
 PruTimer::PruTimer(std::function<void()> endstopAlarmCallback)
-: endstopAlarmCallback(endstopAlarmCallback) {
-	ddr_mem = 0;
-	ddr_mem_end = 0;
-	shared_mem = 0;
-	mem_fd=-1;
-	ddr_addr = 0;
-	ddr_size = 0;
-	totalQueuedMovesTime = 0;
-	ddr_mem_used = 0;
-	stop = false;
+    : endstopAlarmCallback(endstopAlarmCallback)
+{
+    ddr_mem = 0;
+    ddr_mem_end = 0;
+    shared_mem = 0;
+    mem_fd = -1;
+    ddr_addr = 0;
+    ddr_size = 0;
+    totalQueuedMovesTime = 0;
+    ddr_mem_used = 0;
+    stop = false;
 }
 
-bool PruTimer::initPRU(const std::string &firmware_stepper, const std::string &firmware_endstops) {
-	std::unique_lock<std::mutex> lk(mutex_memory);
+bool PruTimer::initPRU(const std::string& firmware_stepper, const std::string& firmware_endstops)
+{
+    std::unique_lock<std::mutex> lk(mutex_memory);
 
-	firmwareStepper = firmware_stepper;
-	firmwareEndstop = firmware_endstops;
+    firmwareStepper = firmware_stepper;
+    firmwareEndstop = firmware_endstops;
 
 #ifdef DEMO_PRU
-	ddr_size=0x40000;
+    ddr_size = 0x40000;
 
-	ddr_mem = (uint8_t*)malloc(ddr_size);
-	ddr_addr = (unsigned long)ddr_mem;
-	
-	LOG( "The DDR memory reserved for the PRU is 0x" << std::hex <<  ddr_size << " and has addr 0x" <<  std::hex <<  ddr_addr <<  std::dec << std::endl);
-	
-	if (ddr_mem == NULL) {
+    ddr_mem = (uint8_t*)malloc(ddr_size);
+    ddr_addr = (unsigned long)ddr_mem;
+
+    LOG("The DDR memory reserved for the PRU is 0x" << std::hex << ddr_size << " and has addr 0x" << std::hex << ddr_addr << std::dec << std::endl);
+
+    if (ddr_mem == NULL)
+    {
         return false;
     }
 
-	ddr_write_location  = ddr_mem;
-	ddr_nr_events  = (uint32_t*)(ddr_mem+ddr_size-4);
-	ddr_mem_end = ddr_mem+ddr_size-8;
-	pru_control = (uint32_t*)(ddr_mem+ddr_size-8);
+    ddr_write_location = ddr_mem;
+    ddr_nr_events = (uint32_t*)(ddr_mem + ddr_size - 4);
+    ddr_mem_end = ddr_mem + ddr_size - 8;
+    pru_control = (uint32_t*)(ddr_mem + ddr_size - 8);
 
-	*((uint32_t*)ddr_write_location)=0; //So that the PRU waits
-	*ddr_nr_events = 0;
+    *((uint32_t*)ddr_write_location) = 0; //So that the PRU waits
+    *ddr_nr_events = 0;
 
-	currentReadingAddress = ddr_write_location;
+    currentReadingAddress = ddr_write_location;
 #else
-	unsigned int ret;
+    unsigned int ret;
     tpruss_intc_initdata pruss_intc_initdata = PRUSS_INTC_INITDATA;
 
-    LOG( "Initializing PRU..." << std::endl);
+    LOG("Initializing PRU..." << std::endl);
 
     /* Initialize the PRU */
-    prussdrv_init ();
+    prussdrv_init();
 
     /* Open PRU Interrupt */
     ret = prussdrv_open(PRU_EVTOUT_0);
     if (ret)
     {
-        LOG( "prussdrv_open failed" << std::endl);
+        LOG("prussdrv_open failed" << std::endl);
         return false;
     }
 
@@ -107,214 +110,223 @@ bool PruTimer::initPRU(const std::string &firmware_stepper, const std::string &f
     ret = prussdrv_open(PRU_EVTOUT_1);
     if (ret)
     {
-        LOG( "prussdrv_open failed (sync interrupt)" << std::endl);
+        LOG("prussdrv_open failed (sync interrupt)" << std::endl);
         return false;
     }
 
     /* Get the interrupt initialized */
     prussdrv_pruintc_init(&pruss_intc_initdata);
 
+    std::ifstream faddr("/sys/class/uio/uio0/maps/map1/addr");
 
-	std::ifstream faddr("/sys/class/uio/uio0/maps/map1/addr");
-
-	if(!faddr.good()) {
-		LOG( "Failed to read /sys/class/uio/uio0/maps/map1/addr\n");
+    if (!faddr.good())
+    {
+        LOG("Failed to read /sys/class/uio/uio0/maps/map1/addr\n");
         return false;
-	}
+    }
 
-	std::ifstream fsize("/sys/class/uio/uio0/maps/map1/size");
+    std::ifstream fsize("/sys/class/uio/uio0/maps/map1/size");
 
-	if(!faddr.good()) {
-		LOG( "Failed to read /sys/class/uio/uio0/maps/map1/size\n");
+    if (!faddr.good())
+    {
+        LOG("Failed to read /sys/class/uio/uio0/maps/map1/size\n");
         return false;
-	}
+    }
 
-	std::string s;
+    std::string s;
 
-	std::getline(faddr, s);
+    std::getline(faddr, s);
 
-	ddr_addr = std::stoul(s, nullptr, 16);
+    ddr_addr = std::stoul(s, nullptr, 16);
 
-	std::getline(fsize, s);
+    std::getline(fsize, s);
 
-	ddr_size = std::stoul(s, nullptr, 16);
+    ddr_size = std::stoul(s, nullptr, 16);
 
-	if(!ddr_size || !ddr_addr) {
-		LOG("[ERROR] Unable to find DDR address and size for PRU" << std::endl);
-		return false;
-	}
+    if (!ddr_size || !ddr_addr)
+    {
+        LOG("[ERROR] Unable to find DDR address and size for PRU" << std::endl);
+        return false;
+    }
 
-	LOG( "The DDR memory reserved for the PRU is 0x" << std::hex <<  ddr_size << " and has addr 0x" <<  std::hex <<  ddr_addr << std::dec << std::endl);
-	
+    LOG("The DDR memory reserved for the PRU is 0x" << std::hex << ddr_size << " and has addr 0x" << std::hex << ddr_addr << std::dec << std::endl);
+
     /* open the device */
     mem_fd = open("/dev/mem", O_RDWR | O_SYNC);
-    if (mem_fd < 0) {
-        LOG( "Failed to open /dev/mem " << strerror(errno) << std::endl);;
+    if (mem_fd < 0)
+    {
+        LOG("Failed to open /dev/mem " << strerror(errno) << std::endl);
+        ;
         return false;
     }
 
     /* map the memory */
     ddr_mem = (uint8_t*)mmap(0, ddr_size, PROT_WRITE | PROT_READ, MAP_SHARED, mem_fd, ddr_addr);
 
-	if (ddr_mem == NULL) {
-        LOG( "Failed to map the device "<< strerror(errno) << std::endl);
+    if (ddr_mem == NULL)
+    {
+        LOG("Failed to map the device " << strerror(errno) << std::endl);
         close(mem_fd);
         return false;
     }
-	
-	LOG( "Mapped memory starting at 0x" << std::hex << (unsigned long)ddr_mem  << std::dec << std::endl);
 
-	shared_mem = (uint8_t*)mmap(0, PRU_ICSS_LEN, PROT_WRITE | PROT_READ, MAP_SHARED, mem_fd, PRU_ICSS);
+    LOG("Mapped memory starting at 0x" << std::hex << (unsigned long)ddr_mem << std::dec << std::endl);
 
-	if (shared_mem == nullptr)
-	{
-		LOG("Failed to map the shared memory " << strerror(errno) << std::endl);
-		close(mem_fd);
-		return false;
-	}
+    shared_mem = (uint8_t*)mmap(0, PRU_ICSS_LEN, PROT_WRITE | PROT_READ, MAP_SHARED, mem_fd, PRU_ICSS);
 
+    if (shared_mem == nullptr)
+    {
+        LOG("Failed to map the shared memory " << strerror(errno) << std::endl);
+        close(mem_fd);
+        return false;
+    }
 
+    ddr_write_location = ddr_mem;
+    ddr_nr_events = (uint32_t*)(ddr_mem + ddr_size - 4);
+    ddr_mem_end = ddr_mem + ddr_size - 8;
+    pru_control = (uint32_t*)(ddr_mem + ddr_size - 8);
 
+    initalizePRURegisters();
 
-	ddr_write_location  = ddr_mem;
-	ddr_nr_events  = (uint32_t*)(ddr_mem+ddr_size-4);
-	ddr_mem_end = ddr_mem+ddr_size-8;
-	pru_control = (uint32_t*)(ddr_mem+ddr_size-8);
-
-	initalizePRURegisters();
-
-	//bzero(ddr_mem, ddr_size);
+    //bzero(ddr_mem, ddr_size);
 
     /* Execute firmwares on PRU */
-    LOG( ("\tINFO: Starting stepper firmware on PRU0\r\n"));
-	ret = prussdrv_exec_program (PRU_NUM0, firmware_stepper.c_str());
-	if(ret!=0) {
-		LOG( "[WARNING] Unable to execute firmware on PRU0" << std::endl);
-	}
+    LOG(("\tINFO: Starting stepper firmware on PRU0\r\n"));
+    ret = prussdrv_exec_program(PRU_NUM0, firmware_stepper.c_str());
+    if (ret != 0)
+    {
+        LOG("[WARNING] Unable to execute firmware on PRU0" << std::endl);
+    }
 
-    LOG( ("\tINFO: Starting endstop firmware on PRU1\r\n"));
-    ret=prussdrv_exec_program (PRU_NUM1, firmware_endstops.c_str());
-	if(ret!=0) {
-		LOG( "[WARNING] Unable to execute firmware on PRU1" << std::endl);
-	}
+    LOG(("\tINFO: Starting endstop firmware on PRU1\r\n"));
+    ret = prussdrv_exec_program(PRU_NUM1, firmware_endstops.c_str());
+    if (ret != 0)
+    {
+        LOG("[WARNING] Unable to execute firmware on PRU1" << std::endl);
+    }
 
-	//std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
+    // std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
 
-	/*prussdrv_pru_wait_event (PRU_EVTOUT_0);
+    // prussdrv_pru_wait_event (PRU_EVTOUT_0);
 
-	 printf("\tINFO: PRU0 completed transfer of endstop.\r\n");
+    // printf("\tINFO: PRU0 completed transfer of endstop.\r\n");
 
-	 prussdrv_pru_clear_event (PRU_EVTOUT_0, PRU0_ARM_INTERRUPT);*/
+    // prussdrv_pru_clear_event (PRU_EVTOUT_0, PRU0_ARM_INTERRUPT);
 
 #endif
 
-	ddr_mem_used = 0;
-	blocksID = std::queue<BlockDef>();
-	currentNbEvents = 0;
-	totalQueuedMovesTime = 0;
+    ddr_mem_used = 0;
+    blocksID = std::queue<BlockDef>();
+    currentNbEvents = 0;
+    totalQueuedMovesTime = 0;
 
-	return true;
+    return true;
 }
 
-void PruTimer::initalizePRURegisters() {
-	*((uint32_t*)ddr_write_location)=0; //So that the PRU waits
-	*ddr_nr_events = 0;
-	*pru_control = 0;
+void PruTimer::initalizePRURegisters()
+{
+    *((uint32_t*)ddr_write_location) = 0; //So that the PRU waits
+    *ddr_nr_events = 0;
+    *pru_control = 0;
 
-	//Set DDR location for PRU
-	//pypruss.pru_write_memory(0, 0, [self.ddr_addr, self.ddr_nr_events, 0])
-	uint32_t ddrstartData[3];
-	ddrstartData[0] = (uint32_t)ddr_addr;
-	ddrstartData[1] = (uint32_t)(ddr_addr+ddr_size-4);
-	ddrstartData[2] = (uint32_t)(ddr_addr+ddr_size-8); //PRU control register address
+    //Set DDR location for PRU
+    //pypruss.pru_write_memory(0, 0, [self.ddr_addr, self.ddr_nr_events, 0])
+    uint32_t ddrstartData[3];
+    ddrstartData[0] = (uint32_t)ddr_addr;
+    ddrstartData[1] = (uint32_t)(ddr_addr + ddr_size - 4);
+    ddrstartData[2] = (uint32_t)(ddr_addr + ddr_size - 8); //PRU control register address
 
-	prussdrv_pru_write_memory(PRUSS0_PRU0_DATARAM, 0, ddrstartData, sizeof(ddrstartData));
-
-
+    prussdrv_pru_write_memory(PRUSS0_PRU0_DATARAM, 0, ddrstartData, sizeof(ddrstartData));
 }
 
-PruTimer::~PruTimer() {
-
+PruTimer::~PruTimer()
+{
 }
 
-void PruTimer::reset() {
-	std::unique_lock<std::mutex> lk(mutex_memory);
+void PruTimer::reset()
+{
+    std::unique_lock<std::mutex> lk(mutex_memory);
 
-	prussdrv_pru_disable(0);
-	prussdrv_pru_disable(1);
+    prussdrv_pru_disable(0);
+    prussdrv_pru_disable(1);
 
-	initalizePRURegisters();
+    initalizePRURegisters();
 
-	/* Execute firmwares on PRU */
-    LOG( ("\tINFO: Starting stepper firmware on PRU0\r\n"));
-	unsigned int ret = prussdrv_exec_program (PRU_NUM0, firmwareStepper.c_str());
-	if(ret!=0) {
-		LOG( "[WARNING] Unable to execute firmware on PRU0" << std::endl);
-	}
+    /* Execute firmwares on PRU */
+    LOG(("\tINFO: Starting stepper firmware on PRU0\r\n"));
+    unsigned int ret = prussdrv_exec_program(PRU_NUM0, firmwareStepper.c_str());
+    if (ret != 0)
+    {
+        LOG("[WARNING] Unable to execute firmware on PRU0" << std::endl);
+    }
 
-    LOG( ("\tINFO: Starting endstop firmware on PRU1\r\n"));
-    ret=prussdrv_exec_program (PRU_NUM1, firmwareEndstop.c_str());
-	if(ret!=0) {
-		LOG( "[WARNING] Unable to execute firmware on PRU1" << std::endl);
-	}
+    LOG(("\tINFO: Starting endstop firmware on PRU1\r\n"));
+    ret = prussdrv_exec_program(PRU_NUM1, firmwareEndstop.c_str());
+    if (ret != 0)
+    {
+        LOG("[WARNING] Unable to execute firmware on PRU1" << std::endl);
+    }
 
-	totalQueuedMovesTime = 0;
-	ddr_mem_used = 0;
-	currentNbEvents = 0;
+    totalQueuedMovesTime = 0;
+    ddr_mem_used = 0;
+    currentNbEvents = 0;
 
-	blocksID = std::queue<BlockDef>();
+    blocksID = std::queue<BlockDef>();
 }
 
-void PruTimer::runThread() {
-	stop=false;
+void PruTimer::runThread()
+{
+    stop = false;
 
-	if(!ddr_nr_events || !ddr_mem) {
-		LOG( "Cannot run PruTimer when not initialized" << std::endl);
-		return;
-	}
+    if (!ddr_nr_events || !ddr_mem)
+    {
+        LOG("Cannot run PruTimer when not initialized" << std::endl);
+        return;
+    }
 
-	runningThread = std::thread([this]() {
-		this->run();
-	});
+    runningThread = std::thread([this]() {
+        this->run();
+    });
 }
 
-void PruTimer::stopThread(bool join) {
-	{
-	  std::lock_guard<std::mutex> lk(mutex_memory);
-	  LOG("Stopping PruTimer..." << std::endl);
-	  stop = true;
+void PruTimer::stopThread(bool join)
+{
+    {
+        std::lock_guard<std::mutex> lk(mutex_memory);
+        LOG("Stopping PruTimer..." << std::endl);
+        stop = true;
 
-	  /* Disable PRU and close memory mapping*/
-	  prussdrv_pru_disable(PRU_NUM0);
-	  prussdrv_pru_disable(PRU_NUM1);
-	  prussdrv_exit();
+        /* Disable PRU and close memory mapping*/
+        prussdrv_pru_disable(PRU_NUM0);
+        prussdrv_pru_disable(PRU_NUM1);
+        prussdrv_exit();
 
-	  if (ddr_mem) {
+        if (ddr_mem)
+        {
 #ifdef DEMO_PRU
-	    free(ddr_mem);
-	    ddr_mem = NULL;
+            free(ddr_mem);
+            ddr_mem = NULL;
 #else
-	    munmap(ddr_mem, ddr_size);
-	    close(mem_fd);
-	    ddr_mem = NULL;
-	    mem_fd = -1;
+            munmap(ddr_mem, ddr_size);
+            close(mem_fd);
+            ddr_mem = NULL;
+            mem_fd = -1;
 #endif
-	  }
+        }
 
-	  LOG("PRU disabled, DDR released, FD closed." << std::endl);
+        LOG("PRU disabled, DDR released, FD closed." << std::endl);
 
+        pruMemoryAvailable.notify_all();
+    }
 
-	  pruMemoryAvailable.notify_all();
-	}
+    if (join && runningThread.joinable())
+    {
+        LOG("Joining thread" << std::endl);
+        runningThread.join();
+    }
 
-	if(join && runningThread.joinable()) {
-	  LOG( "Joining thread" << std::endl);
-	  runningThread.join();
-	}
-
-	LOG( "PruTimer stopped." << std::endl);
+    LOG("PruTimer stopped." << std::endl);
 }
-
 
 /**
 blockMemory - the data.
@@ -322,339 +334,357 @@ blockLen - number of data bytes.
 unit - stepSize in bytes.
 totalTime - time it takes to complete the current block, in ticks.
 */
-void PruTimer::push_block(uint8_t* blockMemory, size_t blockLen, unsigned int unit, unsigned long totalTime) {
+void PruTimer::push_block(uint8_t* blockMemory, size_t blockLen, unsigned int unit, unsigned long totalTime)
+{
 
-	if(!ddr_write_location)
+    if (!ddr_write_location)
         return;
 
-	//Split the block in smaller blocks if needed
-	size_t nbBlocks = ceil((blockLen+12)/((ddr_size/4.0)-12.0));
+    //Split the block in smaller blocks if needed
+    size_t nbBlocks = ceil((blockLen + 12) / ((ddr_size / 4.0) - 12.0));
 
-	LOG("nbBlocks: "<<nbBlocks<<std::endl);
+    LOG("nbBlocks: " << nbBlocks << std::endl);
 
-	size_t blockSize = blockLen / nbBlocks;
+    size_t blockSize = blockLen / nbBlocks;
 
-	//Make sure block size is a multiple of unit
-	blockSize = (blockSize/unit) * unit;
+    //Make sure block size is a multiple of unit
+    blockSize = (blockSize / unit) * unit;
 
-	if(blockSize*nbBlocks<blockLen)
-		nbBlocks++;
+    if (blockSize * nbBlocks < blockLen)
+        nbBlocks++;
 
-	assert(blockSize*nbBlocks>=blockLen);
+    assert(blockSize * nbBlocks >= blockLen);
 
-	size_t nbStepsWritten = 0;
+    size_t nbStepsWritten = 0;
 
-	for(unsigned int i=0;i<nbBlocks;i++) {
+    for (unsigned int i = 0; i < nbBlocks; i++)
+    {
 
-		uint8_t *blockStart = blockMemory + i*blockSize;
+        uint8_t* blockStart = blockMemory + i * blockSize;
 
-		size_t currentBlockSize;
+        size_t currentBlockSize;
 
-		if(i+1<nbBlocks) {
-			currentBlockSize = blockSize;
-		} else {
-			currentBlockSize = blockLen - i*blockSize;
-		}
+        if (i + 1 < nbBlocks)
+        {
+            currentBlockSize = blockSize;
+        }
+        else
+        {
+            currentBlockSize = blockLen - i * blockSize;
+        }
 
-		assert(ddr_size>=currentBlockSize+12);
+        assert(ddr_size >= currentBlockSize + 12);
 
-		{
-			//LOG( "Waiting for " << std::dec << currentBlockSize+12 << " bytes available. Currently: " << getFreeMemory() << std::endl);
+        {
+            //LOG( "Waiting for " << std::dec << currentBlockSize+12 << " bytes available. Currently: " << getFreeMemory() << std::endl);
 
-			std::unique_lock<std::mutex> lk(mutex_memory);
-			blockSizeToWaitFor = currentBlockSize;
-			pruMemoryAvailable.wait(lk, [this,currentBlockSize]{ return isPruMemoryAvailable(); });
+            std::unique_lock<std::mutex> lk(mutex_memory);
+            blockSizeToWaitFor = currentBlockSize;
+            pruMemoryAvailable.wait(lk, [this, currentBlockSize] { return isPruMemoryAvailable(); });
 
-			if(!ddr_mem || stop) return;
+            if (!ddr_mem || stop)
+                return;
 
-			if (ddr_mem_used == 0) {
-				LOGINFO("PRU DDR was empty" << std::endl);
-			}
+            if (ddr_mem_used == 0)
+            {
+                LOGINFO("PRU DDR was empty" << std::endl);
+            }
 
+            //Copy at the right location
+            if (ddr_write_location + currentBlockSize + 12 > ddr_mem_end)
+            {
+                //Split into two blocks
 
-			//Copy at the right location
-			if(ddr_write_location+currentBlockSize+12>ddr_mem_end) {
-				//Split into two blocks
+                //First block size
+                size_t maxSize = ddr_mem_end - ddr_write_location - 8;
 
-				//First block size
-				size_t maxSize = ddr_mem_end-ddr_write_location-8;
+                //make sure we are in a multiple of unit size
+                maxSize = (maxSize / unit) * unit;
 
-				//make sure we are in a multiple of unit size
-				maxSize = (maxSize/unit)*unit;
+                bool resetDDR = false;
 
-				bool resetDDR = false;
+                if (!maxSize)
+                {
+                    //Dont have the size for a single command! Reset the DDR
+                    //LOG( "No more space at 0x" << std::hex << ddr_write_location << ". Resetting DDR..." << std::endl);
+                    uint32_t nb;
 
-				if(!maxSize) {
-					//Dont have the size for a single command! Reset the DDR
-					//LOG( "No more space at 0x" << std::hex << ddr_write_location << ". Resetting DDR..." << std::endl);
-					uint32_t nb;
+                    //First put 0 for next command
+                    nb = 0;
+                    memcpy(ddr_mem, &nb, sizeof(nb));
+                    msync(ddr_mem, sizeof(nb), MS_SYNC);
 
-					//First put 0 for next command
-					nb=0;
-					memcpy(ddr_mem, &nb, sizeof(nb));
-					msync(ddr_mem, sizeof(nb), MS_SYNC);
+                    nb = DDR_MAGIC;
+                    memcpy(ddr_write_location, &nb, sizeof(nb));
 
-					nb=DDR_MAGIC;
-					memcpy(ddr_write_location, &nb, sizeof(nb));
+                    msync(ddr_write_location, sizeof(nb), MS_SYNC);
 
-					msync(ddr_write_location, sizeof(nb), MS_SYNC);
+                    //It is now the begining
+                    ddr_write_location = ddr_mem;
 
-					//It is now the begining
-					ddr_write_location=ddr_mem;
+                    resetDDR = true;
 
-					resetDDR = true;
+                    if (ddr_write_location + currentBlockSize + 12 > ddr_mem_end)
+                    {
+                        maxSize = ddr_mem_end - ddr_write_location - 8;
 
-					if(ddr_write_location+currentBlockSize+12>ddr_mem_end) {
-						maxSize = ddr_mem_end-ddr_write_location-8;
+                        //make sure we are in a multiple of unit size
+                        maxSize = (maxSize / unit) * unit;
+                    }
+                    else
+                    {
+                        maxSize = currentBlockSize;
+                    }
+                }
 
-						//make sure we are in a multiple of unit size
-						maxSize = (maxSize/unit)*unit;
-					} else {
-						maxSize = currentBlockSize;
-					}
+                assert(maxSize > 0);
+                unsigned long t = currentBlockSize - maxSize > 0 ? totalTime / 2 : totalTime;
+                blocksID.emplace(maxSize + 4, t); //FIXME: TotalTime is not /2 but doesn't it to be precise to make it work...
 
+                ddr_mem_used += maxSize + 4;
+                totalQueuedMovesTime += t;
 
-				}
+                // First copy the data
+                // LOG( std::dec << "Writing " << maxSize+4 << " bytes to 0x" << std::hex << (unsigned long)ddr_write_location << std::endl);
 
-				assert(maxSize>0);
-				unsigned long t = currentBlockSize-maxSize > 0 ? totalTime/2 : totalTime;
-				blocksID.emplace(maxSize+4,t); //FIXME: TotalTime is not /2 but doesn't it to be precise to make it work...
+                memcpy(ddr_write_location + 4, blockStart, maxSize);
 
-				ddr_mem_used+=maxSize+4;
-				totalQueuedMovesTime += t;
+                // Then write on the next free area OF DDR MAGIC
+                uint32_t nb;
 
-				//First copy the data
-				//LOG( std::dec << "Writing " << maxSize+4 << " bytes to 0x" << std::hex << (unsigned long)ddr_write_location << std::endl);
+                if (resetDDR)
+                {
+                    nb = 0;
+                }
+                else
+                {
+                    nb = DDR_MAGIC;
+                }
 
-				memcpy(ddr_write_location+4, blockStart, maxSize);
+                assert(ddr_write_location + maxSize + sizeof(nb) * 2 <= ddr_mem_end);
 
-				//Then write on the next free area OF DDR MAGIC
-				uint32_t nb;
+                memcpy(ddr_write_location + maxSize + sizeof(nb), &nb, sizeof(nb));
 
-				if(resetDDR) {
-					nb=0;
-				} else {
-					nb=DDR_MAGIC;
-				}
+                if (!resetDDR)
+                {
+                    nb = 0;
+                    memcpy(ddr_mem, &nb, sizeof(nb));
+                    msync(ddr_mem, sizeof(nb), MS_SYNC);
+                }
 
-				assert(ddr_write_location+maxSize+sizeof(nb)*2<=ddr_mem_end);
+                // Need it?
+                msync(ddr_write_location + 4, maxSize + 4, MS_SYNC);
 
-				memcpy(ddr_write_location+maxSize+sizeof(nb), &nb, sizeof(nb));
+                // Then signal how much data we have to the PRU
+                nb = (uint32_t)maxSize / unit;
 
-				if(!resetDDR) {
-					nb=0;
-					memcpy(ddr_mem, &nb, sizeof(nb));
-					msync(ddr_mem, sizeof(nb), MS_SYNC);
-				}
+                nbStepsWritten += nb;
 
-				//Need it?
-				msync(ddr_write_location+4, maxSize+4, MS_SYNC);
+                memcpy(ddr_write_location, &nb, sizeof(nb));
 
-				//Then signal how much data we have to the PRU
-				nb = (uint32_t)maxSize/unit;
+                // LOG( "Written " << std::dec << maxSize << " bytes of stepper commands." << std::endl);
 
-				nbStepsWritten+=nb;
+                // LOG( "Remaining free memory: " << std::dec << ddr_size-ddr_mem_used << " bytes." << std::endl);
 
-				memcpy(ddr_write_location, &nb, sizeof(nb));
+                msync(ddr_write_location, 4, MS_SYNC);
 
-				//LOG( "Written " << std::dec << maxSize << " bytes of stepper commands." << std::endl);
+                if (resetDDR)
+                {
+                    ddr_write_location += maxSize + sizeof(nb);
+                    ;
+                }
+                else
+                {
+                    // It is now the begining
+                    ddr_write_location = ddr_mem;
+                }
 
-				//LOG( "Remaining free memory: " << std::dec << ddr_size-ddr_mem_used << " bytes." << std::endl);
+                size_t remainingSize = currentBlockSize - maxSize;
 
-				msync(ddr_write_location, 4, MS_SYNC);
+                if (remainingSize)
+                {
 
+                    assert(remainingSize == (remainingSize / unit) * unit);
 
-				if(resetDDR) {
-					ddr_write_location+=maxSize+sizeof(nb);;
-				} else {
-					//It is now the begining
-					ddr_write_location=ddr_mem;
-				}
+                    blocksID.emplace(remainingSize + 4, totalTime - t); //FIXME: TotalTime is not /2 but doesn't it to be precise to make it work...
 
+                    ddr_mem_used += remainingSize + 4;
+                    totalQueuedMovesTime += totalTime - t;
 
-				size_t remainingSize = currentBlockSize-maxSize;
+                    assert(ddr_write_location + remainingSize + sizeof(nb) * 2 <= ddr_mem_end);
 
+                    //First copy the data
+                    //LOG( std::dec << "Writing " << remainingSize+4 << " bytes to 0x" << std::hex << (unsigned long)ddr_write_location << std::endl);
 
+                    //LOG( std::hex << "Writing second part of data to 0x" << (unsigned long)ddr_write_location+4 << std::endl);
 
-				if(remainingSize) {
+                    memcpy(ddr_write_location + 4, blockStart + maxSize, remainingSize);
 
-					assert(remainingSize == (remainingSize/unit)*unit);
+                    //Then write on the next free area OF DDR MAGIC
+                    uint32_t nb = 0;
 
+                    assert(ddr_write_location + remainingSize + sizeof(nb) * 2 <= ddr_mem_end);
 
-					blocksID.emplace(remainingSize+4,totalTime-t); //FIXME: TotalTime is not /2 but doesn't it to be precise to make it work...
+                    memcpy(ddr_write_location + remainingSize + sizeof(nb), &nb, sizeof(nb));
 
-					ddr_mem_used+=remainingSize+4;
-					totalQueuedMovesTime += totalTime-t;
+                    //Need it?
+                    msync(ddr_write_location + sizeof(nb), remainingSize, MS_SYNC);
 
+                    //Then signal how much data we have to the PRU
+                    nb = (uint32_t)remainingSize / unit;
+                    nbStepsWritten += nb;
+                    //LOG( std::hex << "Writing nb command to 0x" << (unsigned long)ddr_write_location << std::endl);
+                    memcpy(ddr_write_location, &nb, sizeof(nb));
 
-					assert(ddr_write_location+remainingSize+sizeof(nb)*2<=ddr_mem_end);
+                    //LOG( "Written " << std::dec << remainingSize << " bytes of stepper commands." << std::endl);
 
-					//First copy the data
-					//LOG( std::dec << "Writing " << remainingSize+4 << " bytes to 0x" << std::hex << (unsigned long)ddr_write_location << std::endl);
+                    //LOG( "Remaining free memory: " << std::dec << ddr_size-ddr_mem_used << " bytes." << std::endl);
 
-					//LOG( std::hex << "Writing second part of data to 0x" << (unsigned long)ddr_write_location+4 << std::endl);
+                    msync(ddr_write_location, sizeof(nb), MS_SYNC);
 
-					memcpy(ddr_write_location+4, blockStart+maxSize, remainingSize);
+                    //It is now the begining
+                    ddr_write_location += remainingSize + sizeof(nb);
+                }
+            }
+            else
+            {
+                blocksID.emplace(currentBlockSize + 4, totalTime); //FIXME: TotalTime is not /2 but doesn't it to be precise to make it work...
+                ddr_mem_used += currentBlockSize + 4;
+                totalQueuedMovesTime += totalTime;
+                //First copy the data
+                //LOG( std::hex << "Writing data to 0x" << (unsigned long)ddr_write_location+4 << std::endl);
+                //LOG( std::dec << "Writing " << currentBlockSize+4 << " bytes to 0x" << std::hex << (unsigned long)ddr_write_location << std::endl);
 
-					//Then write on the next free area OF DDR MAGIC
-					uint32_t nb = 0;
+                memcpy(ddr_write_location + 4, blockStart, currentBlockSize);
 
-					assert(ddr_write_location+remainingSize+sizeof(nb)*2<=ddr_mem_end);
-
-					memcpy(ddr_write_location+remainingSize+sizeof(nb), &nb, sizeof(nb));
-
-					//Need it?
-					msync(ddr_write_location+sizeof(nb), remainingSize, MS_SYNC);
-
-					//Then signal how much data we have to the PRU
-					nb = (uint32_t)remainingSize/unit;
-					nbStepsWritten+=nb;
-					//LOG( std::hex << "Writing nb command to 0x" << (unsigned long)ddr_write_location << std::endl);
-					memcpy(ddr_write_location, &nb, sizeof(nb));
-
-					//LOG( "Written " << std::dec << remainingSize << " bytes of stepper commands." << std::endl);
-
-					//LOG( "Remaining free memory: " << std::dec << ddr_size-ddr_mem_used << " bytes." << std::endl);
-
-					msync(ddr_write_location, sizeof(nb), MS_SYNC);
-
-					//It is now the begining
-					ddr_write_location+=remainingSize+sizeof(nb);
-
-				}
-
-
-
-			} else {
-				blocksID.emplace(currentBlockSize+4,totalTime); //FIXME: TotalTime is not /2 but doesn't it to be precise to make it work...
-				ddr_mem_used+=currentBlockSize+4;
-				totalQueuedMovesTime += totalTime;
-				//First copy the data
-				//LOG( std::hex << "Writing data to 0x" << (unsigned long)ddr_write_location+4 << std::endl);
-				//LOG( std::dec << "Writing " << currentBlockSize+4 << " bytes to 0x" << std::hex << (unsigned long)ddr_write_location << std::endl);
-
-				memcpy(ddr_write_location+4, blockStart, currentBlockSize);
-
-				//Then write on the next free area than there is no command to execute
-				uint32_t nb = 0;
-				assert(ddr_write_location+currentBlockSize+sizeof(nb)*2<=ddr_mem_end);
-				memcpy(ddr_write_location+currentBlockSize+sizeof(nb), &nb, sizeof(nb));
-				//Need it?
-				msync(ddr_write_location+sizeof(nb), currentBlockSize, MS_SYNC);
-				//Then signal how much data we have to the PRU
-				nb = (uint32_t)currentBlockSize/unit;
-				nbStepsWritten+=nb;
-				//LOG( std::hex << "Writing nb command to 0x" << (unsigned long)ddr_write_location << std::endl);
-				memcpy(ddr_write_location, &nb, sizeof(nb));
-				//LOG( "Written " << std::dec << currentBlockSize << " bytes of stepper commands." << std::endl);
-				//LOG( "Remaining free memory: " << std::dec << ddr_size-ddr_mem_used << " bytes." << std::endl);
-				ddr_write_location+=currentBlockSize+sizeof(nb);
-				msync(ddr_write_location, sizeof(nb), MS_SYNC);
-			}
-		}
-	}
-	assert(nbStepsWritten == blockLen/unit);
+                //Then write on the next free area than there is no command to execute
+                uint32_t nb = 0;
+                assert(ddr_write_location + currentBlockSize + sizeof(nb) * 2 <= ddr_mem_end);
+                memcpy(ddr_write_location + currentBlockSize + sizeof(nb), &nb, sizeof(nb));
+                //Need it?
+                msync(ddr_write_location + sizeof(nb), currentBlockSize, MS_SYNC);
+                //Then signal how much data we have to the PRU
+                nb = (uint32_t)currentBlockSize / unit;
+                nbStepsWritten += nb;
+                //LOG( std::hex << "Writing nb command to 0x" << (unsigned long)ddr_write_location << std::endl);
+                memcpy(ddr_write_location, &nb, sizeof(nb));
+                //LOG( "Written " << std::dec << currentBlockSize << " bytes of stepper commands." << std::endl);
+                //LOG( "Remaining free memory: " << std::dec << ddr_size-ddr_mem_used << " bytes." << std::endl);
+                ddr_write_location += currentBlockSize + sizeof(nb);
+                msync(ddr_write_location, sizeof(nb), MS_SYNC);
+            }
+        }
+    }
+    assert(nbStepsWritten == blockLen / unit);
 }
 
-void PruTimer::waitUntilFinished() {
-	std::unique_lock<std::mutex> lk(mutex_memory);
-	pruMemoryEmpty.wait(lk, [this] { return isPruMemoryEmpty(); });
+void PruTimer::waitUntilFinished()
+{
+    std::unique_lock<std::mutex> lk(mutex_memory);
+    pruMemoryEmpty.wait(lk, [this] { return isPruMemoryEmpty(); });
 }
 
-void PruTimer::run() {
-	LOG( "Starting PruTimer thread..." << std::endl);
-	while(!stop) {
+void PruTimer::run()
+{
+    LOG("Starting PruTimer thread..." << std::endl);
+    while (!stop)
+    {
 #ifdef DEMO_PRU
 
-		unsigned int* nbCommand = (unsigned int *)currentReadingAddress;
+        unsigned int* nbCommand = (unsigned int*)currentReadingAddress;
 
-		if(!nbCommand || stop || !*nbCommand)
-			continue;
-		SteppersCommand * cmd = (SteppersCommand*)(currentReadingAddress+4);
-		FLOAT_T totalWait = 0;
-		for(int i=0; i<(int)*nbCommand;i++) {
-			totalWait+=cmd->delay/200000.0;
-			cmd++;
-		}
+        if (!nbCommand || stop || !*nbCommand)
+            continue;
+        SteppersCommand* cmd = (SteppersCommand*)(currentReadingAddress + 4);
+        FLOAT_T totalWait = 0;
+        for (int i = 0; i < (int)*nbCommand; i++)
+        {
+            totalWait += cmd->delay / 200000.0;
+            cmd++;
+        }
 
-		std::this_thread::sleep_for( std::chrono::milliseconds((unsigned)totalWait) );
-		currentReadingAddress+=(*nbCommand)*8+4;
-		nbCommand = (unsigned int *)currentReadingAddress;
-		if(*nbCommand == DDR_MAGIC) {
-			currentReadingAddress = ddr_mem;
-		}
-		*ddr_nr_events=(*ddr_nr_events)+1;
+        std::this_thread::sleep_for(std::chrono::milliseconds((unsigned)totalWait));
+        currentReadingAddress += (*nbCommand) * 8 + 4;
+        nbCommand = (unsigned int*)currentReadingAddress;
+        if (*nbCommand == DDR_MAGIC)
+        {
+            currentReadingAddress = ddr_mem;
+        }
+        *ddr_nr_events = (*ddr_nr_events) + 1;
 #else
-		unsigned int nbWaitedEvent = prussdrv_pru_wait_event (PRU_EVTOUT_0,1000); // 250ms timeout
+        unsigned int nbWaitedEvent = prussdrv_pru_wait_event(PRU_EVTOUT_0, 1000); // 250ms timeout
 #endif
 
-		if(stop)
+        if (stop)
             break;
 
-		/*
-		if (nbWaitedEvent)
-			LOG( ("\tINFO: PRU0 completed transfer.\r\n"));
-		else
-			LOG( ("\tINFO: PRU0 transfer timeout.\r\n"));
-		*/
-
+#if 0
+        if (nbWaitedEvent)
+          LOG( ("\tINFO: PRU0 completed transfer.\r\n"));
+        else
+          LOG( ("\tINFO: PRU0 transfer timeout.\r\n"));
+#endif
 
 #ifndef DEMO_PRU
-		if(nbWaitedEvent)
-			prussdrv_pru_clear_event (PRU_EVTOUT_0, PRU0_ARM_INTERRUPT);
+        if (nbWaitedEvent)
+            prussdrv_pru_clear_event(PRU_EVTOUT_0, PRU0_ARM_INTERRUPT);
 #endif
-		msync(ddr_nr_events, 4, MS_SYNC);
-		uint32_t nb = *ddr_nr_events;
+        msync(ddr_nr_events, 4, MS_SYNC);
+        uint32_t nb = *ddr_nr_events;
 
-		if (nb == 0xFFFFFFFF)
-		{
+        if (nb == 0xFFFFFFFF)
+        {
             // The PRU has stopped due to an endstop alarm.
-			endstopAlarmCallback();
-		}
-		else
-		{
-			std::lock_guard<std::mutex> lk(mutex_memory);
-//			LOG( "NB event " << nb << " / " << currentNbEvents << "\t\tRead event from UIO = " << nbWaitedEvent << ", block in the queue: " << ddr_mem_used << std::endl);
-			while(currentNbEvents!=nb && !blocksID.empty()) { //We use != to handle the overflow case
-				BlockDef & front = blocksID.front();
-				ddr_mem_used-=front.size;
-				totalQueuedMovesTime -=front.totalTime;
-				assert(ddr_mem_used<ddr_size);
-//				LOG( "Block of size " << std::dec << front.size << " and time " << front.totalTime << " done." << std::endl);
-				blocksID.pop();
-				currentNbEvents++;
-			}
-			currentNbEvents = nb;
-			notifyIfPruMemoryIsAvailable();
-			notifyIfPruMemoryIsEmpty();
-		}
-//		LOG( "NB event after " << std::dec << nb << " / " << currentNbEvents << std::endl);
-//		LOG( std::dec <<ddr_mem_used << " bytes used, free: " <<std::dec <<  ddr_size-ddr_mem_used<< "." << std::endl);
-
-	}
+            endstopAlarmCallback();
+        }
+        else
+        {
+            std::lock_guard<std::mutex> lk(mutex_memory);
+            //			LOG( "NB event " << nb << " / " << currentNbEvents << "\t\tRead event from UIO = " << nbWaitedEvent << ", block in the queue: " << ddr_mem_used << std::endl);
+            while (currentNbEvents != nb && !blocksID.empty())
+            { //We use != to handle the overflow case
+                BlockDef& front = blocksID.front();
+                ddr_mem_used -= front.size;
+                totalQueuedMovesTime -= front.totalTime;
+                assert(ddr_mem_used < ddr_size);
+                //				LOG( "Block of size " << std::dec << front.size << " and time " << front.totalTime << " done." << std::endl);
+                blocksID.pop();
+                currentNbEvents++;
+            }
+            currentNbEvents = nb;
+            notifyIfPruMemoryIsAvailable();
+            notifyIfPruMemoryIsEmpty();
+        }
+        //		LOG( "NB event after " << std::dec << nb << " / " << currentNbEvents << std::endl);
+        //		LOG( std::dec <<ddr_mem_used << " bytes used, free: " <<std::dec <<  ddr_size-ddr_mem_used<< "." << std::endl);
+    }
 }
 
-int PruTimer::waitUntilSync() {
+int PruTimer::waitUntilSync()
+{
     int ret;
-	// Wait until the PRU sends a sync event.
+    // Wait until the PRU sends a sync event.
     ret = prussdrv_pru_wait_event(PRU_EVTOUT_1, 1000);
-    if(ret != 0)
-    	prussdrv_pru_clear_event(PRU_EVTOUT_1, PRU1_ARM_INTERRUPT);
+    if (ret != 0)
+        prussdrv_pru_clear_event(PRU_EVTOUT_1, PRU1_ARM_INTERRUPT);
     return ret;
 }
 
-void PruTimer::suspend() {
-	//We lock it so that we are thread safe
-	std::unique_lock<std::mutex> lk(mutex_memory);
-	*pru_control = 1;
+void PruTimer::suspend()
+{
+    // We lock it so that we are thread safe
+    std::unique_lock<std::mutex> lk(mutex_memory);
+    *pru_control = 1;
 }
 
-void PruTimer::resume() {
-	//We lock it so that we are thread safe
-	std::unique_lock<std::mutex> lk(mutex_memory);
-	*pru_control = 0;
+void PruTimer::resume()
+{
+    // We lock it so that we are thread safe
+    std::unique_lock<std::mutex> lk(mutex_memory);
+    *pru_control = 0;
 }
 
-size_t PruTimer::getStepsRemaining() {
-	return *(volatile size_t*)(shared_mem + SHARED_RAM_START + 16);
+size_t PruTimer::getStepsRemaining()
+{
+    return *(volatile size_t*)(shared_mem + SHARED_RAM_START + 16);
 }

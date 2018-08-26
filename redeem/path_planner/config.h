@@ -37,7 +37,7 @@
 /* The speed of the timer created by the PRU in Hz */
 #define F_CPU 200000000
 #define F_CPU_FLOAT 200000000.0
-#define CPU_CYCLE_LENGTH (1.0/200000000.0) // AKA 5e-9
+#define CPU_CYCLE_LENGTH (1.0 / 200000000.0) // AKA 5e-9
 
 /* Data type for floating point */
 #define FLOAT_T double
@@ -45,10 +45,10 @@
 /* Negligible numeric error - also 1/50th of a CPU cycle */
 #define NEGLIGIBLE_ERROR 1e-10
 
-#define AXIS_CONFIG_XY      0
-#define AXIS_CONFIG_H_BELT  1
+#define AXIS_CONFIG_XY 0
+#define AXIS_CONFIG_H_BELT 1
 #define AXIS_CONFIG_CORE_XY 2
-#define AXIS_CONFIG_DELTA   3
+#define AXIS_CONFIG_DELTA 3
 
 #define MINIMUM_STEP_INTERVAL 1000
 
