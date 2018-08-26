@@ -282,8 +282,8 @@ class Redeem:
       adc = self.printer.config.get("Heaters", "path_adc_" + e)
       if not self.printer.config.has_option("Heaters", "sensor_" + e):
         sensor = self.printer.config.get("Heaters", "temp_chart_" + e)
-        logging.warning(
-            "Deprecated config option temp_chart_" + e + " use sensor_" + e + " instead.")
+        logging.warning("Deprecated config option temp_chart_" + e + " use sensor_" + e +
+                        " instead.")
       else:
         sensor = self.printer.config.get("Heaters", "sensor_" + e)
       self.printer.thermistors[e] = TemperatureSensor(adc, 'MOSFET ' + e, sensor)

@@ -21,8 +21,9 @@ class M561(GCodeCommand):
   def execute(self, g):
     # Show matrix
     if g.has_letter("S"):
-      self.printer.send_message(g.prot, "Current bed compensation matrix: {}".format(
-          json.dumps(self.printer.matrix_bed_comp.tolist())))
+      self.printer.send_message(
+          g.prot, "Current bed compensation matrix: {}".format(
+              json.dumps(self.printer.matrix_bed_comp.tolist())))
 
     # Update matrix
     elif g.has_letter("U"):

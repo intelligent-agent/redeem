@@ -23,17 +23,18 @@ class M360(GCodeCommand):
       answer = "ok " + "\n".join([":".join(line) for line in settings])
       g.set_answer(answer)
     elif g.has_letter("U"):
-      Alarm.action_command("review_data",
-                           json.dumps({
-                               "type": "review_data",
-                               "message_title": "Config data ready",
-                               "message_text": "Click to upload and view",
-                               "message_type": "info",
-                               "message_hide": False,
-                               "data_type": "config_data",
-                               "replicape_key": self.printer.replicape_key,
-                               "data": settings
-                           }))
+      Alarm.action_command(
+          "review_data",
+          json.dumps({
+              "type": "review_data",
+              "message_title": "Config data ready",
+              "message_text": "Click to upload and view",
+              "message_type": "info",
+              "message_hide": False,
+              "data_type": "config_data",
+              "replicape_key": self.printer.replicape_key,
+              "data": settings
+          }))
 
   def get_description(self):
     return "Get current config"
