@@ -449,8 +449,7 @@ if __name__ == '__main__':
   print("real: " + str(real_printer_params.to_dict()))
   print("calculated: " + str(calculated_printer_params.to_dict()))
   print(str([real_printer_params.xstop, real_printer_params.ystop, real_printer_params.zstop]))
-  print(
-      str([
-          calculated_printer_params.xstop, calculated_printer_params.ystop,
-          calculated_printer_params.zstop
-      ]))
+  print(str([
+      calculated_printer_params.xstop, calculated_printer_params.ystop,
+      calculated_printer_params.zstop
+  ]))

@@ -46,8 +46,9 @@ class M303(GCodeCommand):
     logging.info("Max temp: {}, Min temp: {}, Ku: {}, Pu: {}".format(tuner.max_temp, tuner.min_temp,
                                                                      tuner.Ku, tuner.Pu))
     logging.info("Kp: {}, Ti: {}, Td: {}".format(heater.Kp, heater.Ti, heater.Td))
-    self.printer.send_message(g.prot, "Max temp: {}, Min temp: {}, Ku: {}, Pu: {}".format(
-        tuner.max_temp, tuner.min_temp, tuner.Ku, tuner.Pu))
+    self.printer.send_message(
+        g.prot, "Max temp: {}, Min temp: {}, Ku: {}, Pu: {}".format(tuner.max_temp, tuner.min_temp,
+                                                                    tuner.Ku, tuner.Pu))
     self.printer.send_message(g.prot, "Kp: {}, Ti: {}, Td: {}".format(heater.Kp, heater.Ti,
                                                                       heater.Td))
     self.printer.send_message(g.prot, "Settings by G-code: \n")

@@ -89,8 +89,8 @@ def update_source(git_executable, folder, target, force=False):
   print(">>> Running: git diff --shortstat")
   returncode, stdout = _git(["diff", "--shortstat"], folder, git_executable=git_executable)
   if returncode != 0:
-    raise RuntimeError("Could not update, \"git diff\" failed with returncode %d: %s" % (returncode,
-                                                                                         stdout))
+    raise RuntimeError(
+        "Could not update, \"git diff\" failed with returncode %d: %s" % (returncode, stdout))
   if stdout and stdout.strip():
     # we got changes in the working tree, maybe from the user, so we'll now rescue those into a patch
     import time
@@ -117,8 +117,8 @@ def update_source(git_executable, folder, target, force=False):
   print(">>> Running: git pull")
   returncode, stdout = _git(["pull"], folder, git_executable=git_executable)
   if returncode != 0:
-    raise RuntimeError("Could not update, \"git pull\" failed with returncode %d: %s" % (returncode,
-                                                                                         stdout))
+    raise RuntimeError(
+        "Could not update, \"git pull\" failed with returncode %d: %s" % (returncode, stdout))
   print(stdout)
 
   if force:
@@ -144,8 +144,8 @@ def install_source(python_executable, folder, user=False, sudo=False):
   print(">>> Running: make -C /usr/src/redeem install")
   returncode, stdout = _make()
   if returncode != 0:
-    raise RuntimeError("Could not update, \"make install\" failed with returncode %d: %s" %
-                       (returncode, stdout))
+    raise RuntimeError(
+        "Could not update, \"make install\" failed with returncode %d: %s" % (returncode, stdout))
   print(stdout)
 
 

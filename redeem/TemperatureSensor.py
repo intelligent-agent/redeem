@@ -177,9 +177,10 @@ class PT100(TemperatureSensor):
       logging.error(
           "PT100 Sensor configuration for {0} is missing parameters. Expected: 5, received: {1}.".
           format(pin, len(sensorConfiguration)))
-      Alarm(Alarm.THERMISTOR_ERROR,
-            "PT100 Sensor configuration for {0} is missing parameters. Expected: 5, received: {1}.".
-            format(pin, len(sensorConfiguration)))
+      Alarm(
+          Alarm.THERMISTOR_ERROR,
+          "PT100 Sensor configuration for {0} is missing parameters. Expected: 5, received: {1}.".
+          format(pin, len(sensorConfiguration)))
     else:
       self.pin = pin
       self.name = name
