@@ -40,6 +40,8 @@ from time import sleep
 from GCodeCommand import GCodeCommand
 from redeem.Gcode import Gcode
 
+import cProfile, pstats, StringIO
+
 # device_location = '/dev/mmcblk1p1'
 USB_DEVICE_LOCATION = '/dev/sda1'
 USB_MOUNT_LOCATION = '/media/usbmem'
@@ -294,21 +296,31 @@ class M23(M2X):
 
 class M24(GCodeCommand):
   def process_gcode(self, g):
+    profile = cProfile.Profile()
 
     self.printer.sd_card_manager.set_status(True)
+
+    profile.enable()
 
     for line in self.printer.sd_card_manager:
       line = line.strip()
       if not line or line.startswith(';'):
         continue
-      file_g = Gcode({"message": line, "parent": g})
-      self.printer.processor.execute(file_g)
+      file_g = Gcode({"message": line})
+      self.printer.processor.enqueue(file_g)
 
     if self.printer.sd_card_manager.get_status():
       logging.info("M24: file complete")
     self.printer.sd_card_manager.set_status(False)
 
     self.printer.send_message(g.prot, "Done printing file")
+
+    profile.disable();
+    s = StringIO.StringIO()
+    sortby = 'cumulative'
+    ps = pstats.Stats(profile, stream=s).sort_stats(sortby)
+    ps.print_stats()
+    logging.error(s.getvalue())
 
   def execute(self, g):
 

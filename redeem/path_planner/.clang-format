@@ -1,6 +1,2 @@
-﻿AllowShortIfStatementsOnASingleLine: 'false'
+﻿BasedOnStyle: WebKit
 BreakBeforeBraces: Allman
-ColumnLimit: '100'
-IndentCaseLabels: 'false'
-IndentWidth: '4'
-UseTab: Never

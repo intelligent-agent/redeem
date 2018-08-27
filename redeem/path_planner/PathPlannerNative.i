@@ -18,6 +18,8 @@
 
 %rename(PathPlannerNative) PathPlanner;
 %rename(AlarmCallbackNative) AlarmCallback;
+%rename(SyncCallbackNative) SyncCallback;
+%rename(WaitEventNative) WaitEvent;
 
 // exception handler
 %exception {
@@ -32,12 +34,12 @@
 
 // Instantiate template for vector<>
 namespace std {
-  %template(vector_FLOAT_T) vector<FLOAT_T>;
+  %template(vector_double) vector<double>;
 }
 
-%apply FLOAT_T *OUTPUT { FLOAT_T* offset };
-%apply FLOAT_T *OUTPUT { FLOAT_T* X, FLOAT_T* Y , FLOAT_T* Z};
-%apply FLOAT_T *OUTPUT { FLOAT_T* Az, FLOAT_T* Bz , FLOAT_T* Cz};
+%apply double *OUTPUT { double* offset };
+%apply double *OUTPUT { double* X, double* Y , double* Z};
+%apply double *OUTPUT { double* Az, double* Bz , double* Cz};
 
 %typemap(in) VectorN {
   if (!PySequence_Check($input)) {
@@ -108,16 +110,33 @@ public:
   virtual ~AlarmCallback();
 };
 
+
+
 class Delta {
  public:
   Delta();
   ~Delta();
-  void setMainDimensions(FLOAT_T L_in, FLOAT_T r_in);
-  void setRadialError(FLOAT_T A_radial_in, FLOAT_T B_radial_in, FLOAT_T C_radial_in);
-  void setAngularError(FLOAT_T A_angular_in, FLOAT_T B_angular_in, FLOAT_T C_angular_in);
-  void worldToDelta(FLOAT_T X, FLOAT_T Y, FLOAT_T Z, FLOAT_T* Az, FLOAT_T* Bz, FLOAT_T* Cz);
-  void deltaToWorld(FLOAT_T Az, FLOAT_T Bz, FLOAT_T Cz, FLOAT_T* X, FLOAT_T* Y, FLOAT_T* Z);
-  void verticalOffset(FLOAT_T Az, FLOAT_T Bz, FLOAT_T Cz, FLOAT_T* offset);
+  void setMainDimensions(double L_in, double r_in);
+  void setRadialError(double A_radial_in, double B_radial_in, double C_radial_in);
+  void setAngularError(double A_angular_in, double B_angular_in, double C_angular_in);
+  void worldToDelta(double X, double Y, double Z, double* Az, double* Bz, double* Cz);
+  void deltaToWorld(double Az, double Bz, double Cz, double* X, double* Y, double* Z);
+  void verticalOffset(double Az, double Bz, double Cz, double* offset);
+};
+
+%feature("director") SyncCallback;
+
+class SyncCallback
+{
+public:
+  virtual ~SyncCallback();
+  virtual void syncComplete();
+};
+
+class WaitEvent
+{
+public:
+  void signalWaitComplete();
 };
 
 class PathPlanner {
@@ -125,19 +144,17 @@ class PathPlanner {
   Delta delta_bot;
   PathPlanner(unsigned int cacheSize, AlarmCallback& alarmCallback);
   bool initPRU(const std::string& firmware_stepper, const std::string& firmware_endstops);
-  bool queueSyncEvent(bool isBlocking = true);
-  int waitUntilSyncEvent();
-  void clearSyncEvent();
+  void queueSyncEvent(SyncCallback& callback, bool isBlocking = true);
+  %newobject queueWaitEvent;
+  WaitEvent* queueWaitEvent();
   void queueMove(VectorN endPos, 
-		 FLOAT_T speed, FLOAT_T accel, 
+		 double speed, double accel, 
 		 bool cancelable, bool optimize, 
 		 bool enable_soft_endstops, bool use_bed_matrix, 
 		 bool use_backlash_compensation, bool is_probe, int tool_axis);
   void runThread();
   void stopThread(bool join);
   void waitUntilFinished();
-  void setPrintMoveBufferWait(int dt);
-  void setMaxBufferedMoveTime(long long dt);
   void setMaxSpeeds(VectorN speeds);
   void setAxisStepsPerMeter(VectorN stepPerM);
   void setAcceleration(VectorN accel);
@@ -146,7 +163,7 @@ class PathPlanner {
   void setSoftEndstopsMax(VectorN stops);
   void setStopPrintOnSoftEndstopHit(bool stop);
   void setStopPrintOnPhysicalEndstopHit(bool stop);
-  void setBedCompensationMatrix(std::vector<FLOAT_T> matrix);
+  void setBedCompensationMatrix(std::vector<double> matrix);
   void setAxisConfig(int axis);
   void setState(VectorN set);
   void enableSlaves(bool enable);
@@ -155,7 +172,7 @@ class PathPlanner {
   void resetBacklash();
   VectorN getState();
   bool getLastQueueMoveStatus();
-  FLOAT_T getLastProbeDistance();
+  double getLastProbeDistance();
   void suspend();
   void resume();
   void reset();

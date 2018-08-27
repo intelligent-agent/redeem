@@ -26,7 +26,6 @@ import logging
 from Printer import Printer
 from DAC import DAC, PWM_DAC
 from ShiftRegister import ShiftRegister
-import Adafruit_BBIO.GPIO as GPIO
 from threading import Thread
 from Alarm import Alarm
 from Key_pin import Key_pin
@@ -56,16 +55,6 @@ class Stepper(object):
     # Set up the Shift register
     ShiftRegister.make(8)
     self.shift_reg = ShiftRegister.registers[shiftreg_nr]
-
-    # Set up the GPIO pins - we just have to initialize them so the PRU can flip them
-    # terrible hack to cover a bug in Adafruit
-    dir_name = "EHRPWM2A" if dir_pin == "GPIO0_22" else dir_pin
-
-    try:
-      GPIO.setup(dir_name, GPIO.OUT)
-      GPIO.setup(step_pin, GPIO.OUT)
-    except ValueError:
-      logging.warning("*** Stepper {} Pin {} initialization failure:".format(self.name, dir_name))
 
     # Add a key code to the key listener
     # Steppers have an nFAULT pin, so callback on falling
