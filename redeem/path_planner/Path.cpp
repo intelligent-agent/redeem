@@ -99,6 +99,7 @@ void Path::zero()
 
     syncCallback = nullptr;
     waitEvent = std::optional<std::future<void>>();
+    probeResult = std::optional<std::promise<IntVectorN>>();
 }
 
 Path::Path()
@@ -134,6 +135,7 @@ Path& Path::operator=(Path&& path)
 
     syncCallback = path.syncCallback;
     waitEvent = std::move(path.waitEvent);
+    probeResult = std::move(path.probeResult);
 
     return *this;
 }
