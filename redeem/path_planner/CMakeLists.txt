@@ -48,6 +48,7 @@ if (${USE_REAL_PRU_INTERFACE})
   set (sources ${sources} PruTimer.cpp)
 else()
   set (sources ${sources} test_harness/PruDump.cpp)
+  add_definitions(-DUSE_FAKE_PRU_INTERFACE)
 endif()
 
 add_library (PathPlannerLib ${headers} ${sources})

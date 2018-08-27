@@ -43,7 +43,7 @@
 // nasty hack so std::experimental::optional becomes std::optional
 namespace std
 {
-    using namespace experimental;
+using namespace experimental;
 }
 
 #endif

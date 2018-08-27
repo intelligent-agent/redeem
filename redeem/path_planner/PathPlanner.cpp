@@ -69,10 +69,12 @@ PathPlanner::PathPlanner(unsigned int cacheSize, AlarmCallback& alarmCallback, P
     LOGINFO("PathPlanner initialized\n");
 }
 
+#ifndef USE_FAKE_PRU_INTERFACE
 PathPlanner::PathPlanner(unsigned int cacheSize, AlarmCallback& alarmCallback)
-    : PathPlanner(cacheSize, alarmCallback, *new PruTimer([this](){this->pruAlarmCallback();}))
+    : PathPlanner(cacheSize, alarmCallback, *new PruTimer([this]() { this->pruAlarmCallback(); }))
 {
 }
+#endif
 
 void PathPlanner::recomputeParameters()
 {
