@@ -238,30 +238,11 @@ void PathPlanner::queueMove(VectorN endWorldPos,
         return; // No steps included
     }
 
-    class ProbeSyncCallback : public SyncCallback
-    {
-    private:
-        std::promise<void> event;
-
-    public:
-        void syncComplete() override
-        {
-            event.set_value();
-        }
-
-        void waitUntilComplete()
-        {
-            auto future = event.get_future();
-            future.wait();
-        }
-    };
-
-    std::optional<ProbeSyncCallback> probeSyncCallback;
+    std::optional<std::future<IntVectorN>> probeResult;
 
     if (is_probe)
     {
-        probeSyncCallback.emplace();
-        p.setSyncEvent(probeSyncCallback.value(), true);
+        probeResult = p.prepareProbeResult();
     }
 
     /*
@@ -308,7 +289,13 @@ void PathPlanner::queueMove(VectorN endWorldPos,
     }
     else
     {
-        LOG("probe move - not updating state" << std::endl);
+        LOG("probe move - getting new state once probe completes" << std::endl);
+        assert((bool)probeResult);
+        auto& value = probeResult.value();
+        value.wait();
+        state = value.get();
+
+        assert(state != startPos);
     }
 
     ////////////////////////////////////////////////////////////////////
@@ -316,16 +303,6 @@ void PathPlanner::queueMove(VectorN endWorldPos,
     ////////////////////////////////////////////////////////////////////
 
     //    LOGINFO("Move queued for the worker" << std::endl);
-
-    if (is_probe)
-    {
-        LOGINFO("Probe Move - waiting for the sync event" << std::endl);
-
-        probeSyncCallback.value().waitUntilComplete();
-        // TODO do we need to resume the PRU?
-
-        assert(state != startPos);
-    }
 
     queue_move_fail = false;
 }
@@ -444,10 +421,12 @@ void PathPlanner::run()
             const VectorN startPos = machineToWorld(cur.getStartMachinePos());
 
             assert(state == cur.getStartMachinePos());
-            state = cur.getStartMachinePos() + probeDistanceTraveled;
-            const VectorN endPos = getState();
+            const IntVectorN endMachinePos = cur.getStartMachinePos() + probeDistanceTraveled;
+            const VectorN endPos = machineToWorld(endMachinePos);
 
             lastProbeDistance = vabs(endPos - startPos);
+
+            cur.setProbeResult(endMachinePos);
         }
 
         //LOG("Current move time " << pru.getTotalQueuedMovesTime() / (double) F_CPU << std::endl);
