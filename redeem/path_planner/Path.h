@@ -186,6 +186,7 @@ private:
 
     SyncCallback* syncCallback;
     std::optional<std::future<void>> waitEvent;
+    std::optional<std::promise<IntVectorN>> probeResult;
 
     Path(const Path& path) = delete;
     Path& operator=(const Path&) = delete;
@@ -314,6 +315,24 @@ public:
     void setWaitEvent(std::future<void>&& future)
     {
         waitEvent = std::move(future);
+    }
+
+    inline bool hasProbeResult()
+    {
+        return (bool)probeResult;
+    }
+
+    std::future<IntVectorN> prepareProbeResult()
+    {
+        assert(!hasProbeResult());
+        probeResult.emplace();
+        return probeResult.value().get_future();
+    }
+
+    void setProbeResult(IntVectorN result)
+    {
+        assert(hasProbeResult());
+        probeResult.value().set_value(result);
     }
 
     SyncCallback* getSyncCallback()
