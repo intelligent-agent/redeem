@@ -4,7 +4,6 @@ Set fan power and PWM frequency
 
 Author: Mathieu Monney
 email: zittix(at)xwaves(dot)net
-Website: http://www.xwaves.net
 License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 """
 from __future__ import absolute_import

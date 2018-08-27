@@ -3,7 +3,6 @@
   This file is part of Redeem - 3D Printer control software
 
   Author: Mathieu Monney
-  Website: http://www.xwaves.net
   License: GNU GPLv3 http://www.gnu.org/copyleft/gpl.html
 
 

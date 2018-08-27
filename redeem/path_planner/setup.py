@@ -44,6 +44,5 @@ setup(
     description='PathPlanner for 3D printer',
     author='Mathieu Monney',
     author_email='zittix@xwaves.net',
-    url='http://www.xwaves.net',
     ext_modules=[pathplanner],
 )
