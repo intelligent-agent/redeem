@@ -18,7 +18,7 @@ source:
 	$(PYTHON) setup.py sdist $(COMPILE)
 
 install:
-	$(PYTHON) setup.py install
+	$(PYTHON) setup.py develop
 	mkdir -p /etc/redeem
 	cp configs/*.cfg /etc/redeem/
 	cp data/*.cht /etc/redeem/
