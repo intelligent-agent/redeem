@@ -8,7 +8,7 @@
 #include <experimental/optional>
 namespace std
 {
-using namespace experimental;    
+using namespace experimental;
 }
 #endif
 #include <vector>

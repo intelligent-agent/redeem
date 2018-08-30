@@ -23,8 +23,8 @@
  
 */
 
-#include "PathPlanner.h"
 #include "AlarmCallback.h"
+#include "PathPlanner.h"
 
 // Speeds / accels
 void PathPlanner::setMaxSpeeds(VectorN speeds)

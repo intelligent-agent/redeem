@@ -24,9 +24,9 @@
 
 */
 
+#include "Path.h"
 #include "Delta.h"
 #include "Logger.h"
-#include "Path.h"
 #include <algorithm>
 #include <cmath>
 #include <numeric>
