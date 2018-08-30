@@ -530,3 +530,25 @@ TEST(PathQueueBasics, HandlesWrapAroundForBeforePathRemoval)
     ASSERT_TRUE(queue.popPath());
     ASSERT_TRUE(queue.popPath());
 }
+
+TEST(PathQueueBasics, SignalsEmptyAfterOneBigPath)
+{
+    MockPathOptimizer optimizer;
+    MockPathQueue queue(optimizer, 10, 30ll * F_CPU);
+
+    Path path;
+    EXPECT_CALL(optimizer, onPathAdded(::testing::_, 0, 0)).WillOnce(::testing::Return(31ll * F_CPU));
+    queue.addPath(std::move(path));
+
+    EXPECT_CALL(optimizer, beforePathRemoval).WillOnce(::testing::Return(-31ll * F_CPU));
+
+    WorkerThread thread([&queue]() {
+        EXPECT_TRUE(queue.waitForQueueToEmpty());
+    });
+
+    EXPECT_FALSE(thread.isFinished());
+
+    queue.popPath();
+
+    thread.waitAndJoin();
+}
