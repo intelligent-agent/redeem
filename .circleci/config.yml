@@ -7,47 +7,27 @@ jobs:
   build:
     docker:
       # specify the version you desire here
-      # use `-browsers` prefix for selenium tests, e.g. `3.6.1-browsers`
-      - image: circleci/python:2.7
-
-      # Specify service dependencies here if necessary
-      # CircleCI maintains a library of pre-built images
-      # documented at https://circleci.com/docs/2.0/circleci-images/
-      # - image: circleci/postgres:9.4
+      - image: wackerbarth/builder:18.04
 
     working_directory: ~/repo
 
     steps:
-      - checkout
-
-      # Download and cache dependencies
-      - restore_cache:
-          keys:
-          - v1-dependencies-{{ checksum "requirements.txt" }}-{{ checksum "setup.py" }}
-          # fallback to using the latest cache if no exact match is found
-          - v1-dependencies-
-
       - run:
-          name: install dependencies
-          command: |
-            virtualenv venv
-            . venv/bin/activate
-            pip install yapf
-            # pip install -r requirements.txt
+          name: "Set 5m Build Time Limit"
+          command: sleep 300; touch .fail-build; exit 1
+          background: true
 
-      - save_cache:
-          paths:
-            - ./venv
-          key: v1-dependencies-{{ checksum "requirements.txt" }}-{{ checksum "setup.py" }}
+      - checkout
 
       # Run style checks
       - run:
-          name: Verify styling
+          name: "Verify styling"
           command: |
-            . venv/bin/activate
+            export PATH=/clang_6.0.1/bin:$PATH
             cd ~/repo
-            yapf --diff --exclude venv/ --exclude .git/ -r .
-            FORMATTING_ERRORS=$?
+            # yapf --diff --exclude venv/ --exclude .git/ -r .
+            # FORMATTING_ERRORS=$?
+            FORMATTING_ERRORS=0
             SOURCE_FILES=`find ./redeem -name \*.cpp -type f -or -name \*.h -type f`
             for SOURCE_FILE in $SOURCE_FILES
             do
@@ -55,6 +35,14 @@ jobs:
               if [ "$FORMATTING_ISSUE_COUNT" -gt "0" ]; then
                 echo "Source file $SOURCE_FILE contains formatting issues. Please use clang-format tool to resolve found issues."
                 FORMATTING_ERRORS=1
+                # Reformat this file
+                clang-format -i $SOURCE_FILE
+                git diff $SOURCE_FILE
               fi
             done
             exit $FORMATTING_ERRORS
+
+      - run:
+          name: "Enforce Build Time Limit"
+          command: if [ -f .fail-build ]; then echo "Build ran too long."; exit 1; fi
+          when: always
