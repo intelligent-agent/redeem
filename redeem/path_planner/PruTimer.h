@@ -11,6 +11,7 @@
 
 #include "Logger.h"
 #include "PruInterface.h"
+#include "config.h"
 #include <condition_variable>
 #include <functional>
 #include <iostream>
@@ -18,7 +19,6 @@
 #include <queue>
 #include <string.h>
 #include <thread>
-#include "config.h"
 
 //#define DEMO_PRU
 

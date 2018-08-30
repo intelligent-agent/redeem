@@ -33,7 +33,7 @@ int64_t PathOptimizer::onPathAdded(std::vector<Path>& queue, size_t first, size_
 {
     calculateSafeSpeed(queue[last]);
 
-	int64_t timeChange = queue[last].getEstimatedTime();
+    int64_t timeChange = queue[last].getEstimatedTime();
 
     if (first != last)
     {

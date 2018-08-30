@@ -204,13 +204,13 @@ bool PruTimer::initPRU(const std::string& firmware_stepper, const std::string& f
         LOG("[WARNING] Unable to execute firmware on PRU1" << std::endl);
     }
 
-        //std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
+    // std::this_thread::sleep_for( std::chrono::milliseconds( 1000 ) );
 
-        /*prussdrv_pru_wait_event (PRU_EVTOUT_0);
+    // prussdrv_pru_wait_event (PRU_EVTOUT_0);
 
-	 printf("\tINFO: PRU0 completed transfer of endstop.\r\n");
+    // printf("\tINFO: PRU0 completed transfer of endstop.\r\n");
 
-	 prussdrv_pru_clear_event (PRU_EVTOUT_0, PRU0_ARM_INTERRUPT);*/
+    // prussdrv_pru_clear_event (PRU_EVTOUT_0, PRU0_ARM_INTERRUPT);
 
 #endif
 
@@ -465,17 +465,17 @@ void PruTimer::pushBlock(uint8_t* blockMemory, size_t blockLen, unsigned int uni
 
                 unsigned long timeSoFar = moreToWrite ? totalTime / 2 : totalTime;
 
-                blocksID.emplace(maxSize + 4, timeSoFar, moreToWrite ? nullptr : callback); //FIXME: TotalTime is not /2 but doesn't it to be precise to make it work...
+                blocksID.emplace(maxSize + 4, timeSoFar, moreToWrite ? nullptr : callback); //FIXME: TotalTime is not /2 but doesn't need to be precise to make it work...
 
                 ddr_mem_used += maxSize + 4;
                 totalQueuedMovesTime += timeSoFar;
 
-                //First copy the data
-                //LOG( std::dec << "Writing " << maxSize+4 << " bytes to 0x" << std::hex << (unsigned long)ddr_write_location << std::endl);
+                // First copy the data
+                // LOG( std::dec << "Writing " << maxSize+4 << " bytes to 0x" << std::hex << (unsigned long)ddr_write_location << std::endl);
 
                 memcpy(ddr_write_location + 4, blockStart, maxSize);
 
-                //Then write on the next free area OF DDR MAGIC
+                // Then write on the next free area OF DDR MAGIC
                 uint32_t nb;
 
                 if (resetDDR)
@@ -498,19 +498,19 @@ void PruTimer::pushBlock(uint8_t* blockMemory, size_t blockLen, unsigned int uni
                     msync(ddr_mem, sizeof(nb), MS_SYNC);
                 }
 
-                //Need it?
+                // Need it?
                 msync(ddr_write_location + 4, maxSize + 4, MS_SYNC);
 
-                //Then signal how much data we have to the PRU
+                // Then signal how much data we have to the PRU
                 nb = (uint32_t)maxSize / unit;
 
                 nbStepsWritten += nb;
 
                 memcpy(ddr_write_location, &nb, sizeof(nb));
 
-                //LOG( "Written " << std::dec << maxSize << " bytes of stepper commands." << std::endl);
+                // LOG( "Written " << std::dec << maxSize << " bytes of stepper commands." << std::endl);
 
-                //LOG( "Remaining free memory: " << std::dec << ddr_size-ddr_mem_used << " bytes." << std::endl);
+                // LOG( "Remaining free memory: " << std::dec << ddr_size-ddr_mem_used << " bytes." << std::endl);
 
                 msync(ddr_write_location, 4, MS_SYNC);
 
@@ -521,7 +521,7 @@ void PruTimer::pushBlock(uint8_t* blockMemory, size_t blockLen, unsigned int uni
                 }
                 else
                 {
-                    //It is now the begining
+                    // It is now the begining
                     ddr_write_location = ddr_mem;
                 }
 
@@ -533,7 +533,7 @@ void PruTimer::pushBlock(uint8_t* blockMemory, size_t blockLen, unsigned int uni
 
                     assert(remainingSize == (remainingSize / unit) * unit);
 
-                    blocksID.emplace(remainingSize + 4, totalTime - timeSoFar, callback); //FIXME: TotalTime is not /2 but doesn't it to be precise to make it work...
+                    blocksID.emplace(remainingSize + 4, totalTime - timeSoFar, callback); //FIXME: TotalTime is not /2 but it doesn't need to be precise to make it work...
 
                     ddr_mem_used += remainingSize + 4;
                     totalQueuedMovesTime += totalTime - timeSoFar;
@@ -645,12 +645,12 @@ void PruTimer::run()
         if (stop)
             break;
 
-            /*
-		if (nbWaitedEvent)
-			LOG( ("\tINFO: PRU0 completed transfer.\r\n"));
-		else
-			LOG( ("\tINFO: PRU0 transfer timeout.\r\n"));
-		*/
+#if 0
+    		if (nbWaitedEvent)
+    			LOG( ("\tINFO: PRU0 completed transfer.\r\n"));
+    		else
+    			LOG( ("\tINFO: PRU0 transfer timeout.\r\n"));
+#endif
 
 #ifndef DEMO_PRU
         if (nbWaitedEvent)
@@ -724,14 +724,14 @@ void PruTimer::run()
 
 void PruTimer::suspend()
 {
-    //We lock it so that we are thread safe
+    // We lock it so that we are thread safe
     std::unique_lock<std::mutex> lk(mutex_memory);
     *pru_control = 1;
 }
 
 void PruTimer::resume()
 {
-    //We lock it so that we are thread safe
+    // We lock it so that we are thread safe
     std::unique_lock<std::mutex> lk(mutex_memory);
     *pru_control = 0;
 }
