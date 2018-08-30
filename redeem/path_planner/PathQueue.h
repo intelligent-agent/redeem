@@ -71,7 +71,6 @@ private:
 
         if (availableSlots == queue.size() - 1)
         {
-            lock.unlock();
             queueHasPaths.notify_all();
         }
 
@@ -134,23 +133,20 @@ public:
         // subtract one because the optimizer does touch the last index
         curTime += optimizer.beforePathRemoval(queue, readIndex, (writeIndex + queue.size() - 1) % queue.size());
 
-        Path result(std::move(queue[currentReadIndex]));
-
         readIndex = (readIndex + 1) % queue.size();
         availableSlots++;
 
         if (addPathMightBeBlocking && doesQueueHaveSpace())
         {
-            lock.unlock();
             queueHasSpace.notify_all();
         }
-        else if (availableSlots == queue.size())
+
+        if (availableSlots == queue.size())
         {
-            lock.unlock();
             queueIsEmpty.notify_all();
         }
 
-        return std::move(result);
+        return std::move(queue[currentReadIndex]);
     }
 
     bool queueSyncEvent(SyncCallback& callback, bool blocking)
