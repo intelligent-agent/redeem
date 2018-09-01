@@ -2,14 +2,14 @@
 
 #include <cmath>
 
-int64_t PathOptimizer::beforePathRemoval(std::vector<Path>& queue, size_t first, size_t last)
+int64_t PathOptimizer::beforePathRemoval(std::vector<Path>& queue, PathQueueIndex first, PathQueueIndex last)
 {
-    int64_t timeChange = -queue[first].getEstimatedTime();
+    int64_t timeChange = -queue[first.value].getEstimatedTime();
 
     if (first != last)
     {
-        Path& firstPath = queue[first];
-        Path& secondPath = queue[(first + 1) % queue.size()];
+        Path& firstPath = queue[first.value];
+        Path& secondPath = queue[(first + 1).value];
 
         // Calculate the maximum possible end speed for firstPath.
         // We're using the formula vf^2 = v0^2 + 2*a*d.
@@ -29,16 +29,16 @@ int64_t PathOptimizer::beforePathRemoval(std::vector<Path>& queue, size_t first,
     return timeChange;
 }
 
-int64_t PathOptimizer::onPathAdded(std::vector<Path>& queue, size_t first, size_t last)
+int64_t PathOptimizer::onPathAdded(std::vector<Path>& queue, PathQueueIndex first, PathQueueIndex last)
 {
-    calculateSafeSpeed(queue[last]);
+    calculateSafeSpeed(queue[last.value]);
 
-    int64_t timeChange = queue[last].getEstimatedTime();
+    int64_t timeChange = queue[last.value].getEstimatedTime();
 
     if (first != last)
     {
         // compute the junction speed for the new path
-        calculateJunctionSpeed(queue[last - 1], queue[last]);
+        calculateJunctionSpeed(queue[(last - 1).value], queue[last.value]);
     }
 
     while (first != last)
@@ -46,10 +46,10 @@ int64_t PathOptimizer::onPathAdded(std::vector<Path>& queue, size_t first, size_
         // Loop through all paths in pairs and update the junctions between them.
         // This means we'll touch everything but the end speed of the last move (which is fixed at maxSpeedJump/2)
         // and the start speed of the first move (which is fixed because the move before that is already being carried out).
-        Path& currentPath = queue[last];
+        Path& currentPath = queue[last.value];
 
-        last = (last + queue.size() - 1) % queue.size();
-        Path& previousPath = queue[last];
+        last--;
+        Path& previousPath = queue[last.value];
 
         if (currentPath.getStartSpeed() == previousPath.getMaxJunctionSpeed())
         {
