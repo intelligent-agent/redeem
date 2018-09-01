@@ -5,6 +5,7 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
+#include "PathOptimizerInterface.h"
 #include "PathQueue.h"
 
 #include "TestUtils.h"
@@ -16,14 +17,14 @@ public:
     {
     }
 
-    int64_t onPathAdded(std::vector<Path>& queue, size_t, size_t finish)
+    int64_t onPathAdded(std::vector<Path>& queue, PathQueueIndex, PathQueueIndex finish)
     {
-        return queue[finish].getEstimatedTime();
+        return queue[finish.value].getEstimatedTime();
     }
 
-    int64_t beforePathRemoval(std::vector<Path>& queue, size_t start, size_t)
+    int64_t beforePathRemoval(std::vector<Path>& queue, PathQueueIndex start, PathQueueIndex)
     {
-        return -queue[start].getEstimatedTime();
+        return -queue[start.value].getEstimatedTime();
     }
 };
 
@@ -429,19 +430,24 @@ TEST(PathQueueBasics, QueuesWaitEvents)
 class MockPathOptimizer : public PathOptimizerInterface
 {
 public:
-    MOCK_METHOD3(onPathAdded, int64_t(std::vector<Path>&, size_t, size_t));
-    MOCK_METHOD3(beforePathRemoval, int64_t(std::vector<Path>&, size_t, size_t));
+    MOCK_METHOD3(onPathAdded, int64_t(std::vector<Path>&, PathQueueIndex, PathQueueIndex));
+    MOCK_METHOD3(beforePathRemoval, int64_t(std::vector<Path>&, PathQueueIndex, PathQueueIndex));
 };
 
 typedef PathQueue<MockPathOptimizer> MockPathQueue;
 
 TEST(PathQueueBasics, BlocksWhenFullByTime)
 {
+    constexpr size_t queueSize = 10;
     MockPathOptimizer optimizer;
-    MockPathQueue queue(optimizer, 10, 30ll * F_CPU);
+    MockPathQueue queue(optimizer, queueSize, 30ll * F_CPU);
+
+    std::function<PathQueueIndex(size_t)> index = [queueSize](size_t index) {
+        return PathQueueIndex(index, queueSize);
+    };
 
     Path path;
-    EXPECT_CALL(optimizer, onPathAdded(::testing::_, 0, 0)).WillOnce(::testing::Return(31ll * F_CPU));
+    EXPECT_CALL(optimizer, onPathAdded(::testing::_, index(0), index(0))).WillOnce(::testing::Return(31ll * F_CPU));
     queue.addPath(std::move(path));
 
     EXPECT_CALL(optimizer, onPathAdded);
@@ -461,25 +467,35 @@ TEST(PathQueueBasics, BlocksWhenFullByTime)
 
 TEST(PathQueueBasics, CallsOnPathAddedAfterAdd)
 {
+    constexpr size_t queueSize = 4;
     MockPathOptimizer optimizer;
-    MockPathQueue queue(optimizer, 4, 100);
+    MockPathQueue queue(optimizer, queueSize, 100);
+
+    std::function<PathQueueIndex(size_t)> index = [queueSize](size_t index) {
+        return PathQueueIndex(index, queueSize);
+    };
 
     Path path;
 
-    EXPECT_CALL(optimizer, onPathAdded(::testing::_, 0, 0));
+    EXPECT_CALL(optimizer, onPathAdded(::testing::_, index(0), index(0)));
 
     ASSERT_TRUE(queue.addPath(std::move(path)));
 }
 
 TEST(PathQueueBasics, CallsBeforePathRemovalBeforePop)
 {
+    constexpr size_t queueSize = 4;
     MockPathOptimizer optimizer;
-    MockPathQueue queue(optimizer, 4, 100);
+    MockPathQueue queue(optimizer, queueSize, 100);
+
+    std::function<PathQueueIndex(size_t)> index = [queueSize](size_t index) {
+        return PathQueueIndex(index, queueSize);
+    };
 
     Path path;
 
-    EXPECT_CALL(optimizer, onPathAdded(::testing::_, 0, 0));
-    EXPECT_CALL(optimizer, beforePathRemoval(::testing::_, 0, 0));
+    EXPECT_CALL(optimizer, onPathAdded(::testing::_, index(0), index(0)));
+    EXPECT_CALL(optimizer, beforePathRemoval(::testing::_, index(0), index(0)));
 
     ASSERT_TRUE(queue.addPath(std::move(path)));
     path = queue.popPath().value();
@@ -487,16 +503,21 @@ TEST(PathQueueBasics, CallsBeforePathRemovalBeforePop)
 
 TEST(PathQueueBasics, HandlesWrapAroundForOnPathAdded)
 {
+    constexpr size_t queueSize = 3;
     MockPathOptimizer optimizer;
-    MockPathQueue queue(optimizer, 3, 100);
+    MockPathQueue queue(optimizer, queueSize, 100);
+
+    std::function<PathQueueIndex(size_t)> index = [queueSize](size_t index) {
+        return PathQueueIndex(index, queueSize);
+    };
 
     Path path;
 
-    EXPECT_CALL(optimizer, onPathAdded(::testing::_, 0, 0));
-    EXPECT_CALL(optimizer, onPathAdded(::testing::_, 0, 1));
-    EXPECT_CALL(optimizer, beforePathRemoval(::testing::_, 0, 1));
-    EXPECT_CALL(optimizer, onPathAdded(::testing::_, 1, 2));
-    EXPECT_CALL(optimizer, onPathAdded(::testing::_, 1, 0));
+    EXPECT_CALL(optimizer, onPathAdded(::testing::_, index(0), index(0)));
+    EXPECT_CALL(optimizer, onPathAdded(::testing::_, index(0), index(1)));
+    EXPECT_CALL(optimizer, beforePathRemoval(::testing::_, index(0), index(1)));
+    EXPECT_CALL(optimizer, onPathAdded(::testing::_, index(1), index(2)));
+    EXPECT_CALL(optimizer, onPathAdded(::testing::_, index(1), index(0)));
 
     ASSERT_TRUE(queue.addPath(std::move(path)));
     ASSERT_TRUE(queue.addPath(std::move(path)));
@@ -507,19 +528,24 @@ TEST(PathQueueBasics, HandlesWrapAroundForOnPathAdded)
 
 TEST(PathQueueBasics, HandlesWrapAroundForBeforePathRemoval)
 {
+    constexpr size_t queueSize = 3;
     MockPathOptimizer optimizer;
-    MockPathQueue queue(optimizer, 3, 100);
+    MockPathQueue queue(optimizer, queueSize, 100);
+
+    std::function<PathQueueIndex(size_t)> index = [queueSize](size_t index) {
+        return PathQueueIndex(index, queueSize);
+    };
 
     Path path;
 
-    EXPECT_CALL(optimizer, onPathAdded(::testing::_, 0, 0));
-    EXPECT_CALL(optimizer, onPathAdded(::testing::_, 0, 1));
-    EXPECT_CALL(optimizer, onPathAdded(::testing::_, 0, 2));
-    EXPECT_CALL(optimizer, beforePathRemoval(::testing::_, 0, 2));
-    EXPECT_CALL(optimizer, beforePathRemoval(::testing::_, 1, 2));
-    EXPECT_CALL(optimizer, onPathAdded(::testing::_, 2, 0));
-    EXPECT_CALL(optimizer, beforePathRemoval(::testing::_, 2, 0));
-    EXPECT_CALL(optimizer, beforePathRemoval(::testing::_, 0, 0));
+    EXPECT_CALL(optimizer, onPathAdded(::testing::_, index(0), index(0)));
+    EXPECT_CALL(optimizer, onPathAdded(::testing::_, index(0), index(1)));
+    EXPECT_CALL(optimizer, onPathAdded(::testing::_, index(0), index(2)));
+    EXPECT_CALL(optimizer, beforePathRemoval(::testing::_, index(0), index(2)));
+    EXPECT_CALL(optimizer, beforePathRemoval(::testing::_, index(1), index(2)));
+    EXPECT_CALL(optimizer, onPathAdded(::testing::_, index(2), index(0)));
+    EXPECT_CALL(optimizer, beforePathRemoval(::testing::_, index(2), index(0)));
+    EXPECT_CALL(optimizer, beforePathRemoval(::testing::_, index(0), index(0)));
 
     ASSERT_TRUE(queue.addPath(std::move(path)));
     ASSERT_TRUE(queue.addPath(std::move(path)));
@@ -533,11 +559,16 @@ TEST(PathQueueBasics, HandlesWrapAroundForBeforePathRemoval)
 
 TEST(PathQueueBasics, SignalsEmptyAfterOneBigPath)
 {
+    constexpr size_t queueSize = 10;
     MockPathOptimizer optimizer;
     MockPathQueue queue(optimizer, 10, 30ll * F_CPU);
 
+    std::function<PathQueueIndex(size_t)> index = [queueSize](size_t index) {
+        return PathQueueIndex(index, queueSize);
+    };
+
     Path path;
-    EXPECT_CALL(optimizer, onPathAdded(::testing::_, 0, 0)).WillOnce(::testing::Return(31ll * F_CPU));
+    EXPECT_CALL(optimizer, onPathAdded(::testing::_, index(0), index(0))).WillOnce(::testing::Return(31ll * F_CPU));
     queue.addPath(std::move(path));
 
     EXPECT_CALL(optimizer, beforePathRemoval).WillOnce(::testing::Return(-31ll * F_CPU));

@@ -15,7 +15,54 @@ using namespace experimental;
 
 #include "Logger.h"
 #include "Path.h"
-#include "PathOptimizerInterface.h"
+
+struct PathQueueIndex
+{
+    size_t value;
+    size_t queueSize;
+
+    PathQueueIndex(size_t value, size_t queueSize)
+        : value(value)
+        , queueSize(queueSize)
+    {
+    }
+
+    PathQueueIndex operator+(size_t rhsRaw)
+    {
+        return PathQueueIndex((value + rhsRaw) % queueSize, queueSize);
+    }
+
+    PathQueueIndex operator-(size_t rhsRaw)
+    {
+        return PathQueueIndex((value - rhsRaw + queueSize) % queueSize, queueSize);
+    }
+
+    PathQueueIndex operator++(int)
+    {
+        PathQueueIndex temp(*this);
+        value = (value + 1) % queueSize;
+        return temp;
+    }
+
+    PathQueueIndex operator--(int)
+    {
+        PathQueueIndex temp(*this);
+        value = (value - 1 + queueSize) % queueSize;
+        return temp;
+    }
+
+    friend bool operator==(PathQueueIndex lhs, PathQueueIndex rhs)
+    {
+        return lhs.value == rhs.value && lhs.queueSize == rhs.queueSize;
+    }
+
+    friend bool operator!=(PathQueueIndex lhs, PathQueueIndex rhs)
+    {
+        return lhs.value != rhs.value || lhs.queueSize != rhs.queueSize;
+    }
+};
+
+class PathOptimizerInterface;
 
 template <typename PathOptimizerType, typename std::enable_if<std::is_base_of<PathOptimizerInterface, PathOptimizerType>::value>::type* = nullptr>
 class PathQueue
@@ -29,8 +76,8 @@ private:
     std::vector<Path> queue;
     uint64_t maxTime;
     uint64_t curTime;
-    size_t writeIndex;
-    size_t readIndex;
+    PathQueueIndex writeIndex;
+    PathQueueIndex readIndex;
     size_t availableSlots;
     bool running;
 
@@ -62,11 +109,11 @@ private:
             return false;
         }
 
-        queue[writeIndex] = std::move(path);
+        queue[writeIndex.value] = std::move(path);
 
         curTime += optimizer.onPathAdded(queue, readIndex, writeIndex);
 
-        writeIndex = (writeIndex + 1) % queue.size();
+        writeIndex++;
         availableSlots--;
 
         if (availableSlots == queue.size() - 1)
@@ -83,8 +130,8 @@ public:
         , queue(size)
         , maxTime(maxTime)
         , curTime(0)
-        , writeIndex(0)
-        , readIndex(0)
+        , writeIndex(0, size)
+        , readIndex(0, size)
         , availableSlots(size)
         , running(true)
     {
@@ -122,13 +169,13 @@ public:
             return std::optional<Path>();
         }
 
-        const size_t currentReadIndex = readIndex;
+        const PathQueueIndex currentReadIndex = readIndex;
         const bool addPathMightBeBlocking = !doesQueueHaveSpace();
 
         // subtract one because the optimizer does touch the last index
-        curTime += optimizer.beforePathRemoval(queue, readIndex, (writeIndex + queue.size() - 1) % queue.size());
+        curTime += optimizer.beforePathRemoval(queue, readIndex, writeIndex - 1);
 
-        readIndex = (readIndex + 1) % queue.size();
+        readIndex++;
         availableSlots++;
 
         if (addPathMightBeBlocking && doesQueueHaveSpace())
@@ -142,7 +189,7 @@ public:
             queueIsEmpty.notify_all();
         }
 
-        return std::move(queue[currentReadIndex]);
+        return std::move(queue[currentReadIndex.value]);
     }
 
     bool queueSyncEvent(SyncCallback& callback, bool blocking)
@@ -154,13 +201,13 @@ public:
             return false;
         }
 
-        const size_t lastPathIndex = (writeIndex + queue.size() - 1) % queue.size();
+        const PathQueueIndex lastPathIndex = writeIndex - 1;
 
         if (queue.size() - availableSlots > 0
-            && !queue[lastPathIndex].isSyncEvent()
-            && !queue[lastPathIndex].isSyncWaitEvent())
+            && !queue[lastPathIndex.value].isSyncEvent()
+            && !queue[lastPathIndex.value].isSyncWaitEvent())
         {
-            Path& lastPath = queue[(writeIndex + queue.size() - 1) % queue.size()];
+            Path& lastPath = queue[lastPathIndex.value];
             lastPath.setSyncEvent(callback, blocking);
             return true;
         }

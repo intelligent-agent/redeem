@@ -14,27 +14,31 @@ struct PathOptimizerTests : ::testing::Test
     PathBuilder builder;
     PathOptimizer optimizer;
     std::vector<Path> paths;
-    size_t firstPath = 0;
-    size_t lastPath = 0;
+    PathQueueIndex firstPath;
+    PathQueueIndex lastPath;
 
     PathOptimizerTests()
+        : builder(PathBuilder::CartesianBuilder())
+        , optimizer()
+        , paths(10)
+        , firstPath(0, 10)
+        , lastPath(0, 10)
     {
-        builder = PathBuilder::CartesianBuilder();
         paths.resize(10);
         optimizer.setMaxSpeedJumps(builder.maxSpeedJumps);
     }
 
     int64_t addPath(Path&& p)
     {
-        paths[lastPath] = std::move(p);
-        return optimizer.onPathAdded(paths, 0, lastPath++);
+        paths[lastPath.value] = std::move(p);
+        return optimizer.onPathAdded(paths, firstPath, lastPath++);
     }
 
     void run()
     {
         std::vector<Path> result;
 
-        for (size_t i = firstPath; i < lastPath; i++)
+        for (PathQueueIndex i = firstPath; i != lastPath; i++)
         {
             optimizer.beforePathRemoval(paths, i, lastPath - 1);
         }
@@ -256,4 +260,16 @@ TEST_F(PathOptimizerTests, AddingASecondPathReturnsTimeChange)
 {
     EXPECT_EQ(addPath(builder.makePath(0.2, 0, 0, 0.1)), 2ll * F_CPU);
     EXPECT_EQ(addPath(builder.makePath(0.2, 0, 0, 0.1)), 2ll * F_CPU);
+}
+
+TEST_F(PathOptimizerTests, CorrectlyWrapsAroundAtQueueEnd)
+{
+    firstPath = lastPath = PathQueueIndex(paths.size() - 1, paths.size());
+
+    addPath(builder.makePath(0.2, 0, 0, 0.2));
+    addPath(builder.makePath(0.2, 0, 0, 0.2));
+
+    ASSERT_EQ(lastPath.value, 1);
+
+    EXPECT_DOUBLE_EQ(paths[firstPath.value].getMaxJunctionSpeed(), 0.2);
 }
