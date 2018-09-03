@@ -102,7 +102,7 @@ class PruTimer : public PruInterface
 
     inline bool isPruQueueFullByTime()
     {
-        return totalQueuedMovesTime >= maxQueuedMovesTime;
+        return totalQueuedMovesTime >= maxQueuedMovesTime && blocksID.size() > 1;
     }
 
     inline void notifyIfPruQueueIsntFullByTime()
