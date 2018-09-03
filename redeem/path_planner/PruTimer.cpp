@@ -407,11 +407,6 @@ void PruTimer::pushBlock(uint8_t* blockMemory, size_t blockLen, unsigned int uni
             if (!ddr_mem || stop)
                 return;
 
-            if (ddr_mem_used == 0)
-            {
-                LOGINFO("PRU DDR was empty" << std::endl);
-            }
-
             //Copy at the right location
             if (ddr_write_location + currentBlockSize + 12 > ddr_mem_end)
             {
@@ -658,6 +653,7 @@ void PruTimer::run()
 #endif
         msync(ddr_nr_events, 4, MS_SYNC);
         uint32_t nb = *ddr_nr_events;
+        bool underflowOccurred = false;
 
         if (nb == 0xFFFFFFFF)
         {
@@ -715,7 +711,15 @@ void PruTimer::run()
             if (isPruMemoryEmpty())
             {
                 assert(totalQueuedMovesTime == 0);
+                assert(blocksID.empty());
             }
+
+            underflowOccurred = isPruMemoryEmpty() && !wasMemoryEmpty;
+        }
+
+        if (underflowOccurred)
+        {
+            LOGWARNING("PRU queue underflow" << std::endl);
         }
         //		LOG( "NB event after " << std::dec << nb << " / " << currentNbEvents << std::endl);
         //		LOG( std::dec <<ddr_mem_used << " bytes used, free: " <<std::dec <<  ddr_size-ddr_mem_used<< "." << std::endl);

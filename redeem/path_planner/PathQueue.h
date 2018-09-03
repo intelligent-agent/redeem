@@ -162,11 +162,6 @@ public:
     {
         std::unique_lock<std::mutex> lock(mutex);
 
-        if (availableSlots == queue.size())
-        {
-            //LOGINFO("path queue underrun" << std::endl);
-        }
-
         queueHasPaths.wait(lock, [this] { return !running || availableSlots != queue.size(); });
 
         if (!running)
@@ -190,6 +185,7 @@ public:
 
         if (availableSlots == queue.size())
         {
+            LOGWARNING("Path queue underflow" << std::endl);
             queueIsEmpty.notify_all();
         }
 
