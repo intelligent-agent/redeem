@@ -4,7 +4,7 @@
 #
 version: 2.0
 jobs:
-  build:
+  check_style_cpp:
     docker:
       # specify the version you desire here
       - image: wackerbarth/builder:18.04
@@ -25,8 +25,6 @@ jobs:
           command: |
             export PATH=/clang_6.0.1/bin:$PATH
             cd ~/repo
-            # yapf --diff --exclude venv/ --exclude .git/ -r .
-            # FORMATTING_ERRORS=$?
             FORMATTING_ERRORS=0
             SOURCE_FILES=`find ./redeem -name \*.cpp -type f -or -name \*.h -type f`
             for SOURCE_FILE in $SOURCE_FILES
@@ -46,3 +44,98 @@ jobs:
           name: "Enforce Build Time Limit"
           command: if [ -f .fail-build ]; then echo "Build ran too long."; exit 1; fi
           when: always
+
+  check_style_python:
+    docker:
+      - image: circleci/python:2.7
+
+    working_directory: ~/repo
+
+    steps:
+      - run:
+          name: "Set 5m Build Time Limit"
+          command: sleep 300; touch .fail-build; exit 1
+          background: true
+
+      - checkout
+
+      # Download and cache dependencies
+      - restore_cache:
+          keys:
+          - v1-dependencies-{{ checksum "setup.cfg" }}
+          # fallback to using the latest cache if no exact match is found
+          - v1-dependencies-
+
+      - run:
+          name: install dependencies
+          command: |
+            virtualenv venv
+            . venv/bin/activate
+            pip install yapf
+            # pip install -r requirements.txt
+
+      - save_cache:
+          paths:
+            - ./venv
+          key: v1-dependencies-{{ checksum "setup.cfg" }}
+
+      # Run style checks
+      - run:
+          name: Verify styling for python files
+          command: |
+            . venv/bin/activate
+            cd ~/repo
+            yapf --diff --exclude venv/ --exclude .git/ -r .
+
+      - run:
+          name: "Enforce Build Time Limit"
+          command: if [ -f .fail-build ]; then echo "Build ran too long."; exit 1; fi
+          when: always
+
+  check_style_js:
+    docker:
+      - image: wackerbarth/builder:18.04
+
+    working_directory: ~/repo
+
+    steps:
+      - run:
+          name: "Set 1m Build Time Limit"
+          command: sleep 60; touch .fail-build; exit 1
+          background: true
+
+      - checkout
+
+      # Run style checks
+      - run:
+          name: Verify styling for javascript
+          command: |
+            export PATH=/clang_6.0.1/bin:$PATH
+            cd ~/repo
+            FORMATTING_ERRORS=0
+            SOURCE_FILES=`find . -name \*.js -type f`
+            for SOURCE_FILE in $SOURCE_FILES
+            do
+              export FORMATTING_ISSUE_COUNT=`clang-format -style=Google -output-replacements-xml $SOURCE_FILE | grep offset | wc -l`
+              if [ "$FORMATTING_ISSUE_COUNT" -gt "0" ]; then
+                echo "Source file $SOURCE_FILE contains formatting issues. Please use clang-format tool to resolve found issues."
+                FORMATTING_ERRORS=1
+                # Reformat this file
+                clang-format -style=Google -i $SOURCE_FILE
+                git diff $SOURCE_FILE
+              fi
+            done
+            exit $FORMATTING_ERRORS
+
+      - run:
+          name: "Enforce Build Time Limit"
+          command: if [ -f .fail-build ]; then echo "Build ran too long."; exit 1; fi
+          when: always
+
+workflows:
+  version: 2
+  commit:
+    jobs:
+      - check_style_python
+      - check_style_js
+      - check_style_cpp
