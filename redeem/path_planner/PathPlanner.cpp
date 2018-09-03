@@ -226,7 +226,7 @@ void PathPlanner::queueMove(VectorN endWorldPos,
 
     Path p;
 
-    p.initialize(state, tweakedEndPos, startWorldPos, endWorldPos, axisStepsPerM,
+    p.initialize(state, tweakedEndPos, startWorldPos, machineToWorld(endPos), axisStepsPerM,
         maxSpeeds, maxAccelerationMPerSquareSecond,
         speed, accel, axis_config, delta_bot, cancelable, is_probe);
 
