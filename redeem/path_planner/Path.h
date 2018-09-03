@@ -166,7 +166,8 @@ private:
     // These fields change throughout the lifecycle of a Path
     unsigned int joinFlags;
     std::atomic_uint_fast32_t flags;
-    double maxJunctionSpeed; /// Max. junction speed between this and next segment
+    double maxStartSpeed; // max exit speed of our starting junction
+    double maxEndSpeed; // max entry speed of our ending junction
 
     // These fields are constant after initialization
     double distance; /// Total distance of the move in NUM_AXIS-dimensional space in meters
@@ -219,7 +220,7 @@ public:
         joinFlags = 0;
     }
 
-    inline bool areParameterUpToDate()
+    inline bool areParameterUpToDate() const
     {
         return joinFlags & FLAG_JOIN_STEPPARAMS_COMPUTED;
     }
@@ -230,7 +231,7 @@ public:
         stepperPath.zero();
     }
 
-    inline bool isStartSpeedFixed()
+    inline bool isStartSpeedFixed() const
     {
         return joinFlags & FLAG_JOIN_START_FIXED;
     }
@@ -245,12 +246,12 @@ public:
         joinFlags |= FLAG_JOIN_END_FIXED | FLAG_JOIN_START_FIXED;
     }
 
-    inline bool isEndSpeedFixed()
+    inline bool isEndSpeedFixed() const
     {
         return joinFlags & FLAG_JOIN_END_FIXED;
     }
 
-    inline bool isCancelable()
+    inline bool isCancelable() const
     {
         return flags & FLAG_CANCELABLE;
     }
@@ -275,32 +276,32 @@ public:
         flags &= ~FLAG_BLOCKED;
     }
 
-    inline bool isBlocked()
+    inline bool isBlocked() const
     {
         return flags & FLAG_BLOCKED;
     }
 
-    inline bool isCheckEndstops()
+    inline bool isCheckEndstops() const
     {
         return flags & FLAG_CHECK_ENDSTOPS;
     }
 
-    inline bool willMoveReachFullSpeed()
+    inline bool willMoveReachFullSpeed() const
     {
         return flags & FLAG_WILL_REACH_FULL_SPEED;
     }
 
-    inline bool isSyncEvent()
+    inline bool isSyncEvent() const
     {
         return flags & FLAG_SYNC;
     }
 
-    inline bool isSyncWaitEvent()
+    inline bool isSyncWaitEvent() const
     {
         return flags & FLAG_SYNC_WAIT;
     }
 
-    inline bool isWaitEvent()
+    inline bool isWaitEvent() const
     {
         return (bool)waitEvent;
     }
@@ -316,7 +317,7 @@ public:
         waitEvent = std::move(future);
     }
 
-    inline bool hasProbeResult()
+    inline bool hasProbeResult() const
     {
         return (bool)probeResult;
     }
@@ -345,37 +346,37 @@ public:
         this->syncCallback = &callback;
     }
 
-    inline bool willUsePressureAdvance()
+    inline bool willUsePressureAdvance() const
     {
         return flags & FLAG_USE_PRESSURE_ADVANCE;
     }
 
-    inline bool isProbeMove()
+    inline bool isProbeMove() const
     {
         return flags & FLAG_PROBE;
     }
 
-    inline bool isNoMove()
+    inline bool isNoMove() const
     {
         return (moveMask & 255) == 0;
     }
 
-    inline bool isAxisMove(unsigned int axis)
+    inline bool isAxisMove(unsigned int axis) const
     {
         return (moveMask & (1 << axis)) != 0;
     }
 
-    inline bool isAxisOnlyMove(unsigned int axis)
+    inline bool isAxisOnlyMove(unsigned int axis) const
     {
         return (moveMask & 255) == (unsigned int)(1 << axis);
     }
 
-    inline unsigned char getAxisMoveMask()
+    inline unsigned char getAxisMoveMask() const
     {
         return moveMask & 255;
     }
 
-    inline int64_t getEstimatedTime()
+    inline int64_t getEstimatedTime() const
     {
         return estimatedTime;
     }
@@ -385,59 +386,72 @@ public:
         estimatedTime = time;
     }
 
-    inline const VectorN& getSpeeds()
+    inline const VectorN& getSpeeds() const
     {
         return speeds;
     }
 
-    inline const VectorN& getWorldMove()
+    inline const VectorN& getWorldMove() const
     {
         return worldMove;
     }
 
-    inline double getMaxJunctionSpeed()
+    inline double getMaxStartSpeed() const
     {
-        return maxJunctionSpeed;
+        return maxStartSpeed;
     }
 
-    inline void setMaxJunctionSpeed(double speed)
+    inline void setMaxStartSpeed(double speed)
     {
-        maxJunctionSpeed = speed;
+        maxStartSpeed = speed;
     }
 
-    inline double getStartSpeed()
+    inline double getMaxEndSpeed() const
+    {
+        return maxEndSpeed;
+    }
+
+    inline void setMaxEndSpeed(double speed)
+    {
+        maxEndSpeed = speed;
+    }
+
+    inline double getStartSpeed() const
     {
         return startSpeed;
     }
 
     inline void setStartSpeed(double speed)
     {
+        assert(!isStartSpeedFixed());
+        assert(APPROX_LESS_THAN(speed, maxStartSpeed) || maxStartSpeed == 0);
         startSpeed = speed;
         invalidateStepperPathParameters();
     }
 
-    inline double getFullSpeed()
+    inline double getFullSpeed() const
     {
         return fullSpeed;
     }
 
-    inline double getEndSpeed()
+    inline double getEndSpeed() const
     {
         return endSpeed;
     }
 
     inline void setEndSpeed(double speed)
     {
+        assert(APPROX_LESS_THAN(speed, maxEndSpeed) || maxEndSpeed == 0);
         endSpeed = speed;
         invalidateStepperPathParameters();
     }
 
-    inline double getAcceleration()
+    inline double getAcceleration() const
     {
         return accel;
     }
 
-    inline double getDistance()
+    inline double getDistance() const
     {
         return distance;
     }
@@ -446,12 +460,12 @@ public:
     /// v^2 = v0^2 + 2 * a * (r - r0)
     /// This determines final velocity from initial velocity, acceleration, and
     /// distance traveled. It's useful because it doesn't involve time.
-    inline double getAccelerationDistance2()
+    inline double getAccelerationDistance2() const
     {
         return 2.0 * distance * accel;
     }
 
-    const IntVectorN& getStartMachinePos()
+    const IntVectorN& getStartMachinePos() const
     {
         return startMachinePos;
     }

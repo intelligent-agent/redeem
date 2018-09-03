@@ -5,10 +5,14 @@
 class PathOptimizer final : public PathOptimizerInterface
 {
 private:
+    friend struct PathOptimizerTests;
+
     VectorN maxSpeedJumps;
 
-    void calculateJunctionSpeed(Path& previousPath, Path& newPath);
-    void calculateSafeSpeed(Path& path);
+    std::tuple<double, double> calculateJunctionSpeed(const Path& previousPath, const Path& newPath);
+    double calculateReachableJunctionSpeed(const Path& firstPath, const double firstOverallSpeed, const Path& secondSpeeds);
+    double calculateSafeSpeed(const Path& path);
+    bool doesJunctionSpeedViolateMaxSpeedJumps(const VectorN& entrySpeeds, const VectorN& exitSpeeds);
 
 public:
     int64_t beforePathRemoval(std::vector<Path>& queue, PathQueueIndex first, PathQueueIndex last) override;
