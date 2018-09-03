@@ -76,7 +76,8 @@ void Path::zero()
 {
     joinFlags = 0;
     flags = 0;
-    maxJunctionSpeed = 0;
+    maxStartSpeed = 0;
+    maxEndSpeed = 0;
 
     distance = 0;
     moveMask = 0;
@@ -117,7 +118,8 @@ Path& Path::operator=(Path&& path)
     // move assignment operator
     joinFlags = path.joinFlags;
     flags = path.flags.load();
-    maxJunctionSpeed = path.maxJunctionSpeed;
+    maxStartSpeed = path.maxStartSpeed;
+    maxEndSpeed = path.maxEndSpeed;
 
     distance = path.distance;
     moveMask = path.moveMask;

@@ -41,6 +41,15 @@
 /* Negligible numeric error - also 1/50th of a CPU cycle */
 #define NEGLIGIBLE_ERROR 1e-10
 
+#define APPROX_LESS_THAN(first, second) \
+    ((first) - (second) < NEGLIGIBLE_ERROR)
+
+#define APPROX_GREATER_THAN(first, second) \
+    ((first) - (second) > -NEGLIGIBLE_ERROR)
+
+#define APPROX_EQUAL(first, second) \
+    (std::abs((first) - (second)) < NEGLIGIBLE_ERROR)
+
 #define AXIS_CONFIG_XY 0
 #define AXIS_CONFIG_H_BELT 1
 #define AXIS_CONFIG_CORE_XY 2

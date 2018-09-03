@@ -48,6 +48,11 @@ struct PathOptimizerTests : ::testing::Test
     {
         return optimizer.beforePathRemoval(paths, firstPath++, lastPath - 1);
     }
+
+    std::tuple<double, double> calculateJunctionSpeed(Path& firstPath, Path& secondPath)
+    {
+        return optimizer.calculateJunctionSpeed(firstPath, secondPath);
+    }
 };
 
 TEST_F(PathOptimizerTests, OneMoveAtHalfMaxSpeedJump)
@@ -98,7 +103,7 @@ TEST_F(PathOptimizerTests, TwoMovesSameDirectionWithSecondOneSlowerThanJerk)
     run();
 
     EXPECT_DOUBLE_EQ(paths[0].getStartSpeed(), 0.005);
-    EXPECT_DOUBLE_EQ(paths[0].getEndSpeed(), 0.002);
+    EXPECT_DOUBLE_EQ(paths[0].getEndSpeed(), 0.012);
     EXPECT_DOUBLE_EQ(paths[1].getStartSpeed(), 0.002);
     EXPECT_DOUBLE_EQ(paths[1].getEndSpeed(), 0.002);
 }
@@ -115,14 +120,6 @@ TEST_F(PathOptimizerTests, TwoMovesRightAngle)
     EXPECT_DOUBLE_EQ(paths[1].getEndSpeed(), 0.005); // back to half because Y is jumping from 0.005 to <unknown>
 }
 
-/*
-NOTE: These two tests cover behavior that is expected but not ideal.
-The current notion of a single junction speed that's shared by two paths
-means that the end speed of one path must be the start speed of the next
-path, even if the rules of maximum speed jumps could potentially let us
-do better.
-*/
-
 TEST_F(PathOptimizerTests, TwoMovesSlowingDown)
 {
     addPath(builder.makePath(0.1, 0, 0, 0.03));
@@ -130,7 +127,7 @@ TEST_F(PathOptimizerTests, TwoMovesSlowingDown)
     run();
 
     EXPECT_DOUBLE_EQ(paths[0].getStartSpeed(), 0.005);
-    EXPECT_DOUBLE_EQ(paths[0].getEndSpeed(), 0.02); // Ideally this could be 0.03, but not today
+    EXPECT_DOUBLE_EQ(paths[0].getEndSpeed(), 0.03);
     EXPECT_DOUBLE_EQ(paths[1].getStartSpeed(), 0.02);
     EXPECT_DOUBLE_EQ(paths[1].getEndSpeed(), 0.005);
 }
@@ -143,7 +140,7 @@ TEST_F(PathOptimizerTests, TwoMovesSpeedingUp)
 
     EXPECT_DOUBLE_EQ(paths[0].getStartSpeed(), 0.005);
     EXPECT_DOUBLE_EQ(paths[0].getEndSpeed(), 0.02);
-    EXPECT_DOUBLE_EQ(paths[1].getStartSpeed(), 0.02); // Ideally this could be 0.03, but not today
+    EXPECT_DOUBLE_EQ(paths[1].getStartSpeed(), 0.03);
     EXPECT_DOUBLE_EQ(paths[1].getEndSpeed(), 0.005);
 }
 
@@ -172,8 +169,8 @@ TEST_F(PathOptimizerTests, ThreeMovesThatFormTrapezoid)
     // calculated in Maxima as sqrt(v0^2 + 2*a*d)
     EXPECT_DOUBLE_EQ(paths[0].getStartSpeed(), 0.005);
     EXPECT_DOUBLE_EQ(paths[0].getEndSpeed(), 0.1415097169808491);
-    EXPECT_DOUBLE_EQ(paths[1].getStartSpeed(), 0.1415097169808491);
-    EXPECT_DOUBLE_EQ(paths[1].getEndSpeed(), 0.1415097169808491);
+    EXPECT_DOUBLE_EQ(paths[1].getStartSpeed(), 0.1515097169808491);
+    EXPECT_DOUBLE_EQ(paths[1].getEndSpeed(), 0.1515097169808491);
     EXPECT_DOUBLE_EQ(paths[2].getStartSpeed(), 0.1415097169808491);
     EXPECT_DOUBLE_EQ(paths[2].getEndSpeed(), 0.005);
 }
@@ -189,12 +186,12 @@ TEST_F(PathOptimizerTests, FiveMovesThatFormTrapezoid)
 
     EXPECT_DOUBLE_EQ(paths[0].getStartSpeed(), 0.005);
     EXPECT_DOUBLE_EQ(paths[0].getEndSpeed(), 0.1415097169808491);
-    EXPECT_DOUBLE_EQ(paths[1].getStartSpeed(), 0.1415097169808491);
-    EXPECT_DOUBLE_EQ(paths[1].getEndSpeed(), 0.2000624902374256);
-    EXPECT_DOUBLE_EQ(paths[2].getStartSpeed(), 0.2000624902374256);
-    EXPECT_DOUBLE_EQ(paths[2].getEndSpeed(), 0.2000624902374256);
-    EXPECT_DOUBLE_EQ(paths[3].getStartSpeed(), 0.2000624902374256);
-    EXPECT_DOUBLE_EQ(paths[3].getEndSpeed(), 0.1415097169808491);
+    EXPECT_DOUBLE_EQ(paths[1].getStartSpeed(), 0.1515097169808491);
+    EXPECT_DOUBLE_EQ(paths[1].getEndSpeed(), 0.20725634933486836);
+    EXPECT_DOUBLE_EQ(paths[2].getStartSpeed(), 0.21725634933486837);
+    EXPECT_DOUBLE_EQ(paths[2].getEndSpeed(), 0.21725634933486837);
+    EXPECT_DOUBLE_EQ(paths[3].getStartSpeed(), 0.20725634933486836);
+    EXPECT_DOUBLE_EQ(paths[3].getEndSpeed(), 0.1515097169808491);
     EXPECT_DOUBLE_EQ(paths[4].getStartSpeed(), 0.1415097169808491);
     EXPECT_DOUBLE_EQ(paths[4].getEndSpeed(), 0.005);
 }
@@ -212,16 +209,16 @@ TEST_F(PathOptimizerTests, SevenMovesThatFormTrapezoid)
 
     EXPECT_DOUBLE_EQ(paths[0].getStartSpeed(), 0.005);
     EXPECT_DOUBLE_EQ(paths[0].getEndSpeed(), 0.1415097169808491);
-    EXPECT_DOUBLE_EQ(paths[1].getStartSpeed(), 0.1415097169808491);
-    EXPECT_DOUBLE_EQ(paths[1].getEndSpeed(), 0.2000624902374256);
-    EXPECT_DOUBLE_EQ(paths[2].getStartSpeed(), 0.2000624902374256);
-    EXPECT_DOUBLE_EQ(paths[2].getEndSpeed(), 0.245);
-    EXPECT_DOUBLE_EQ(paths[3].getStartSpeed(), 0.245);
-    EXPECT_DOUBLE_EQ(paths[3].getEndSpeed(), 0.245);
-    EXPECT_DOUBLE_EQ(paths[4].getStartSpeed(), 0.245);
-    EXPECT_DOUBLE_EQ(paths[4].getEndSpeed(), 0.2000624902374256);
-    EXPECT_DOUBLE_EQ(paths[5].getStartSpeed(), 0.2000624902374256);
-    EXPECT_DOUBLE_EQ(paths[5].getEndSpeed(), 0.1415097169808491);
+    EXPECT_DOUBLE_EQ(paths[1].getStartSpeed(), 0.1515097169808491);
+    EXPECT_DOUBLE_EQ(paths[1].getEndSpeed(), 0.20725634933486836);
+    EXPECT_DOUBLE_EQ(paths[2].getStartSpeed(), 0.21725634933486836);
+    EXPECT_DOUBLE_EQ(paths[2].getEndSpeed(), 0.25923024770715775);
+    EXPECT_DOUBLE_EQ(paths[3].getStartSpeed(), 0.26923024770715775);
+    EXPECT_DOUBLE_EQ(paths[3].getEndSpeed(), 0.26923024770715775);
+    EXPECT_DOUBLE_EQ(paths[4].getStartSpeed(), 0.25923024770715775);
+    EXPECT_DOUBLE_EQ(paths[4].getEndSpeed(), 0.21725634933486836);
+    EXPECT_DOUBLE_EQ(paths[5].getStartSpeed(), 0.20725634933486836);
+    EXPECT_DOUBLE_EQ(paths[5].getEndSpeed(), 0.1515097169808491);
     EXPECT_DOUBLE_EQ(paths[6].getStartSpeed(), 0.1415097169808491);
     EXPECT_DOUBLE_EQ(paths[6].getEndSpeed(), 0.005);
 }
@@ -271,5 +268,94 @@ TEST_F(PathOptimizerTests, CorrectlyWrapsAroundAtQueueEnd)
 
     ASSERT_EQ(lastPath.value, 1);
 
-    EXPECT_DOUBLE_EQ(paths[firstPath.value].getMaxJunctionSpeed(), 0.2);
+    EXPECT_DOUBLE_EQ(paths[firstPath.value].getMaxEndSpeed(), 0.2);
+    EXPECT_DOUBLE_EQ(paths[(firstPath + 1).value].getMaxStartSpeed(), 0.2);
+}
+
+TEST_F(PathOptimizerTests, FullSpeedJunction)
+{
+    Path firstPath = builder.makePath(0.2, 0, 0, 0.2);
+    Path secondPath = builder.makePath(0.2, 0, 0, 0.2);
+
+    auto [firstSpeed, secondSpeed] = calculateJunctionSpeed(firstPath, secondPath);
+
+    EXPECT_DOUBLE_EQ(firstSpeed, 0.2);
+    EXPECT_DOUBLE_EQ(secondSpeed, 0.2);
+}
+
+TEST_F(PathOptimizerTests, FullSpeedJunctionNegative)
+{
+    Path firstPath = builder.makePath(-0.2, 0, 0, 0.2);
+    Path secondPath = builder.makePath(-0.2, 0, 0, 0.2);
+
+    auto [firstSpeed, secondSpeed] = calculateJunctionSpeed(firstPath, secondPath);
+
+    EXPECT_DOUBLE_EQ(firstSpeed, 0.2);
+    EXPECT_DOUBLE_EQ(secondSpeed, 0.2);
+}
+
+TEST_F(PathOptimizerTests, SafeSpeedJunction)
+{
+    Path firstPath = builder.makePath(0.2, 0, 0, 0.2);
+    Path secondPath = builder.makePath(-0.2, 0, 0, 0.2);
+
+    auto [firstSpeed, secondSpeed] = calculateJunctionSpeed(firstPath, secondPath);
+
+    EXPECT_DOUBLE_EQ(firstSpeed, 0.005);
+    EXPECT_DOUBLE_EQ(secondSpeed, 0.005);
+}
+
+TEST_F(PathOptimizerTests, SafeSpeedJunctionNegative)
+{
+    Path firstPath = builder.makePath(-0.2, 0, 0, 0.2);
+    Path secondPath = builder.makePath(0.2, 0, 0, 0.2);
+
+    auto [firstSpeed, secondSpeed] = calculateJunctionSpeed(firstPath, secondPath);
+
+    EXPECT_DOUBLE_EQ(firstSpeed, 0.005);
+    EXPECT_DOUBLE_EQ(secondSpeed, 0.005);
+}
+
+TEST_F(PathOptimizerTests, SpeedJumpJunction)
+{
+    Path firstPath = builder.makePath(0.2, 0, 0, 0.2);
+    Path secondPath = builder.makePath(0, 0.2, 0, 0.2);
+
+    auto [firstSpeed, secondSpeed] = calculateJunctionSpeed(firstPath, secondPath);
+
+    EXPECT_DOUBLE_EQ(firstSpeed, 0.01);
+    EXPECT_DOUBLE_EQ(secondSpeed, 0.01);
+}
+
+TEST_F(PathOptimizerTests, SpeedJumpJunctionNegative)
+{
+    Path firstPath = builder.makePath(-0.2, 0, 0, 0.2);
+    Path secondPath = builder.makePath(0, -0.2, 0, 0.2);
+
+    auto [firstSpeed, secondSpeed] = calculateJunctionSpeed(firstPath, secondPath);
+
+    EXPECT_DOUBLE_EQ(firstSpeed, 0.01);
+    EXPECT_DOUBLE_EQ(secondSpeed, 0.01);
+}
+
+TEST_F(PathOptimizerTests, 45DegreeAngle)
+{
+    Path firstPath = builder.makePath(0.1, 0, 0, 0.2);
+    Path secondPath = builder.makePath(0.1, 0.1, 0, 0.2);
+
+    auto [firstSpeed, secondSpeed] = calculateJunctionSpeed(firstPath, secondPath);
+
+    EXPECT_DOUBLE_EQ(firstSpeed, 0.014142135623730951);
+    EXPECT_DOUBLE_EQ(secondSpeed, 0.014142135623730951);
+}
+
+TEST_F(PathOptimizerTests, 135DegreeAngle)
+{
+    Path firstPath = builder.makePath(0.1, 0, 0, 0.2);
+    Path secondPath = builder.makePath(-0.1, 0.1, 0, 0.2);
+
+    auto [firstSpeed, secondSpeed] = calculateJunctionSpeed(firstPath, secondPath);
+
+    EXPECT_DOUBLE_EQ(firstSpeed, 0.005);
+    EXPECT_DOUBLE_EQ(secondSpeed, 0.0070710678118654762);
 }
