@@ -83,7 +83,7 @@ private:
 
     bool doesQueueHaveSpace()
     {
-        return availableSlots != 0 && curTime < maxTime;
+        return availableSlots != 0 && (curTime < maxTime || availableSlots == queue.size() - 1);
     }
 
     bool addPathInternal(std::unique_lock<std::mutex>& lock, Path&& path)

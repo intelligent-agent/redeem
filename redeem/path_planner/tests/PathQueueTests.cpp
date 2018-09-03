@@ -436,7 +436,7 @@ public:
 
 typedef PathQueue<MockPathOptimizer> MockPathQueue;
 
-TEST(PathQueueBasics, BlocksWhenFullByTime)
+TEST(PathQueueBasics, DoesntBlockWhenFullByTimeWithOnlyOnePath)
 {
     constexpr size_t queueSize = 10;
     MockPathOptimizer optimizer;
@@ -450,6 +450,27 @@ TEST(PathQueueBasics, BlocksWhenFullByTime)
     EXPECT_CALL(optimizer, onPathAdded(::testing::_, index(0), index(0))).WillOnce(::testing::Return(31ll * F_CPU));
     queue.addPath(std::move(path));
 
+    EXPECT_CALL(optimizer, onPathAdded(::testing::_, index(0), index(1))).WillOnce(::testing::Return(31ll * F_CPU));
+    queue.addPath(std::move(path));
+}
+
+TEST(PathQueueBasics, BlocksWhenFullByTimeWithTwoPaths)
+{
+    constexpr size_t queueSize = 10;
+    MockPathOptimizer optimizer;
+    MockPathQueue queue(optimizer, queueSize, 30ll * F_CPU);
+
+    std::function<PathQueueIndex(size_t)> index = [queueSize](size_t index) {
+        return PathQueueIndex(index, queueSize);
+    };
+
+    Path path;
+    EXPECT_CALL(optimizer, onPathAdded(::testing::_, index(0), index(0))).WillOnce(::testing::Return(31ll * F_CPU));
+    queue.addPath(std::move(path));
+
+    EXPECT_CALL(optimizer, onPathAdded(::testing::_, index(0), index(1))).WillOnce(::testing::Return(31ll * F_CPU));
+    queue.addPath(std::move(path));
+
     EXPECT_CALL(optimizer, onPathAdded);
     EXPECT_CALL(optimizer, beforePathRemoval).WillOnce(::testing::Return(-31ll * F_CPU));
 
@@ -457,6 +478,8 @@ TEST(PathQueueBasics, BlocksWhenFullByTime)
         Path path;
         EXPECT_TRUE(queue.addPath(std::move(path)));
     });
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(1));
 
     EXPECT_FALSE(thread.isFinished());
 
