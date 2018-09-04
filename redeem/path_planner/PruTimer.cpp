@@ -392,7 +392,7 @@ void PruTimer::pushBlock(uint8_t* blockMemory, size_t blockLen, unsigned int uni
             bool logged = false;
             if (logBlock && isPruQueueFullByTime())
             {
-                LOGWARNING("PRU Queue is full by time - " << totalQueuedMovesTime << "/" << maxQueuedMovesTime << std::endl);
+                LOG("PRU Queue is full by time - " << totalQueuedMovesTime << "/" << maxQueuedMovesTime << std::endl);
                 logBlock--;
                 logged = true;
             }
@@ -401,7 +401,7 @@ void PruTimer::pushBlock(uint8_t* blockMemory, size_t blockLen, unsigned int uni
 
             if (logged)
             {
-                LOGWARNING("PRU Queue has space again" << std::endl);
+                LOG("PRU Queue has space again" << std::endl);
             }
 
             if (!ddr_mem || stop)
@@ -719,7 +719,7 @@ void PruTimer::run()
 
         if (underflowOccurred)
         {
-            LOGWARNING("PRU Queue underflow" << std::endl);
+            LOG("PRU Queue underflow" << std::endl);
         }
         //		LOG( "NB event after " << std::dec << nb << " / " << currentNbEvents << std::endl);
         //		LOG( std::dec <<ddr_mem_used << " bytes used, free: " <<std::dec <<  ddr_size-ddr_mem_used<< "." << std::endl);
