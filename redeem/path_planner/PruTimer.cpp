@@ -719,7 +719,7 @@ void PruTimer::run()
 
         if (underflowOccurred)
         {
-            LOGWARNING("PRU queue underflow" << std::endl);
+            LOGWARNING("PRU Queue underflow" << std::endl);
         }
         //		LOG( "NB event after " << std::dec << nb << " / " << currentNbEvents << std::endl);
         //		LOG( std::dec <<ddr_mem_used << " bytes used, free: " <<std::dec <<  ddr_size-ddr_mem_used<< "." << std::endl);
