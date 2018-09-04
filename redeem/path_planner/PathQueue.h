@@ -92,7 +92,7 @@ private:
         bool logged = false;
         if (logBlock && !doesQueueHaveSpace())
         {
-            LOGWARNING("path queue blocking - slots: " << availableSlots << "/" << queue.size() << " time: " << curTime << "/" << maxTime << std::endl);
+            LOGINFO("Path Queue blocking - slots: " << availableSlots << "/" << queue.size() << " time: " << curTime << "/" << maxTime << std::endl);
             logBlock--;
             logged = true;
         }
@@ -101,7 +101,7 @@ private:
 
         if (logged)
         {
-            LOGWARNING("path queue has space again" << std::endl);
+            LOGINFO("Path Queue has space again" << std::endl);
         }
 
         if (!running)
@@ -185,7 +185,7 @@ public:
 
         if (availableSlots == queue.size())
         {
-            LOGWARNING("Path queue underflow" << std::endl);
+            LOGINFO("Path Queue underflow" << std::endl);
             queueIsEmpty.notify_all();
         }
 
