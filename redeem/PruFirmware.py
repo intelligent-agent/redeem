@@ -107,10 +107,12 @@ class PruFirmware:
 
     return ret0 or ret1
 
-  def produce_firmware(self):
-    if not self.is_needing_firmware_compilation():
-      return True
+  def produce_firmware(self, unconditionally=False):
+    if not unconditionally:
+      if not self.is_needing_firmware_compilation():
+        return True
 
+    logging.info('Recompiling PRU Firmware')
     config_file = self.make_config_file()
 
     # Copy the files to tmp, because the pasm is really picky!

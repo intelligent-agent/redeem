@@ -35,11 +35,8 @@ class M119(GCodeCommand):
       # Update the config.
       self.printer.config.set('Endstops', 'invert_' + es, str(val))
 
-      # Save the config file.
-      self.printer.config.save(os.path.join(self.printer.config_location, 'local.cfg'))
-
       # Recompile the firmware
-      self.printer.path_planner.pru_firmware.produce_firmware()
+      self.printer.path_planner.pru_firmware.produce_firmware(unconditionally=True)
 
       # Restart the path planner.
       self.printer.path_planner.restart()

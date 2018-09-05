@@ -42,13 +42,10 @@ class M569(GCodeCommand):
         self.printer.config.set('Steppers', 'direction_' + axis, str(value))
         self.printer.steppers[axis].direction = int(value)
 
-      # Save the config file.
-      self.printer.config.save(os.path.join(self.printer.config_location, 'local.cfg'))
-
       self.printer.path_planner.wait_until_done()
 
       # Recompile the firmware
-      self.printer.path_planner.pru_firmware.produce_firmware()
+      self.printer.path_planner.pru_firmware.produce_firmware(unconditionally=True)
 
       # Restart the path planner.
       self.printer.path_planner.restart()
