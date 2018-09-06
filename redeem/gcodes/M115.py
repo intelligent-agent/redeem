@@ -2,13 +2,17 @@
 GCode M115
 Get Firmware Version and Capabilities
 
-Author: Mathieu Monney
+Author: Richard Wackerbarth
+email: rkw(at)dataplex(dot)net
+Original Author: Mathieu Monney
 email: zittix(at)xwaves(dot)net
 License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 """
 from __future__ import absolute_import
+
 from .GCodeCommand import GCodeCommand
 from redeem import __url__, __long_version__
+import os
 
 
 class M115(GCodeCommand):
@@ -20,6 +24,13 @@ class M115(GCodeCommand):
     firmware_url = __url__
     machine_type = self.printer.config.get('System', 'machine_type')
     extruder_count = self.printer.NUM_EXTRUDERS
+    kernel = os.uname()[2]
+    # get distro will come from /etc/issue or /etc/kamikaze-release
+    f = open('/etc/kamikaze-release', 'r')
+    l = f.readline().split(" ")
+    f.close()
+    distro_name = l[0]
+    distro_version = l[1]
     g.set_answer(
         "ok " \
         "PROTOCOL_VERSION:{} "\
@@ -28,13 +39,20 @@ class M115(GCodeCommand):
         "REPLICAPE_KEY:{} "\
         "FIRMWARE_URL:{} "\
         "MACHINE_TYPE:{} "\
-        "EXTRUDER_COUNT:{}".format(
+        "KERNEL:{} "\
+        "DISTRIBUTION_NAME:{} "\
+        "DISTRIBUTION_VERSION:{} "\
+        "EXTRUDER_COUNT:{}"\
+        .format(
             protocol_version,
             firmware_name,
             firmware_version,
             replicape_key,
             firmware_url,
             machine_type,
+            kernel,
+            distro_name,
+            distro_version,
             extruder_count
         )
     )
