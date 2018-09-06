@@ -111,7 +111,7 @@ class CascadingConfigParser(ConfigParser.SafeConfigParser):
     """ Save the changed settings to local.cfg """
     current = CascadingConfigParser(self.config_files)
 
-    # Get list of changed values
+    # Build a list of changed values
     to_save = []
     for section in self.sections():
       #logging.debug(section)
@@ -123,6 +123,9 @@ class CascadingConfigParser(ConfigParser.SafeConfigParser):
 
     # Update local config with changed values
     local = ConfigParser.SafeConfigParser()
+    # Start each file with revision identification
+    local.add_section("Configuration")
+    local.set("Configuration", "version", "1")
     local.readfp(open(filename, "r"))
     for opt in to_save:
       (section, option, value, old) = opt
