@@ -16,9 +16,8 @@ class G34_Tests(MockPrinter):
     self.printer.processor.execute = mock.Mock(autospec=True)    # block gcode execution
     self.printer.path_planner.probe = mock.Mock(return_value=0.029)
 
-  def test_G34_is_buffered(self):
-    g = Gcode({"message": "G34"})
-    self.assertTrue(self.printer.processor.is_buffered(g))
+  def test_G34_properties(self):
+    self.assertGcodeProperties("G34", is_buffered=True, is_async=True)
 
   @mock.patch("redeem.gcodes.G34.Gcode")
   def test_G34_expected_gcodes(self, mock_Gcode):

@@ -6,9 +6,8 @@ from redeem.Gcode import Gcode
 
 
 class G29_Tests(MockPrinter):
-  def test_G29_is_buffered(self):
-    g = Gcode({"message": "G29"})
-    self.assertTrue(self.printer.processor.is_buffered(g))
+  def test_G29_properties(self):
+    self.assertGcodeProperties("G29", is_buffered=True, is_async=True)
 
   @mock.patch("redeem.gcodes.G29.Gcode")
   def test_gcodes_G29_runs_macro(self, mock_Gcode):
