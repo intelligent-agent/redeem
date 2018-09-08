@@ -17,6 +17,5 @@ class G28_Tests(MockPrinter):
     self.execute_gcode("G28 Z0")
     self.printer.path_planner.home.assert_called_with(["Z"])
 
-  def test_G28_is_buffered(self):
-    g = Gcode({"message": "G28"})
-    self.assertTrue(self.printer.processor.is_buffered(g))
+  def test_G28_properties(self):
+    self.assertGcodeProperties("G28", is_buffered=True, is_async=True)

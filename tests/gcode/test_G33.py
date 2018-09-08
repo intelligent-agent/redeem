@@ -10,9 +10,8 @@ class G33_Tests(MockPrinter):
   def setUp(self):
     pass
 
-  def test_G33_is_buffered(self):
-    g = Gcode({"message": "G33"})
-    self.assertTrue(self.printer.processor.is_buffered(g))
+  def test_G33_properties(self):
+    self.assertGcodeProperties("G33", is_buffered=True, is_async=True)
 
   @mock.patch("redeem.gcodes.G33.Gcode")
   def test_G33_abort_on_bad_factor_count(self, mock_Gcode):

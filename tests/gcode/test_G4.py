@@ -6,9 +6,8 @@ from redeem.Gcode import Gcode
 
 
 class G4_Tests(MockPrinter):
-  def test_G4_is_buffered(self):
-    g = Gcode({"message": "G4"})
-    self.assertTrue(self.printer.processor.is_buffered(g))
+  def test_G4_properties(self):
+    self.assertGcodeProperties("G4", is_buffered=True)
 
   @mock.patch('time.sleep')
   def test_G4_milliseconds(self, mock_time):

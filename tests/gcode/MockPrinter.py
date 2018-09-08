@@ -165,3 +165,14 @@ log_to_file = False
     if not match:
       exception = self._formatMessage(msg, "{} is not close to {}: {}".format(a, b, msg))
       raise self.failureException(exception)
+
+  def assertGcodeProperties(self, gcode, is_buffered=False, is_async=False):
+    gcode_instance = Gcode({"message": gcode})
+    self.printer.processor.resolve(gcode_instance)
+
+    gcode_handler = gcode_instance.command
+    self.assertNotEqual(gcode_handler.get_description(), "")
+    self.assertNotEqual(gcode_handler.get_long_description(), "")
+    self.assertEqual(gcode_handler.is_buffered(), is_buffered)
+    self.assertEqual(gcode_handler.is_async(), is_async)
+

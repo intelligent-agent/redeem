@@ -29,9 +29,8 @@ class G30_Tests(MockPrinter):
     }]
     self.printer.probe_heights = [0, 0]
 
-  def test_G30_is_buffered(self):
-    g = Gcode({"message": "G30"})
-    self.assertTrue(self.printer.processor.is_buffered(g))
+  def test_G30_properties(self):
+    self.assertGcodeProperties("G30", is_buffered=True, is_async=True)
 
   @mock.patch("redeem.gcodes.G30.Gcode")
   def test_gcodes_G30_point_0_not_set(self, mock_Gcode):
