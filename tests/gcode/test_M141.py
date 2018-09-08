@@ -34,5 +34,5 @@ class M141_Tests(MockPrinter):
       freq = round(random() * 10000, 0)
       duty = round(random(), 1)
       g = self.execute_gcode("M141 P" + str(fan) + " I" + str(freq) + " S" + str(duty))
-      self.assertEqual(freq, self.printer.fans[i].pwm_frequency)
-      self.assertEqual(duty, self.printer.fans[i].value)
+      self.printer.fans[i].set_PWM_frequency.assert_called_with(freq)
+      self.printer.fans[i].set_value.assert_called_with(duty)
