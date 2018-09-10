@@ -108,7 +108,7 @@ class Redeem:
     if not os.path.exists(local_path):
       logging.info(local_path + " does not exist, Creating one")
       os.mknod(local_path)
-      os.chmod(local_path, 0o777)
+      os.chmod(local_path, 0o666)
 
     # Parse the config files.
     printer.config = CascadingConfigParser([
