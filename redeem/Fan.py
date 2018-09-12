@@ -23,8 +23,11 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
 
 import logging
 import time
-from builtins import range
 from PWM import PWM
+from six import PY2
+
+if PY2:
+  range = xrange
 
 
 class Fan(PWM):
