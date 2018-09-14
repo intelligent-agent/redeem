@@ -30,7 +30,7 @@ if version_info.major == 2:
 else:
   import builtins    # pylint:disable=import-error
 
-from TemperatureSensor import *
+from redeem.TemperatureSensor import *
 
 
 class TestTemperatureSensor(unittest.TestCase):
