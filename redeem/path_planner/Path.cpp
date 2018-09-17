@@ -235,6 +235,10 @@ void Path::initialize(const IntVectorN& machineStart,
         if (worldMove[i])
         {
             speeds[i] = worldMove[i] / idealTimeForMove;
+            if (std::abs(speeds[i]) < NEGLIGIBLE_ERROR)
+            {
+                speeds[i] = 0;
+            }
         }
         else
         {
