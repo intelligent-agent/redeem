@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<!--[if IE 8]> <html lang="en" class="ie8"> <![endif]-->  
+<!--[if IE 9]> <html lang="en" class="ie9"> <![endif]-->  
+<!--[if !IE]><!--> <html lang="en"> <!--<![endif]-->  
+<head>
+    <title>Replicape Docs | support/printers/delta</title>
+    <!-- Meta -->
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="">
+    <meta name="author" content="">    
+
+    <link rel="apple-touch-icon" sizes="180x180" href="../../_static/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="../../_static/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="../../_static/favicon-16x16.png">
+    <link rel="mask-icon" href="../../_static/safari-pinned-tab.svg" color="#5bbad5">
+    <link rel="shortcut icon" href="../../_static/favicon.ico">
+
+    <link href='http://fonts.googleapis.com/css?family=Open+Sans:300italic,400italic,600italic,700italic,800italic,400,300,600,700,800' rel='stylesheet' type='text/css'>
+    <!-- Global CSS -->
+    <link rel="stylesheet" href="../../_static/plugins/bootstrap/css/bootstrap.min.css">
+    <!-- Plugins CSS -->    
+    <link rel="stylesheet" href="../../_static/plugins/font-awesome/css/font-awesome.css">
+    <link rel="stylesheet" href="../../_static/plugins/prism/prism.css">
+    <link rel="stylesheet" href="../../_static/plugins/elegant_font/css/style.css">
+    <link rel="stylesheet" href="../../_static/plugins/popup/magnific-popup.css">
+    
+    <!-- Theme CSS -->
+    <link id="theme-style" rel="stylesheet" href="../../_static/css/styles.css">
+    <!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/html5shiv/3.7.2/html5shiv.min.js"></script>
+      <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
+    <![endif]-->
+    
+</head> 
+
+<body class="body-blue">
+    <div class="page-wrapper">
+        <!-- ******Header****** -->
+        <header id="header" class="header">
+            <div class="container">
+                <div class="branding">
+                    <div class="logo">
+                        <a href="../../index.html">
+                            <img class="icon noborder" src="../../_static/images/thingprinter_logo.svg" />
+                            <span class="text-highlight">Replicape</span><span class="text-bold">Docs</span>
+                        </a>
+                    </div>
+                    <div class="version-select">
+                        <div class="dropdown">
+  <button class="btn btn-version dropdown-toggle" type="button" id="dropdownMenu1" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">version 0.0.0&nbsp;<span class="caret"></span>
+  </button>
+  <ul class="dropdown-menu" aria-labelledby="dropdownMenu1"><li><a href="#">development mode</a></li></ul>
+</div>
+                    </div><div class="version-msg">( development )</div></div><!--//branding-->
+                <ol class="breadcrumb">
+                    <li class="nav-item nav-item-0"><a href="../../index.html">Docs</a></li>
+                      <li class="nav-item nav-item-1"><a href="../index.html" accesskey="U">Support</a></li>
+                </ol>
+            </div><!--//container-->
+        </header><!--//header-->
+        <div class="doc-wrapper">
+            <div class="container">
+                <div class="doc-body">
+                    <div class="doc-content">
+                        <div class="content-inner">
+                            <div class="github-edit">
+                                <div>
+                                    <a href="https://github.com/intelligent-agent/redeem/edit/develop/docs/support/printers/delta.rst">
+                                        <span class="text">edit on github</span>
+                                        <i class="fa fa-github"></i>
+                                    </a>
+                                </div>
+                            </div>
+                            <div class="section" id="delta-printers">
+<h1>Delta Printers<a class="headerlink" href="#delta-printers" title="Permalink to this headline">¶</a></h1>
+<p>Before I start this tutorial, one very important detail to know before
+you start stripping wires and cranking on your Delta is:</p>
+<ul class="simple">
+<li>X-axis in the back</li>
+<li>Y-axis to the left</li>
+<li>Z-axis to the right</li>
+</ul>
+<p>My goal here is to give a quick rundown of how to get your Delta moving
+correctly, homing, and then autocalibrated… If you need help with
+wiring, WiFi, SSH’ing into your BBB, or generally linking your printer
+with Octoprint there is plenty of documentation within the Wiki, and we
+also have plenty of skilled guys over at:
+<a class="reference external" href="https://www.thing-printer.com/wp-login.php?action=slack-invitation">Slack</a>
+and
+<a class="reference external" href="https://plus.google.com/communities/104577360369030938514">Google+</a>
+to offer help. I also suggest you take some time to look over all of the
+G/MCodes and Redeem in general over at
+<a class="reference external" href="http://wiki.thing-printer.com/index.php?title=Redeem">http://wiki.thing-printer.com/index.php?title=Redeem</a></p>
+<p>OK, so you have your towers figured out? <strong>Good..</strong> and you’ve wired
+everything up to the best of your knowledge? <strong>Great!</strong> Your printer is
+connected to Octoprint? <strong>Fantastic!</strong></p>
+<div class="section" id="profile-configurations">
+<h2>Profile Configurations<a class="headerlink" href="#profile-configurations" title="Permalink to this headline">¶</a></h2>
+<p>Ok, let’s wrap our brains around the Profile Configurations which are
+located in These guys are what tells Redeem (the software) everything it
+needs to know about your printer. At the bottom you’ll see
+<em>Default.cfg</em>… Click on the little eyeball and check out all of the
+commands in that file. This configuration contains all of the necessary
+commands that tells the software the size of the printer, how much power
+to send to your steppers, how fast it can move, and how slow, just to
+name a few… Ok, close that window… above <em>Default.cfg</em>, you’ll see
+<em>Printer.cfg</em>… these particular configurations are tweaked for
+specific printers, and whatever is written to this configuration will
+override the commands within the <em>Default.cfg</em>… you with me so far?
+Excellent! Beers for everyone! Wait, we’re not finished yet! You may
+have noticed that you can’t make any changes to those two
+configurations, and that’s a good thing, let me tell you! “Default.cfg”
+lives up to it’s name and has a full list of the available commands for
+your printer… when the time comes, you can copy/paste those commands
+to your “Local.cfg” and tweak those commands to suit your printer.</p>
+<p>OK… if you have a typical off the shelf delta printer like a Kossel
+Mini, you’re in luck! Look for <em>Kossel Mini</em> in the list of
+configurations under <em>Printer.cfg</em> and make it your default
+configuration by clicking the star symbol… things should be very close
+up to this point… but before we go printing, let’s talk a little more
+about that profile up top called “local.cfg”… What? There’s nothing in
+that file? You’re right! Something must be wrong… Let me find that
+toll free hot-line… Just kidding… this is where you, yes, you get to
+make changes to the configuration… and this configuration overrides
+the <em>Printer.cfg</em>, and the <em>Default.cfg</em>, so make sure you’re not too
+pickled while you’re dealing with this config! So does all of that make
+sense? The “hierarchy” <em>Local.cfg</em> &gt; <em>Printer.cfg</em> &gt; <em>Default.cfg</em>…</p>
+<p><strong>OK… let’s get to the fun stuff!</strong></p>
+</div>
+<div class="section" id="editing-local-cfg">
+<h2>Editing Local.cfg<a class="headerlink" href="#editing-local-cfg" title="Permalink to this headline">¶</a></h2>
+<p>So let’s say you’re the adventurous type, and you’ve built yourself an
+oversized custom delta… 300mm bed, 1M tall…</p>
+<p>Before we open up the local.cfg, lets go to “Terminal” tab in Octoprint
+and make sure your XYZ endstops are wired correctly… Remembering the
+tower positions of XYZ up above, you should see a notification pop up in
+the terminal when you manually push the endstops… “X1 Endstop hit” “Y1
+Endstop hit” “Z1 Endstop Hit”… if you see this notification for each
+endstop, then great! We’re on the right track. If not, we’re going to
+fix them in the [Endstop] section of your local.cfg… if they don’t
+work after that, then you may have wired them incorrectly!</p>
+<p>Let’s open up our local.cfg file in Octoprint and start from the top
+with what you will need to enter initially… <strong>Do not copy/paste
+anything within parentheses… these are only explanations…</strong></p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="p">[</span><span class="n">Geometry</span><span class="p">]</span>
+
+<span class="n">axis_config</span> <span class="o">=</span> <span class="mi">3</span> <span class="p">(</span><span class="n">The</span> <span class="mi">3</span> <span class="n">here</span> <span class="n">means</span> <span class="n">that</span> <span class="n">we</span> <span class="n">are</span> <span class="n">using</span> <span class="n">a</span> <span class="n">Delta</span> <span class="n">printer</span><span class="o">...</span> <span class="mi">0</span> <span class="n">would</span> <span class="n">be</span> <span class="n">used</span> <span class="k">for</span> <span class="n">normal</span> <span class="n">Cartesian</span><span class="p">)</span>
+</pre></div>
+</div>
+<p><a class="reference internal" href="../../replicape/configuration.html#configsteppermicrostepping"><span class="std std-ref">Microstepping</span></a></p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="p">[</span><span class="n">Steppers</span><span class="p">]</span>
+
+<span class="n">microstepping_x</span> <span class="o">=</span> <span class="mi">3</span> <span class="p">(</span><span class="n">The</span> <span class="mi">3</span> <span class="n">here</span> <span class="n">means</span> <span class="n">we</span> <span class="n">are</span> <span class="n">microstepping</span> <span class="n">at</span> <span class="mi">1</span><span class="o">/</span><span class="mi">4</span> <span class="n">steps</span> <span class="k">for</span> <span class="n">each</span> <span class="n">stepper</span><span class="o">...</span><span class="p">)</span>
+<span class="n">microstepping_y</span> <span class="o">=</span> <span class="mi">3</span>
+<span class="n">microstepping_z</span> <span class="o">=</span> <span class="mi">3</span>
+<span class="n">microstepping_e</span> <span class="o">=</span> <span class="mi">3</span>
+
+
+<span class="n">current_x</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="p">(</span><span class="n">This</span> <span class="n">setting</span> <span class="ow">is</span> <span class="mf">0.5</span> <span class="n">amps</span><span class="o">...</span> <span class="n">anything</span> <span class="n">above</span> <span class="n">this</span> <span class="n">will</span> <span class="n">require</span> <span class="n">cooling</span> <span class="ow">and</span> <span class="n">the</span> <span class="n">addition</span> <span class="n">of</span> <span class="n">heat</span> <span class="n">sinks</span><span class="o">...</span><span class="p">)</span>
+<span class="n">current_y</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="p">(</span><span class="n">I</span> <span class="n">would</span> <span class="n">highly</span> <span class="n">recommend</span> <span class="n">adding</span> <span class="n">heatsinks</span> <span class="n">to</span> <span class="n">the</span> <span class="n">stepper</span> <span class="n">drivers</span> <span class="ow">and</span> <span class="n">a</span> <span class="n">fan</span> <span class="k">for</span> <span class="n">cooling</span> <span class="n">the</span> <span class="n">board</span><span class="o">...</span><span class="p">)</span>
+<span class="n">current_z</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="p">(</span><span class="n">There</span> <span class="n">will</span> <span class="n">probably</span> <span class="n">come</span> <span class="n">a</span> <span class="n">time</span> <span class="n">when</span> <span class="n">you</span> <span class="n">need</span> <span class="n">more</span> <span class="n">current</span><span class="p">,</span> <span class="n">which</span> <span class="n">requires</span> <span class="n">mandatory</span> <span class="n">cooling</span><span class="o">...</span><span class="p">)</span>
+<span class="n">current_e</span> <span class="o">=</span> <span class="mf">0.5</span>
+</pre></div>
+</div>
+<p><a class="reference external" href="https://toms3d.org/2014/04/06/3d-printing-guides-calibrating-your-extruder">Calibrating your extruder</a></p>
+<div class="highlight-default"><div class="highlight"><pre><span></span>steps_pr_mm_x = 5.0 (This should get you in the ballpark with 1.8 degree steppers...)
+steps_pr_mm_y = 5.0 (When the time comes, you will need to calibrate your X, Y, and Z for accurate prints)
+steps_pr_mm_z = 5.0
+steps_pr_mm_e = 6.0 (You will need to calibrate your steps here... see:
+in_use_x = True (By adding ``\ “``True``”\ `` here, it means that you do have a stepper in use for this axis...)
+in_use_y = True
+in_use_z = True
+in_use_e = True
+direction_x = 1 (You can change direction of your steppers by entering -1 but I suggest when you)
+direction_y = 1 (wire your steppers, have them all connected to the Replicape so that they are all)
+direction_z = 1 (wired and connected identically
+
+
+``[Endstops]``
+has_x = True (Chances are, you have an endstop for each of these axes... therefore ``\ “``True``”\ ``!)
+has_y = True
+has_z = True
+
+end_stop_x1_stops = x_cw (Most deltas will have the endstop stopping the cw rotation of your stepper...
+end_stop_y1_stops = y_cw (but if yours is different, change it to ``\ “``ccw``”\ ``... I also suggest having all of your steppers)
+end_stop_z1_stops = z_cw (rotating in the same direction... things get confusing otherwise)
+soft_end_stop_min_x = -0.150 (Since X0 and Y0 are in the center, you&#39;ll use a negative radius for minimum X and Y,)
+soft_end_stop_min_y = -0.150
+soft_end_stop_max_x = 0.150 (And a positive radius for your maximum X and Y...)
+soft_end_stop_max_y = 0.150
+invert_x1 = False (Remembering your X,Y,Z tower positions mentioned above... if everything was working, then we can leave)
+invert_y1 = False (these as &quot;False... If you weren&#39;t receiving the ``\ “``Endstop``\ `` ``\ ``hit``”\ `` notifications, then change this to ``\ “``True``”\ ``... save your)
+invert_z1 = False (local.cfg, restart Redeem, and check them again manually...)
+</pre></div>
+</div>
+<p>Ok… back to Endstops… if you had the “Endstop hit” notifications in
+your <em>Terminal</em> then you can move on to the next step… however, if you
+didn’t get the notifications, change the “invert_x1/y1/z1 =” from
+“False” to “True” and check the <em>Terminal</em> again for the notifications
+after restarting Redeem.</p>
+<p>At this point, you should be able to save your changes in the local.cfg,
+restart Redeem, and at least get movement from your machine… once
+you’re reconnected to Octoprint, go to your <em>Terminal</em> tab and enter M18
+(to disengage your steppers). Physically move your printhead so that
+your carriages are at about half the distance to your endstops. The
+software is going to think you’re Z axis is at “0”, so enter G1 Z20 and
+see if all three motors are raising the carriages. If any of your
+carriages are moving down, then I suggest physically flipping the plug
+connecting that stepper to the Replicape. To be safe, power down the
+machine beforehand… remove the plug, flip it 180°, and plug it back
+in. Do this for any steppers that were not moving upwards. Once
+finished, power up your machine and check the movement again just like
+before.</p>
+<p>If your machine was working correctly, then you’re ready to move on to
+the next step!!</p>
+</div>
+<div class="section" id="checking-your-endstops">
+<h2>Checking Your Endstops<a class="headerlink" href="#checking-your-endstops" title="Permalink to this headline">¶</a></h2>
+<p>OK… if your machine is moving as it should, let’s open up the
+<em>Terminal</em> once more and enter M18 again to disengage the steppers.
+Physically move the printhead near bottom center and then enter “G92
+Z0”… this will zero your Z axis so we can use the next command… now
+enter “G1 Z75 F1000”… this should be enough movement at a slow enough
+speed for you to physically press the endstop switches before it stops.
+Theoretically with our current local.cfg, there shouldn’t be a problem,
+and I need to investigate further before going much further with
+suggestions if they aren’t… I’d say refer to this section of the
+original wiki:
+<a class="reference external" href="http://wiki.thing-printer.com/index.php?title=Redeem#Steppers">http://wiki.thing-printer.com/index.php?title=Redeem#Steppers</a> … if
+your endstops are working correctly, then let’s move on!</p>
+<p>If you’ve made it this far, then congratulations! The easy stuff is
+basically finished… Now we need to get your delta to home properly.
+Let’s start by adding a [Homing] section to your local.cfg</p>
+</div>
+<div class="section" id="homing-properly">
+<h2>Homing Properly<a class="headerlink" href="#homing-properly" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="p">[</span><span class="n">Homing</span><span class="p">]</span>
+<span class="n">home_x</span> <span class="o">=</span> <span class="mf">0.0</span> <span class="p">(</span><span class="n">Home</span> <span class="ow">is</span> <span class="n">at</span> <span class="n">center</span> <span class="n">X</span><span class="p">)</span>
+<span class="n">home_y</span> <span class="o">=</span> <span class="mf">0.0</span> <span class="p">(</span><span class="n">Home</span> <span class="ow">is</span> <span class="n">at</span> <span class="n">center</span> <span class="n">Y</span><span class="p">)</span>
+<span class="n">home_z</span> <span class="o">=</span> <span class="mf">0.200</span> <span class="p">(</span><span class="n">This</span> <span class="n">homes</span> <span class="n">Z</span> <span class="n">towards</span> <span class="n">the</span> <span class="n">top</span><span class="o">...</span> <span class="n">once</span> <span class="n">you</span> <span class="n">have</span> <span class="n">your</span> <span class="n">endstop</span> <span class="n">offsets</span><span class="p">,</span> <span class="n">we</span><span class="s1">&#39;ll change this number to pull off of the endstops)</span>
+<span class="n">home_e</span> <span class="o">=</span> <span class="mf">0.0</span> <span class="p">(</span><span class="n">Homes</span> <span class="n">extruder</span> <span class="n">to</span> <span class="mi">0</span><span class="p">)</span>
+<span class="n">home_speed_x</span> <span class="o">=</span> <span class="mf">0.08</span> <span class="p">(</span><span class="n">This</span> <span class="n">moves</span> <span class="n">your</span> <span class="n">stepper</span> <span class="n">at</span> <span class="mi">80</span><span class="n">mm</span><span class="o">/</span><span class="n">s</span> <span class="n">during</span> <span class="n">the</span> <span class="n">homing</span> <span class="n">routine</span><span class="p">)</span>
+<span class="n">home_speed_y</span> <span class="o">=</span> <span class="mf">0.08</span> <span class="p">(</span><span class="n">I</span> <span class="n">suggest</span> <span class="n">homing</span> <span class="n">XYZ</span> <span class="n">at</span> <span class="n">the</span> <span class="n">same</span> <span class="n">speed</span><span class="p">)</span>
+<span class="n">home_speed_z</span> <span class="o">=</span> <span class="mf">0.08</span>
+<span class="n">home_speed_e</span> <span class="o">=</span> <span class="mf">0.01</span>
+</pre></div>
+</div>
+<p>With this particular [Homing] set up, if you enter “G28” at the
+<em>Terminal</em>, your carriages should move up until they hit the endstops.
+It will think your endstops are at 200mm from the bed until you have
+your “endstop offsets” set up… we’ll get into that later. I’ve set
+this number to 0.200 in hopes to keep you from accidentally smashing
+your hotend into your bed. If you want, try entering “G1 Z100” then “G1
+Z50”… Your tip should be a safe distance from the bed, so I suggest
+continuing by using the Octoprint <em>Control Panel</em> to move the tip down
+by 10mm and on to 1mm and 0.1mm until it’s just above the bed by 1mm or
+so. Once it’s there, you can go to the <em>Terminal</em> in Octoprint and enter
+“M114” to get the position of your Z axis… change the negative to
+positive and add that number to 0.200… you now know approximately what
+your total height between your bed and endstops is. You can enter this
+new number as your “home_z” in the [Homing] section of your local.cfg
+for now. Don’t forget to restart Redeem after making any changes to the
+local.cfg. If you’d like to check your new “home_z” entry, you can home
+(G28) your printer and try moving the print head again in small moves
+towards the bed until you get to “G1 Z0”… if we did it correctly, you
+should be right above the bed by 1mm or so. Good job!</p>
+</div>
+<div class="section" id="using-autocalibration-g33">
+<h2>Using Autocalibration “G33”<a class="headerlink" href="#using-autocalibration-g33" title="Permalink to this headline">¶</a></h2>
+<p>OK, we’re doing great, but we’re still not ready to print. There are a
+few more very important steps to take before your delta will be anywhere
+close to being able to print successfully. At this point we need to get
+into calibrating your delta. I suggest getting yourself a probing system
+of some kind if you haven’t already… BLTouch, FSR system, a servo with
+a switch, etc… I won’t go into detail with “how-to’s” on installing
+these systems… if you already have a probing system, then great! We
+can continue! If not, then do some research and come back ;-) I’m using
+FSR’s currently, and have a BLTouch that I plan to start using. I’ll add
+info here in the future about the BLTouch. These systems are super
+cheap, and if you’re new to all of this, your chances of successfully
+printing without one is pretty slim.</p>
+<p>FSR’s… super easy to use… if you’ve found a way to mount them below
+your bed, they work great. Another option is physically holding the FSR
+and allowing it to get squeezed between your hotend and bed… whatever
+the case, use caution not to drive your hotend through your bed! We take
+no responsibilty! <strong>One quick note…</strong> If you’re using a JohnSL FSR
+system, I’m pretty sure you’ll need to use a jumper on the NO pins for
+it to work properly with the Replicape. Make sure to connect your FSR to
+the Z2 Endstop connection of your Replicape… Let’s open our local.cfg
+once again and go down to the [Endstop] section. Let’s add the following
+command there:</p>
+<p><code class="docutils literal"><span class="pre">end_stop_z2_stops&nbsp;=&nbsp;x_ccw,y_ccw,z_ccw</span></code></p>
+<p>Just like the other endstops, once you’ve restarted Redeem, let’s go to
+the <em>Terminal</em> within Octoprint and make sure we see the notification
+“Z2 Endstop Hit” while pressing the FSR… if you see the notification,
+then hopefully we have everything connected properly. Home your Z-axis
+to the top, and enter “G1 Z50”… while it’s heading down, press on the
+FSR and see if the printhead stops moving. If it does, then we’re in
+good shape! Theoretically with our configuration so far, it should work.
+If it’s not working, check your wiring, and you can enter “M574” in the <em>Terminal</em>
+to make sure your endstops are activated.</p>
+<p>If your probing system is working properly, then we’re ready to
+Autocalibrate your machine! The first thing we need to do is go into the
+<em>Terminal</em> and use the G29C command to generate a circular probing
+pattern. We also need to give the machine some information so it can
+properly set this pattern for us. Here’s a breakdown of how to use G29C
+from <a class="reference internal" href="../../replicape/gcodes.html#g29"><span class="std std-ref">G29</span></a>:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">Generate</span> <span class="n">a</span> <span class="n">circular</span> <span class="n">G29</span> <span class="n">Probing</span> <span class="n">pattern</span>
+<span class="n">D</span> <span class="o">=</span> <span class="n">bed_diameter_mm</span><span class="p">,</span> <span class="n">default</span><span class="p">:</span> <span class="mi">140</span>
+<span class="n">C</span> <span class="o">=</span> <span class="n">Circles</span><span class="p">,</span> <span class="n">default</span> <span class="o">=</span> <span class="mi">2</span>
+<span class="n">P</span> <span class="o">=</span> <span class="n">points_pr_circle</span><span class="p">,</span> <span class="n">default</span><span class="p">:</span> <span class="mi">8</span>
+<span class="n">S</span> <span class="o">=</span> <span class="n">probe_start_height</span><span class="p">,</span> <span class="n">default</span><span class="p">:</span> <span class="mf">6.0</span>
+<span class="n">Z</span> <span class="o">=</span> <span class="n">add_zero</span><span class="p">,</span> <span class="n">default</span> <span class="o">=</span> <span class="mi">1</span>
+<span class="n">K</span> <span class="o">=</span> <span class="n">probe_speed</span><span class="p">,</span> <span class="n">default</span><span class="p">:</span> <span class="mf">3000.0</span>
+</pre></div>
+</div>
+<p>Here’s what I suggest for a 300mm bed:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">G29C</span> <span class="n">D250</span> <span class="n">C2</span> <span class="n">P8</span> <span class="n">S15</span> <span class="n">Z1</span> <span class="n">K1500</span>
+</pre></div>
+</div>
+<p>This will give you slightly longer and slower moves, and it keeps the
+probe from getting to far to the edges. Once you’ve run this routine,
+you’re going to see a new section added to your local.cfg called
+[Macros] and your new G29 routine will be in this section.</p>
+</div>
+<div class="section" id="g31-32-macros">
+<h2>G31/32 Macros<a class="headerlink" href="#g31-32-macros" title="Permalink to this headline">¶</a></h2>
+<p>Now that you have the routine in place, we need to add two more small
+macros to your [Macros] section in order for the autocalibration routine
+to work properly… what I’m offering here is specific to the JohnSL FSR
+system, so you may need to figure this out for your system.</p>
+<p>Add the following to your [Macros]:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">G32</span> <span class="o">=</span>
+   <span class="n">M574</span> <span class="n">Z2</span> <span class="n">x_ccw</span><span class="p">,</span><span class="n">y_ccw</span><span class="p">,</span><span class="n">z_ccw</span>        <span class="p">;</span> <span class="n">Enable</span> <span class="n">FSR</span> <span class="n">System</span><span class="o">.</span>
+<span class="n">G31</span> <span class="o">=</span>
+   <span class="n">M574</span> <span class="n">Z2</span>        <span class="p">;</span> <span class="n">Disable</span> <span class="n">FSR</span> <span class="n">System</span><span class="o">.</span>
+</pre></div>
+</div>
+<p>This can go above or below the G29 routine. These two macros are used
+within the G29 routine to enable and disable your FSR system.</p>
+<p>Once all of this information is entered in the local.cfg, you’re ready
+to run your autocalibration command! Of course you’ll need to restart
+Redeem, and once everything is ready, just go to the <em>Terminal</em> and
+enter “G33”… <strong>Caution!</strong> If you’re manually using your FSR pad, get
+ready to place it in the path of the tip! You don’t want your nice new
+bed or hotend to be damaged! Once autocalibration is finished, you can
+enter “M500” into your <em>Terminal</em> and your printer will be 99% ready to
+print! You’re going to see a few things automatically added to your
+local.cfg… You’ll see a new [Delta] section that looks similar to
+this:</p>
+<p><span class="todo">update based on 2.1.1 configuration</span></p>
+<div class="line-block">
+<div class="line"><strong>``[Delta]``</strong></div>
+<div class="line"><code class="docutils literal"><span class="pre">hez&nbsp;=&nbsp;0.0</span></code></div>
+<div class="line"><code class="docutils literal"><span class="pre">l&nbsp;=&nbsp;0.288</span></code></div>
+<div class="line"><code class="docutils literal"><span class="pre">r&nbsp;=&nbsp;0.145606041232</span></code></div>
+<div class="line"><code class="docutils literal"><span class="pre">ae&nbsp;=&nbsp;0.0</span></code></div>
+<div class="line"><code class="docutils literal"><span class="pre">be&nbsp;=&nbsp;0.0</span></code></div>
+<div class="line"><code class="docutils literal"><span class="pre">ce&nbsp;=&nbsp;0.0</span></code></div>
+<div class="line"><code class="docutils literal"><span class="pre">a_tangential&nbsp;=&nbsp;0</span></code></div>
+<div class="line"><code class="docutils literal"><span class="pre">a_radial&nbsp;=&nbsp;0.0</span></code></div>
+<div class="line"><code class="docutils literal"><span class="pre">b_radial&nbsp;=&nbsp;0.0</span></code></div>
+<div class="line"><code class="docutils literal"><span class="pre">c_radial&nbsp;=&nbsp;0.0</span></code></div>
+</div>
+<p>And you’ll also see offsets similar to these added to your [Geometry]
+section:</p>
+<div class="line-block">
+<div class="line"><code class="docutils literal"><span class="pre">offset_x&nbsp;=&nbsp;-0.316440484471</span></code></div>
+<div class="line"><code class="docutils literal"><span class="pre">offset_y&nbsp;=&nbsp;-0.31603573114</span></code></div>
+<div class="line"><code class="docutils literal"><span class="pre">offset_z&nbsp;=&nbsp;-0.316766815853</span></code></div>
+</div>
+<p>You may also notice that your Z2 endstop just says “end_stop_z2_stops
+=” with no entry… that’s because your macro has cleared it out, and
+that is normal. Otherwise, this endstop would be engaged while you are
+printing and causing all kinds of trouble!</p>
+<p>You also need to change your “home_z = 0.xxx” to about 10 or 15 mm
+lower than your XYZ offsets. This will pull your carriages off of the
+endstops which I’ve been told can create issues. It doesn’t hurt to
+rerun G33 once you’ve made this change.</p>
+<p>Well, I’m sure I’m forgetting something, or something seems crazy, or
+heck, maybe I’m even wrong somewhere! My suggestion is shoot me an email
+at <a class="reference external" href="mailto:95roverd90&#37;&#52;&#48;gmail&#46;com">95roverd90<span>&#64;</span>gmail<span>&#46;</span>com</a>, or hitting any of us up on Slack or G+! Don’t
+hesitate to ask questions!</p>
+</div>
+<div class="section" id="calibrating-convex-concave-behaviour">
+<h2>calibrating convex/concave behaviour<a class="headerlink" href="#calibrating-convex-concave-behaviour" title="Permalink to this headline">¶</a></h2>
+<p>If your delta printer is exhibiting non-planar behaviour, you can use
+<a class="reference internal" href="../../replicape/mcodes.html#m665"><span class="std std-ref">M665</span></a> to calibrate the values. When you have found the correct values, save
+them with <a class="reference internal" href="../../replicape/mcodes.html#m500"><span class="std std-ref">M500</span></a>.</p>
+<p>The saved settings will be in <cite>local.cfg</cite>.</p>
+<p>To see which parameter to change in which direction, looking at this
+page will guide you in which value to tune which way: <a class="reference external" href="http://boim.com/DeltaUtil/CalDoc/Calibration.html">Delta Calibration Study</a></p>
+<p>To summarize, set your rod length <strong>L</strong> according to what you have
+measured, from center to center of the ball joints. Then adjust the
+behavior by adjusting the <strong>R</strong> parameter.</p>
+<p>Use a thickness gauge (can be anything that doesn’t compress) of a few
+millimeters thickness as a reference. First set the Z-height properly
+for X,Y = (0,0). Then move 10, 20 millimeters in X and Y around the
+center to see if you have a significant error in the planar behavior.
+If you don’t, move out further and check with your thickness gauge how
+far off you are. A quick example of the order of magnitudes is if you
+notice a 1 to 1.5mm offset (<em>upwards means you need to shrink R, too
+far down means you need to increase R</em>) at 40mm off center out of a
+3mm gauge. The error in radius was somewhere on the order of 2 or 3mm
+to adjust it. The further out from the center, the smaller the
+adjustment to be made to the radius.</p>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">while the radial offset values exist, <a class="reference external" href="https://plus.google.com/100077479073911242630/posts/C2dubTjDeMG">it has been reported</a>
+that at present they do not behave as expected. The suggested fix is
+to subtract the offsets directly into your print radius value to get a
+better behavior. This note will be removed when the release branch of
+redeem has corrected the behavior.</p>
+</div>
+</div>
+<div class="section" id="bed-leveling-compensation-matrix">
+<h2>bed leveling compensation matrix<a class="headerlink" href="#bed-leveling-compensation-matrix" title="Permalink to this headline">¶</a></h2>
+<p>Redeem supports autoprobing the bed
+to generate a bed leveling compensation matrix. However it is no
+substitute for a poorly setup machine. Try to get your head as level
+as possible without bed leveling first, then use the <a class="reference internal" href="../../replicape/gcodes.html#g29"><span class="std std-ref">G29</span></a>
+command to generate the fine-tuning bed compensation matrix.</p>
+</div>
+<div class="section" id="using-g33-for-auto-calibration">
+<h2>Using G33 for auto-calibration<a class="headerlink" href="#using-g33-for-auto-calibration" title="Permalink to this headline">¶</a></h2>
+<p>When you have a working G29 probing setup in place, you can improve
+several parameters of your delta printer with the G33 command. The
+parameters to improve is end stop offsets, delta radius, tower angular
+position correction and diagonal rod length.</p>
+<p>G33 will use the probe offset in the [Probe] section to adjust the end
+stops offsets, so be sure to set this to 0 initially to avoid offset
+errors.</p>
+<p>The G33 in Redeem is an implementation of the calculations found in this
+web site: <a class="reference external" href="http://escher3d.com/pages/wizards/wizarddelta.php">http://escher3d.com/pages/wizards/wizarddelta.php</a></p>
+</div>
+</div>
+
+                        </div><!--//content-inner-->
+                    </div><!--//doc-content-->
+                    <div class="doc-sidebar hidden-xs">
+                        <nav id="doc-nav">
+                            <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../../gettingstarted/index.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../replicape/index.html">Replicape</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../development/index.html">Development</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../index.html">Support</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../nomenclature.html">Nomenclature</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../troubleshooting.html">Troubleshooting</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../knownproblems.html">Known problems</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../howto/imageburn.html">Image Burn</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../howto/zprobes.html">Z Probes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../howto/endstops.html">Endstops</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../howto/homing.html">Homing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../howto/beginlinux.html">Linux Beginner Guide</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../howto/linklocal.html">Link Local</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../howto/octoprint.html">OctoPrint</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../howto/marlinmigration.html">Migrate from Marlin</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../howto/bltouch.html">BLTouch</a></li>
+<li class="toctree-l2"><a class="reference internal" href="corexy.html">Core XY</a></li>
+<li class="toctree-l2"><a class="reference internal" href="cartesian.html">Cartesian Printers</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Delta Printers</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#profile-configurations">Profile Configurations</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#editing-local-cfg">Editing Local.cfg</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#checking-your-endstops">Checking Your Endstops</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#homing-properly">Homing Properly</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#using-autocalibration-g33">Using Autocalibration “G33”</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#g31-32-macros">G31/32 Macros</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#calibrating-convex-concave-behaviour">calibrating convex/concave behaviour</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#bed-leveling-compensation-matrix">bed leveling compensation matrix</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#using-g33-for-auto-calibration">Using G33 for auto-calibration</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../attribution.html">Attributions</a></li>
+</ul>
+
+                        </nav>
+                    </div><!--//doc-sidebar-->
+                </div><!--//doc-body-->              
+            </div><!--//container-->
+        </div><!--//doc-wrapper-->
+    </div><!--//page-wrapper-->
+    
+    <footer id="footer" class="footer text-center">
+        <div class="container">
+            <small class="copyright">&copy 2017, Replicape, ThingPrinter</small></small>
+            <small class="copyright">Sphinx theme based on the <a href="https://themes.3rdwavemedia.com/demo/prettydocs/">Pretty Docs</a> design.</small>
+        </div><!--//container-->
+    </footer><!--//footer-->
+
+    <!-- Main Javascript -->          
+    <script type="text/javascript" src="../../_static/plugins/jquery-1.12.3.min.js"></script>
+    <script type="text/javascript" src="../../_static/plugins/bootstrap/js/bootstrap.min.js"></script>
+    <script type="text/javascript" src="../../_static/plugins/prism/prism.js"></script>
+    <script type="text/javascript" src="../../_static/plugins/jquery-scrollTo/jquery.scrollTo.min.js"></script>
+    <script type="text/javascript" src="../../_static/plugins/jquery-match-height/jquery.matchHeight-min.js"></script>
+    <script type="text/javascript" src="../../_static/plugins/popup/jquery.magnific-popup.js"></script>
+
+
+    <script type="text/javascript">
+        window.MathJax = {
+            asciimath2jax: {
+                ignoreClass: 'problematic'
+            }
+        };
+    </script>
+
+    <script type="text/javascript" async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.2/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+    <script type="text/javascript" src="../../_static/js/main.js"></script>
+    
+</body>
+</html> 
