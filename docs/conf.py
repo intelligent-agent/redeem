@@ -21,9 +21,8 @@ import sys
 import mock
 from sphinx.errors import SphinxError
 
-sys.path.insert(0, os.path.abspath('..'))
-sys.path.insert(0, os.path.abspath('../redeem'))
-sys.path.insert(0, os.path.abspath('.'))
+sys.path.insert(0, os.path.join(os.path.realpath(os.path.dirname(__file__)), '..'))
+sys.path.insert(0, os.path.join(os.path.realpath(os.path.dirname(__file__)), '..', 'redeem'))
 sys.modules['evdev'] = mock.Mock()
 sys.modules['RotaryEncoder'] = mock.Mock()
 sys.modules['Watchdog'] = mock.Mock()
@@ -48,6 +47,7 @@ sys.modules['JoinableQueue'] = mock.Mock()
 sys.modules['USB'] = mock.Mock()
 sys.modules['Ethernet'] = mock.Mock()
 sys.modules['Pipe'] = mock.Mock()
+sys.modules['redeem.Stepper'] = mock.Mock()
 
 # -- General configuration ------------------------------------------------
 
