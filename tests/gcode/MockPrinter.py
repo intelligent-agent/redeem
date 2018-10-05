@@ -175,4 +175,3 @@ log_to_file = False
     self.assertNotEqual(gcode_handler.get_long_description(), "")
     self.assertEqual(gcode_handler.is_buffered(), is_buffered)
     self.assertEqual(gcode_handler.is_async(), is_async)
-

@@ -6,9 +6,9 @@ from redeem.Path import *
 
 class G1_G0_Tests(MockPrinter):
   """
-    The following tests check that the path object that is sent to self.printer.path_planner
-    matches what is expected, for [several variants of] each Gcode command
-    """
+  The following tests check that the path object that is sent to self.printer.path_planner
+  matches what is expected, for [several variants of] each Gcode command
+  """
 
   def test_gcodes_G1_G0_absolute(self):
     self.printer.movement = Path.ABSOLUTE
