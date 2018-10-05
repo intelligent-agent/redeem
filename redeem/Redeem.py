@@ -143,7 +143,7 @@ class Redeem:
     self.printer.config.parse_capes()
     self.revision = self.printer.config.replicape_revision
     if self.revision:
-      logging.info("Found Replicape rev. " + self.revision)
+      logging.info("Found Replicape rev. {}".format(self.revision))
     else:
       logging.warning("Oh no! No Replicape present!")
       self.revision = "0B3A"
