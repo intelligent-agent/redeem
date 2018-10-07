@@ -1,6 +1,6 @@
+#include <stdint.h>
 #include <pru_cfg.h>
 #include <pru_ctrl.h>
-#include <stdint.h>
 
 #include "config.h"
 
