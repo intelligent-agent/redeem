@@ -294,7 +294,10 @@ void PathPlanner::queueMove(VectorN endWorldPos,
         value.wait();
         state = value.get();
 
-        assert(state != startPos);
+        if (state == startPos)
+        {
+            LOGWARNING("probe was blocked - this generally signals a problem with your endstop config" << std::endl);
+        }
     }
 
     ////////////////////////////////////////////////////////////////////
@@ -459,6 +462,14 @@ void PathPlanner::runMove(
     unsigned int totalSteps = 0;
     uint64_t currentBlockStartTime = 0;
 
+    // options applied to a normal command (there are extra options for the last command in a list)
+    const uint8_t normalStepOptions = probeDistanceTraveled != nullptr ? STEPPER_COMMAND_OPTION_CARRY_BLOCKED_STEPPERS : 0;
+
+    if (probeDistanceTraveled != nullptr)
+    {
+        pru.resetStepsRemaining();
+    }
+
     assert(commandsLength > 1); // we do not handle single-index command buffers correctly
 
     finalStepTimes.fill(0);
@@ -473,6 +484,8 @@ void PathPlanner::runMove(
 
     // reserve a command to be an opening delay with no steps
     uint32_t* lastDelay = &commands[commandsIndex].delay;
+    commands[commandsIndex].options = normalStepOptions;
+
     commandsIndex++;
     totalSteps++;
 
@@ -544,6 +557,7 @@ void PathPlanner::runMove(
         totalSteps++;
 
         cmd.cancellableMask = cancellableMask;
+        cmd.options = normalStepOptions;
 
         lastDelay = &cmd.delay;
         lastStepTime = stepTime;
@@ -587,25 +601,28 @@ void PathPlanner::runMove(
         assert(commandsIndex > 0 && commandsIndex <= commandsLength);
 
         SteppersCommand& cmd = commands[commandsIndex - 1];
+
+        cmd.options |= normalStepOptions;
+
         if (wait)
         {
-            cmd.options = STEPPER_COMMAND_OPTION_SYNCWAIT_EVENT;
+            cmd.options |= STEPPER_COMMAND_OPTION_SYNCWAIT_EVENT;
         }
 
         if (sync)
         {
-            cmd.options = STEPPER_COMMAND_OPTION_SYNC_EVENT;
+            cmd.options |= STEPPER_COMMAND_OPTION_SYNC_EVENT;
         }
     }
 
     if (commandsIndex != 0)
     {
-        pru.pushBlock((uint8_t*)&commands[0], sizeof(SteppersCommand) * commandsIndex, sizeof(SteppersCommand), stepTime - currentBlockStartTime, callback);
-
         if (probeDistanceTraveled)
         {
             probeSteps.insert(probeSteps.end(), &commands[0], &commands[commandsIndex]);
         }
+
+        pru.pushBlock((uint8_t*)&commands[0], sizeof(SteppersCommand) * commandsIndex, sizeof(SteppersCommand), stepTime - currentBlockStartTime, callback);
 
         for (size_t i = 0; i < commandsLength; i++)
         {
@@ -625,15 +642,18 @@ void PathPlanner::runMove(
         pru.waitUntilFinished();
         const size_t stepsRemaining = pru.getStepsRemaining();
         const size_t stepsTraveled = probeSteps.size() - stepsRemaining;
+        pru.resetStepsRemaining();
+
+        LOG("probe took " << stepsTraveled << " of " << probeSteps.size() << " steps");
 
         assert(stepsRemaining < probeSteps.size());
         IntVectorN deltasTraveled;
 
         for (size_t i = 0; i < stepsTraveled; i++)
         {
+            const SteppersCommand& command = probeSteps[i];
             for (int axis = 0; axis < NUM_AXES; axis++)
             {
-                const SteppersCommand& command = probeSteps[i];
                 if (command.step & (1 << axis))
                 {
                     deltasTraveled[axis] += (command.direction & (1 << axis)) ? 1 : -1;

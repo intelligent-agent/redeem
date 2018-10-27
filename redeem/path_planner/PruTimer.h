@@ -158,7 +158,8 @@ public:
 
     void pushBlock(uint8_t* blockMemory, size_t blockLen, unsigned int unit, uint64_t totalTime, SyncCallback* callback = nullptr) override;
 
-    size_t getStepsRemaining() override;
+    uint32_t getStepsRemaining() override;
+    void resetStepsRemaining() override;
 };
 
 #endif /* defined(__PathPlanner__PruTimer__) */

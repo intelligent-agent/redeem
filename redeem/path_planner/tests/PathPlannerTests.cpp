@@ -43,7 +43,8 @@ public:
     MOCK_METHOD0(suspend, void());
     MOCK_METHOD0(resume, void());
     MOCK_METHOD0(reset, void());
-    MOCK_METHOD0(getStepsRemaining, size_t());
+    MOCK_METHOD0(getStepsRemaining, uint32_t());
+    MOCK_METHOD0(resetStepsRemaining, void());
 
     void pushBlock(uint8_t* start, size_t length, unsigned int unit, uint64_t time, SyncCallback* callback) override
     {
@@ -460,4 +461,61 @@ TEST_F(PathPlannerTest, WaitsForWaitEvents)
     planner.stopThread(true);
 
     ASSERT_EQ(pru.stepperCommands.size(), 23); // one extra for the wait event - TODO this can be improved
+}
+
+TEST_F(PathPlannerTest, ResetsStepsRemainingForProbe)
+{
+    {
+        ::testing::InSequence dummy;
+        EXPECT_CALL(pru, resetStepsRemaining);
+        EXPECT_CALL(pru, getStepsRemaining).WillOnce(::testing::Return(3));
+        EXPECT_CALL(pru, resetStepsRemaining);
+    }
+
+    planner.runThread();
+
+    planner.queueMove(
+        VectorN(0.0001, 0, 0), // at 100 steps/mm, this will take 10 steps to complete
+        0.0001, // at 0.1mm/s, this should take 1 second
+        1.0,
+        false,
+        false,
+        false,
+        false,
+        false,
+        true); // is_probe
+
+    planner.waitUntilFinished();
+
+    ASSERT_EQ(pru.stepperCommands.size(), 11);
+    ASSERT_EQ(planner.getLastProbeDistance(), 0.00007);
+    ASSERT_EQ(planner.getState(), VectorN(0.00007, 0, 0));
+
+    planner.stopThread(true);
+}
+
+TEST_F(PathPlannerTest, SetsCarryBlockedSteppersFlag)
+{
+    planner.runThread();
+
+    planner.queueMove(
+        VectorN(0.0001, 0, 0), // at 100 steps/mm, this will take 10 steps to complete
+        0.0001, // at 0.1mm/s, this should take 1 second
+        1.0,
+        false,
+        false,
+        false,
+        false,
+        false,
+        true); // is_probe
+
+    planner.waitUntilFinished();
+
+    EXPECT_EQ(pru.stepperCommands.size(), 11);
+    for (auto& command : pru.stepperCommands)
+    {
+        EXPECT_EQ(command.options, STEPPER_COMMAND_OPTION_CARRY_BLOCKED_STEPPERS);
+    }
+
+    planner.stopThread(true);
 }

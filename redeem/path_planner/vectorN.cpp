@@ -221,6 +221,19 @@ VectorN operator*(const VectorN& v1, const VectorN& v2)
     return v3;
 }
 
+bool operator==(const VectorN& v1, const VectorN& v2)
+{
+    for (int i = 0; i < NUM_AXES; i++)
+    {
+        if (v1[i] != v2[i])
+        {
+            return false;
+        }
+    }
+
+    return true;
+}
+
 IntVectorN::IntVectorN()
 {
     zero();

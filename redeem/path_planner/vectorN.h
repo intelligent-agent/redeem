@@ -87,6 +87,8 @@ double dot(const VectorN& v1, const VectorN& v2);
 VectorN operator/(const VectorN& v1, const VectorN& v2);
 /// Element-wise multiplication
 VectorN operator*(const VectorN& v1, const VectorN& v2);
+/// Binary == check equality
+bool operator==(const VectorN& v1, const VectorN& v2);
 
 struct IntVectorN
 {
@@ -119,7 +121,7 @@ IntVectorN operator+(const IntVectorN& v1, const IntVectorN& v2);
 IntVectorN operator-(const IntVectorN& v1, const IntVectorN& v2);
 /// Binary == check equality
 bool operator==(const IntVectorN& v1, const IntVectorN& v2);
-/// Binaru != check inequality
+/// Binary != check inequality
 bool operator!=(const IntVectorN& v1, const IntVectorN& v2);
 
 #endif

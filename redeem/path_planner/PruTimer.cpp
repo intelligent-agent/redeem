@@ -740,7 +740,12 @@ void PruTimer::resume()
     *pru_control = 0;
 }
 
-size_t PruTimer::getStepsRemaining()
+uint32_t PruTimer::getStepsRemaining()
 {
-    return *(volatile size_t*)(shared_mem + SHARED_RAM_START + 16);
+    return *(volatile uint32_t*)(shared_mem + SHARED_RAM_START + 16);
+}
+
+void PruTimer::resetStepsRemaining()
+{
+    *(volatile uint32_t*)(shared_mem + SHARED_RAM_START + 16) = 0;
 }
