@@ -76,8 +76,19 @@ class MockPrinter(unittest.TestCase):
     """
     tf = open("../configs/local.cfg", "w")
     lines = """
+[Configuration]
+version = 1
+
 [System]
 log_to_file = False
+    """
+    tf.write(lines)
+    tf.close()
+
+    tf = open(os.path.join(path, 'printer.cfg'), "w")
+    lines = """
+[Configuration]
+version = 1
     """
     tf.write(lines)
     tf.close()
