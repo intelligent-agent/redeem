@@ -28,9 +28,8 @@ class SDCardManager(object):
 
   def load_file(self, f):
     """
-        open the file, remains open until another file is opened
-        """
-
+    open the file, remains open until another file is opened
+    """
     self.lock.acquire()
 
     self.file_name = f
@@ -57,14 +56,12 @@ class SDCardManager(object):
     self.gcode_file.seek(0)
 
     self.lock.release()
-
     return True
 
   def next(self):
     """
-        return the next line in the file and increment counters
-        """
-
+    return the next line in the file and increment counters
+    """
     self.lock.acquire()
     lc = self.line_count
     N = self.file_line_size
@@ -89,74 +86,60 @@ class SDCardManager(object):
       self.lock.release()
       raise StopIteration()
 
-    return
-
   def get_file_size(self):
     """
-        return the size of the file
-        """
-
+    return the size of the file
+    """
     self.lock.acquire()
     szb = self.file_byte_size
     szl = self.file_line_size
     self.lock.release()
-
     return szl, szb
 
   def get_file_name(self):
     """
-        return the name of the file
-        """
-
+    return the name of the file
+    """
     self.lock.acquire()
     fn = self.file_name
     self.lock.release()
-
     return fn
 
   def get_position(self):
     """
-        return the current position within the file, both line count 
-        and number of bytes
-        """
-
+    return the current position within the file, both line count 
+    and number of bytes
+    """
     self.lock.acquire()
     line_position = self.line_count
     byte_position = self.byte_count
     self.lock.release()
-
     return line_position, byte_position
 
   def get_status(self):
     """
-        get the status of the current file
-        """
-
+    get the status of the current file
+    """
     self.lock.acquire()
     st = self.active
     self.lock.release()
-
     return st
 
   def set_status(self, status):
     """
-        set the status of the current file
-        """
-
+    set the status of the current file
+    """
     self.lock.acquire()
     self.active = bool(status)
     self.lock.release()
 
-    return
-
   def set_position(self, byte_position=0, line_position=0):
     """
-        set the counters that define our current position within the file
-        
-        inputs may be either line index or some amount of bytes, bytes 
-        will be converted to a line position
-        """
-
+    set the counters that define our current position within the file
+    
+    inputs may be either line index or some amount of bytes, bytes 
+    will be converted to a line position
+    """
     self.lock.acquire()
 
     # reset file object
@@ -189,9 +172,8 @@ class SDCardManager(object):
 
   def reset(self):
     """
-        reset all values to default
-        """
-
+    reset all values to default
+    """
     self.file_name = None
     self.byte_count = None
     self.line_count = None

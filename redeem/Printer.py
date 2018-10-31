@@ -167,18 +167,14 @@ class Printer:
     """
         go through the list of endstops and load their active status into the PRU
         """
-
     # generate a binary representation of the active status
     active = 0
     for i, es in enumerate(["X1", "Y1", "Z1", "X2", "Y2", "Z2"]):
       if self.end_stops[es].active:
         active += 1 << i
-
     #logging.debug("endstop active mask = " + bin(active))
-
     # write to shared memory
     PruInterface.set_active_endstops(active)
-    return
 
   def save_settings(self, filename):
     logging.debug("save_settings: setting stepper parameters")
@@ -238,7 +234,6 @@ class Printer:
   def movement_axis(self, axis):
     if self.e_axis_active and axis == "E":
       return self.current_tool
-
     return axis
 
   @staticmethod

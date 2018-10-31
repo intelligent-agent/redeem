@@ -106,7 +106,6 @@ class Autotune:
     self.heater.onoff_control = self.has_onoff_control
     self.running = False
     self.t.join()
-
     return True
 
   def _tune(self):
@@ -148,7 +147,6 @@ class Autotune:
           logging.debug("peaks: " + str(self.peaks))
           logging.debug("valls: " + str(self.valleys))
           logging.debug("temps len: " + str(len(self.temps)) + " " + str(len(self.smooth_temps)))
-
           self.max_temp = self.temps[self.peaks[-1]]
           self.min_temp = self.temps[self.valleys[-1]]
           logging.debug("Max: " + str(self.max_temp))
@@ -309,7 +307,6 @@ class Autotune:
         [(cooling_times[200 + (i * 200)] - cooling_times[0 + (i * 200)]) for i in range(5)])
     slopes = abs(diffs / times)
     temp_deltas = [cooling_temps[100 + (i * 200)] - self.ambient_temp for i in range(5)]
-
     # Wait until we are below cutoff-temp, so we can get some traction
     while self.heater.get_temperature_raw() > cutoff_temp - 20.0:
       time.sleep(1)
@@ -322,11 +319,9 @@ class Autotune:
     logging.debug("Times: " + str(times) + " s")
     logging.debug("Cooling rates: " + str(slopes) + " deg/s")
     logging.debug("Deltas: " + str(temp_deltas) + " deg")
-
     # (16) Calculate heat_loss_constant
     self.heat_loss_constant = [slopes[n] / temp_deltas[n] for n in range(len(slopes))]
     logging.debug("Heat loss constant: " + str(self.heat_loss_constant))
-
     # (17) Calculate heat_loss_K
     self.heat_loss_k = np.average(self.heat_loss_constant)
     logging.debug("Heat loss K: " + str(self.heat_loss_k))
@@ -347,7 +342,6 @@ class Autotune:
     # (22) Calculate high-cycle power
     self.high_cycle_power = self.setpoint_power * (1.0 + 1.0 / (self.gain_skew**2))
     logging.debug("High-cycle_power: " + str(self.high_cycle_power))
-
     # (23) Check if high-cycle power exceeds max_PWM
     if self.high_cycle_power > 1.0:
       # notify user the heater is too weak to cycle effectively at the chosen setpoint,

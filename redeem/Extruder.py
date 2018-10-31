@@ -29,9 +29,9 @@ from Alarm import Alarm
 
 class Heater(object):
   """
-    A heater element that must keep temperature,
-    either an extruder, a HBP or could even be a heated chamber
-    """
+  A heater element that must keep temperature,
+  either an extruder, a HBP or could even be a heated chamber
+  """
 
   def __init__(self, thermistor, mosfet, name, onoff_control):
     """ Init """
@@ -208,13 +208,13 @@ class Heater(object):
     """ Calculate and return the error integral """
     self.error_integral += self.error * self.sleep
     # Avoid windup by clippping the integral part
-    # to teh reciprocal of the integral term
+    # to the reciprocal of the integral term
     self.error_integral = np.clip(self.error_integral, 0, self.max_power * self.Ti / self.Kp)
     return self.error_integral
 
   def check_temperature_error(self):
     """ Check the temperatures, make sure they are sane. 
-        Sound the alarm if something is wrong """
+    Sound the alarm if something is wrong """
     if len(self.temperatures) < 2:
       return
     temp_delta = self.temperatures[-1] - self.temperatures[-2]
