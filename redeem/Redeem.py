@@ -91,8 +91,6 @@ class Redeem:
     Path.printer = printer
     Gcode.printer = printer
 
-    printer.config_location = config_location
-
     # Set up and Test the alarm framework
     Alarm.printer = self.printer
     Alarm.executor = AlarmExecutor()
