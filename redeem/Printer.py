@@ -43,7 +43,6 @@ class Printer:
   AXIS_CONFIG_DELTA = 3
 
   def __init__(self):
-    self.config_location = None
     self.steppers = {}
     self.heaters = {}
     self.thermistors = {}
@@ -110,14 +109,14 @@ class Printer:
 
   def add_slave(self, master, slave):
     ''' Make an axis copy the movement of another.
-        the slave will get the same position as the axis'''
+    the slave will get the same position as the axis'''
     self.slaves[master] = slave
     self.has_slaves = True
 
   def ensure_steppers_enabled(self):
     """
-        This method is called for every move, so it should be fast/cached.
-        """
+    This method is called for every move, so it should be fast/cached.
+    """
     # Reset Stepper watchdog
     self.swd.reset()
     # Enable steppers
@@ -149,9 +148,9 @@ class Printer:
 
   def homing(self, is_homing):
     """
-        if the printer is homing the endstops may need to be updated to
-        allow for endstops that are only active during the homing procedure
-        """
+    if the printer is homing the endstops may need to be updated to
+    allow for endstops that are only active during the homing procedure
+    """
 
     homing_only_endstops = self.config.get('Endstops', 'homing_only_endstops')
     if homing_only_endstops:
@@ -165,8 +164,8 @@ class Printer:
 
   def set_active_endstops(self):
     """
-        go through the list of endstops and load their active status into the PRU
-        """
+    go through the list of endstops and load their active status into the PRU
+    """
     # generate a binary representation of the active status
     active = 0
     for i, es in enumerate(["X1", "Y1", "Z1", "X2", "Y2", "Z2"]):
@@ -179,20 +178,22 @@ class Printer:
   def save_settings(self, filename):
     logging.debug("save_settings: setting stepper parameters")
     for name, stepper in iteritems(self.steppers):
-      self.config.set('Steppers', 'in_use_' + name, str(stepper.in_use))
-      self.config.set('Steppers', 'direction_' + name, str(stepper.direction))
-      self.config.set('Endstops', 'has_' + name, str(stepper.has_endstop))
-      self.config.set('Steppers', 'current_' + name, str(stepper.current_value))
-      self.config.set('Steppers', 'steps_pr_mm_' + name, str(stepper.steps_pr_mm))
-      self.config.set('Steppers', 'microstepping_' + name, str(stepper.microstepping))
-      self.config.set('Steppers', 'slow_decay_' + name, str(stepper.decay))
-      self.config.set('Steppers', 'slave_' + name, str(self.slaves[name]))
+      n = name.lower()
+      self.config.set('Steppers', "in_use_{}".format(n), str(stepper.in_use))
+      self.config.set('Steppers', "direction_{}".format(n), str(stepper.direction))
+      self.config.set('Endstops', "has_{}".format(n), str(stepper.has_endstop))
+      self.config.set('Steppers', "current_{}".format(n), str(stepper.current_value))
+      self.config.set('Steppers', "steps_pr_mm_{}".format(n), str(stepper.steps_pr_mm))
+      self.config.set('Steppers', "microstepping_{}".format(n), str(stepper.microstepping))
+      self.config.set('Steppers', "slow_decay_{}".format(n), str(stepper.decay))
+      self.config.set('Steppers', "slave_{}".format(n), str(self.slaves[name]))
 
     logging.debug("save_settings: setting heater parameters")
     for name, heater in iteritems(self.heaters):
-      self.config.set('Heaters', 'pid_Kp_' + name, str(heater.Kp))
-      self.config.set('Heaters', 'pid_Ti_' + name, str(heater.Ti))
-      self.config.set('Heaters', 'pid_Td_' + name, str(heater.Td))
+      n = name.lower()
+      self.config.set('Heaters', 'pid_Kp_' + n, str(heater.Kp))
+      self.config.set('Heaters', 'pid_Ti_' + n, str(heater.Ti))
+      self.config.set('Heaters', 'pid_Td_' + n, str(heater.Td))
 
     logging.debug("save_settings: saving bed compensation matrix")
     # Bed compensation
@@ -201,11 +202,11 @@ class Printer:
     # Offsets
     logging.debug("save_settings: setting offsets")
     for axis, offset in iteritems(self.path_planner.center_offset):
-      self.config.set('Geometry', "offset_{}".format(axis), str(offset))
+      self.config.set('Geometry', "offset_{}".format(axis).lower(), str(offset))
     # Travel length
     logging.debug("save_settings: travel length")
     for axis, offset in iteritems(self.path_planner.travel_length):
-      self.config.set('Geometry', "travel_{}".format(axis), str(offset))
+      self.config.set('Geometry', "travel_{}".format(axis).lower(), str(offset))
 
     # Save Delta config
     logging.debug("save_settings: setting delta config")
