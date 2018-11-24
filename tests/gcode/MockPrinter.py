@@ -88,7 +88,7 @@ log_to_file = False
   @classmethod
   @mock.patch.object(EndStop, "_wait_for_event", new=None)
   @mock.patch.object(PathPlanner, "_init_path_planner")
-  @mock.patch("redeem.CascadingConfigParser", new=CascadingConfigParserWedge)
+  @mock.patch("redeem.Redeem.CascadingConfigParser", new=CascadingConfigParserWedge)
   def setUpClass(cls, mock_init_path_planner):
     """
     Allow Extruder or HBP instantiation without crashing 'cause not BBB/Replicape
