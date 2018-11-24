@@ -49,11 +49,11 @@ class GCodeProcessor:
     self.counters = GCodePerformanceCounters()
     self.sync_event_needed = False
     self.gcodes = {}
-    try:
-      module = __import__("gcodes", locals(), globals())
-    except ImportError:
-      module = importlib.import_module("redeem.gcodes")
+    module = importlib.import_module("redeem.gcodes")
     self.load_classes_in_module(module)
+
+    if len(self.gcodes) is 0:
+      logging.error("No gcodes loaded")
 
   def load_classes_in_module(self, module):
     for module_name, obj in inspect.getmembers(module):
