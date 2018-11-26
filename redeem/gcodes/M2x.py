@@ -276,7 +276,7 @@ class M23(M2X):
 
     nl, nb = self.printer.sd_card_manager.get_file_size()
 
-    self.printer.send_message(g.prot, "File opened:{} Lines:{} Size:{}B".format(fn, nl, nb))
+    self.printer.send_message(g.prot, "File opened:{} Size:{}".format(fn, nb))
     self.printer.send_message(g.prot, "File selected")
     logging.info("M23: finished gcode file processing")
 
