@@ -150,7 +150,7 @@ class GCodeProcessor:
       self._make_async_queue_wait_for_buffered_queue()
 
   def peek(self, gcode):
-    if self.printer.running_M116 and gcode.code() == "M108":
+    if self.printer.running_M116 and gcode.code() in ["M108", "M104", "M140"]:
       self.execute(gcode)
       return True
     elif gcode.code() == "M1500":
