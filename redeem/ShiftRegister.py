@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 """
 Implements an 8 bit shift register controlled via SPI. 
+This can also be used for the 40bit interface to TMC2130
 
 Author: Elias Bakken
 email: elias(dot)bakken(at)gmail(dot)com
@@ -47,7 +48,7 @@ class ShiftRegister(object):
 
   @staticmethod
   def commit():
-    """ Send the values to the serial to parallel chips """
+    """ Send the values to the serial-to-parallel chips """
     bytes = []
     for reg in ShiftRegister.registers:
       bytes.append(reg.state)

@@ -44,8 +44,8 @@ they are case sensitive.
 
 ..  note::
 
-    If you are not writing your own new ``printer.cfg``, keep all your printer
-    settings in ``local.cfg`` to avoid getting any setting over-written by a redeem update.
+    If you are not writing your own new ``printer.cfg``, keep all your printer
+    settings in ``local.cfg`` to avoid getting any setting over-written by a redeem update.
 
 .. _ConfigSystem:
 
@@ -241,7 +241,7 @@ For more information on correcting delta calibration, see the :doc:`/support/pri
     # NEW IN 2.1.1
     A_angular = 0.0
     B_angular = 0.0
-    C_angular = 0.0
+    C_angular = 0.0
 
 
 Here is a visual depiction of what the length and radius looks like:
@@ -583,19 +583,19 @@ path segments before pushing them to the PRU for processing.
     ...
 
     # NEW IN 2.1.1
-    # if total buffered time gets below (min_buffered_move_time) then wait for (print_move_buffer_wait) before moving again, (ms)
-    min_buffered_move_time = 100
+    # if total buffered time gets below (min_buffered_move_time) then wait for (print_move_buffer_wait) before moving again, (ms)
+    min_buffered_move_time = 100
 
     # DEPRECATED IN 2.1.1
     # Max speed for the steppers in m/s
     min_speed_x = 0.005
-    min_speed_y = 0.005
-    min_speed_z = 0.005
-    min_speed_e = 0.01
-    min_speed_h = 0.01
-    min_speed_a = 0.01
-    min_speed_b = 0.01
-    min_speed_c = 0.01
+    min_speed_y = 0.005
+    min_speed_z = 0.005
+    min_speed_e = 0.01
+    min_speed_h = 0.01
+    min_speed_a = 0.01
+    min_speed_b = 0.01
+    min_speed_c = 0.01
 
     # When true, movements on the E axis (eg, G1, G92) will apply
     # to the active tool (similar to other firmwares).  When false,
@@ -722,6 +722,11 @@ Steinhart-Heart
 +--------------------+-------------------------------------------------------------------+
 | HT100K3950         | RobotDigg.com's 3950-100K thermistor (part number HT100K3950-1)   |
 +--------------------+-------------------------------------------------------------------+
+
+If you do not find your thermistor in the chart, you can find the Steinhart-Hart coefficients
+from the `NTC Calculator`__ online tool.
+
+__ http://www.thinksrs.com/downloads/programs/Therm%20Calc/NTCCalibrator/NTCcalculator.htm
 
 
 PT100 type thermistors
@@ -975,12 +980,12 @@ This should trick the probe into moving in the correct direction.
 **G31**
 ::
 
-    M574 Z2  ; Probe up (Dock sled)
+    M574 Z2  ; Probe up (Dock sled)
 
 **G32**
 ::
 
-    M574 Z2 z_ccw, h_ccw  ; Probe down (Undock sled)
+    M574 Z2 z_ccw, h_ccw  ; Probe down (Undock sled)
 
 ::
 

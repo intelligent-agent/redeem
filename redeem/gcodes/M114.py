@@ -28,7 +28,7 @@ class M114(GCodeCommand):
 
   def get_long_description(self):
     return ("Get current printer head position. "
-            "This is the ideal positition, without bed compensation. "
+            "This is the ideal position, without bed compensation. "
             "The returned value is in millimeters.\n"
             "M = Return the position seen with the bed matrix enabled ")
 

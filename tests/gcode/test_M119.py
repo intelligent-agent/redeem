@@ -29,7 +29,7 @@ class M119_Tests(MockPrinter):
         g = self.execute_gcode("M119 " + es + " S" + str(state))
 
         self.assertEqual(self.printer.end_stops[es].invert, state)
-        self.printer.config.set.assert_called_with('Endstops', 'invert_' + es, 'True'
-                                                   if state else 'False')
+        self.printer.config.set.assert_called_with('Endstops', 'invert_' + es,
+                                                   'True' if state else 'False')
         self.printer.path_planner.pru_firmware.produce_firmware.assert_called()
         self.printer.path_planner.restart.assert_called()

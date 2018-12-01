@@ -26,6 +26,7 @@ ntfs - this is the most common Windows fs type or larger external hard drives
 vfat - this is the most common fs type used for smaller external hard drives
 exfat - is also a file system option commonly found on USB flash drives and other external drives
 """
+from __future__ import absolute_import
 
 import os
 from abc import abstractmethod, ABCMeta
@@ -37,7 +38,7 @@ from thread import start_new_thread
 
 from time import sleep
 
-from GCodeCommand import GCodeCommand
+from .GCodeCommand import GCodeCommand
 from redeem.Gcode import Gcode
 
 import cProfile, pstats, StringIO
