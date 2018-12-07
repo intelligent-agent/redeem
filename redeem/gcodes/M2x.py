@@ -408,16 +408,16 @@ class M27(M2X):
     if byte_position == 0:
       byte_position = 1
 
-    message = "SD printing byte {}/{}".format(byte_position, size_bytes)
-    self.printer.send_message(g.prot, message)
-    logging.info(message)
-
+	
     # message to inform that we have completed the print
     active = self.printer.sd_card_manager.get_status()
     if not active:
       message = "Not SD printing."
-      self.printer.send_message(g.prot, message)
-      logging.info(message)
+    else:
+      message = "SD printing byte {}/{}".format(byte_position, size_bytes)
+    
+    self.printer.send_message(g.prot, message)
+    logging.info(message)
     return
 
   def get_description(self):
