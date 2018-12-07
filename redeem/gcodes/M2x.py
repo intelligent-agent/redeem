@@ -57,7 +57,7 @@ MOUNT_LOCATIONS = {'/usb': USB_MOUNT_LOCATION, '/sd': SD_MOUNT_LOCATION, '/lcl':
 
 DEVICE_TABLE = """
 ==== ===========================
-id   device        
+id   device
 ==== ===========================
 /usb usb memory attached to host
 /sd  microsd card
@@ -196,7 +196,7 @@ class M21(M2X):
     > M20 /usb
     > M20 /sd
 
-Use ``M22`` to unattach a device before removing. 
+Use ``M22`` to unattach a device before removing.
 
 .. note:: local storage is always mounted; used with M21 will be a no-op
 """.format(DEVICE_TABLE)
@@ -228,7 +228,7 @@ class M22(M2X):
     > M21 /usb
     > M21 /sd
 
-.. note:: local storage is always mounted; used with M22 will be a no-op 
+.. note:: local storage is always mounted; used with M22 will be a no-op
 """.format(DEVICE_TABLE)
 
 
@@ -347,7 +347,7 @@ class M24(GCodeCommand):
 
   def get_formatted_description(self):
     return """Start printing from an externally selected file using the ``M23`` command.
-        
+
 If the current print (from any source) was paused by ``M25``, this will resume the print."""
 
   def is_buffered(self):
@@ -384,16 +384,16 @@ class M26(M2X):
 
   def get_formatted_description(self):
     return """Set SD card print position.
-        
+
     S = position in bytes
     L = line number
-        
+
 ::
 
     > M26 S0
-    or 
+    or
     > M26 L10
-    
+
 """
 
 
@@ -404,20 +404,14 @@ class M27(M2X):
     size_lines, size_bytes = self.printer.sd_card_manager.get_file_size()
     file_name = self.printer.sd_card_manager.get_file_name()
 
-    # avoid divide by zero error in octoprint ???
-    if byte_position == 0:
-      byte_position = 1
-
     # message to inform that we have completed the print
     active = self.printer.sd_card_manager.get_status()
     if active:
       message = "SD printing byte {}/{}".format(byte_position, size_bytes)
     else:
       message = "Not SD printing."
-
     self.printer.send_message(g.prot, message)
     logging.info(message)
-    return
 
   def get_description(self):
     return """Report external file print status"""
@@ -425,12 +419,12 @@ class M27(M2X):
   def get_formatted_description(self):
     return """If printing from an externally selected file (from ``M23``), display of how many bytes
 from the active file have been processed.
-        
+
 ::
 
     > M27
     SD printing byte 10/1231
-    
+
 """
 
 
