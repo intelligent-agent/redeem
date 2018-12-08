@@ -23,7 +23,6 @@ class M109(GCodeCommand):
       heaters = ["E", "H"]
       if self.printer.config.reach_revision:
         heaters.extend(["A", "B", "C"])
-
       parameters = ["P" + str(heaters.index(self.printer.current_tool))]
     else:
       parameters = g.get_tokens()

@@ -6,10 +6,10 @@
 
 //* Constants */
 #define GPIO_DATAIN 0x138 // This is the register for reading data
-#define GPIO0 0x44E07000 // The adress of the GPIO0 bank
-#define GPIO1 0x4804C000 // The adress of the GPIO1 bank
-#define GPIO2 0x481AC000 // The adress of the GPIO2 bank
-#define GPIO3 0x481AE000 // The adress of the GPIO3 bank
+#define GPIO0 0x44E07000 // The address of the GPIO0 bank
+#define GPIO1 0x4804C000 // The address of the GPIO1 bank
+#define GPIO2 0x481AC000 // The address of the GPIO2 bank
+#define GPIO3 0x481AE000 // The address of the GPIO3 bank
 #define SHARED_RAM_ENDSTOPS_ADDR 0x0120
 
 #include "config.h"
