@@ -1,18 +1,18 @@
 # -*- coding: utf-8 -*-
 """
 GCode M303
-Run PID tuning 
+Run PID tuning
 
 Author: Elias Bakken
 email: elias.bakken(at)gmail(dot)com
 Website: http://www.thing-printer.com
 License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 
-PID Tuning refers to a control algorithm used in some repraps to 
-tune heating behavior for hot ends and heated beds. 
-This command generates Proportional (Kp), 
-Integral (Ki), and Derivative (Kd) values for the hotend or bed (E-1). 
-Send the appropriate code and wait for the output to update the firmware. 
+PID Tuning refers to a control algorithm used in some repraps to
+tune heating behavior for hot ends and heated beds.
+This command generates Proportional (Kp),
+Integral (Ki), and Derivative (Kd) values for the hotend or bed (E-1).
+Send the appropriate code and wait for the output to update the firmware.
 
 """
 from __future__ import absolute_import
@@ -81,7 +81,7 @@ class M303(GCodeCommand):
             "for hot ends and heated beds. This command "
             "generates Proportional (Kp), Integral (Ki), "
             "and Derivative (Kd) values for the hotend or "
-            "bed (E-1). Send the appropriate code and wait "
+            "bed. Send the appropriate code and wait "
             "for the output to update the firmware. "
             "\nInputs:\n"
             "H<0 or 1> overrides the extruder. Use H-1 for heated bed. \n"
