@@ -404,10 +404,6 @@ class M27(M2X):
     size_lines, size_bytes = self.printer.sd_card_manager.get_file_size()
     file_name = self.printer.sd_card_manager.get_file_name()
 
-    # avoid divide by zero error in octoprint ???
-    if byte_position == 0:
-      byte_position = 1
-
     # message to inform that we have completed the print
     active = self.printer.sd_card_manager.get_status()
     if active:
