@@ -549,16 +549,12 @@ class Redeem:
     # Set up communication channels
     printer.comms["USB"] = USB(self.printer)
     printer.comms["Eth"] = Ethernet(self.printer)
-
-    if Pipe.check_tty0tty() or Pipe.check_socat():
-      printer.comms["octoprint"] = Pipe(printer, "octoprint")
-      printer.comms["toggle"] = Pipe(printer, "toggle")
-      printer.comms["testing"] = Pipe(printer, "testing")
-      printer.comms["testing_noret"] = Pipe(printer, "testing_noret")
-      # Does not send "ok"
-      printer.comms["testing_noret"].send_response = False
-    else:
-      logging.warning("Neither tty0tty nor socat is installed! No virtual tty pipes enabled")
+    printer.comms["octoprint"] = Pipe(printer, "octoprint")
+    printer.comms["toggle"] = Pipe(printer, "toggle")
+    printer.comms["testing"] = Pipe(printer, "testing")
+    printer.comms["testing_noret"] = Pipe(printer, "testing_noret")
+    # Does not send "ok"
+    printer.comms["testing_noret"].send_response = False
 
   def start(self):
     """ Start the processes """
