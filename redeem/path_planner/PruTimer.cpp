@@ -316,6 +316,7 @@ void PruTimer::stopThread(bool join)
         LOG("PRU disabled, DDR released, FD closed." << std::endl);
 
         pruMemoryAvailable.notify_all();
+        pruQueueIsntFullByTime.notify_all();
     }
 
     if (join && runningThread.joinable())
