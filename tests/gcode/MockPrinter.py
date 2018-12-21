@@ -1,7 +1,10 @@
 from __future__ import absolute_import
 
 import mock
+import numpy as np
+import os
 import sys
+import tempfile
 import unittest
 
 sys.modules['evdev'] = mock.Mock()
@@ -38,7 +41,9 @@ sys.modules['redeem.IOManager'].IOManager = mock.MagicMock()
 from redeem.CascadingConfigParser import CascadingConfigParser
 from redeem.EndStop import EndStop
 from redeem.Extruder import Heater
-from redeem.Redeem import *
+from redeem.Gcode import Gcode
+from redeem.Path import Path
+from redeem.Redeem import Redeem, PathPlanner
 """
 Override CascadingConfigParser methods to set self. variables
 """
@@ -74,14 +79,18 @@ class MockPrinter(unittest.TestCase):
   def setUpConfigFiles(cls, path):
     """
     This seems like the best way to add to or change stuff in default.cfg,
-    without actually messing with the prestine file. Overwrite if you want
+    without actually messing with the pristine file. Overwrite if you want
     different printer.cfg and/or local.cfg files. For example, copy example files...
 
     copyfile(os.path.join(os.path.dirname(__file__), "my_test_local.cfg"), os.path.join(path, 'local.cfg'))
     copyfile(os.path.join(os.path.dirname(__file__), "my_test_printer.cfg"), os.path.join(path, 'printer.cfg'))
-
     """
-    tf = open("../configs/local.cfg", "w")
+    from shutil import copyfile
+    copyfile(
+        os.path.join(os.path.dirname(__file__), "..", "..", "configs", "default.cfg"),
+        os.path.join(path, 'default.cfg'))
+
+    tf = open(os.path.join(path, 'local.cfg'), "w")
     lines = """
 [Configuration]
 version = 1
@@ -126,10 +135,10 @@ version = 1
     mock.patch('redeem.Extruder.HBP.enable', new=disabled_hbp_enable).start()
     mock.patch('redeem.PathPlanner.PathPlanner._init_path_planner', new=bypass_init_path_planner)
 
-    cfg_path = "../configs"
-    cls.setUpConfigFiles(cfg_path)
+    cls.temporary_config_directory = tempfile.mkdtemp()
+    cls.setUpConfigFiles(cls.temporary_config_directory)
 
-    cls.R = Redeem(config_location=cfg_path)
+    cls.R = Redeem(config_location=cls.temporary_config_directory)
     cls.printer = cls.R.printer
     cls.printer.config.replicape_key = "TESTING_DUMMY_KEY"
 
@@ -158,10 +167,9 @@ version = 1
   @classmethod
   def tearDownClass(cls):
     cls.R = cls.printer = None
-    if os.path.exists("../configs/local.cfg"):
-      os.remove("../configs/local.cfg")
-    if os.path.exists("../configs/printer.cfg"):
-      os.remove("../configs/printer.cfg")
+    for filename in os.listdir(cls.temporary_config_directory):
+      os.remove(os.path.join(cls.temporary_config_directory, filename))
+    os.rmdir(cls.temporary_config_directory)
 
   """ directly calls a Gcode class's execute method, bypassing printer.processor.execute """
 
@@ -169,7 +177,8 @@ version = 1
   def execute_gcode(cls, text):
     g = Gcode({"message": text})
     g.prot = 'testing_noret'
-    cls.printer.processor.gcodes[g.gcode].execute(g)
+    cls.printer.processor.resolve(g)
+    g.command.execute(g)
     return g
 
   @classmethod
@@ -186,7 +195,6 @@ version = 1
   def assertGcodeProperties(self, gcode, is_buffered=False, is_async=False):
     gcode_instance = Gcode({"message": gcode})
     self.printer.processor.resolve(gcode_instance)
-
     gcode_handler = gcode_instance.command
     self.assertNotEqual(gcode_handler.get_description(), "")
     self.assertNotEqual(gcode_handler.get_long_description(), "")
