@@ -51,7 +51,7 @@ Override CascadingConfigParser methods to set self. variables
 
 class CascadingConfigParserWedge(CascadingConfigParser):
   def parse_capes(self):
-    self.replicape_revision = "0A4A"    # Fake. No hardware involved in these tests (Redundant?)
+    self.replicape_revision = "0B3A"    # Fake. No hardware involved in these tests (Redundant?)
     self.reach_revision = "00A0"    # Fake. No hardware involved in these tests (Redundant?)
 
 
@@ -63,10 +63,11 @@ class MockPrinter(unittest.TestCase):
   """
   """
   handy conversion from microstep config to microstep multiplier
-  this is inherently tied to the stepper class the MockPrinter is using - right now it's 00A4
+  this is inherently tied to the stepper class the MockPrinter is using - right now it's 0B3A
+  for the A series, this is [1, 2, 4, 8, 16, 32]
   for the B series that use TMC2100s, this is [1, 2, 2, 4, 16, 4, 16, 4, 16]
   """
-  microstep_config_to_multiplier = [1, 2, 4, 8, 16, 32]
+  microstep_config_to_multiplier = {'A': [1, 2, 4, 8, 16, 32], 'B': [1, 2, 2, 4, 16, 4, 16, 4, 16]}
 
   @classmethod
   def setUpPatch(cls):

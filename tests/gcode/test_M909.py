@@ -1,19 +1,21 @@
 from __future__ import absolute_import
 
-from .MockPrinter import MockPrinter
-from numpy.testing import assert_array_equal
-import numpy
 import mock
+import numpy
+from numpy.testing import assert_array_equal
+from .MockPrinter import MockPrinter
 
 
 class M909_Tests(MockPrinter):
   def setUp(self):
     self.steps_pr_mm = {}
     self.microstep_configs = {}
+    self.stepper_type = {}
 
     for axis, stepper in self.printer.steppers.items():
       self.steps_pr_mm[axis] = stepper.steps_pr_mm
       self.microstep_configs[axis] = stepper.microstepping
+      self.stepper_type[axis] = stepper.revision[0]
 
     self.printer.path_planner.update_steps_pr_meter = mock.Mock()
 
@@ -34,8 +36,8 @@ class M909_Tests(MockPrinter):
 
     for axis_num in range(self.printer.num_axes):
       axis = self.printer.index_to_axis(axis_num)
-      expected_microsteps.append(self.steps_pr_mm[axis] *
-                                 self.microstep_config_to_multiplier[self.microstep_configs[axis]])
+      expected_microsteps.append(self.steps_pr_mm[axis] * self.microstep_config_to_multiplier[
+          self.stepper_type[axis]][self.microstep_configs[axis]])
 
     assert_array_equal(expected_microsteps, printer_microsteps)
 
