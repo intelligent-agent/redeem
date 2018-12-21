@@ -19,6 +19,7 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
  You should have received a copy of the GNU General Public License
  along with Redeem.  If not, see <http://www.gnu.org/licenses/>.
 """
+from __future__ import absolute_import
 
 import importlib
 import inspect
@@ -88,7 +89,7 @@ class GCodeProcessor:
   def resolve(self, gcode):
     if hasattr(gcode, 'command'):
       logging.warning("tried to resolve a gcode that's already resolved: " + gcode.message)
-      logging.error(traceback.format_stack())
+      # logging.error(traceback.format_stack())
     else:
       c = gcode.code() if not gcode.is_info_command() else gcode.code()[:-1]
       if not c in self.gcodes:
