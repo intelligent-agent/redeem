@@ -406,14 +406,10 @@ class M27(M2X):
 
     # message to inform that we have completed the print
     active = self.printer.sd_card_manager.get_status()
-    selected = False
-    if self.printer.sd_card_manager.get_file_name() is not None:
-	selected = True
-
-    if active or selected:
-      message = "SD printing byte {}/{}".format(byte_position, size_bytes)
-    else:
+    if self.printer.sd_card_manager.get_file_name() is None:
       message = "Not SD printing."
+    else:
+      message = "SD printing byte {}/{}".format(byte_position, size_bytes)
 
     self.printer.send_message(g.prot, message)
     logging.info(message)
