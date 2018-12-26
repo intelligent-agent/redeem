@@ -21,14 +21,8 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
  along with Redeem.  If not, see <http://www.gnu.org/licenses/>.
 """
 
-import time
-import subprocess
-import os
 import logging
-
-from threading import Thread
-
-from evdev import *
+from evdev import InputDevice, ecodes
 import select
 
 

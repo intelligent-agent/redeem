@@ -61,26 +61,25 @@ class Pipe:
     # the fd which PTY we're using. This means we have to use master_fd instead
     # of opening master by name.
 
-    logging.info("Opened PTY for " + prot + " and got " + os.ttyname(master_fd) + " and " + slave)
+    logging.info("Opened PTY for {} and got {}".format(prot, os.ttyname(slave_fd)))
 
     self.pipe_link = "/dev/" + prot + "_1"
 
-    self.rd = os.fdopen(master_fd, "r")
-    self.wr = os.fdopen(master_fd, "w")
-
-    logging.info("Unlinking " + self.pipe_link)
     try:
       os.unlink(self.pipe_link)
     except OSError, e:
       # file not found is fine to ignore - anythine else and we should log it
       if e.errno != errno.ENOENT:
-        logging.error("Failed to unlink " + self.pipe_link + ": " + e.strerror)
+        logging.error("Failed to unlink '{}': {}".format(self.pipe_link, e.strerror))
 
-    logging.info("re-linking " + self.pipe_link)
+    logging.info("linking {}".format(self.pipe_link))
     os.symlink(slave, self.pipe_link)
-    os.chmod(self.pipe_link, 0666)
+    os.chmod(self.pipe_link, 0o666)
 
-    logging.info("Pipe " + self.prot + " open. Use '" + self.pipe_link + "' to communicate with it")
+    logging.info("{} Pipe open. Use '{}' to communicate with it".format(self.prot, self.pipe_link))
+
+    self.rd = os.fdopen(master_fd, "r")
+    self.wr = os.fdopen(master_fd, "w")
 
     self.send_response = True
     self.iomanager.add_file(self.rd, self.get_message)
@@ -92,7 +91,7 @@ class Pipe:
         g = Gcode({"message": message, "prot": self.prot})
         self.printer.processor.enqueue(g)
     except IOError:
-      logging.warning("Could not read from pipe")
+      logging.warning("Could not read from {} pipe".format(self.prot))
 
   def send_message(self, message):
     if self.send_response:
@@ -102,7 +101,7 @@ class Pipe:
         try:
           self.wr.write(message)
         except OSError:
-          logging.warning("Unable to write to file. Closing down?")
+          logging.warning("Unable to write to {} pipe".format(self.prot))
         except IOError as error:
           if error.errno != errno.EAGAIN:    # if the output buffer is full, we're just going to drop messages
             logging.warning("Failed to write to file: %s", error)

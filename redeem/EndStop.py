@@ -24,9 +24,9 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
 
 import logging
 import re
-from evdev import InputDevice, ecodes
-from PruInterface import *
+from evdev import InputDevice
 from Key_pin import Key_pin
+from PruInterface import PruInterface
 
 
 class EndStop:
@@ -92,7 +92,7 @@ class EndStop:
     self.hit = bool(state & self.condition_bit)
 
   def callback(self):
-    """ An endStop has been hit """
+    """ An endStop has changed state """
     type_string = "hit" if self.hit else "released"
     event_string = "End Stop {} {}!".format(self.name, type_string)
     logging.info(event_string)
