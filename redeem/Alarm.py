@@ -185,7 +185,7 @@ class AlarmExecutor:
 
   def stop(self):
     if self.running:
-      logging.debug("Stoppping alarm executor")
+      logging.debug("Stopping alarm executor")
       self.running = False
       self.t.join()
     else:

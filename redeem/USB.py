@@ -28,30 +28,25 @@ from Gcode import Gcode
 
 
 class USB:
-  def __init__(self, printer):
+  def __init__(self, printer, iomanager):
     self.printer = printer
+    self.iomanager = iomanager
     self.send_response = False
     try:
       self.tty = open("/dev/ttyGS0", "r+")
     except IOError:
       logging.warning("USB gadget serial not available as /dev/ttyGS0")
       return
-    self.running = True
-    self.t = Thread(target=self.get_message, name="USB")
-    self.t.start()
+    self.iomanager.add_file(self.tty, self.get_message)
 
   def get_message(self):
-    """ Loop that gets messages and pushes them on the queue """
-    while self.running:
-      ret = select.select([self.tty], [], [], 1.0)
-      if ret[0] == [self.tty]:
-        message = self.tty.readline().strip("\n")
-        if len(message) > 0:
-          g = Gcode({"message": message, "prot": "USB"})
-          self.printer.processor.enqueue(g)
-          # Do not enable sending messages until a
-          # message has been received
-          self.send_response = True
+    message = self.tty.readline().strip("\n")
+    if len(message) > 0:
+      g = Gcode({"message": message, "prot": "USB"})
+      self.printer.processor.enqueue(g)
+      # Do not enable sending messages until a
+      # message has been received
+      self.send_response = True
 
   def send_message(self, message):
     """ Send a message """
@@ -63,6 +58,5 @@ class USB:
 
   def close(self):
     """ Stop receiving messages """
-    self.running = False
-    if hasattr(self, 't'):
-      self.t.join()
+    if hasattr(self, 'tty'):
+      self.iomanager.remove_file(self.tty)

@@ -29,17 +29,22 @@ import subprocess
 import time
 import os
 import errno
+import fcntl
 import termios
 from Gcode import Gcode
 
 
 class Pipe:
-  def __init__(self, printer, prot):
+  def __init__(self, printer, prot, iomanager):
     self.printer = printer
     self.prot = prot
+    self.iomanager = iomanager
 
     (master_fd, slave_fd) = os.openpty()
     slave = os.ttyname(slave_fd)
+
+    master_flags = fcntl.fcntl(master_fd, fcntl.F_GETFL, 0)
+    fcntl.fcntl(master_fd, fcntl.F_SETFL, master_flags | os.O_NONBLOCK)
 
     # switch to "raw" mode - these constants come from the manpage for termios under cfmakeraw()
     master_attr = termios.tcgetattr(master_fd)
@@ -77,23 +82,17 @@ class Pipe:
 
     logging.info("Pipe " + self.prot + " open. Use '" + self.pipe_link + "' to communicate with it")
 
-    self.running = True
-    self.t = Thread(target=self.get_message, name="Pipe")
     self.send_response = True
-    self.t.start()
+    self.iomanager.add_file(self.rd, self.get_message)
 
-  def get_message(self):
-    """ Loop that gets messages and pushes them on the queue """
-    while self.running:
-      r, w, x = select.select([self.rd], [], [], 1.0)
-      if r:
-        try:
-          message = self.rd.readline().rstrip()
-          if len(message) > 0:
-            g = Gcode({"message": message, "prot": self.prot})
-            self.printer.processor.enqueue(g)
-        except IOError:
-          logging.warning("Could not read from pipe")
+  def get_message(self, flags):
+    try:
+      message = self.rd.readline().rstrip()
+      if len(message) > 0:
+        g = Gcode({"message": message, "prot": self.prot})
+        self.printer.processor.enqueue(g)
+    except IOError:
+      logging.warning("Could not read from pipe")
 
   def send_message(self, message):
     if self.send_response:
@@ -104,9 +103,11 @@ class Pipe:
           self.wr.write(message)
         except OSError:
           logging.warning("Unable to write to file. Closing down?")
+        except IOError as error:
+          if error.errno != errno.EAGAIN:    # if the output buffer is full, we're just going to drop messages
+            logging.warning("Failed to write to file: %s", error)
 
   def close(self):
-    self.running = False
-    self.t.join()
+    self.iomanager.remove_file(self.rd)
     self.rd.close()
     os.unlink(self.pipe_link)
