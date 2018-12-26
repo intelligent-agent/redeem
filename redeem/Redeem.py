@@ -32,6 +32,7 @@ from threading import Thread
 import Queue
 import numpy as np
 import sys
+import IOManager
 
 from Mosfet import Mosfet
 from Stepper import *
@@ -84,7 +85,6 @@ class Redeem:
     """
     from __init__ import __version__
     logging.info("Redeem initializing {}".format(__version__))
-
     global printer
     printer = Printer()
     self.printer = printer
@@ -171,10 +171,11 @@ class Redeem:
     # Init the Paths
     printer.axis_config = printer.config.getint('Geometry', 'axis_config')
 
+    printer.endstop_io_manager = IOManager.IOManager()
     # Init the end stops
     EndStop.inputdev = self.printer.config.get("Endstops", "inputdev")
     # Set up key listener
-    Key_pin.listener = Key_pin_listener(EndStop.inputdev)
+    Key_pin.listener = Key_pin_listener(EndStop.inputdev, printer.endstop_io_manager)
 
     homing_only_endstops = self.printer.config.get('Endstops', 'homing_only_endstops')
 
@@ -545,12 +546,13 @@ class Redeem:
       printer.swd.start()
 
     # Set up communication channels
-    printer.comms["USB"] = USB(self.printer)
+    printer.comms_io_manager = IOManager.IOManager()
+    printer.comms["USB"] = USB(self.printer, printer.comms_io_manager)
     printer.comms["Eth"] = Ethernet(self.printer)
-    printer.comms["octoprint"] = Pipe(printer, "octoprint")
-    printer.comms["toggle"] = Pipe(printer, "toggle")
-    printer.comms["testing"] = Pipe(printer, "testing")
-    printer.comms["testing_noret"] = Pipe(printer, "testing_noret")
+    printer.comms["octoprint"] = Pipe(printer, "octoprint", printer.comms_io_manager)
+    printer.comms["toggle"] = Pipe(printer, "toggle", printer.comms_io_manager)
+    printer.comms["testing"] = Pipe(printer, "testing", printer.comms_io_manager)
+    printer.comms["testing_noret"] = Pipe(printer, "testing_noret", printer.comms_io_manager)
     # Does not send "ok"
     printer.comms["testing_noret"].send_response = False
 
@@ -622,10 +624,13 @@ class Redeem:
       logging.debug("closing " + name)
       comm.close()
 
+    self.printer.comms_io_manager.stop()
+
     self.printer.enable.set_disabled()
     self.printer.swd.stop()
     Alarm.executor.stop()
     Key_pin.listener.stop()
+    self.printer.endstop_io_manager.stop()
     self.printer.watchdog.stop()
     self.printer.enable.set_disabled()
 
