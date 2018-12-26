@@ -32,7 +32,6 @@ from threading import Thread
 import Queue
 import numpy as np
 import sys
-import IOManager
 
 from Mosfet import Mosfet
 from Stepper import *
@@ -64,6 +63,7 @@ from StepperWatchdog import StepperWatchdog
 from Key_pin import Key_pin, Key_pin_listener
 from Watchdog import Watchdog
 from six import iteritems
+from IOManager import IOManager
 
 # Global vars
 printer = None
@@ -171,7 +171,7 @@ class Redeem:
     # Init the Paths
     printer.axis_config = printer.config.getint('Geometry', 'axis_config')
 
-    printer.endstop_io_manager = IOManager.IOManager()
+    printer.endstop_io_manager = IOManager()
     # Init the end stops
     EndStop.inputdev = self.printer.config.get("Endstops", "inputdev")
     # Set up key listener
@@ -546,7 +546,7 @@ class Redeem:
       printer.swd.start()
 
     # Set up communication channels
-    printer.comms_io_manager = IOManager.IOManager()
+    printer.comms_io_manager = IOManager()
     printer.comms["USB"] = USB(self.printer, printer.comms_io_manager)
     printer.comms["Eth"] = Ethernet(self.printer)
     printer.comms["octoprint"] = Pipe(printer, "octoprint", printer.comms_io_manager)
