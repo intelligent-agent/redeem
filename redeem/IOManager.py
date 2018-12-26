@@ -30,7 +30,7 @@ class IOManager:
     self._wake_io_thread()
     self.control_queue.join()
     self.thread.join()
-    logging.debug("IOManager done shutting down")
+    logging.debug("IOManager finished shutting down")
 
   def is_running(self):
     return self.thread is not None and self.thread.is_alive()
