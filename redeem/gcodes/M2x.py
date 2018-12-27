@@ -116,8 +116,9 @@ class M20(M2X):
     self.printer.send_message(g.prot, "Begin file list:")
     for root, directories, filenames in os.walk(list_location):
       for filename in filenames:
-        file_byte_count = os.stat(root + os.sep + filename).st_size
-        self.printer.send_message(g.prot, "{}/{} {}".format(device_id, filename, file_byte_count))
+        if not filename.startswith('.'):
+          file_byte_count = os.stat(root + os.sep + filename).st_size
+          self.printer.send_message(g.prot, "{}/{} {}".format(device_id, filename, file_byte_count))
     self.printer.send_message(g.prot, "End file list")
 
   def get_description(self):
