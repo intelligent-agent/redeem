@@ -332,34 +332,3 @@ class PruFirmware:
         raise RuntimeError("Unknown Replicape revision " + revision +
                            ", cannot determine stepper delays")
     return configFile_0
-
-
-if __name__ == '__main__':
-  from Printer import Printer
-  from EndStop import EndStop
-  from Stepper import Stepper, Stepper_00A3, Stepper_00A4, Stepper_00B1, Stepper_00B2, Stepper_00B3
-  from CascadingConfigParser import CascadingConfigParser
-  printer = Printer()
-
-  # Parse the config files.
-  printer.config = CascadingConfigParser(['/etc/redeem/default.cfg'])
-
-  # Init the 5 Stepper motors (step, dir, fault, DAC channel, name)
-  printer.steppers["X"] = Stepper("GPIO0_27", "GPIO1_29", "GPIO2_4", 0, 0, "X")
-  printer.steppers["Y"] = Stepper("GPIO1_12", "GPIO0_22", "GPIO2_5", 1, 1, "Y")
-  printer.steppers["Z"] = Stepper("GPIO0_23", "GPIO0_26", "GPIO0_15", 2, 2, "Z")
-  printer.steppers["E"] = Stepper("GPIO1_28", "GPIO1_15", "GPIO2_1", 3, 3, "E")
-  printer.steppers["H"] = Stepper("GPIO1_13", "GPIO1_14", "GPIO2_3", 4, 4, "H")
-  printer.steppers["A"] = Stepper("GPIO2_2", "GPIO1_18", "GPIO0_14", 5, 5, "A")
-  printer.steppers["B"] = Stepper("GPIO1_16", "GPIO0_5", "GPIO0_14", 6, 6, "B")
-  printer.steppers["C"] = Stepper("GPIO0_3", "GPIO3_19", "GPIO0_14", 7, 7, "C")
-
-  for es in ["X1", "X2", "Y1", "Y2", "Z1", "Z2"]:
-    pin = printer.config.get("Endstops", "pin_" + es)
-    keycode = printer.config.getint("Endstops", "keycode_" + es)
-    invert = printer.config.getboolean("Endstops", "invert_" + es)
-    printer.end_stops[es] = EndStop(pin, keycode, es, invert)
-
-  pasm = "/home/elias/workspace/am335x_pru_package/pru_sw/utils/pasm"
-  pru = PruFirmware("0.p", "0.bin", "1.p", "1.bin", printer, "")
-  pru.make_config_file()
