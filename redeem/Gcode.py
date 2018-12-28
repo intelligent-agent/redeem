@@ -183,7 +183,7 @@ class Gcode:
     return len(self.tokens)
 
   def get_tokens_as_dict(self):
-    """ Return the remaining tokans as a dict. """
+    """ Return the remaining tokens as a dict. """
     tad = {}
     for i in range(self.num_tokens()):
       tad[self.tokens[i][0]] = self.token_value(i)
