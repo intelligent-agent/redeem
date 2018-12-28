@@ -63,7 +63,14 @@ class Pipe:
 
     logging.info("Opened PTY for {} and got {}".format(prot, os.ttyname(slave_fd)))
 
-    self.pipe_link = "/dev/" + prot + "_1"
+    pipe_directory_path = os.path.join('/dev', 'redeem')
+
+    if not os.path.exists(pipe_directory_path):
+      logging.info("Creating {}".format(pipe_directory_path))
+      os.mkdir(pipe_directory_path)
+      os.chmod(pipe_directory_path, 0o755)
+
+    self.pipe_link = os.path.join(pipe_directory_path, prot)
 
     try:
       os.unlink(self.pipe_link)
