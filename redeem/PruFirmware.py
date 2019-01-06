@@ -35,25 +35,26 @@ from Printer import Printer
 class PruFirmware:
   def __init__(self, firmware_source_file0, binary_filename0, firmware_source_file1,
                binary_filename1, printer, compiler, linker_cmdfile, repackage_cmdfile):
-    """Create and initialize a PruFirmware
+    """
+    Create and initialize a PruFirmware
 
-        Parameters
-        ----------
+    Parameters
+    ----------
 
-        firmware_source_file : string
-            The path to the firmware source to use to produce the firmware
-        binary_filename : string
-            Full path to the file where to store the final firmware file
-            without the extension (without .bin)
-        config_parser : ConfigParser
-            The config parser with the config file already loaded
-        compiler : string
-            Path to the PRU C compiler
-        linker_cmdfile : string
-            Path to the cmd file that maps the device for the linker
-        repackage_cmdfile : string
-            Path to the cmd file describing how to repackage the firmware
-        """
+    firmware_source_file : string
+        The path to the firmware source to use to produce the firmware
+    binary_filename : string
+        Full path to the file where to store the final firmware file
+        without the extension (without .bin)
+    config_parser : ConfigParser
+        The config parser with the config file already loaded
+    compiler : string
+        Path to the PRU C compiler
+    linker_cmdfile : string
+        Path to the cmd file that maps the device for the linker
+    repackage_cmdfile : string
+        Path to the cmd file describing how to repackage the firmware
+    """
 
     self.firmware_source_file0 = os.path.realpath(firmware_source_file0)
     self.firmware_source_file1 = os.path.realpath(firmware_source_file1)
@@ -295,7 +296,7 @@ class PruFirmware:
 
       configFile.write("\n")
 
-      # Put each dir and step pin in the proper buck if they are for GPIO0 or GPIO1 bank.
+      # Put each dir and step pin in the proper bank if they are for GPIO0 or GPIO1 bank.
       # This is a restriction due to the limited capabilities of the pasm preprocessor.
       for name, bank in iteritems(banks):
         #bank = (~bank & 0xFFFFFFFF)

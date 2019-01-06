@@ -107,8 +107,8 @@ class SDCardManager(object):
 
   def get_position(self):
     """
-    return the current position within the file, both line count 
-    and number of bytes
+    return the current position within the file,
+    both line count and number of bytes
     """
     self.lock.acquire()
     line_position = self.line_count
@@ -136,9 +136,9 @@ class SDCardManager(object):
   def set_position(self, byte_position=0, line_position=0):
     """
     set the counters that define our current position within the file
-    
-    inputs may be either line index or some amount of bytes, bytes 
-    will be converted to a line position
+
+    inputs may be either line index or some amount of bytes,
+    bytes will be converted to a line position
     """
     self.lock.acquire()
 
