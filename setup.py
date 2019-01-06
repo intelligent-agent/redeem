@@ -100,7 +100,7 @@ setup(
       'configobj==5.0.6',
       'scipy',
       'pytest==3.1.2',
-      'future',
+      'future>=0.16.0',
     ],
     url=__url__,
     ext_modules=[pathplanner],
