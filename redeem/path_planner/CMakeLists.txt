@@ -31,13 +31,6 @@ add_subdirectory(${CMAKE_BINARY_DIR}/googletest-src
 
 enable_testing()
 
-find_package(PythonLibs REQUIRED)
-find_package(SWIG REQUIRED)
-
-include(${SWIG_USE_FILE})
-set(CMAKE_SWIG_FLAGS "")
-include_directories(${PYTHON_INCLUDE_DIRS})
-
 set(CMAKE_CXX_STANDARD 17)
 
 # These aren't actually built, but adding them to the target makes them appear in IDEs
