@@ -60,7 +60,8 @@ class Pipe:
 
     self.pipe_link = "/dev/" + prot + "_1"
 
-    self.file = os.fdopen(master_fd, "r+")
+    self.rd = os.fdopen(master_fd, "r")
+    self.wr = os.fdopen(master_fd, "w")
 
     logging.info("Unlinking " + self.pipe_link)
     try:
@@ -84,10 +85,10 @@ class Pipe:
   def get_message(self):
     """ Loop that gets messages and pushes them on the queue """
     while self.running:
-      r, w, x = select.select([self.file], [], [], 1.0)
+      r, w, x = select.select([self.rd], [], [], 1.0)
       if r:
         try:
-          message = self.file.readline().rstrip()
+          message = self.rd.readline().rstrip()
           if len(message) > 0:
             g = Gcode({"message": message, "prot": self.prot})
             self.printer.processor.enqueue(g)
@@ -100,12 +101,12 @@ class Pipe:
       if message[-1] != "\n":
         message += "\n"
         try:
-          self.file.write(message)
+          self.wr.write(message)
         except OSError:
           logging.warning("Unable to write to file. Closing down?")
 
   def close(self):
     self.running = False
     self.t.join()
-    self.file.close()
+    self.rd.close()
     os.unlink(self.pipe_link)

@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """
 Common class listening to key events. 
 A callback can be registered so an even
@@ -88,19 +87,3 @@ class Key_pin_listener:
               key = self.keys[code]
               if val == key.edge and key.callback:
                 key.callback(key, event)
-
-
-if __name__ == '__main__':
-  logging.basicConfig(
-      level=logging.DEBUG,
-      format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
-      datefmt='%m-%d %H:%M')
-
-  def callback(key_pin, event):
-    logging.info("Callback for " + str(key_pin))
-
-  Key_pin.listener = Key_pin_listener("/dev/input/event0")
-  k1 = Key_pin("X1", 114, Key_pin.FALLING, callback)
-  Key_pin.listener.start()
-
-  time.sleep(5)

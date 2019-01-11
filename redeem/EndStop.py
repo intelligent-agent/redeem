@@ -22,11 +22,12 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
  along with Redeem.  If not, see <http://www.gnu.org/licenses/>.
 """
 
-from threading import Thread
+import logging
 import re
-from PruInterface import *
 from evdev import InputDevice, ecodes
+from PruInterface import *
 from select import select
+from threading import Thread
 
 
 class EndStop:
