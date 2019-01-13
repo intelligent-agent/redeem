@@ -44,11 +44,7 @@ class G33(GCodeCommand):
       self.printer.path_planner.wait_until_done()
 
     # adjust probe heights
-    probe_z_coords = np.array(self.printer.probe_heights[:len(self.printer.probe_points)])
-    offset_z = self.printer.config.getfloat('Probe', 'offset_z') * 1000.
-    logging.info("G33: adjusting offset using Z-probe offset by " + str(offset_z))
-    # this is where the print head was when the probe was triggered
-    print_head_zs = probe_z_coords - offset_z
+    print_head_zs = np.array(self.printer.probe_heights[:len(self.printer.probe_points)])
 
     # Log the found heights
     logging.info("G33: Found heights: " + str(np.round(print_head_zs, 2)))
