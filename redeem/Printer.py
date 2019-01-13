@@ -125,9 +125,15 @@ class Printer:
         if not stepper.enabled:
           # Stepper should be enabled, but is not.
           stepper.set_enabled(True)    # Force update
-        if not stepper.current_enabled:
-          # Stepper does not have current enabled.
-          stepper.set_current_enabled()    # Force update
+        try:
+          if not stepper.current_enabled:
+            # Stepper does not have current enabled.
+            stepper.set_current_enabled()    # Force update
+        except:
+          # Logic needed for replicate a4a
+          if hasattr( stepper, "current_enabled" ):
+            # Stepper does not have current enabled.
+            stepper.set_current_enabled()    # Force update
 
   def reply(self, gcode):
     """ Send a reply through the proper channel """
