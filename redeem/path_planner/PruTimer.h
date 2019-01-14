@@ -13,6 +13,7 @@
 #include "PruInterface.h"
 #include "config.h"
 #include <condition_variable>
+#include <cstdint>
 #include <functional>
 #include <iostream>
 #include <mutex>
@@ -30,10 +31,10 @@ class PruTimer : public PruInterface
     class BlockDef
     {
     public:
-        unsigned long size;
-        unsigned long totalTime;
+        size_t size;
+        uint64_t totalTime;
         SyncCallback* callback;
-        BlockDef(unsigned long size, unsigned long totalTime, SyncCallback* callback)
+        BlockDef(size_t size, uint64_t totalTime, SyncCallback* callback)
             : size(size)
             , totalTime(totalTime)
             , callback(callback)
