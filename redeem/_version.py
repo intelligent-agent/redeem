@@ -39,8 +39,8 @@ def get_config():
   cfg = VersioneerConfig()
   cfg.VCS = "git"
   cfg.style = "pep440-branch-based"
-  cfg.tag_prefix = ""
-  cfg.parentdir_prefix = "Redeem-"
+  cfg.tag_prefix = "base_"
+  cfg.parentdir_prefix = ""
   cfg.versionfile_source = "redeem/_version.py"
   cfg.verbose = False
   return cfg
