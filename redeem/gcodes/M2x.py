@@ -288,7 +288,7 @@ class M24(GCodeCommand):
       file_g = Gcode({"message": line})
       self.printer.processor.enqueue(file_g)
     if self.printer.sd_card_manager.get_status():
-      logging.info("M24: Print complete")
+      logging.info("M24: Print from file complete")
     self.printer.sd_card_manager.set_status(False)
 
     self.printer.send_message(g.prot, "Done printing file")
