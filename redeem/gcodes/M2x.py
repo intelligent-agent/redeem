@@ -288,7 +288,7 @@ class M24(GCodeCommand):
       file_g = Gcode({"message": line})
       self.printer.processor.enqueue(file_g)
     if self.printer.sd_card_manager.get_status():
-      logging.info("M24: file complete")
+      logging.info("M24: Print from file complete")
     self.printer.sd_card_manager.set_status(False)
 
     self.printer.send_message(g.prot, "Done printing file")
@@ -297,15 +297,14 @@ class M24(GCodeCommand):
     sortby = 'cumulative'
     ps = pstats.Stats(profile, stream=s).sort_stats(sortby)
     ps.print_stats()
-    logging.error(s.getvalue())
+    logging.debug(s.getvalue())
     self.printer.sd_card_manager.reset()
 
   def execute(self, g):
     fn = self.printer.sd_card_manager.get_file_name()
     active = self.printer.sd_card_manager.get_status()
-    logging.info("M24: current file is: '{}'".format(fn))
     if not active:
-      logging.info("M24: active file is '{}'".format(fn))
+      logging.info("M24: Printing file '{}'".format(fn))
       start_new_thread(self.process_gcode, (g, ))
       # allow some time for the new thread to start before we proceed
       counter = 0
