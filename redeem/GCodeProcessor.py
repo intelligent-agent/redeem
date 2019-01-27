@@ -128,6 +128,9 @@ class GCodeProcessor:
   def enqueue(self, gcode):
     self.resolve(gcode)
     if gcode.command is None:
+      logging.warning("tried to enqueue an unknown gcode: " + gcode.code())
+      gcode.set_answer("ok Unknown GCode: " + gcode.code())
+      self.printer.reply(gcode)
       return
 
     # If an M116 is running, peek at the incoming Gcode
