@@ -33,8 +33,8 @@ class G33_Tests(MockPrinter):
       self.assertEqual(v, mock_Gcode.call_args_list[i][0][0]["message"])
 
   def test_gcodes_G33_correct_args_to_autocalibrate_delta_printer(self):
-    offset_z = self.printer.config.set('Probe', 'offset_z',
-                                       str(-0.0012))    # arbitrary probe offset, -1.2mm
+    """ Set probe offset to 0. Since processor.execute has been mocked the G33 code will not actually execute G30 commands """
+    offset_z = self.printer.config.set('Probe', 'offset_z', str(0.000))
     self.printer.probe_points = [    # roughly 120 degree equalateral triangle, 30mm off the deck
         {0.080, 0.0, 0.030}, {-0.040, 0.070, 0.030}, {-0.040, -0.070, 0.030}
     ]
@@ -54,4 +54,4 @@ class G33_Tests(MockPrinter):
                   set([-0.04, 0.070, 0.03]),
                   set([-0.04, -0.070, 0.03])]))
     np.testing.assert_array_equal(
-        np.round(autocal_call_args[3], 3), np.array([1.231, 1.232, 1.233]))
+        np.round(autocal_call_args[3], 3), np.array([0.031, 0.032, 0.033]))
