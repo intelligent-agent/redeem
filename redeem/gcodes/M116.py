@@ -36,21 +36,11 @@ class M116(GCodeCommand):
         has_parameter and heater_index != 0, has_parameter and heater_index != 1, has_parameter
         and heater_index != -1
     ]
-    if self.printer.config.reach_revision:
-      all_ok.extend([
-          has_parameter and heater_index != 2, has_parameter and heater_index != 3, has_parameter
-          and heater_index != 4
-      ])
 
     while True:
       all_ok[0] |= self.printer.heaters['E'].is_target_temperature_reached()
       all_ok[1] |= self.printer.heaters['H'].is_target_temperature_reached()
       all_ok[2] |= self.printer.heaters['HBP'].is_target_temperature_reached()
-
-      if self.printer.config.reach_revision:
-        all_ok[3] |= self.printer.heaters['A'].is_target_temperature_reached()
-        all_ok[4] |= self.printer.heaters['B'].is_target_temperature_reached()
-        all_ok[5] |= self.printer.heaters['C'].is_target_temperature_reached()
 
       m105 = Gcode({"message": "M105", "parent": g})
       self.printer.processor.resolve(m105)
@@ -79,9 +69,6 @@ class M116(GCodeCommand):
             "-1 - Heated Bed \n"
             " 0 - Extruder E\n"
             " 1 - Extruder H")
-    # unittests and docs may not have printer set when looking for docs
-    if not self.printer or self.printer.config.reach_revision:
-      desc += (" 2 - Extruder A\n" " 3 - Extruder B\n" " 4 - Extruder C")
     return desc
 
   def is_buffered(self):
