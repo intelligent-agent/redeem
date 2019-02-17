@@ -635,10 +635,10 @@ class Redeem:
     self.printer.enable.set_disabled()
 
     # list all threads that are still running
-    # note: some of these maybe daemons
+    # note: some of these may be daemons
     for t in threading.enumerate():
-      logging.debug("Thread " + t.name + " is still running")
-    logging.info("Redeem Exit Complete")
+      if t.name != "MainThread":
+        logging.debug("Thread " + t.name + " is still running")
 
   def _execute(self, g):
     """ Execute a G-code """
@@ -684,7 +684,7 @@ def main(config_location="/etc/redeem"):
   while RedeemIsRunning:
     signal.pause()
 
-  logging.info("Main thread terminating")
+  logging.info("Redeem Terminated")
 
 
 def profile(config_location="/etc/redeem"):
