@@ -107,7 +107,8 @@ setup(
     ext_modules=[pathplanner],
     entry_points= {
         'console_scripts': [
-            'redeem = redeem.Redeem:main'
+            'redeem = redeem.Redeem:main',
+            'update-redeem = updater:perform_update',
         ]
     },
 )
