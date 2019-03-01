@@ -58,10 +58,7 @@ class DAC():
     self.offset = 0.0
     if 'SPI' in globals():
       # init the SPI for the DAC
-      try:
-        self.spi2_0 = SPI(0, 0)
-      except IOError:
-        self.spi2_0 = SPI(1, 0)
+      self.spi2_0 = SPI(2, 0)
       self.spi2_0.bpw = 8
       self.spi2_0.mode = 1
     else:
