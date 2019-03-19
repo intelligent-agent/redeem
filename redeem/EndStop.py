@@ -64,10 +64,7 @@ class EndStop:
     self.t.start()
 
   def get_gpio_bank_and_pin(self):
-    matches = re.compile(r'GPIO([0-9])_([0-9]+)').search(self.pin)
-    tup = matches.group(1, 2)
-    tup = (int(tup[0]), int(tup[1]))
-    return tup
+    return (self.pin.get_chip(), self.pin.get_pin())
 
   def stop(self):
     self.running = False

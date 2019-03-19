@@ -120,12 +120,14 @@ version = 1
       EndStop.inputdev = "/dev/input/by-path/platform-ocp:gpio_keys-event"
       Key_pin.listener = Key_pin_listener(EndStop.inputdev)
 
-      printer.end_stop_inputs["X1"] = "GPIO3_21"
-      printer.end_stop_inputs["X2"] = "GPIO0_30"
-      printer.end_stop_inputs["Y1"] = "GPIO1_17"
-      printer.end_stop_inputs["Y2"] = "GPIO3_17"
-      printer.end_stop_inputs["Z1"] = "GPIO0_31"
-      printer.end_stop_inputs["Z2"] = "GPIO0_4"
+      gpio = mock.Mock()
+
+      printer.end_stop_inputs["X1"] = gpio.input(3, 21)
+      printer.end_stop_inputs["X2"] = gpio.input(0, 30)
+      printer.end_stop_inputs["Y1"] = gpio.input(1, 17)
+      printer.end_stop_inputs["Y2"] = gpio.input(3, 17)
+      printer.end_stop_inputs["Z1"] = gpio.input(0, 31)
+      printer.end_stop_inputs["Z2"] = gpio.input(0, 4)
 
       printer.end_stop_keycodes["X1"] = 112
       printer.end_stop_keycodes["X2"] = 113
@@ -134,11 +136,16 @@ version = 1
       printer.end_stop_keycodes["Z1"] = 116
       printer.end_stop_keycodes["Z2"] = 117
 
-      printer.steppers["X"] = Stepper_00B3("GPIO0_27", "GPIO1_29", 90, mock.Mock(), 0, "X")
-      printer.steppers["Y"] = Stepper_00B3("GPIO1_12", "GPIO0_22", 91, mock.Mock(), 1, "Y")
-      printer.steppers["Z"] = Stepper_00B3("GPIO0_23", "GPIO0_26", 92, mock.Mock(), 2, "Z")
-      printer.steppers["E"] = Stepper_00B3("GPIO1_28", "GPIO1_15", 93, mock.Mock(), 3, "E")
-      printer.steppers["H"] = Stepper_00B3("GPIO1_13", "GPIO1_14", 94, mock.Mock(), 4, "H")
+      printer.steppers["X"] = Stepper_00B3(
+          gpio.output(0, 27), gpio.output(1, 29), 90, mock.Mock(), 0, "X")
+      printer.steppers["Y"] = Stepper_00B3(
+          gpio.output(1, 12), gpio.output(0, 22), 91, mock.Mock(), 1, "Y")
+      printer.steppers["Z"] = Stepper_00B3(
+          gpio.output(0, 23), gpio.output(0, 26), 92, mock.Mock(), 2, "Z")
+      printer.steppers["E"] = Stepper_00B3(
+          gpio.output(1, 28), gpio.output(1, 15), 93, mock.Mock(), 3, "E")
+      printer.steppers["H"] = Stepper_00B3(
+          gpio.output(1, 13), gpio.output(1, 14), 94, mock.Mock(), 4, "H")
 
       printer.mosfets["E"] = Mosfet(mock.Mock())
       printer.mosfets["H"] = Mosfet(mock.Mock())

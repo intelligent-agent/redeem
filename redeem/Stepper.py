@@ -24,7 +24,6 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
 import time
 import logging
 from ShiftRegister import ShiftRegister
-import Adafruit_BBIO.GPIO as GPIO
 from threading import Thread
 from Alarm import Alarm
 from Key_pin import Key_pin
@@ -54,16 +53,6 @@ class Stepper(object):
     ShiftRegister.make(8)
     self.shift_reg = ShiftRegister.registers[shiftreg_nr]
 
-    # Set up the GPIO pins - we just have to initialize them so the PRU can flip them
-    # terrible hack to cover a bug in Adafruit
-    dir_name = "EHRPWM2A" if dir_pin == "GPIO0_22" else dir_pin
-
-    try:
-      GPIO.setup(dir_name, GPIO.OUT)
-      GPIO.setup(step_pin, GPIO.OUT)
-    except ValueError:
-      logging.warning("*** Stepper {} Pin {} initialization failure:".format(self.name, dir_name))
-
     # Add a key code to the key listener
     # Steppers have an nFAULT pin, so callback on falling
     Key_pin(name, fault_key, Key_pin.FALLING, self.fault_callback)
@@ -88,19 +77,19 @@ class Stepper(object):
 
   def get_step_bank(self):
     """ The pin that steps, it looks like GPIO1_31 """
-    return int(self.step_pin[4:5])
+    return int(self.step_pin.get_chip())
 
   def get_step_pin(self):
     """ The pin that steps, it looks like GPIO1_31 """
-    return int(self.step_pin[6:])
+    return int(self.step_pin.get_pin())
 
   def get_dir_bank(self):
     """ Get the dir pin shifted into position """
-    return int(self.dir_pin[4:5])
+    return int(self.dir_pin.get_chip())
 
   def get_dir_pin(self):
     """ Get the dir pin shifted into position """
-    return int(self.dir_pin[6:])
+    return int(self.dir_pin.get_pin())
 
   def get_direction(self):
     return self.direction
