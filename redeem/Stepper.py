@@ -23,8 +23,6 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
 
 import time
 import logging
-from Printer import Printer
-from DAC import DAC, PWM_DAC
 from ShiftRegister import ShiftRegister
 import Adafruit_BBIO.GPIO as GPIO
 from threading import Thread
@@ -38,9 +36,8 @@ class Stepper(object):
 
   all_steppers = list()
 
-  def __init__(self, step_pin, dir_pin, fault_key, dac_channel, shiftreg_nr, name):
+  def __init__(self, step_pin, dir_pin, fault_key, shiftreg_nr, name):
     """ Init """
-    self.dac_channel = dac_channel    # Which channel on the dac is connected to this stepper
     self.step_pin = step_pin
     self.dir_pin = dir_pin
     self.fault_key = fault_key
@@ -133,8 +130,8 @@ D7 = CFG1-Z  = 0 (microstepping)
 
 class Stepper_00B1(Stepper):
   def __init__(self, stepPin, dirPin, faultPin, dac_channel, shiftreg_nr, name):
-    Stepper.__init__(self, stepPin, dirPin, faultPin, dac_channel, shiftreg_nr, name)
-    self.dac = PWM_DAC(dac_channel)
+    Stepper.__init__(self, stepPin, dirPin, faultPin, shiftreg_nr, name)
+    self.dac = dac_channel
     self.state = 0    # The initial state of shift register
 
   def set_microstepping(self, value, force_update=False):
@@ -245,7 +242,6 @@ class Stepper_00B1(Stepper):
 class Stepper_00B2(Stepper_00B1):
   def __init__(self, stepPin, dirPin, faultPin, dac_channel, shiftreg_nr, name):
     Stepper_00B1.__init__(self, stepPin, dirPin, faultPin, dac_channel, shiftreg_nr, name)
-    self.dac = PWM_DAC(dac_channel)
     if name in ["X", "E", "H"]:
       self.state = 0x1    # The initial state of shift register
     else:
@@ -291,7 +287,6 @@ class Stepper_00B3(Stepper_00B2):
 
   def __init__(self, stepPin, dirPin, faultPin, dac_channel, shiftreg_nr, name):
     Stepper_00B1.__init__(self, stepPin, dirPin, faultPin, dac_channel, shiftreg_nr, name)
-    self.dac = PWM_DAC(dac_channel)
     if name in ["X", "E", "H"]:
       self.state = 0x1    # The initial state of shift register
     else:
@@ -360,8 +355,8 @@ class Stepper_00A4(Stepper):
   DECAY = 5
 
   def __init__(self, stepPin, dirPin, faultPin, dac_channel, shiftreg_nr, name):
-    Stepper.__init__(self, stepPin, dirPin, faultPin, dac_channel, shiftreg_nr, name)
-    self.dac = DAC(dac_channel)
+    Stepper.__init__(self, stepPin, dirPin, faultPin, shiftreg_nr, name)
+    self.dac = dac_channel
     self.dacvalue = 0x00    # The voltage value on the VREF
     self.state = (1 << Stepper_00A4.SLEEP) | (1 << Stepper_00A4.RESET) | (
         1 << Stepper_00A4.ENABLED)    # The initial state of the inputs
@@ -485,13 +480,3 @@ class Stepper_00A3(Stepper_00A4):
   Stepper.SLEEP = 5
   Stepper.RESET = 4
   Stepper.DECAY = 0
-
-
-# Simple test procedure for the steppers
-if __name__ == '__main__':
-  s = Stepper("GPIO0_27", "GPIO1_29", "GPIO2_4", 0, 0, "X")
-
-  print(s.get_step_pin())
-  print(s.get_step_bank())
-  print(s.get_dir_pin())
-  print(s.get_dir_bank())

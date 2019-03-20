@@ -134,15 +134,15 @@ version = 1
       printer.end_stop_keycodes["Z1"] = 116
       printer.end_stop_keycodes["Z2"] = 117
 
-      printer.steppers["X"] = Stepper_00B3("GPIO0_27", "GPIO1_29", 90, 11, 0, "X")
-      printer.steppers["Y"] = Stepper_00B3("GPIO1_12", "GPIO0_22", 91, 12, 1, "Y")
-      printer.steppers["Z"] = Stepper_00B3("GPIO0_23", "GPIO0_26", 92, 13, 2, "Z")
-      printer.steppers["E"] = Stepper_00B3("GPIO1_28", "GPIO1_15", 93, 14, 3, "E")
-      printer.steppers["H"] = Stepper_00B3("GPIO1_13", "GPIO1_14", 94, 15, 4, "H")
+      printer.steppers["X"] = Stepper_00B3("GPIO0_27", "GPIO1_29", 90, mock.Mock(), 0, "X")
+      printer.steppers["Y"] = Stepper_00B3("GPIO1_12", "GPIO0_22", 91, mock.Mock(), 1, "Y")
+      printer.steppers["Z"] = Stepper_00B3("GPIO0_23", "GPIO0_26", 92, mock.Mock(), 2, "Z")
+      printer.steppers["E"] = Stepper_00B3("GPIO1_28", "GPIO1_15", 93, mock.Mock(), 3, "E")
+      printer.steppers["H"] = Stepper_00B3("GPIO1_13", "GPIO1_14", 94, mock.Mock(), 4, "H")
 
-      printer.mosfets["E"] = Mosfet(5)
-      printer.mosfets["H"] = Mosfet(3)
-      printer.mosfets["HBP"] = Mosfet(4)
+      printer.mosfets["E"] = Mosfet(mock.Mock())
+      printer.mosfets["H"] = Mosfet(mock.Mock())
+      printer.mosfets["HBP"] = Mosfet(mock.Mock())
 
       printer.thermistor_inputs["E"] = "/sys/bus/iio/devices/iio:device0/in_voltage4_raw"
       printer.thermistor_inputs["H"] = "/sys/bus/iio/devices/iio:device0/in_voltage5_raw"

@@ -58,7 +58,6 @@ from GCodeProcessor import GCodeProcessor
 from PluginsController import PluginsController
 from Delta import Delta
 from Enable import Enable
-from PWM import PWM
 from RotaryEncoder import *
 from FilamentSensor import *
 from Alarm import Alarm, AlarmExecutor
@@ -128,6 +127,7 @@ class Redeem:
     level = self.printer.config.getint('System', 'loglevel')
     if level > 0:
       logging.getLogger().setLevel(level)
+      logging.warn("log level set to %d", level)
 
     # Set up additional logging, if present:
     if self.printer.config.getboolean('System', 'log_to_file'):

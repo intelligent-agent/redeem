@@ -1,14 +1,17 @@
 import logging
 import glob
 import struct
+import subprocess
 
-from redeem.PWM import PWM
+from redeem.PWM import PWM_PCA9685
 from redeem.Enable import Enable
 from redeem.EndStop import EndStop
 from redeem.Stepper import Stepper_00A3, Stepper_00A4, Stepper_00B1, Stepper_00B2, Stepper_00B3
 from redeem.Key_pin import Key_pin, Key_pin_listener
 from redeem.Mosfet import Mosfet
 from redeem.Fan import Fan
+from redeem.GPIO import AM335x_GPIO_Controller
+from redeem.DAC import DAC, PWM_DAC
 
 
 def probe_replicape(printer):
@@ -40,7 +43,7 @@ def find_replicape():
           eeprom_path = nvmem_path
           found = True
           break
-    except IOError as e:
+    except IOError:
       pass
 
   if not found:
@@ -76,10 +79,18 @@ def build_replicape_printer(printer, revision, key):
   printer.revision = revision
   printer.key = key
 
+  # first get the PWM controller
+  kernel_version = subprocess.check_output(["uname", "-r"]).strip()
+  [major, minor, rev] = kernel_version.split("-")[0].split(".")
+  if (int(major) == 3 and int(minor) >= 14) or int(major) > 3:
+    pwm = PWM_PCA9685(0x70, 2)
+  else:
+    pwm = PWM_PCA9685(0x70, 1)
+
   if revision in ["00A4", "0A4A", "00A3"]:
-    PWM.set_frequency(100)
+    pwm.set_frequency(100)
   elif revision in ["00B1", "00B2", "00B3", "0B3A"]:
-    PWM.set_frequency(1000)
+    pwm.set_frequency(1000)
 
   # Enable PWM and steppers
   printer.enable = Enable("P9_41")
@@ -115,33 +126,48 @@ def build_replicape_printer(printer, revision, key):
     printer.steppers["E"] = Stepper_00A3("GPIO1_28", "GPIO1_15", "GPIO2_1", 3, "E")
     printer.steppers["H"] = Stepper_00A3("GPIO1_13", "GPIO1_14", "GPIO2_3", 4, "H")
   elif revision == "00B1":
-    printer.steppers["X"] = Stepper_00B1("GPIO0_27", "GPIO1_29", "GPIO2_4", 11, 0, "X")
-    printer.steppers["Y"] = Stepper_00B1("GPIO1_12", "GPIO0_22", "GPIO2_5", 12, 1, "Y")
-    printer.steppers["Z"] = Stepper_00B1("GPIO0_23", "GPIO0_26", "GPIO0_15", 13, 2, "Z")
-    printer.steppers["E"] = Stepper_00B1("GPIO1_28", "GPIO1_15", "GPIO2_1", 14, 3, "E")
-    printer.steppers["H"] = Stepper_00B1("GPIO1_13", "GPIO1_14", "GPIO2_3", 15, 4, "H")
+    printer.steppers["X"] = Stepper_00B1("GPIO0_27", "GPIO1_29", "GPIO2_4",
+                                         PWM_DAC(pwm.get_output(11)), 0, "X")
+    printer.steppers["Y"] = Stepper_00B1("GPIO1_12", "GPIO0_22", "GPIO2_5",
+                                         PWM_DAC(pwm.get_output(12)), 1, "Y")
+    printer.steppers["Z"] = Stepper_00B1("GPIO0_23", "GPIO0_26", "GPIO0_15",
+                                         PWM_DAC(pwm.get_output(13)), 2, "Z")
+    printer.steppers["E"] = Stepper_00B1("GPIO1_28", "GPIO1_15", "GPIO2_1",
+                                         PWM_DAC(pwm.get_output(14)), 3, "E")
+    printer.steppers["H"] = Stepper_00B1("GPIO1_13", "GPIO1_14", "GPIO2_3",
+                                         PWM_DAC(pwm.get_output(15)), 4, "H")
   elif revision == "00B2":
-    printer.steppers["X"] = Stepper_00B2("GPIO0_27", "GPIO1_29", "GPIO2_4", 11, 0, "X")
-    printer.steppers["Y"] = Stepper_00B2("GPIO1_12", "GPIO0_22", "GPIO2_5", 12, 1, "Y")
-    printer.steppers["Z"] = Stepper_00B2("GPIO0_23", "GPIO0_26", "GPIO0_15", 13, 2, "Z")
-    printer.steppers["E"] = Stepper_00B2("GPIO1_28", "GPIO1_15", "GPIO2_1", 14, 3, "E")
-    printer.steppers["H"] = Stepper_00B2("GPIO1_13", "GPIO1_14", "GPIO2_3", 15, 4, "H")
+    printer.steppers["X"] = Stepper_00B2("GPIO0_27", "GPIO1_29", "GPIO2_4",
+                                         PWM_DAC(pwm.get_output(11)), 0, "X")
+    printer.steppers["Y"] = Stepper_00B2("GPIO1_12", "GPIO0_22", "GPIO2_5",
+                                         PWM_DAC(pwm.get_output(12)), 1, "Y")
+    printer.steppers["Z"] = Stepper_00B2("GPIO0_23", "GPIO0_26", "GPIO0_15",
+                                         PWM_DAC(pwm.get_output(13)), 2, "Z")
+    printer.steppers["E"] = Stepper_00B2("GPIO1_28", "GPIO1_15", "GPIO2_1",
+                                         PWM_DAC(pwm.get_output(14)), 3, "E")
+    printer.steppers["H"] = Stepper_00B2("GPIO1_13", "GPIO1_14", "GPIO2_3",
+                                         PWM_DAC(pwm.get_output(15)), 4, "H")
   elif revision in ["00B3", "0B3A"]:
-    printer.steppers["X"] = Stepper_00B3("GPIO0_27", "GPIO1_29", 90, 11, 0, "X")
-    printer.steppers["Y"] = Stepper_00B3("GPIO1_12", "GPIO0_22", 91, 12, 1, "Y")
-    printer.steppers["Z"] = Stepper_00B3("GPIO0_23", "GPIO0_26", 92, 13, 2, "Z")
-    printer.steppers["E"] = Stepper_00B3("GPIO1_28", "GPIO1_15", 93, 14, 3, "E")
-    printer.steppers["H"] = Stepper_00B3("GPIO1_13", "GPIO1_14", 94, 15, 4, "H")
+    printer.steppers["X"] = Stepper_00B3("GPIO0_27", "GPIO1_29", 90, PWM_DAC(pwm.get_output(11)), 0,
+                                         "X")
+    printer.steppers["Y"] = Stepper_00B3("GPIO1_12", "GPIO0_22", 91, PWM_DAC(pwm.get_output(12)), 1,
+                                         "Y")
+    printer.steppers["Z"] = Stepper_00B3("GPIO0_23", "GPIO0_26", 92, PWM_DAC(pwm.get_output(13)), 2,
+                                         "Z")
+    printer.steppers["E"] = Stepper_00B3("GPIO1_28", "GPIO1_15", 93, PWM_DAC(pwm.get_output(14)), 3,
+                                         "E")
+    printer.steppers["H"] = Stepper_00B3("GPIO1_13", "GPIO1_14", 94, PWM_DAC(pwm.get_output(15)), 4,
+                                         "H")
   elif revision in ["00A4", "0A4A"]:
-    printer.steppers["X"] = Stepper_00A4("GPIO0_27", "GPIO1_29", "GPIO2_4", 0, 0, "X")
-    printer.steppers["Y"] = Stepper_00A4("GPIO1_12", "GPIO0_22", "GPIO2_5", 1, 1, "Y")
-    printer.steppers["Z"] = Stepper_00A4("GPIO0_23", "GPIO0_26", "GPIO0_15", 2, 2, "Z")
-    printer.steppers["E"] = Stepper_00A4("GPIO1_28", "GPIO1_15", "GPIO2_1", 3, 3, "E")
-    printer.steppers["H"] = Stepper_00A4("GPIO1_13", "GPIO1_14", "GPIO2_3", 4, 4, "H")
+    printer.steppers["X"] = Stepper_00A4("GPIO0_27", "GPIO1_29", "GPIO2_4", DAC(0), 0, "X")
+    printer.steppers["Y"] = Stepper_00A4("GPIO1_12", "GPIO0_22", "GPIO2_5", DAC(1), 1, "Y")
+    printer.steppers["Z"] = Stepper_00A4("GPIO0_23", "GPIO0_26", "GPIO0_15", DAC(2), 2, "Z")
+    printer.steppers["E"] = Stepper_00A4("GPIO1_28", "GPIO1_15", "GPIO2_1", DAC(3), 3, "E")
+    printer.steppers["H"] = Stepper_00A4("GPIO1_13", "GPIO1_14", "GPIO2_3", DAC(4), 4, "H")
 
-  printer.mosfets["E"] = Mosfet(5)
-  printer.mosfets["H"] = Mosfet(3)
-  printer.mosfets["HBP"] = Mosfet(4)
+  printer.mosfets["E"] = Mosfet(pwm.get_output(5))
+  printer.mosfets["H"] = Mosfet(pwm.get_output(3))
+  printer.mosfets["HBP"] = Mosfet(pwm.get_output(4))
 
   printer.thermistor_inputs["E"] = "/sys/bus/iio/devices/iio:device0/in_voltage4_raw"
   printer.thermistor_inputs["H"] = "/sys/bus/iio/devices/iio:device0/in_voltage5_raw"
@@ -150,15 +176,15 @@ def build_replicape_printer(printer, revision, key):
   # Init the three fans. Argument is PWM channel number
   printer.fans = []
   if printer.revision == "00A3":
-    printer.fans.append(Fan(0))
-    printer.fans.append(Fan(1))
-    printer.fans.append(Fan(2))
+    printer.fans.append(Fan(pwm.get_output(0)))
+    printer.fans.append(Fan(pwm.get_output(1)))
+    printer.fans.append(Fan(pwm.get_output(2)))
   elif printer.revision == "0A4A":
-    printer.fans.append(Fan(8))
-    printer.fans.append(Fan(9))
-    printer.fans.append(Fan(10))
+    printer.fans.append(Fan(pwm.get_output(8)))
+    printer.fans.append(Fan(pwm.get_output(9)))
+    printer.fans.append(Fan(pwm.get_output(10)))
   elif printer.revision in ["00B1", "00B2", "00B3", "0B3A"]:
-    printer.fans.append(Fan(7))
-    printer.fans.append(Fan(8))
-    printer.fans.append(Fan(9))
-    printer.fans.append(Fan(10))
+    printer.fans.append(Fan(pwm.get_output(7)))
+    printer.fans.append(Fan(pwm.get_output(8)))
+    printer.fans.append(Fan(pwm.get_output(9)))
+    printer.fans.append(Fan(pwm.get_output(10)))

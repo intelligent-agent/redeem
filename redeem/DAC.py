@@ -23,8 +23,6 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
  along with Redeem.  If not, see <http://www.gnu.org/licenses/>.
 """
 
-from PWM import PWM
-
 import time
 import logging
 
@@ -35,21 +33,21 @@ except ImportError:
   pass
 
 
-class PWM_DAC(PWM):
+class PWM_DAC(object):
   """ This class implements a DAC using a PWM and a second order low pass filter """
 
-  def __init__(self, channel):
+  def __init__(self, pwm_output):
     """ Channel is the pwm output is on (0..15) """
-    self.channel = channel
+    self.pwm = pwm_output
     self.offset = 0.0
 
   def set_voltage(self, voltage):
     """ Set the amount of on-time from 0..1 """
     # The VCC on the PWM chip is 5.0V on Replicape Rev B1
-    PWM.set_value((voltage / 5.0) + self.offset, self.channel)
+    self.pwm.set_value((voltage / 5.0) + self.offset)
 
 
-class DAC():
+class DAC(object):
   """ This class uses an actual DAC """
 
   def __init__(self, channel):
@@ -80,12 +78,3 @@ class DAC():
     byte2 = (dacval & 0x0F) << 4
     self.spi2_0.writebytes([byte1, byte2])    # Update all channels
     self.spi2_0.writebytes([0xA0, 0xFF])
-
-
-if __name__ == '__main__':
-  PWM.set_frequency(100)
-
-  dacs = [0] * 5
-  for i in range(5):
-    dacs[i] = PWM_DAC(11 + i)
-    dacs[i].set_voltage(1.5)
