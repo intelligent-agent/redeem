@@ -83,3 +83,110 @@ class PWM_PCA9685(object):
 
   def get_output(self, channel):
     return PWM_PCA9685_Output(self, channel)
+
+
+class PWM_AM335_Output(PWM_Output):
+  def __init__(self, base_path):
+    self.base_path = base_path
+    self.enabled = True
+    self.set_frequency(1000)    # TODO this should probably be a parameter
+    self.set_enabled(False)
+
+  def set_value(self, value):
+    """ Set the amount of on-time from 0..1 """
+    duty_cycle = int(self.period * float(value))
+    path = self.base_path + "/duty_cycle"
+    with open(path, "w") as f:
+      f.write(str(duty_cycle))
+    # Call enable/disable here since the timer pins
+    self.set_enabled((value > 0))
+
+  def set_enabled(self, is_enabled=True):
+    if self.enabled == is_enabled:
+      return
+    path = self.base_path + "/enable"
+    with open(path, "w") as f:
+      f.write("1" if is_enabled else "0")
+    self.enabled = is_enabled
+
+  def set_frequency(self, freq):
+    """ Set the PWM frequency for all fans connected on this PWM-chip """
+    freq = self.clamp_frequency(freq)
+
+    # period is specified in nanoseconds
+    period = int((1.0 / float(freq)) * (10**9))
+    self.period = period
+    path = self.base_path + "/period"
+
+    logging.debug("Setting period to " + str(period) + "ns (freq: " + str(freq) + " Hz)")
+    with open(path, "w") as f:
+      f.write(str(period))
+
+  def clamp_frequency(self, freq):
+    raise NotImplementedError()
+
+
+class PWM_AM335_Chip_Output(PWM_AM335_Output):
+  def __init__(self, base_path):
+    super(PWM_AM335_Chip_Output, self).__init__(base_path)
+
+  def clamp_frequency(self, freq):
+    if freq < 1000:
+      logging.warning("Frequency too low ({} Hz), clamping to 1000 Hz for chip, {}".format(
+          freq, self.base_path))
+      return 1000
+    return freq
+
+
+class PWM_AM335_Timer_Output(PWM_AM335_Output):
+  def __init__(self, base_path):
+    super(PWM_AM335_Timer_Output, self).__init__(base_path)
+
+  def clamp_frequency(self, freq):
+    if freq > 1000:
+      logging.warning("Frequency too high ({} Hz), clamping to 1000 Hz for timer, {}".format(
+          freq, self.base_path))
+      return 1000
+    return freq
+
+
+class PWM_AM335(object):
+
+  claimed_pins = []
+
+  def get_output(self, chip, channel):
+    pin = '{}:{}'.format(chip, channel)
+    logging.debug("PWM_AM335: Setting up pin {}".format(pin))
+
+    if pin in PWM_AM335.claimed_pins:
+      logging.error("PWM_AM335: Trying to add pin {}, but it has already been added".format(pin))
+      raise RuntimeError(
+          "PWM_AM335: Trying to add pin {}, but it has already been added".format(pin))
+    else:
+      self.claimed_pins.append(pin)
+
+    base_path = self._export_chip(chip, channel)
+
+    if chip in [0, 1, 2, 3]:    # TODO these can change - we need to check by device name
+      return PWM_AM335_Timer_Output(base_path)
+    else:
+      return PWM_AM335_Chip_Output(base_path)
+
+  def get_output_by_device(self, device_name, channel):
+    paths = glob.glob("/sys/bus/platform/devices/{}/pwm/pwmchip*".format(device_name))
+    if len(paths) != 1:
+      raise RuntimeError("Could not find PWM by device name {}".format(device_name))
+
+    chip_string = os.path.basename(paths[0])
+    chip_number = int(chip_string[7:])
+    logging.debug("PWM_AM335: device %s mapped to chip %d", device_name, chip_number)
+    return self.get_output(chip_number, channel)
+
+  def _export_chip(self, chip, channel):
+    base_path = "/sys/class/pwm/pwmchip{}/pwm-{}:{}".format(chip, chip, channel)
+    if not os.path.exists(base_path):
+      with open("/sys/class/pwm/pwmchip{}/export".format(chip), "w") as f:
+        f.write(str(channel))
+      if not os.path.exists(base_path):
+        raise RuntimeError("Unable to export PWM pin")
+    return base_path
