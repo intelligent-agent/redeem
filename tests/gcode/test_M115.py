@@ -15,7 +15,7 @@ class M115_Tests(MockPrinter):
     self.printer.processor.gcodes[g.gcode].execute(g)
 
     self.assertRegexpMatches(g.answer, "PROTOCOL_VERSION:\S+")
-    self.assertRegexpMatches(g.answer, "REPLICAPE_KEY:TESTING_DUMMY_KEY")
+    self.assertRegexpMatches(g.answer, "PRINTER_KEY:TESTING_DUMMY_KEY")
     self.assertRegexpMatches(g.answer, "FIRMWARE_NAME:Redeem")
     self.assertRegexpMatches(g.answer, "FIRMWARE_VERSION:{}\s".format(re.escape(__long_version__)))
     self.assertRegexpMatches(g.answer, "FIRMWARE_URL:https:\S+")

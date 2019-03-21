@@ -21,8 +21,6 @@ class M109(GCodeCommand):
     has_parameter = g.has_letter("P") or g.has_letter("T")
     if not has_parameter:
       heaters = ["E", "H"]
-      if self.printer.config.reach_revision:
-        heaters.extend(["A", "B", "C"])
       parameters = ["P" + str(heaters.index(self.printer.current_tool))]
     else:
       parameters = g.get_tokens()

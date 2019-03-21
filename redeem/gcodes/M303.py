@@ -64,7 +64,7 @@ class M303(GCodeCommand):
     tune_data = {
         "tune_data": tuner.plot_temps,
         "tune_gcode": g.message,
-        "replicape_key": self.printer.config.replicape_key
+        "replicape_key": self.printer.key
     }
 
     Alarm.action_command("pid_tune_data", json.dumps(tune_data))

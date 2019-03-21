@@ -43,12 +43,6 @@ Override CascadingConfigParser methods to set self. variables
 """
 
 
-class CascadingConfigParserWedge(CascadingConfigParser):
-  def parse_capes(self):
-    self.replicape_revision = "0A4A"    # Fake. No hardware involved in these tests (Redundant?)
-    self.reach_revision = "00A0"    # Fake. No hardware involved in these tests (Redundant?)
-
-
 class MockPrinter(unittest.TestCase):
   """
   MockPrinter, in combination with the many sys.module[...] = Mock() statements
@@ -99,7 +93,6 @@ version = 1
   @classmethod
   @mock.patch.object(EndStop, "_wait_for_event", new=None)
   @mock.patch.object(PathPlanner, "_init_path_planner")
-  @mock.patch("redeem.Redeem.CascadingConfigParser", new=CascadingConfigParserWedge)
   def setUpClass(cls, mock_init_path_planner):
     """
     Allow Extruder or HBP instantiation without crashing 'cause not BBB/Replicape
@@ -116,16 +109,61 @@ version = 1
     def bypass_init_path_planner(self):
       pass
 
+    def probe_virtual_board(printer):
+      printer.board = "virtual"
+      printer.revision = "0000"
+
+      # longterm TODO: for now, this is lovingly ripped from build_replicape.
+      # In the long run, this is where we can build a virtual printer on virtual hardware.
+      printer.NUM_AXES = 5
+
+      EndStop.inputdev = "/dev/input/by-path/platform-ocp:gpio_keys-event"
+      Key_pin.listener = Key_pin_listener(EndStop.inputdev)
+
+      printer.end_stop_inputs["X1"] = "GPIO3_21"
+      printer.end_stop_inputs["X2"] = "GPIO0_30"
+      printer.end_stop_inputs["Y1"] = "GPIO1_17"
+      printer.end_stop_inputs["Y2"] = "GPIO3_17"
+      printer.end_stop_inputs["Z1"] = "GPIO0_31"
+      printer.end_stop_inputs["Z2"] = "GPIO0_4"
+
+      printer.end_stop_keycodes["X1"] = 112
+      printer.end_stop_keycodes["X2"] = 113
+      printer.end_stop_keycodes["Y1"] = 114
+      printer.end_stop_keycodes["Y2"] = 115
+      printer.end_stop_keycodes["Z1"] = 116
+      printer.end_stop_keycodes["Z2"] = 117
+
+      printer.steppers["X"] = Stepper_00B3("GPIO0_27", "GPIO1_29", 90, 11, 0, "X")
+      printer.steppers["Y"] = Stepper_00B3("GPIO1_12", "GPIO0_22", 91, 12, 1, "Y")
+      printer.steppers["Z"] = Stepper_00B3("GPIO0_23", "GPIO0_26", 92, 13, 2, "Z")
+      printer.steppers["E"] = Stepper_00B3("GPIO1_28", "GPIO1_15", 93, 14, 3, "E")
+      printer.steppers["H"] = Stepper_00B3("GPIO1_13", "GPIO1_14", 94, 15, 4, "H")
+
+      printer.mosfets["E"] = Mosfet(5)
+      printer.mosfets["H"] = Mosfet(3)
+      printer.mosfets["HBP"] = Mosfet(4)
+
+      printer.thermistor_inputs["E"] = "/sys/bus/iio/devices/iio:device0/in_voltage4_raw"
+      printer.thermistor_inputs["H"] = "/sys/bus/iio/devices/iio:device0/in_voltage5_raw"
+      printer.thermistor_inputs["HBP"] = "/sys/bus/iio/devices/iio:device0/in_voltage6_raw"
+
+      printer.fans.append(Fan(7))
+      printer.fans.append(Fan(8))
+      printer.fans.append(Fan(9))
+      printer.fans.append(Fan(10))
+
     mock.patch('redeem.Extruder.Extruder.enable', new=disabled_extruder_enable).start()
     mock.patch('redeem.Extruder.HBP.enable', new=disabled_hbp_enable).start()
     mock.patch('redeem.PathPlanner.PathPlanner._init_path_planner', new=bypass_init_path_planner)
+    mock.patch('redeem.boards.probe.probe_all_boards', new=probe_virtual_board).start()
 
     cfg_path = "../configs"
     cls.setUpConfigFiles(cfg_path)
 
     cls.R = Redeem(config_location=cfg_path)
     cls.printer = cls.R.printer
-    cls.printer.config.replicape_key = "TESTING_DUMMY_KEY"
+    cls.printer.key = "TESTING_DUMMY_KEY"
 
     cls.setUpPatch()
 

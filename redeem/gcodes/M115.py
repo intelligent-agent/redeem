@@ -18,7 +18,7 @@ import os
 class M115(GCodeCommand):
   def execute(self, g):
     protocol_version = 0.1
-    replicape_key = self.printer.config.replicape_key
+    printer_key = self.printer.key
     firmware_name = "Redeem"
     firmware_version = __long_version__
     firmware_url = __url__
@@ -36,7 +36,7 @@ class M115(GCodeCommand):
         "PROTOCOL_VERSION:{} "\
         "FIRMWARE_NAME:{} "\
         "FIRMWARE_VERSION:{} "\
-        "REPLICAPE_KEY:{} "\
+        "PRINTER_KEY:{} "\
         "FIRMWARE_URL:{} "\
         "MACHINE_TYPE:{} "\
         "KERNEL:{} "\
@@ -47,7 +47,7 @@ class M115(GCodeCommand):
             protocol_version,
             firmware_name,
             firmware_version,
-            replicape_key,
+            printer_key,
             firmware_url,
             machine_type,
             kernel,

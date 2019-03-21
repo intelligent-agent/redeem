@@ -45,8 +45,11 @@ class Printer:
   def __init__(self):
     self.steppers = {}
     self.heaters = {}
+    self.thermistor_inputs = {}
     self.thermistors = {}
     self.mosfets = {}
+    self.end_stop_inputs = {}
+    self.end_stop_keycodes = {}
     self.end_stops = {}
     self.fans = []
     self.cold_ends = []
