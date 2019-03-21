@@ -13,6 +13,8 @@ from redeem.Fan import Fan
 from redeem.GPIO import AM335x_GPIO_Controller
 from redeem.DAC import DAC, PWM_DAC
 
+import redeem.SPI as SPI
+
 
 def probe_replicape(printer):
   results = find_replicape()
@@ -176,16 +178,17 @@ def build_replicape_printer(printer, revision, key):
     printer.steppers["H"] = Stepper_00B3(
         gpio.output(1, 13), gpio.output(1, 14), 94, PWM_DAC(pwm.get_output(15)), 4, "H")
   elif revision in ["00A4", "0A4A"]:
+    dac_spi = SPI.get_spi_bus_by_device("481a0000.spi", 0)
     printer.steppers["X"] = Stepper_00A4(
-        gpio.output(0, 27), gpio.output(1, 29), gpio.input(2, 4), DAC(0), 0, "X")
+        gpio.output(0, 27), gpio.output(1, 29), gpio.input(2, 4), DAC(dac_spi, 0), 0, "X")
     printer.steppers["Y"] = Stepper_00A4(
-        gpio.output(1, 12), gpio.output(0, 22), gpio.input(2, 5), DAC(1), 1, "Y")
+        gpio.output(1, 12), gpio.output(0, 22), gpio.input(2, 5), DAC(dac_spi, 1), 1, "Y")
     printer.steppers["Z"] = Stepper_00A4(
-        gpio.output(0, 23), gpio.output(0, 26), gpio.input(0, 15), DAC(2), 2, "Z")
+        gpio.output(0, 23), gpio.output(0, 26), gpio.input(0, 15), DAC(dac_spi, 2), 2, "Z")
     printer.steppers["E"] = Stepper_00A4(
-        gpio.output(1, 28), gpio.output(1, 15), gpio.input(2, 1), DAC(3), 3, "E")
+        gpio.output(1, 28), gpio.output(1, 15), gpio.input(2, 1), DAC(dac_spi, 3), 3, "E")
     printer.steppers["H"] = Stepper_00A4(
-        gpio.output(1, 13), gpio.output(1, 14), gpio.input(2, 3), DAC(4), 4, "H")
+        gpio.output(1, 13), gpio.output(1, 14), gpio.input(2, 3), DAC(dac_spi, 4), 4, "H")
 
   printer.mosfets["E"] = Mosfet(pwm.get_output(5))
   printer.mosfets["H"] = Mosfet(pwm.get_output(3))
