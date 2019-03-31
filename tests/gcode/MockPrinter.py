@@ -57,6 +57,12 @@ class MockPrinter(unittest.TestCase):
   above, creates a mock Redeem instance. The mock instance has only what is
   needed for our tests and does not access any BBB hardware IOs.
   """
+  """
+  handy conversion from microstep config to microstep multiplier
+  this is inherently tied to the stepper class the MockPrinter is using - right now it's 00A4
+  for the B series that use TMC2100s, this is [1, 2, 2, 4, 16, 4, 16, 4, 16]
+  """
+  microstep_config_to_multiplier = [1, 2, 4, 8, 16, 32]
 
   @classmethod
   def setUpPatch(cls):

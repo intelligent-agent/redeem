@@ -44,11 +44,12 @@ void PathPlanner::setMaxSpeedJumps(VectorN speedJumps)
     optimizer.setMaxSpeedJumps(speedJumps);
 }
 
-void PathPlanner::setAxisStepsPerMeter(VectorN stepPerM)
+void PathPlanner::setAxisStepsPerMeter(VectorN stepsPerM)
 {
-    axisStepsPerM = stepPerM;
-
+    VectorN stateBefore = getState();
+    axisStepsPerM = stepsPerM;
     recomputeParameters();
+    setState(stateBefore);
 }
 
 // soft endstops

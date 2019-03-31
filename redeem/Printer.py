@@ -87,7 +87,6 @@ class Printer:
     self.home_speed = np.ones(self.num_axes)
     self.home_backoff_speed = np.ones(self.num_axes)
     self.home_backoff_offset = np.zeros(self.num_axes)
-    self.steps_pr_meter = np.ones(self.num_axes)
     self.backlash_compensation = np.zeros(self.num_axes)
     self.backlash_state = np.zeros(self.num_axes)
     self.soft_min = -np.ones(self.num_axes) * 1000.0
@@ -174,6 +173,12 @@ class Printer:
     #logging.debug("endstop active mask = " + bin(active))
     # write to shared memory
     PruInterface.set_active_endstops(active)
+
+  def get_steps_pr_meter(self):
+    result = np.ones(self.num_axes)
+    for axis in self.steppers.keys():
+      result[self.axis_to_index(axis)] = self.steppers[axis].get_steps_pr_meter()
+    return result
 
   def save_settings(self, filename):
     logging.debug("save_settings: setting stepper parameters")

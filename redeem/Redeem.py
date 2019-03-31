@@ -444,7 +444,6 @@ class Redeem:
                                                               'home_backoff_speed_' + axis.lower())
       printer.home_backoff_offset[i] = printer.config.getfloat(
           'Homing', 'home_backoff_offset_' + axis.lower())
-      printer.steps_pr_meter[i] = printer.steppers[axis].get_steps_pr_meter()
       printer.backlash_compensation[i] = printer.config.getfloat('Steppers',
                                                                  'backlash_' + axis.lower())
 

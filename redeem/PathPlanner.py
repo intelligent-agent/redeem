@@ -137,7 +137,7 @@ class PathPlanner:
 
     self.native_planner.initPRU(fw0, fw1)
 
-    self.native_planner.setAxisStepsPerMeter(tuple(self.printer.steps_pr_meter))
+    self.native_planner.setAxisStepsPerMeter(tuple(self.printer.get_steps_pr_meter()))
     self.native_planner.setMaxSpeeds(tuple(self.printer.max_speeds))
     self.native_planner.setAcceleration(tuple(self.printer.acceleration))
     self.native_planner.setMaxSpeedJumps(tuple(self.printer.max_speed_jumps))
@@ -174,7 +174,7 @@ class PathPlanner:
 
   def update_steps_pr_meter(self):
     """ Update steps pr meter from the path """
-    self.native_planner.setAxisStepsPerMeter(tuple(self.printer.steps_pr_meter))
+    self.native_planner.setAxisStepsPerMeter(tuple(self.printer.get_steps_pr_meter()))
 
   def update_backlash(self):
     """ Update steps pr meter from the path """
@@ -420,8 +420,8 @@ class PathPlanner:
     start_state = self.native_planner.getState()
 
     # calculate how many steps the requested z movement will require
-    steps = np.ceil(z * self.printer.steps_pr_meter[2])
-    z_dist = steps / self.printer.steps_pr_meter[2]
+    steps = np.ceil(z * self.printer.get_steps_pr_meter()[2])
+    z_dist = steps / self.printer.get_steps_pr_meter()[2]
     logging.debug("Steps total: " + str(steps))
 
     # select the relative end point
@@ -540,10 +540,6 @@ class PathPlanner:
         """
     if ext_nr in range(Printer.MAX_AXES - 3):
       logging.debug("Selecting " + str(ext_nr))
-      #Printer.steps_pr_meter[3] = self.printer.steppers[
-      #        Printer.index_to_axis(ext_nr+3)
-      #        ].get_steps_pr_meter()
-      #self.native_planner.setExtruder(ext_nr)
 
 
 """
