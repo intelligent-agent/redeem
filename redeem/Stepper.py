@@ -36,8 +36,6 @@ class Stepper(object):
 
   printer = None
 
-  all_steppers = list()
-
   def __init__(self, step_pin, dir_pin, fault_key, dac_channel, shiftreg_nr, name):
     """ Init """
     self.dac_channel = dac_channel    # Which channel on the dac is connected to this stepper
@@ -138,7 +136,11 @@ class Stepper_00B1(Stepper):
     self.state = 0    # The initial state of shift register
 
   def set_microstepping(self, value, force_update=False):
-    """ Todo: Find an elegant way for this """
+    if not value in range(9):
+      logging.warning("Tried to set illegal microstepping value: {0} for stepper {1}".format(
+          value, self.name))
+      return
+
     EN_CFG1 = (1 << 7)
     DIS_CFG1 = (0 << 7)
     EN_CFG2 = (1 << 5)
@@ -179,9 +181,6 @@ class Stepper_00B1(Stepper):
     self.shift_reg.set_state(state, 0xF0)
     self.mmPrStep = 1.0 / (self.steps_pr_mm * self.microsteps)
 
-    # update the Printer class with new values
-    stepper_num = self.printer.axis_to_index(self.name)
-    self.printer.steps_pr_meter[stepper_num] = self.get_steps_pr_meter()
     logging.debug("Updated stepper " + self.name + " to microstepping " + str(value) + " = " +
                   str(self.microsteps))
     self.microstepping = value
@@ -432,9 +431,6 @@ class Stepper_00A4(Stepper):
     #self.state = int("0b"+bin(self.state)[2:].rjust(8, '0')[:4]+bin(value)[2:].rjust(3, '0')+bin(self.state)[-1:], 2)
     self.mmPrStep = 1.0 / (self.steps_pr_mm * self.microsteps)
 
-    # update the Printer class with new values
-    stepper_num = self.printer.axis_to_index(self.name)
-    self.printer.steps_pr_meter[stepper_num] = self.get_steps_pr_meter()
     logging.debug("Updated stepper " + self.name + " to microstepping " + str(value) + " = " +
                   str(self.microsteps))
     self.update()

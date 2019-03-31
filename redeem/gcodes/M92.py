@@ -21,11 +21,9 @@ class M92(GCodeCommand):
       if value > 0:
         logging.info("Updating steps pr mm on {} to {}".format(axis, value))
         self.printer.steppers[axis].set_steps_pr_mm(value)
-        i = Printer.axis_to_index(axis)
-        self.printer.steps_pr_meter[i] = self.printer.steppers[axis].get_steps_pr_meter()
       else:
-        logging.error('Steps per milimeter must be grater than zero.')
-    self.printer.path_planner.restart()
+        logging.error('Steps per millimeter must be greater than zero.')
+    self.printer.path_planner.update_steps_pr_meter()
 
   def get_description(self):
     return "Set number of steps per millimeters for each steppers"
