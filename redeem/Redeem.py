@@ -24,46 +24,48 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
 import glob
 import logging
 import logging.handlers
-import os
-import os.path
-import signal
-import threading
-from threading import Thread
-import Queue
 import numpy as np
+import os
+import signal
 import sys
 
-from Mosfet import Mosfet
-from Stepper import *
-from TemperatureSensor import *
-from Fan import Fan
-from Servo import Servo
-from EndStop import EndStop
-from USB import USB
-from Pipe import Pipe
-from Ethernet import Ethernet
-from Extruder import Extruder, HBP
-from Cooler import Cooler
-from Path import Path
-from PathPlanner import PathPlanner
-from Gcode import Gcode
-from ColdEnd import ColdEnd
-from PruFirmware import PruFirmware
-from CascadingConfigParser import CascadingConfigParser
-from Printer import Printer
-from GCodeProcessor import GCodeProcessor
-from PluginsController import PluginsController
-from Delta import Delta
-from Enable import Enable
-from PWM import PWM
-from RotaryEncoder import *
-from FilamentSensor import *
-from Alarm import Alarm, AlarmExecutor
-from StepperWatchdog import StepperWatchdog
-from Key_pin import Key_pin, Key_pin_listener
-from Watchdog import Watchdog
-from six import iteritems
-from IOManager import IOManager
+from threading import Thread
+from threading import enumerate as enumerate_threads
+from .Alarm import Alarm, AlarmExecutor
+from .CascadingConfigParser import CascadingConfigParser
+from .ColdEnd import ColdEnd
+from .Cooler import Cooler
+from .Delta import Delta
+from .Enable import Enable
+from .EndStop import EndStop
+from .Ethernet import Ethernet
+from .Extruder import Extruder, HBP
+from .Fan import Fan
+from .FilamentSensor import *
+from .Gcode import Gcode
+from .GCodeProcessor import GCodeProcessor
+from .IOManager import IOManager
+from .Key_pin import Key_pin, Key_pin_listener
+from .Mosfet import Mosfet
+from .Path import Path
+from .PathPlanner import PathPlanner
+from .Pipe import Pipe
+from .PluginsController import PluginsController
+from .Printer import Printer
+from .PruFirmware import PruFirmware
+from .PWM import PWM
+from .RotaryEncoder import *
+from .Servo import Servo
+from .Stepper import *
+from .StepperWatchdog import StepperWatchdog
+from .TemperatureSensor import *
+from .USB import USB
+from .Watchdog import Watchdog
+from six import PY2, iteritems
+if PY2:
+  import Queue as queue
+else:
+  import queue
 
 # Global vars
 printer = None
@@ -424,10 +426,10 @@ class Redeem:
         printer.filament_sensors.append(sensor)
 
     # Make a queue of commands
-    self.printer.commands = Queue.Queue(10)
+    self.printer.commands = queue.Queue(10)
 
     # Make a queue of commands that should not be buffered
-    self.printer.unbuffered_commands = Queue.Queue(10)
+    self.printer.unbuffered_commands = queue.Queue(10)
 
     # Bed compensation matrix
     printer.matrix_bed_comp = printer.load_bed_compensation_matrix()
@@ -586,7 +588,7 @@ class Redeem:
       while RedeemIsRunning:
         try:
           gcode = queue.get(block=True, timeout=1)
-        except Queue.Empty:
+        except queue.Empty:
           continue
         logging.debug("Executing " + gcode.code() + " from " + name + " " + gcode.message)
         self._execute(gcode)
@@ -636,7 +638,7 @@ class Redeem:
 
     # list all threads that are still running
     # note: some of these may be daemons
-    for t in threading.enumerate():
+    for t in enumerate_threads():
       if t.name != "MainThread":
         logging.debug("Thread " + t.name + " is still running")
 
