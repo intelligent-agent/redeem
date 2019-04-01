@@ -1,9 +1,14 @@
-import threading
+import logging
 import os
 import select
 import sys
-import Queue
-import logging
+from six import PY2
+from threading import Thread
+
+if PY2:
+  from Queue import Queue
+else:
+  from queue import Queue
 
 
 class IOManager:
@@ -12,12 +17,12 @@ class IOManager:
   control_queue = None
 
   def __init__(self):
-    self.control_queue = Queue.Queue()
+    self.control_queue = Queue()
     read_fd, write_fd = os.pipe()
     self.control_pipe = os.fdopen(write_fd, 'w')
     thread_pipe = os.fdopen(read_fd, 'r')
     logging.debug("IOManager starting up")
-    self.thread = threading.Thread(target=self._thread_loop, name="IOManager", args=[thread_pipe])
+    self.thread = Thread(target=self._thread_loop, name="IOManager", args=[thread_pipe])
     self.thread.start()
 
   def stop(self):

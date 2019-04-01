@@ -18,16 +18,20 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
  along with Redeem.  If not, see <http://www.gnu.org/licenses/>.
 """
 
-import ConfigParser
-import os
 import logging
+import os
 import struct
+from six import PY2
+if PY2:
+  from ConfigParser import SafeConfigParser as Parser
+else:
+  import configparser as Parser
 
 
-class CascadingConfigParser(ConfigParser.SafeConfigParser):
+class CascadingConfigParser(Parser):
   def __init__(self, config_files):
 
-    ConfigParser.SafeConfigParser.__init__(self)
+    Parser.__init__(self)
 
     # Write options in the case it was read.
     # self.optionxform = str
@@ -93,7 +97,7 @@ class CascadingConfigParser(ConfigParser.SafeConfigParser):
     for config_file in self.config_files:
       if os.path.isfile(config_file):
         c_file = os.path.basename(config_file)
-        cp = ConfigParser.SafeConfigParser()
+        cp = Parser()
         cp.readfp(open(config_file))
         fs.append((c_file, cp))
 
@@ -122,7 +126,7 @@ class CascadingConfigParser(ConfigParser.SafeConfigParser):
           to_save.append((section, option, val, old))
 
     # Update local config with changed values
-    local = ConfigParser.SafeConfigParser()
+    local = Parser()
     # Start each file with revision identification
     local.add_section("Configuration")
     local.set("Configuration", "version", "1")
@@ -139,9 +143,9 @@ class CascadingConfigParser(ConfigParser.SafeConfigParser):
 
   def check(self, filename):
     """ Check the settings currently set against default.cfg """
-    default = ConfigParser.SafeConfigParser()
+    default = Parser()
     default.readfp(open(os.path.join(self.config_location, "default.cfg")))
-    local = ConfigParser.SafeConfigParser()
+    local = Parser()
     local.readfp(open(filename))
 
     local_ok = True

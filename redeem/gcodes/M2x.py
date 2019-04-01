@@ -28,20 +28,21 @@ exfat - is also a file system option commonly found on USB flash drives and othe
 """
 from __future__ import absolute_import
 
-import os
-from abc import abstractmethod, ABCMeta
-
-import sh
+import cProfile, pstats
 import logging
-from threading import Lock
+import os
+import sh
+from abc import ABCMeta
+from redeem.Gcode import Gcode
 from thread import start_new_thread
-
 from time import sleep
+from six import PY2
+if PY2:
+  from io import StringIO
+else:
+  import StringIO
 
 from .GCodeCommand import GCodeCommand
-from redeem.Gcode import Gcode
-
-import cProfile, pstats, StringIO
 
 # device_location = '/dev/mmcblk1p1'
 USB_DEVICE_LOCATION = '/dev/sda1'
