@@ -582,18 +582,18 @@ class Redeem:
     # Signal everything ready
     logging.info("Redeem ready")
 
-  def loop(self, queue, name):
+  def loop(self, the_queue, name):
     """ When a new gcode comes in, execute it """
     try:
       while RedeemIsRunning:
         try:
-          gcode = queue.get(block=True, timeout=1)
+          gcode = the_queue.get(block=True, timeout=1)
         except queue.Empty:
           continue
         logging.debug("Executing " + gcode.code() + " from " + name + " " + gcode.message)
         self._execute(gcode)
         self.printer.reply(gcode)
-        queue.task_done()
+        the_queue.task_done()
         logging.debug("Completed " + gcode.code() + " from " + name + " " + gcode.message)
     except Exception:
       logging.exception("Exception in {} loop: ".format(name))
