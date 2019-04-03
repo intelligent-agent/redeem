@@ -1,8 +1,8 @@
 from __future__ import absolute_import
 
-import unittest
 import mock
 import sys
+import unittest
 
 sys.modules['evdev'] = mock.Mock()
 sys.modules['spidev'] = mock.MagicMock()
@@ -36,9 +36,9 @@ sys.modules['redeem.IOManager'] = mock.Mock()
 sys.modules['redeem.IOManager'].IOManager = mock.MagicMock()
 
 from redeem.CascadingConfigParser import CascadingConfigParser
-from redeem.Redeem import *
 from redeem.EndStop import EndStop
 from redeem.Extruder import Heater
+from redeem.Redeem import *
 """
 Override CascadingConfigParser methods to set self. variables
 """

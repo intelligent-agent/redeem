@@ -22,14 +22,13 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
 
 """
 
-import os
 import logging
-import subprocess
-import shutil
+import os
 import re
-from six import iteritems
-
+import shutil
+import subprocess
 from Printer import Printer
+from six import iteritems
 
 
 class PruFirmware:

@@ -19,12 +19,12 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
  along with Redeem.  If not, see <http://www.gnu.org/licenses/>.
 """
 
-from .AbstractPlugin import AbstractPlugin
 import logging
 from redeem.gcodes.GCodeCommand import GCodeCommand
+from redeem.Key_pin import Key_pin
 from redeem.Path import Path
 from redeem.Printer import Printer
-from redeem.Key_pin import Key_pin
+from .AbstractPlugin import AbstractPlugin
 
 __PLUGIN_NAME__ = 'StartButton'
 

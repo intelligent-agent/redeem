@@ -1,12 +1,11 @@
 from __future__ import absolute_import
 
-import os
-import logging
 import itertools
+import logging
 import numpy as np
+import os
 from mock import Mock
 from six.moves import zip
-
 from .MockPrinter import MockPrinter
 
 show_plots = False

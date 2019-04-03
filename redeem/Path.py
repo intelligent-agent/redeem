@@ -21,9 +21,9 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
  along with Redeem.  If not, see <http://www.gnu.org/licenses/>.
 """
 
+import logging
 import numpy as np
 import sympy as sp
-import logging
 
 
 class Path:

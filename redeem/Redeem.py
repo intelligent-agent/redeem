@@ -28,9 +28,14 @@ import numpy as np
 import os
 import signal
 import sys
-
+from six import PY2, iteritems
 from threading import Thread
 from threading import enumerate as enumerate_threads
+if PY2:
+  import Queue as queue
+else:
+  import queue
+
 from .Alarm import Alarm, AlarmExecutor
 from .CascadingConfigParser import CascadingConfigParser
 from .ColdEnd import ColdEnd
@@ -61,11 +66,6 @@ from .StepperWatchdog import StepperWatchdog
 from .TemperatureSensor import *
 from .USB import USB
 from .Watchdog import Watchdog
-from six import PY2, iteritems
-if PY2:
-  import Queue as queue
-else:
-  import queue
 
 # Global vars
 printer = None

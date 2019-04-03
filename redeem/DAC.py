@@ -22,11 +22,9 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
  You should have received a copy of the GNU General Public License
  along with Redeem.  If not, see <http://www.gnu.org/licenses/>.
 """
-
-from PWM import PWM
-
 import time
 import logging
+from PWM import PWM
 
 # Load SPI module
 try:

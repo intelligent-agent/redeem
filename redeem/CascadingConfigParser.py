@@ -20,8 +20,8 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
 
 import logging
 import os
-import struct
 from six import PY2
+import struct
 if PY2:
   from ConfigParser import SafeConfigParser as Parser
 else:

@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """
 A temperature sensor class for Replicape.
 This represents NTC and PTC sensors like thermistors, thermocouples
@@ -28,13 +27,13 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
  along with Redeem.  If not, see <http://www.gnu.org/licenses/>.
 """
 
-import numpy as np
-import math
 import logging
-from threading import Lock
+import math
+import numpy as np
 import sys
 import TemperatureSensorConfigs
 from Alarm import Alarm
+from threading import Lock
 
 
 class TemperatureSensor:
@@ -80,8 +79,8 @@ class TemperatureSensor:
       self.sensor = None
 
   """
-    Returns the current temperature in degrees celsius for the given sensor.
-    """
+  Returns the current temperature in degrees celsius for the given sensor.
+  """
 
   def get_temperature(self):
     voltage = self.read_adc()
@@ -90,9 +89,9 @@ class TemperatureSensor:
     return self.sensor.get_temperature(voltage)
 
   """
-    Reads the adc pin and returns the actual voltage value
-    Returns -1 if the reading is out of range.
-    """
+  Reads the adc pin and returns the actual voltage value
+  Returns -1 if the reading is out of range.
+  """
 
   def read_adc(self):
     voltage = 0

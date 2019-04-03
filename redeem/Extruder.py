@@ -20,11 +20,11 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
  along with Redeem.  If not, see <http://www.gnu.org/licenses/>.
 """
 
-from threading import Thread, Event
-import time
 import logging
 import numpy as np
+import time
 from Alarm import Alarm
+from threading import Thread, Event
 
 
 class Heater(object):

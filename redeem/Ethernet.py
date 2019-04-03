@@ -20,10 +20,10 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
  along with Redeem.  If not, see <http://www.gnu.org/licenses/>.
 """
 
-from threading import Thread
-import socket
 import logging
+import socket
 from Gcode import Gcode
+from threading import Thread
 
 size = 1024
 

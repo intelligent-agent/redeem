@@ -20,9 +20,9 @@ Author: Elias Bakken
  You should have received a copy of the GNU General Public License
  along with Redeem.  If not, see <http://www.gnu.org/licenses/>.
 """
-from threading import Thread, Lock
-import time
 import logging
+import time
+from threading import Thread, Lock
 
 
 class Watchdog:
