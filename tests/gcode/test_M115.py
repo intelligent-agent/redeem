@@ -2,10 +2,10 @@ from __future__ import absolute_import
 
 import mock
 import re
-from .MockPrinter import MockPrinter
 from redeem.Gcode import Gcode
 from redeem import __long_version__
 from six import PY2
+from .MockPrinter import MockPrinter
 
 
 class M115_Tests(MockPrinter):

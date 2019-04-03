@@ -1,6 +1,6 @@
-import os
-import glob
 import importlib
+import glob
+import os
 
 #Import all python files as submodule
 for f in glob.glob(os.path.dirname(__file__) + "/*.py"):

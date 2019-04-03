@@ -21,9 +21,9 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
 """
 
 from __future__ import division, print_function
-import time
 import logging
 import numpy as np
+import time
 
 
 class Util:

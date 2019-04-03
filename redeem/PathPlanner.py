@@ -27,16 +27,16 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
 from __future__ import absolute_import
 
 import logging
-from .Path import Path, AbsolutePath, RelativePath, G92Path
-from .Delta import Delta
-from .Printer import Printer
 import numpy as np
-from .PruInterface import PruInterface
-from .BedCompensation import BedCompensation
-from .DeltaAutoCalibration import delta_auto_calibration
-from .Alarm import Alarm
-from six import iteritems
 import traceback
+from six import iteritems
+from .Alarm import Alarm
+from .BedCompensation import BedCompensation
+from .Delta import Delta
+from .DeltaAutoCalibration import delta_auto_calibration
+from .Path import Path, AbsolutePath, RelativePath, G92Path
+from .Printer import Printer
+from .PruInterface import PruInterface
 
 try:
   from redeem.path_planner.PathPlannerNative import PathPlannerNative, AlarmCallbackNative, SyncCallbackNative

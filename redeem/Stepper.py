@@ -21,15 +21,15 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
  along with Redeem.  If not, see <http://www.gnu.org/licenses/>.
 """
 
-import time
-import logging
-from .Printer import Printer
-from .DAC import DAC, PWM_DAC
-from .ShiftRegister import ShiftRegister
 import Adafruit_BBIO.GPIO as GPIO
+import logging
+import time
 from threading import Thread
 from .Alarm import Alarm
+from .DAC import DAC, PWM_DAC
 from .Key_pin import Key_pin
+from .Printer import Printer
+from .ShiftRegister import ShiftRegister
 
 
 class Stepper(object):

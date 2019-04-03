@@ -1,7 +1,7 @@
 from __future__ import absolute_import
 
-import mock
 import logging
+import mock
 from .MockPrinter import MockPrinter
 
 logging.info = mock.Mock()

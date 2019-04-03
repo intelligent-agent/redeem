@@ -30,7 +30,6 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
 
 import copy
 import logging
-
 import numpy as np
 from scipy.optimize import leastsq as least_squares
 

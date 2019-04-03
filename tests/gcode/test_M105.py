@@ -1,11 +1,11 @@
 from __future__ import absolute_import
 
+import math
 import mock
 from random import random
-import math
+from redeem.Gcode import Gcode
 from six import iteritems
 from .MockPrinter import MockPrinter
-from redeem.Gcode import Gcode
 
 
 class M105_Tests(MockPrinter):

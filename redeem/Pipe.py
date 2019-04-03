@@ -21,17 +21,16 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
  along with Redeem.  If not, see <http://www.gnu.org/licenses/>.
 """
 
-from threading import Thread
-from distutils.spawn import find_executable
-import select
-import logging
-import subprocess
-import time
-import os
 import errno
 import fcntl
+import logging
+import os
+import select
+import subprocess
 import termios
+import time
 from Gcode import Gcode
+from threading import Thread
 
 
 class Pipe:

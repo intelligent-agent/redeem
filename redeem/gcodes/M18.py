@@ -9,8 +9,8 @@ License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 from __future__ import absolute_import
 
 import logging
-from .GCodeCommand import GCodeCommand
 from redeem.Stepper import Stepper
+from .GCodeCommand import GCodeCommand
 
 
 class M18(GCodeCommand):

@@ -19,14 +19,16 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
  You should have received a copy of the GNU General Public License
  along with Redeem.  If not, see <http://www.gnu.org/licenses/>.
 """
+from __future__ import absolute_import
+
 import logging
 import math
 import time
 from multiprocessing import JoinableQueue
 from PWM_pin import PWM_pin
 from ShiftRegister import ShiftRegister
-from threading import Thread
 from six import PY2
+from threading import Thread
 if PY2:
   import Queue as queue
 else:

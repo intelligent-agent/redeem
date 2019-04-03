@@ -20,18 +20,18 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
  along with Redeem.  If not, see <http://www.gnu.org/licenses/>.
 """
 
-import sys
-import traceback
+import importlib
 import inspect
 import logging
 import re
-import importlib
-from threading import Event
+import sys
+import traceback
 from six import iteritems
-from .gcodes.GCodeCommand import GCodeCommand
-from .PathPlanner import SyncCallback
+from threading import Event
 from . import Sync
 from .Gcode import Gcode
+from .gcodes.GCodeCommand import GCodeCommand
+from .PathPlanner import SyncCallback
 
 
 class GCodePerformanceCounters:
