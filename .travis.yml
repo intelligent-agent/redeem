@@ -9,6 +9,14 @@ matrix:
         - cd tests
       script:
         - pytest
+    - language: python
+      python: 3.6
+      install:
+        - pip install -r tests/requirements.txt
+      before_script:
+        - cd tests
+      script:
+        - pytest
 # next the python formatting
     - language: python
       python: 2.7

@@ -25,7 +25,7 @@ from six import PY2
 if PY2:
   from ConfigParser import SafeConfigParser as Parser
 else:
-  import configparser as Parser
+  from configparser import ConfigParser as Parser
 
 
 class CascadingConfigParser(Parser):
@@ -46,7 +46,10 @@ class CascadingConfigParser(Parser):
     for config_file in self.config_files:
       if os.path.isfile(config_file):
         logging.info("Using config file " + config_file)
-        self.readfp(open(config_file))
+        if PY2:
+          self.readfp(open(config_file))
+        else:
+          self.read_file(open(config_file))
       else:
         logging.warning("Missing config file " + config_file)
         # Might also add command line options for overriding stuff
@@ -98,7 +101,10 @@ class CascadingConfigParser(Parser):
       if os.path.isfile(config_file):
         c_file = os.path.basename(config_file)
         cp = Parser()
-        cp.readfp(open(config_file))
+        if PY2:
+          cp.readfp(open(config_file))
+        else:
+          cp.read_file(open(config_file))
         fs.append((c_file, cp))
 
     lines = []
@@ -130,7 +136,10 @@ class CascadingConfigParser(Parser):
     # Start each file with revision identification
     local.add_section("Configuration")
     local.set("Configuration", "version", "1")
-    local.readfp(open(filename, "r"))
+    if PY2:
+      local.readfp(open(filename))
+    else:
+      local.read_file(open(filename))
     for opt in to_save:
       (section, option, value, old) = opt
       if not local.has_section(section):
@@ -144,9 +153,16 @@ class CascadingConfigParser(Parser):
   def check(self, filename):
     """ Check the settings currently set against default.cfg """
     default = Parser()
-    default.readfp(open(os.path.join(self.config_location, "default.cfg")))
+    if PY2:
+      default.readfp(open(os.path.join(self.config_location, "default.cfg")))
+    else:
+      default.read_file(open(os.path.join(self.config_location, "default.cfg")))
     local = Parser()
-    local.readfp(open(filename))
+
+    if PY2:
+      local.readfp(open(filename))
+    else:
+      local.read_file(open(filename))
 
     local_ok = True
     diff = set(local.sections()) - set(default.sections())

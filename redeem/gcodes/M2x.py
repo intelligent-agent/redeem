@@ -34,13 +34,13 @@ import os
 import sh
 from abc import ABCMeta
 from redeem.Gcode import Gcode
-from thread import start_new_thread
+from threading import Thread
 from time import sleep
 from six import PY2
 if PY2:
-  from io import StringIO
-else:
   import StringIO
+else:
+  from io import StringIO
 
 from .GCodeCommand import GCodeCommand
 
@@ -306,7 +306,7 @@ class M24(GCodeCommand):
     active = self.printer.sd_card_manager.get_status()
     if not active:
       logging.info("M24: Printing file '{}'".format(fn))
-      start_new_thread(self.process_gcode, (g, ))
+      thread = Thread(target=self.process_gcode, args=[g])
       # allow some time for the new thread to start before we proceed
       counter = 0
       while (not active) and (counter < 10):

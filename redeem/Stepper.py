@@ -23,13 +23,13 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
 
 import time
 import logging
-from Printer import Printer
-from DAC import DAC, PWM_DAC
-from ShiftRegister import ShiftRegister
+from .Printer import Printer
+from .DAC import DAC, PWM_DAC
+from .ShiftRegister import ShiftRegister
 import Adafruit_BBIO.GPIO as GPIO
 from threading import Thread
-from Alarm import Alarm
-from Key_pin import Key_pin
+from .Alarm import Alarm
+from .Key_pin import Key_pin
 
 
 class Stepper(object):

@@ -31,7 +31,7 @@ class M105_Tests(MockPrinter):
     expected_answer = "ok"
     expected_answer += " {0}:{1:.1f}/{2:.1f}".format("T", test_temps["T0"], test_target_temps["T0"])
 
-    for heater, data in sorted(iteritems(self.printer.heaters), key=lambda (k, v): (v, k)):
+    for heater, data in sorted(iteritems(self.printer.heaters), key=lambda pair: pair[0]):
       p = data.prefix
       expected_answer += " {0}:{1:.1f}/{2:.1f}".format(p, test_temps[p], test_target_temps[p])
     expected_answer += " @:{0:.1f}".format(math.floor(test_powers["T0"] * 255.0))

@@ -23,7 +23,7 @@ class M18(GCodeCommand):
     else:
       # If no token is present, disable all steppers
       if g.num_tokens() == 0:
-        g.set_tokens(self.printer.steppers.keys())
+        g.set_tokens(list(self.printer.steppers.keys()))
 
       for i in range(g.num_tokens()):    # Run through all tokens
         axis = g.token_letter(i)    # Get the axis, X, Y, Z or E

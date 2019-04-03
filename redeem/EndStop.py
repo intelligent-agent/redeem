@@ -25,8 +25,8 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
 import logging
 import re
 from evdev import InputDevice
-from Key_pin import Key_pin
-from PruInterface import PruInterface
+from .Key_pin import Key_pin
+from .PruInterface import PruInterface
 
 
 class EndStop:

@@ -19,12 +19,12 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
  along with Redeem.  If not, see <http://www.gnu.org/licenses/>.
 """
 
-from Path import Path
+from .Path import Path
 import numpy as np
 import logging
-from Delta import Delta
-from PruInterface import PruInterface
-from SDCardManager import SDCardManager
+from .Delta import Delta
+from .PruInterface import PruInterface
+from .SDCardManager import SDCardManager
 import os
 import json
 from six import iteritems

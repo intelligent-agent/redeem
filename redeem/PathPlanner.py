@@ -24,29 +24,28 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
  along with Redeem.  If not, see <http://www.gnu.org/licenses/>.
 """
 
+from __future__ import absolute_import
+
 import logging
-from Path import Path, AbsolutePath, RelativePath, G92Path
-from Delta import Delta
-from Printer import Printer
+from .Path import Path, AbsolutePath, RelativePath, G92Path
+from .Delta import Delta
+from .Printer import Printer
 import numpy as np
-from PruInterface import PruInterface
-from BedCompensation import BedCompensation
-from DeltaAutoCalibration import delta_auto_calibration
-from Alarm import Alarm
+from .PruInterface import PruInterface
+from .BedCompensation import BedCompensation
+from .DeltaAutoCalibration import delta_auto_calibration
+from .Alarm import Alarm
 from six import iteritems
 import traceback
 
 try:
-  from path_planner.PathPlannerNative import PathPlannerNative, AlarmCallbackNative, SyncCallbackNative
+  from redeem.path_planner.PathPlannerNative import PathPlannerNative, AlarmCallbackNative, SyncCallbackNative
 except Exception as e:
-  try:
-    from _PathPlannerNative import PathPlannerNative, AlarmCallbackNative, SyncCallbackNative
-  except:
-    logging.error("You have to compile the native path planner before running"
-                  " Redeem. Make sure you have swig installed (apt-get "
-                  "install swig) and run cd ../../PathPlanner/PathPlanner && "
-                  "python setup.py install")
-    raise e
+  logging.error("You have to compile the native path planner before running"
+                " Redeem. Make sure you have swig installed (apt-get "
+                "install swig) and run cd ../../PathPlanner/PathPlanner && "
+                "python setup.py install")
+  raise e
 
 
 class AlarmWrapper(AlarmCallbackNative):
