@@ -25,7 +25,7 @@ import inspect
 import logging
 import re
 import importlib
-from plugins import AbstractPlugin
+from .plugins import AbstractPlugin
 
 
 class PluginsController:
@@ -35,7 +35,7 @@ class PluginsController:
     self.plugins = {}
 
     # Load the plugins specified by the config
-    pluginsToLoad = [v.strip() for v in self.printer.config.get('System', 'plugins', '').split(',')]
+    pluginsToLoad = [v.strip() for v in self.printer.config.get('System', 'plugins').split(',')]
     pluginClasses = PluginsController.get_plugin_classes()
 
     for plugin in pluginsToLoad:

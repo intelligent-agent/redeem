@@ -28,13 +28,10 @@ import re
 import importlib
 from threading import Event
 from six import iteritems
-from gcodes.GCodeCommand import GCodeCommand
-from PathPlanner import SyncCallback
-import Sync
-try:
-  from Gcode import Gcode
-except ImportError:
-  from redeem.Gcode import Gcode
+from .gcodes.GCodeCommand import GCodeCommand
+from .PathPlanner import SyncCallback
+from . import Sync
+from .Gcode import Gcode
 
 
 class GCodePerformanceCounters:

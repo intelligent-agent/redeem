@@ -29,18 +29,12 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
  along with Redeem.  If not, see <http://www.gnu.org/licenses/>.
 """
 
-from AbstractPlugin import AbstractPlugin
+from .AbstractPlugin import AbstractPlugin
 import logging
-try:
-  from gcodes.GCodeCommand import GCodeCommand
-  from Stepper import Stepper
-  from Servo import Servo
-  from Path import Path
-except ImportError:
-  from redeem.gcodes.GCodeCommand import GCodeCommand
-  from redeem.Stepper import Stepper
-  from redeem.Servo import Servo
-  from redeem.Path import Path
+from redeem.gcodes.GCodeCommand import GCodeCommand
+from redeem.Stepper import Stepper
+from redeem.Servo import Servo
+from redeem.Path import Path
 
 __PLUGIN_NAME__ = 'HPX2Max'
 
