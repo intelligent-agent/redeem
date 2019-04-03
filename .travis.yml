@@ -24,6 +24,12 @@ matrix:
         - pip install yapf==0.25.0
       script:
         - yapf --diff --exclude venv/ --exclude .git/ -r .
+    - language: python
+      python: 3.6
+      install:
+        - pip install yapf==0.25.0
+      script:
+        - yapf --diff --exclude venv/ --exclude .git/ -r .
 # next the C++ tests
     - language: cpp
       os: linux

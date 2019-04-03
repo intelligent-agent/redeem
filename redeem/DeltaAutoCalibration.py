@@ -338,9 +338,14 @@ class AutoCalibrationDeltaParameters:
 def _expected_residuals(new_raw_delta_params, points, base_delta_params, probe_motor_positions):
   new_delta_params = AutoCalibrationDeltaParameters.from_base_and_raw_params(
       base_delta_params, new_raw_delta_params)
+  # yapf: disable
   new_points = map(
-      lambda motor_position: new_delta_params.inverse_transform(motor_position[0], motor_position[1], motor_position[2]),
+      lambda motor_position: new_delta_params.inverse_transform(
+          motor_position[0],
+          motor_position[1],
+          motor_position[2]),
       probe_motor_positions)
+  # yapf: enable
   new_residuals = []
   for i in range(0, len(new_points)):
     error = points[2][i] - new_points[i][2]
@@ -443,13 +448,24 @@ if __name__ == '__main__':
   #        ys.append(point[1])
   #        zs.append(real_point[2])
 
+  # yapf: disable
   calculated_printer_params = _calibrate_delta_parameters(
-      (np.array(xs), np.array(ys), np.array(zs) * -1), 3, fake_printer_params)
+      (np.array(xs), np.array(ys), np.array(zs) * -1),
+      3,
+      fake_printer_params
+      )
 
   print("real: " + str(real_printer_params.to_dict()))
   print("calculated: " + str(calculated_printer_params.to_dict()))
-  print(str([real_printer_params.xstop, real_printer_params.ystop, real_printer_params.zstop]))
-  print(str([
-      calculated_printer_params.xstop, calculated_printer_params.ystop,
-      calculated_printer_params.zstop
-  ]))
+  print(
+      str([
+          real_printer_params.xstop,
+          real_printer_params.ystop,
+          real_printer_params.zstop
+      ]))
+  print(
+      str([
+          calculated_printer_params.xstop,
+          calculated_printer_params.ystop,
+          calculated_printer_params.zstop
+      ]))
