@@ -95,8 +95,7 @@ class GCodeProcessor:
     else:
       c = gcode.code() if not gcode.is_info_command() else gcode.code()[:-1]
       if not c in self.gcodes:
-        if c != "No-Gcode":
-          logging.error("No GCode processor for " + gcode.code() + ". Message: " + gcode.message)
+        logging.error("No GCode processor for " + gcode.code() + ". Message: " + gcode.message)
         gcode.command = None
       else:
         gcode.command = self.gcodes[c]
@@ -113,10 +112,9 @@ class GCodeProcessor:
       logging.warning("tried to execute a gcode that wasn't resolved: " + gcode.message)
       # logging.error(traceback.format_stack())
       self.resolve(gcode)
-    if gcode.command is None:
+      
+    if gcode.command == None:
       return
-
-    self.counters.gcodes_executed += 1
 
     try:
       gcode.command.execute(gcode)
@@ -136,10 +134,11 @@ class GCodeProcessor:
     # If an M116 is running, peek at the incoming Gcode
     if self.peek(gcode):
       return
+
     if gcode.command.is_async():
       self.sync_event_needed = True
-      self.execute(gcode)
-      self.printer.reply(gcode)
+      self.printer.async_commands.put(gcode)
+
     elif gcode.command.is_buffered():
       # if we previously queued an async code, we need to queue an event to get back into sync
       if self.sync_event_needed:
@@ -147,6 +146,10 @@ class GCodeProcessor:
         self._make_buffered_queue_wait_for_async_queue()
         self.sync_event_needed = False
       self.printer.commands.put(gcode)
+
+      if gcode.command.is_sync():
+        # Yes, it goes into both queues!
+        self.printer.sync_commands.put(gcode)
     else:
       self.printer.unbuffered_commands.put(gcode)
     if gcode.code() in ["M109", "M190"]:

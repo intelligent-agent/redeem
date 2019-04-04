@@ -378,15 +378,11 @@ class M27(M2X):
       byte_position = 1
 
     # message to inform that we have completed the print
-    active = self.printer.sd_card_manager.get_status()
-    if active:
-      message = "SD printing byte {}/{}".format(byte_position, size_bytes)
-    else:
-      message = "Not SD printing."
 
     self.printer.send_message(g.prot, message)
     logging.info(message)
     return
+
 
   def get_description(self):
     return """Report external file print status"""

@@ -99,9 +99,14 @@ setup(
       'testfixtures==6.2.0',
       'configobj==5.0.6',
       'scipy',
+<<<<<<< HEAD
       'pytest==4.0.2',
       'future>=0.16.0',
       'evdev',
+=======
+      'pytest==3.1.2',
+      'future>=0.16.0',
+>>>>>>> origin/RC
     ],
     url=__url__,
     ext_modules=[pathplanner],
