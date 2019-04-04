@@ -29,15 +29,6 @@ Redeem is its firmware; it accepts g-codes and translates them into coordinates 
 
 Umikaze (based on ubuntu 16.03.04)
 
-### Debian package
-
-```
-wget -O - http://kamikaze.thing-printer.com/apt/public.gpg | apt-key add -
-echo "deb [arch=armhf] http://kamikaze.thing-printer.com/apt ./" >> /etc/apt/sources.list
-apt-get update
-apt-get install redeem
-```
-
 ### Source install
 
 ```
