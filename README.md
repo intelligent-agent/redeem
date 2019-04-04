@@ -7,7 +7,7 @@
 ```
 
 Redeem is the Replicape Daemon that accepts G-codes and turns them into coordinates on 
-your 3D-printer. It's similar to Marlin and Teacup, only it's taylor made for Replicape and it's written in Python. 
+your 3D-printer. It's similar to Marlin and Teacup, only it's tailor-made for Replicape and it's written in Python. 
 
 Software features:  
 - Accelleration with corner speed prediction.  
