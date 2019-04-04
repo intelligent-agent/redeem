@@ -2,7 +2,6 @@
   This file is part of Redeem - 3D Printer control software
  
   Author: Mathieu Monney
-  Website: http://www.xwaves.net
   License: GNU GPLv3 http://www.gnu.org/copyleft/gpl.html
  
  
@@ -24,95 +23,133 @@
  
 */
 
+#include "AlarmCallback.h"
 #include "PathPlanner.h"
 
-void PathPlanner::setPrintMoveBufferWait(int dt) {
-  printMoveBufferWait = dt;
-}
-
-void PathPlanner::setMinBufferedMoveTime(int dt) {
-  minBufferedMoveTime = dt;
-}
-
-void PathPlanner::setMaxBufferedMoveTime(int dt) {
-  maxBufferedMoveTime = dt;
-}
-
 // Speeds / accels
-void PathPlanner::setMaxSpeeds(std::vector<FLOAT_T> speeds){
-  if ( speeds.size() != NUM_AXES ) {throw InputSizeError();}
-  maxSpeeds = speeds;
+void PathPlanner::setMaxSpeeds(VectorN speeds)
+{
+    maxSpeeds = speeds;
 }
 
-void PathPlanner::setMinSpeeds(std::vector<FLOAT_T> speeds){
-  if ( speeds.size() != NUM_AXES ) {throw InputSizeError();}
-  minSpeeds = speeds;
+void PathPlanner::setAcceleration(VectorN accel)
+{
+    maxAccelerationMPerSquareSecond = accel;
+
+    recomputeParameters();
 }
 
-void PathPlanner::setAcceleration(std::vector<FLOAT_T> accel){
-  if ( accel.size() != NUM_AXES ) {throw InputSizeError();}
-
-  maxAccelerationMPerSquareSecond = accel;
-
-  recomputeParameters();
+void PathPlanner::setMaxSpeedJumps(VectorN speedJumps)
+{
+    optimizer.setMaxSpeedJumps(speedJumps);
 }
 
-void PathPlanner::setJerks(std::vector<FLOAT_T> jerks){
-  if ( jerks.size() != NUM_AXES ) {throw InputSizeError();}
+void PathPlanner::setAxisStepsPerMeter(VectorN stepPerM)
+{
+    axisStepsPerM = stepPerM;
 
-  maxJerks = jerks;
-
-}
-
-void PathPlanner::setAxisStepsPerMeter(std::vector<FLOAT_T> stepPerM) {
-  if ( stepPerM.size() != NUM_AXES ) {throw InputSizeError();}
-
-  axisStepsPerM = stepPerM;
-
-  recomputeParameters();
+    recomputeParameters();
 }
 
 // soft endstops
-void PathPlanner::setSoftEndstopsMin(std::vector<FLOAT_T> stops)
+void PathPlanner::setSoftEndstopsMin(VectorN stops)
 {
-  if ( stops.size() != NUM_AXES ) {throw InputSizeError();}
-  soft_endstops_min = stops;
+    soft_endstops_min = stops;
 }
 
-void PathPlanner::setSoftEndstopsMax(std::vector<FLOAT_T> stops)
-{ 
- if ( stops.size() != NUM_AXES ) {throw InputSizeError();}
-  soft_endstops_max = stops;
+void PathPlanner::setSoftEndstopsMax(VectorN stops)
+{
+    soft_endstops_max = stops;
+}
+
+void PathPlanner::setStopPrintOnSoftEndstopHit(bool stop)
+{
+    stop_on_soft_endstops_hit = stop;
+}
+
+void PathPlanner::setStopPrintOnPhysicalEndstopHit(bool stop)
+{
+    stop_on_physical_endstops_hit = stop;
 }
 
 // bed compensation
-void PathPlanner::setBedCompensationMatrix(std::vector<FLOAT_T> matrix)
+void PathPlanner::setBedCompensationMatrix(std::vector<double> matrix)
 {
-  if ( matrix.size() != 9 ) {throw InputSizeError();}
-  
-  matrix_bed_comp = matrix;
-}
-    
-// maximum path length
-void PathPlanner::setMaxPathLength(FLOAT_T maxLength)
-{
-  max_path_length = maxLength;
+    matrix_bed_comp = matrix;
 }
 
 // axis configuration
 void PathPlanner::setAxisConfig(int axis)
 {
-  axis_config = axis;
+    if (axis_config != axis)
+    {
+        VectorN stateBefore = getState();
+
+        axis_config = axis;
+
+        setState(stateBefore);
+    }
+}
+
+void PathPlanner::pruAlarmCallback()
+{
+    if (stop_on_physical_endstops_hit)
+    {
+        LOGCRITICAL("PRU fired endstop alarm - disabling path planner and firing alarm" << std::endl);
+        acceptingPaths = false;
+    }
+    else
+    {
+        LOGCRITICAL("PRU fired endstop alarm - continuing path planner and firing alarm" << std::endl);
+    }
+    alarmCallback.call(7, "Physical Endstop hit", "Physical Endstop hit");
 }
 
 // the state of the machine
-void PathPlanner::setState(std::vector<FLOAT_T> set)
+void PathPlanner::setState(VectorN set)
 {
-  if ( set.size() != NUM_AXES ) {throw InputSizeError();}
-  applyBedCompensation(set);
-  state = set;
-}
+    applyBedCompensation(set);
 
+    IntVectorN newState = (set * axisStepsPerM).round();
+
+    switch (axis_config)
+    {
+    case AXIS_CONFIG_XY:
+        break;
+    case AXIS_CONFIG_H_BELT:
+    {
+        const Vector3 motionPos = worldToHBelt(set.toVector3());
+        const IntVector3 motionMotorPos = (motionPos * axisStepsPerM.toVector3()).round();
+        newState[0] = motionMotorPos.x;
+        newState[1] = motionMotorPos.y;
+        newState[2] = motionMotorPos.z;
+        break;
+    }
+    case AXIS_CONFIG_CORE_XY:
+    {
+        const Vector3 motionPos = worldToCoreXY(set.toVector3());
+        const IntVector3 motionMotorPos = (motionPos * axisStepsPerM.toVector3()).round();
+        newState[0] = motionMotorPos.x;
+        newState[1] = motionMotorPos.y;
+        newState[2] = motionMotorPos.z;
+        break;
+    }
+    case AXIS_CONFIG_DELTA:
+    {
+        const Vector3 motionPos = delta_bot.worldToDelta(set.toVector3());
+        const IntVector3 motionMotorPos = (motionPos * axisStepsPerM.toVector3()).round();
+        newState[0] = motionMotorPos.x;
+        newState[1] = motionMotorPos.y;
+        newState[2] = motionMotorPos.z;
+        break;
+    }
+
+    default:
+        assert(0);
+    }
+
+    state = newState;
+}
 
 // slaves
 bool has_slaves;
@@ -121,26 +158,29 @@ std::vector<int> slave;
 
 void PathPlanner::enableSlaves(bool enable)
 {
-  has_slaves = enable;
+    has_slaves = enable;
 }
-
 
 void PathPlanner::addSlave(int master_in, int slave_in)
 {
-  master.push_back(master_in);
-  slave.push_back(slave_in);
+    master.push_back(master_in);
+    slave.push_back(slave_in);
+
+    axes_stepping_together[master_in] |= (1 << slave_in);
 }
 
 // backlash compensation
-void PathPlanner::setBacklashCompensation(std::vector<FLOAT_T> set)
+void PathPlanner::setBacklashCompensation(VectorN set)
 {
-  if ( set.size() != NUM_AXES ) {throw InputSizeError();}
-  backlash_compensation = set;
+    backlash_compensation = set;
 }
 
 void PathPlanner::resetBacklash()
 {
-  for (FLOAT_T& bs : backlash_state) {
-    bs = 0.0;
-  }
+    backlash_state.zero();
+}
+
+double PathPlanner::getLastProbeDistance()
+{
+    return lastProbeDistance;
 }

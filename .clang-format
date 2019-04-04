@@ -1,0 +1,3 @@
+﻿BasedOnStyle: WebKit
+BreakBeforeBraces: Allman
+UseTab: Never

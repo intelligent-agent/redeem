@@ -2,7 +2,6 @@
  This file is part of Redeem - 3D Printer control software
  
  Author: Mathieu Monney
- Website: http://www.xwaves.net
  License: GNU GPLv3 http://www.gnu.org/copyleft/gpl.html
  
  Redeem is free software: you can redistribute it and/or modify
@@ -23,61 +22,99 @@
 #ifndef __PathPlanner__Logger__
 #define __PathPlanner__Logger__
 
-#include <iostream>
-#include <mutex>
 #include <chrono>
 #include <ctime>
+#include <iostream>
+#include <mutex>
 #include <sstream>
 
-class Logger {
+class Logger
+{
 private:
-	static std::mutex coutMutex;
-	
-	std::stringstream internalStream;
-	
+    static std::mutex coutMutex;
+
+    std::unique_lock<std::mutex> lock;
+
 public:
-	
-	Logger()  {
-		std::chrono::time_point<std::chrono::system_clock> timestamp = std::chrono::system_clock::now();
-		
-		internalStream << "[ " <<  std::chrono::duration_cast<std::chrono::milliseconds>(timestamp.time_since_epoch()).count()
-		<< " ]\t";
-	}
-	
-	template <typename TToken>
-	Logger& operator << (const TToken& s) {
-		internalStream << s;
-		
-		return *this;
-	}
-	
-	// this is the type of std::cout
-	typedef std::basic_ostream<char, std::char_traits<char> > CoutType;
-	
-	// this is the function signature of std::endl
-	typedef CoutType& (*StandardEndLine)(CoutType&);
-	
-	// define an operator<< to take in std::endl
-	Logger& operator<<(StandardEndLine manip)
-	{
-		// call the function, but we cannot return it's value
-		manip(internalStream);
-		
-		return *this;
-	}
-	
-	virtual ~Logger() {
-		std::unique_lock<std::mutex> lk(coutMutex);
-		std::cerr << internalStream.str();
-	}
+    Logger()
+        : lock(coutMutex)
+    {
+
+        std::chrono::time_point<std::chrono::system_clock> timestamp = std::chrono::system_clock::now();
+
+        std::cerr << "[ " << std::chrono::duration_cast<std::chrono::milliseconds>(timestamp.time_since_epoch()).count()
+                  << " ]\t";
+    }
+
+    template <typename TToken>
+    Logger& operator<<(const TToken& s)
+    {
+        std::cerr << s;
+
+        return *this;
+    }
+
+    // this is the type of std::cout
+    typedef std::basic_ostream<char, std::char_traits<char>> CoutType;
+
+    // this is the function signature of std::endl
+    typedef CoutType& (*StandardEndLine)(CoutType&);
+
+    // define an operator<< to take in std::endl
+    Logger& operator<<(StandardEndLine manip)
+    {
+        // call the function, but we cannot return it's value
+        manip(std::cerr);
+
+        return *this;
+    }
+
+    virtual ~Logger()
+    {
+    }
 };
 
-#define LOGERROR(x) Logger() << x
+// LOGLEVEL is defined in setup.py
 
-#ifdef DEBUG
-   #define LOG(x) Logger() << x
-  #else
-    #define LOG(x) //Logger() << x
+#define LOGLEVEL_CRITICAL 50
+#define LOGLEVEL_ERROR 40
+#define LOGLEVEL_WARNING 30
+#define LOGLEVEL_INFO 20
+#define LOGLEVEL_DEBUG 10
+#define LOGLEVEL_NOTSET 0
+
+#ifndef LOGLEVEL
+#define LOGLEVEL LOGLEVEL_WARNING
+#endif
+
+#if LOGLEVEL <= LOGLEVEL_CRITICAL
+#define LOGCRITICAL(x) Logger() << "CRITICAL " << x
+#else
+#define LOGCRITICAL(x)
+#endif
+
+#if LOGLEVEL <= LOGLEVEL_ERROR
+#define LOGERROR(x) Logger() << "ERROR    " << x
+#else
+#define LOGERROR(x)
+#endif
+
+#if LOGLEVEL <= LOGLEVEL_WARNING
+#define LOGWARNING(x) Logger() << "WARNING  " << x
+#else
+#define LOGWARNING(x)
+#endif
+
+#if LOGLEVEL <= LOGLEVEL_INFO
+#define LOGINFO(x) Logger() << "INFO     " << x
+#else
+#define LOGINFO(x)
+#endif
+
+#if LOGLEVEL <= LOGLEVEL_DEBUG
+#define LOG(x) Logger() << "DEBUG    " << x
+#else
+#define LOG(x)
 #endif
 
 #endif /* defined(__PathPlanner__Logger__) */

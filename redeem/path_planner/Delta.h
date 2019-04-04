@@ -24,37 +24,68 @@ along with Redeem.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef __DELTA__
 #define __DELTA__
 
-#include <math.h>
+#include <queue>
+
+#include "Logger.h"
+#include "Path.h"
 #include "config.h"
 #include "vector3.h"
-#include "Logger.h"
 
-#define PI 3.141592653589793
+struct DeltaPathConstants
+{
+    IntVector3 deltaMotorStart;
+    IntVector3 deltaMotorEnd;
+    Vector3 deltaStart;
+    Vector3 deltaEnd;
+    Vector3 worldStart;
+    Vector3 worldEnd;
+    Vector3 worldStart2;
+    Vector3 stepsPerM;
+    Vector3 axisSpeeds;
+    Vector3 axisSpeeds2;
+    Vector3 axisSpeeds3;
+    Vector3 axisSpeeds4;
+    Vector3 towerX;
+    Vector3 towerY;
+    Vector3 towerX2;
+    Vector3 towerY2;
+    double time;
+    double axisCore1;
+    double axisCore2;
+};
 
-class Delta {
- private:
-  FLOAT_T Hez; // Distance head extends below the effector.
-  FLOAT_T L; // lenth of rod
-  FLOAT_T r; // Radius of columns
-	
-  FLOAT_T Ae, Be, Ce; 
-  FLOAT_T Avx, Avy, Bvx, Bvy, Cvx, Cvy;
-  Vector3 p1, p2, p3;
-  FLOAT_T A_radial, B_radial, C_radial;
-  FLOAT_T A_tangential, B_tangential, C_tangential;
-	
- public:
-  Delta();
-  ~Delta();
+class Delta
+{
+private:
+    double L; // lenth of rod
+    double r; // Radius of columns
 
-  void setMainDimensions(FLOAT_T Hez_in, FLOAT_T L_in, FLOAT_T r_in);
-  void setEffectorOffset(FLOAT_T Ae_in, FLOAT_T Be_in, FLOAT_T Ce_in);
-  void setRadialError(FLOAT_T A_radial_in, FLOAT_T B_radial_in, FLOAT_T C_radial_in);
-  void setTangentError(FLOAT_T A_tangential_in, FLOAT_T B_tangential_in, FLOAT_T C_tangential_in);
-  void recalculate();
-  void inverse_kinematics(FLOAT_T X, FLOAT_T Y, FLOAT_T Z, FLOAT_T* Az, FLOAT_T* Bz, FLOAT_T* Cz);
-  void forward_kinematics(FLOAT_T Az, FLOAT_T Bz, FLOAT_T Cz, FLOAT_T* X, FLOAT_T* Y, FLOAT_T* Z);
-  void vertical_offset(FLOAT_T Az, FLOAT_T Bz, FLOAT_T Cz, FLOAT_T* offset);
+    double Avx, Avy, Bvx, Bvy, Cvx, Cvy;
+    double A_radial, B_radial, C_radial;
+    double A_angular, B_angular, C_angular;
+
+    void recalculate();
+    DeltaPathConstants calculatePathConstants(int axis, const IntVector3& deltaMotorStart, const IntVector3& deltaMotorEnd, const Vector3& stepsPerM, double time) const;
+    void calculateSteps(int axis, const DeltaPathConstants& constants, std::vector<Step>& steps) const;
+    void calculateStepsInOneDirection(int axis, const DeltaPathConstants& constants, double startTime, double endTime, double towerX, double towerY, double startHeight, double endHeight, std::vector<Step>& steps) const;
+    double calculateCriticalPointTimeForAxis(int axis, const DeltaPathConstants& constants) const;
+    double calculateStepTime(int axis, const DeltaPathConstants& constants, double towerZ, double minTime, double maxTime) const;
+
+public:
+    Delta();
+    ~Delta();
+
+    void setMainDimensions(double L_in, double r_in);
+    void setRadialError(double A_radial_in, double B_radial_in, double C_radial_in);
+    void setAngularError(double A_angular_in, double B_angular_in, double C_angular_in);
+
+    Vector3 worldToDelta(const Vector3& pos) const;
+    void worldToDelta(double X, double Y, double Z, double* Az, double* Bz, double* Cz);
+    Vector3 deltaToWorld(const Vector3& pos) const;
+    void deltaToWorld(double Az, double Bz, double Cz, double* X, double* Y, double* Z);
+    IntVector3 worldToDeltaMotorPos(const Vector3& pos, const Vector3& stepsPerM);
+    void verticalOffset(double Az, double Bz, double Cz, double* offset) const;
+    void calculateMove(const IntVector3& deltaStart, const IntVector3& deltaEnd, const Vector3& stepsPerM, double speed, std::array<std::vector<Step>, NUM_AXES>& steps) const;
 };
 
 #endif

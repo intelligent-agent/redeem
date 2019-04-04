@@ -24,18 +24,19 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
 import logging
 import glob
 
-class ColdEnd: 
-    def __init__(self, pin, name):
-        """ Init """
-        self.pin = pin
-        self.name = name
 
-    def get_temperature(self):	
-        """ Return the temperature in degrees celsius """
-        with open(self.pin, "r") as f:
-            try:
-                temperature = float(f.read().split("t=")[-1])/1000.0
-            except IOError:
-                logging.warning("Unable to get temperature from "+self.name)
-                return -1            
-        return temperature	
+class ColdEnd:
+  def __init__(self, pin, name):
+    """ Init """
+    self.pin = pin
+    self.name = name
+
+  def get_temperature(self):
+    """ Return the temperature in degrees celsius """
+    with open(self.pin, "r") as f:
+      try:
+        temperature = float(f.read().split("t=")[-1]) / 1000.0
+      except IOError:
+        logging.warning("Unable to get temperature from " + self.name)
+        return -1
+    return temperature

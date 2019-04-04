@@ -4,9 +4,9 @@ Control fans
 
 Author: Mathieu Monney
 email: zittix(at)xwaves(dot)net
-Website: http://www.xwaves.net
 License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 """
+from __future__ import absolute_import
 
 from GCodeCommand import GCodeCommand
 import logging
@@ -65,28 +65,25 @@ class M106(GCodeCommand):
 
 
 class M107(GCodeCommand):
+  def execute(self, gcode):
+    fans = []
+    if gcode.has_letter("P"):
+      fan_no = gcode.get_int_by_letter("P", 0)
+      if fan_no < len(self.printer.fans):
+        fans.append(self.printer.fans[fan_no])
+    else:    # No P in gcode, use fans from settings file
+      fans = self.printer.controlled_fans
 
-    def execute(self, gcode):
-        fans = []
-        if gcode.has_letter("P"):
-            fan_no = gcode.get_int_by_letter("P", 0)
-            if fan_no < len(self.printer.fans):
-                fans.append(self.printer.fans[fan_no])
-        elif len(self.printer.controlled_fans) > 0 : # No P in gcode, use fans from settings file
-            fans = self.printer.controlled_fans
-        else: # Uee fan 0
-            fans.append(self.printer.fans[0])
+    for fan in fans:
+      fan.set_value(0)
 
-        for fan in fans:
-            fan.set_value(0)
+  def get_description(self):
+    return "set fan off"
 
-    def get_description(self):
-        return "set fan off"
+  def get_long_description(self):
+    return "Set the current fan off. Specify P parameter for the fan " \
+           "number. If no P, use fan from config. "\
+           "If no fan configured, use fan 0"
 
-    def get_long_description(self):
-        return "Set the current fan off. Specify P parameter for the fan " \
-               "number. If no P, use fan from config. "\
-               "If no fan configured, use fan 0"
-
-    def is_buffered(self):
-        return True
+  def is_buffered(self):
+    return True
