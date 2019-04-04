@@ -27,7 +27,7 @@ Redeem is its firmware; it accepts g-codes and translates them into coordinates 
 
 ### BeagleBone image
 
-Umikaze (based on ubuntu 16.03.04)
+Umikaze (based on Ubuntu 18.04.2 LTS)
 
 ### Source install
 
