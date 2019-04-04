@@ -21,7 +21,7 @@ Redeem is its firmware; it accepts g-codes and translates them into coordinates 
 
 ## Documentation
 
-[intelligent-agent.github.io](http://intelligent-agent.github.io)
+[http://wiki.thing-printer.com/](Intelligent-Agent Wiki)
 
 ## Installation options
 
@@ -31,16 +31,8 @@ Umikaze (based on Ubuntu 18.04.2 LTS)
 
 ### Source install
 
-```
-apt-get install swig python-smbus
-mkdir -p /usr/src
-cd /usr/src
-git clone https://github.com/intelligent-agent/redeem.git
-cd redeem
-make install
-mkdir -p /etc/redeem
-cp configs/* /etc/redeem
-cp data/* /etc/redeem
-```
+** WARNING **: The current `master` branch is considered stable, though not yet released while we integrate a few more features to release 2.2.1.
+As such, please note that as of this latest change to the master branch, you should be building Redeem off a platform similar to that built by the [https://github.com/intelligent-agent/Umikaze](Umikaze) 
+[https://github.com/intelligent-agent/Umikaze/blob/master/Packages/install_redeem](Redeem build script).
 
-Other dependencies: [source install docs](https://intelligent-agent.github.io/redeem/replicape/redeem.html#from-source)
+The build script will not run as a standalone, however it does include all dependency installations and virtual environment setup, as well as inclusion of the systemd service integration.
