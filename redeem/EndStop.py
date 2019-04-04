@@ -22,11 +22,11 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
  along with Redeem.  If not, see <http://www.gnu.org/licenses/>.
 """
 
-from threading import Thread
+import logging
 import re
-from PruInterface import *
-from evdev import InputDevice, ecodes
-from select import select
+from evdev import InputDevice
+from Key_pin import Key_pin
+from PruInterface import PruInterface
 
 
 class EndStop:
@@ -56,11 +56,10 @@ class EndStop:
     # Update "hit" state
     self.read_value()
 
-    self.running = True
-    self.t = Thread(target=self._wait_for_event, name=self.name)
-    self.t.daemon = True
+    logging.debug("starting endstop %s", self.name)
+
+    self.key_pin = Key_pin(self.name + "_pin", self.key_code, 0xff, self._handle_event)
     self.active = True
-    self.t.start()
 
   def get_gpio_bank_and_pin(self):
     matches = re.compile(r'GPIO([0-9])_([0-9]+)').search(self.pin)
@@ -69,36 +68,23 @@ class EndStop:
     return tup
 
   def stop(self):
-    self.running = False
     logging.debug("End stop {} stopping".format(self.name))
-    self.t.join()
 
   def get_pin(self):
     return self.pin
 
-  def _wait_for_event(self):
-    while self.running:
-      #logging.debug("End stop {} waiting".format(self.name))
-      r, w, x = select([self.dev], [], [], 3)
-      if r:
-        #logging.debug("End stop {} event".format(self.name))
-        for event in self.dev.read():
-          if event.type == ecodes.EV_KEY:
-            if event.code == self.key_code:
-              if self.invert:
-                if int(event.value):
-                  self.hit = True
-                  self.callback()
-                else:
-                  self.hit = False
-              elif not self.invert:
-                if not int(event.value):
-                  self.hit = True
-                  self.callback()
-                else:
-                  self.hit = False
-      #else:
-      #    logging.debug("End stop {} timeout".format(self.name))
+  def _handle_event(self, key, event):
+    if self.invert:
+      if int(event.value):
+        self.hit = True
+      else:
+        self.hit = False
+    elif not self.invert:
+      if not int(event.value):
+        self.hit = True
+      else:
+        self.hit = False
+    self.callback()
 
   def read_value(self):
     """ Read the current endstop value from GPIO using PRU1 """
@@ -106,12 +92,13 @@ class EndStop:
     self.hit = bool(state & self.condition_bit)
 
   def callback(self):
-    """ An endStop has been hit """
-    logging.info("End Stop " + self.name + " hit!")
-    if "toggle" in self.printer.comms:
-      self.printer.comms["toggle"].send_message("End stop {} hit!".format(self.name))
-    if "octoprint" in self.printer.comms:
-      self.printer.comms["octoprint"].send_message("End stop {} hit!".format(self.name))
+    """ An endStop has changed state """
+    type_string = "hit" if self.hit else "released"
+    event_string = "End Stop {} {}!".format(self.name, type_string)
+    logging.info(event_string)
+    for channel in ["octoprint", "toggle"]:
+      if channel in self.printer.comms:
+        self.printer.comms[channel].send_message(event_string)
 
 
 if __name__ == "__main__":

@@ -35,25 +35,26 @@ from Printer import Printer
 class PruFirmware:
   def __init__(self, firmware_source_file0, binary_filename0, firmware_source_file1,
                binary_filename1, printer, compiler, linker_cmdfile, repackage_cmdfile):
-    """Create and initialize a PruFirmware
+    """
+    Create and initialize a PruFirmware
 
-        Parameters
-        ----------
+    Parameters
+    ----------
 
-        firmware_source_file : string
-            The path to the firmware source to use to produce the firmware
-        binary_filename : string
-            Full path to the file where to store the final firmware file
-            without the extension (without .bin)
-        config_parser : ConfigParser
-            The config parser with the config file already loaded
-        compiler : string
-            Path to the PRU C compiler
-        linker_cmdfile : string
-            Path to the cmd file that maps the device for the linker
-        repackage_cmdfile : string
-            Path to the cmd file describing how to repackage the firmware
-        """
+    firmware_source_file : string
+        The path to the firmware source to use to produce the firmware
+    binary_filename : string
+        Full path to the file where to store the final firmware file
+        without the extension (without .bin)
+    config_parser : ConfigParser
+        The config parser with the config file already loaded
+    compiler : string
+        Path to the PRU C compiler
+    linker_cmdfile : string
+        Path to the cmd file that maps the device for the linker
+    repackage_cmdfile : string
+        Path to the cmd file describing how to repackage the firmware
+    """
 
     self.firmware_source_file0 = os.path.realpath(firmware_source_file0)
     self.firmware_source_file1 = os.path.realpath(firmware_source_file1)
@@ -295,7 +296,7 @@ class PruFirmware:
 
       configFile.write("\n")
 
-      # Put each dir and step pin in the proper buck if they are for GPIO0 or GPIO1 bank.
+      # Put each dir and step pin in the proper bank if they are for GPIO0 or GPIO1 bank.
       # This is a restriction due to the limited capabilities of the pasm preprocessor.
       for name, bank in iteritems(banks):
         #bank = (~bank & 0xFFFFFFFF)
@@ -331,34 +332,3 @@ class PruFirmware:
         raise RuntimeError("Unknown Replicape revision " + revision +
                            ", cannot determine stepper delays")
     return configFile_0
-
-
-if __name__ == '__main__':
-  from Printer import Printer
-  from EndStop import EndStop
-  from Stepper import Stepper, Stepper_00A3, Stepper_00A4, Stepper_00B1, Stepper_00B2, Stepper_00B3
-  from CascadingConfigParser import CascadingConfigParser
-  printer = Printer()
-
-  # Parse the config files.
-  printer.config = CascadingConfigParser(['/etc/redeem/default.cfg'])
-
-  # Init the 5 Stepper motors (step, dir, fault, DAC channel, name)
-  printer.steppers["X"] = Stepper("GPIO0_27", "GPIO1_29", "GPIO2_4", 0, 0, "X")
-  printer.steppers["Y"] = Stepper("GPIO1_12", "GPIO0_22", "GPIO2_5", 1, 1, "Y")
-  printer.steppers["Z"] = Stepper("GPIO0_23", "GPIO0_26", "GPIO0_15", 2, 2, "Z")
-  printer.steppers["E"] = Stepper("GPIO1_28", "GPIO1_15", "GPIO2_1", 3, 3, "E")
-  printer.steppers["H"] = Stepper("GPIO1_13", "GPIO1_14", "GPIO2_3", 4, 4, "H")
-  printer.steppers["A"] = Stepper("GPIO2_2", "GPIO1_18", "GPIO0_14", 5, 5, "A")
-  printer.steppers["B"] = Stepper("GPIO1_16", "GPIO0_5", "GPIO0_14", 6, 6, "B")
-  printer.steppers["C"] = Stepper("GPIO0_3", "GPIO3_19", "GPIO0_14", 7, 7, "C")
-
-  for es in ["X1", "X2", "Y1", "Y2", "Z1", "Z2"]:
-    pin = printer.config.get("Endstops", "pin_" + es)
-    keycode = printer.config.getint("Endstops", "keycode_" + es)
-    invert = printer.config.getboolean("Endstops", "invert_" + es)
-    printer.end_stops[es] = EndStop(pin, keycode, es, invert)
-
-  pasm = "/home/elias/workspace/am335x_pru_package/pru_sw/utils/pasm"
-  pru = PruFirmware("0.p", "0.bin", "1.p", "1.bin", printer, "")
-  pru.make_config_file()

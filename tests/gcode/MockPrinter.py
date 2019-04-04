@@ -33,6 +33,8 @@ sys.modules['redeem.Pipe'] = mock.Mock()
 sys.modules['redeem.Fan'] = mock.Mock()
 sys.modules['redeem.Mosfet'] = mock.Mock()
 sys.modules['redeem.PWM'] = mock.Mock()
+sys.modules['redeem.IOManager'] = mock.Mock()
+sys.modules['redeem.IOManager'].IOManager = mock.MagicMock()
 
 from redeem.CascadingConfigParser import CascadingConfigParser
 from redeem.Redeem import *
@@ -68,7 +70,7 @@ class MockPrinter(unittest.TestCase):
     """
     This seems like the best way to add to or change stuff in default.cfg,
     without actually messing with the prestine file. Overwrite if you want
-    different printer.cfg and/or local.cfg files. For example, copy example filles...
+    different printer.cfg and/or local.cfg files. For example, copy example files...
 
     copyfile(os.path.join(os.path.dirname(__file__), "my_test_local.cfg"), os.path.join(path, 'local.cfg'))
     copyfile(os.path.join(os.path.dirname(__file__), "my_test_printer.cfg"), os.path.join(path, 'printer.cfg'))
@@ -76,8 +78,19 @@ class MockPrinter(unittest.TestCase):
     """
     tf = open("../configs/local.cfg", "w")
     lines = """
+[Configuration]
+version = 1
+
 [System]
 log_to_file = False
+    """
+    tf.write(lines)
+    tf.close()
+
+    tf = open(os.path.join(path, 'printer.cfg'), "w")
+    lines = """
+[Configuration]
+version = 1
     """
     tf.write(lines)
     tf.close()
@@ -86,7 +99,6 @@ log_to_file = False
   # instantiated, still need to mock the initialization of the native planner (`_init_path_planner`).
 
   @classmethod
-  @mock.patch.object(EndStop, "_wait_for_event", new=None)
   @mock.patch.object(PathPlanner, "_init_path_planner")
   @mock.patch("redeem.Redeem.CascadingConfigParser", new=CascadingConfigParserWedge)
   def setUpClass(cls, mock_init_path_planner):
@@ -175,4 +187,3 @@ log_to_file = False
     self.assertNotEqual(gcode_handler.get_long_description(), "")
     self.assertEqual(gcode_handler.is_buffered(), is_buffered)
     self.assertEqual(gcode_handler.is_async(), is_async)
-
