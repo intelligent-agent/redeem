@@ -1,5 +1,0 @@
-#!/bin/sh
-
-# Shutdown and remove redeem.service
-systemctl stop redeem.service
-systemctl disable redeem.service
