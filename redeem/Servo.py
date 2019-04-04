@@ -21,14 +21,16 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
 """
 import logging
 import math
-import Queue
-import sys
 import time
 from multiprocessing import JoinableQueue
 from PWM_pin import PWM_pin
 from ShiftRegister import ShiftRegister
 from threading import Thread
 from six import PY2
+if PY2:
+  import Queue as queue
+else:
+  import queue
 
 
 class Servo:
@@ -150,7 +152,7 @@ class Servo:
     while self.running:
       try:
         ev = self.queue.get(block=True, timeout=1)
-      except Queue.Empty:
+      except queue.Empty:
         if self.turnoff_timeout > 0 and self.lastCommandTime > 0 and time.time(
         ) - self.lastCommandTime > self.turnoff_timeout:
           self.lastCommandTime = 0

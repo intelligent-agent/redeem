@@ -316,6 +316,7 @@ void PruTimer::stopThread(bool join)
         LOG("PRU disabled, DDR released, FD closed." << std::endl);
 
         pruMemoryAvailable.notify_all();
+        pruQueueIsntFullByTime.notify_all();
     }
 
     if (join && runningThread.joinable())
@@ -458,9 +459,9 @@ void PruTimer::pushBlock(uint8_t* blockMemory, size_t blockLen, unsigned int uni
 
                 bool moreToWrite = currentBlockSize > maxSize;
 
-                unsigned long timeSoFar = moreToWrite ? totalTime / 2 : totalTime;
+                uint64_t timeSoFar = moreToWrite ? totalTime / 2 : totalTime;
 
-                blocksID.emplace(maxSize + 4, timeSoFar, moreToWrite ? nullptr : callback); //FIXME: TotalTime is not /2 but doesn't need to be precise to make it work...
+                blocksID.emplace(maxSize + 4, timeSoFar, moreToWrite ? nullptr : callback); // totalTime is not /2 but doesn't need to be precise to make it work...
 
                 ddr_mem_used += maxSize + 4;
                 totalQueuedMovesTime += timeSoFar;
@@ -528,7 +529,7 @@ void PruTimer::pushBlock(uint8_t* blockMemory, size_t blockLen, unsigned int uni
 
                     assert(remainingSize == (remainingSize / unit) * unit);
 
-                    blocksID.emplace(remainingSize + 4, totalTime - timeSoFar, callback); //FIXME: TotalTime is not /2 but it doesn't need to be precise to make it work...
+                    blocksID.emplace(remainingSize + 4, totalTime - timeSoFar, callback); // totalTime is not /2 but it doesn't need to be precise to make it work...
 
                     ddr_mem_used += remainingSize + 4;
                     totalQueuedMovesTime += totalTime - timeSoFar;
@@ -570,7 +571,7 @@ void PruTimer::pushBlock(uint8_t* blockMemory, size_t blockLen, unsigned int uni
             }
             else
             {
-                blocksID.emplace(currentBlockSize + 4, totalTime, callback); //FIXME: TotalTime is not /2 but doesn't it to be precise to make it work...
+                blocksID.emplace(currentBlockSize + 4, totalTime, callback); // totalTime is not /2 but doesn't it to be precise to make it work...
                 ddr_mem_used += currentBlockSize + 4;
                 totalQueuedMovesTime += totalTime;
                 //First copy the data

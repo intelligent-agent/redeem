@@ -91,16 +91,26 @@ setup(
       'Adafruit_BBIO',
       'mock==2.0.0',
       'pbr==4.2.0',
-      'py==1.4.34',
+      'py',
       'pyusb==1.0.2',
-      'six==1.10.0',
-      'sh==1.12.14',
-      'sympy==1.1.1',
+      'six>=1.11.0',
+      'sh',
+      'sympy',
       'testfixtures==6.2.0',
       'configobj==5.0.6',
       'scipy',
+<<<<<<< HEAD
+      'pytest==4.0.2',
+      'future>=0.16.0',
+      'evdev',
+=======
       'pytest==3.1.2',
+<<<<<<< HEAD
       'future',
+=======
+      'future>=0.16.0',
+>>>>>>> origin/RC
+>>>>>>> 4013834425255e6f515c882e925333884ce900bd
     ],
     url=__url__,
     ext_modules=[pathplanner],

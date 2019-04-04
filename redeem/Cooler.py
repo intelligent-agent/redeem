@@ -19,8 +19,7 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
  along with Redeem.  If not, see <http://www.gnu.org/licenses/>.
 """
 
-from threading import Thread
-import time
+from threading import Thread, Event
 import logging
 
 
@@ -36,6 +35,7 @@ class Cooler:
     self.onoff_control = onoff_control    # If we use PID or ON/OFF control
     self.max_speed = 1.0
     self.ok_range = 4.0
+    self.sleep = 1.0
 
   def set_max_speed(self, speed):
     """ Set the desired max speed of the fan """
@@ -57,29 +57,26 @@ class Cooler:
     return err < self.ok_range
 
   def disable(self):
-    """ Stops the heater and the PID controller """
-    self.enabled = False
-    # Wait for PID to stop
-    while self.disabled == False:
-      time.sleep(0.2)
-    # The PID loop has finished
+    """ Stops the fan and the PID controller """
+    self.stop_thread.set()
+    self.t.join()
+    logging.debug("Cooler {} disabled".format(self.name))
     self.fan.set_power(0.0)
 
   def enable(self):
-    """ Start the PID controller """
-    self.enabled = True
-    self.disabled = False
+    """ Start the controller """
+    self.stop_thread = Event()
     self.t = Thread(target=self.keep_temperature, name=self.name)
     self.t.daemon = True
     self.t.start()
 
   def set_p_value(self, P):
-    """ Set values for Proportional, Integral, Derivative"""
+    """ Set values for Proportional"""
     self.P = P    # Proportional
 
   def keep_temperature(self):
-    """ PID Thread that keeps the temperature stable """
-    while self.enabled:
+    """ Thread that keeps the temperature stable """
+    while not self.stop_thread.is_set():
       self.current_temp = self.cold_end.get_temperature()
       error = self.target_temp - self.current_temp
 
@@ -93,7 +90,6 @@ class Cooler:
       power = 1.0 - power
       # Clamp the max speed
       power = min(power, self.max_speed)
-      #logging.info("Err: {}, Pwr: {}".format(error, power))
+      #logging.debug("Err: {}, Pwr: {}".format(error, power))
       self.fan.set_value(power)
-      time.sleep(1)
-    self.disabled = True
+      self.stop_thread.wait(self.sleep)

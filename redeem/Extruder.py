@@ -20,7 +20,7 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
  along with Redeem.  If not, see <http://www.gnu.org/licenses/>.
 """
 
-from threading import Thread
+from threading import Thread, Event
 import time
 import logging
 import numpy as np
@@ -123,7 +123,7 @@ class Heater(object):
   def disable(self):
     """ Stops the heater and the PID controller """
     self.target_temp = 0
-    self.enabled = False
+    self.stop_thread.set()
     self.mosfet.set_power(0.0)
     # Wait for PID to stop
     self.t.join()
@@ -143,14 +143,14 @@ class Heater(object):
     self.prev_time = self.current_time = time.time()
     self.current_temp = self.thermistor.get_temperature()
     self.temperatures = [self.current_temp]
-    self.enabled = True
+    self.stop_thread = Event()
     self.t = Thread(target=self.keep_temperature, name=self.name)
     self.t.start()
 
   def keep_temperature(self):
     """ PID Thread that keeps the temperature stable """
     try:
-      while self.enabled:
+      while not self.stop_thread.is_set():
         self.current_temp = self.thermistor.get_temperature()
         self.temperatures.append(self.current_temp)
         self.temperatures[:-max(int(60 / self.sleep), self.avg)] = [
@@ -187,7 +187,7 @@ class Heater(object):
           self.mosfet.set_power(power)
         else:
           self.mosfet.set_power(0)
-        time.sleep(self.sleep)
+        self.stop_thread.wait(self.sleep)
     finally:
       # Disable this mosfet if anything goes wrong
       self.mosfet.set_power(0)

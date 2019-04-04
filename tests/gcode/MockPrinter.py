@@ -33,6 +33,8 @@ sys.modules['redeem.Pipe'] = mock.Mock()
 sys.modules['redeem.Fan'] = mock.Mock()
 sys.modules['redeem.Mosfet'] = mock.Mock()
 sys.modules['redeem.PWM'] = mock.Mock()
+sys.modules['redeem.IOManager'] = mock.Mock()
+sys.modules['redeem.IOManager'].IOManager = mock.MagicMock()
 
 from redeem.CascadingConfigParser import CascadingConfigParser
 from redeem.Redeem import *
@@ -97,7 +99,6 @@ version = 1
   # instantiated, still need to mock the initialization of the native planner (`_init_path_planner`).
 
   @classmethod
-  @mock.patch.object(EndStop, "_wait_for_event", new=None)
   @mock.patch.object(PathPlanner, "_init_path_planner")
   @mock.patch("redeem.Redeem.CascadingConfigParser", new=CascadingConfigParserWedge)
   def setUpClass(cls, mock_init_path_planner):

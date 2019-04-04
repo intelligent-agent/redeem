@@ -28,20 +28,21 @@ exfat - is also a file system option commonly found on USB flash drives and othe
 """
 from __future__ import absolute_import
 
-import os
-from abc import abstractmethod, ABCMeta
-
-import sh
+import cProfile, pstats
 import logging
-from threading import Lock
+import os
+import sh
+from abc import ABCMeta
+from redeem.Gcode import Gcode
 from thread import start_new_thread
-
 from time import sleep
+from six import PY2
+if PY2:
+  from io import StringIO
+else:
+  import StringIO
 
 from .GCodeCommand import GCodeCommand
-from redeem.Gcode import Gcode
-
-import cProfile, pstats, StringIO
 
 # device_location = '/dev/mmcblk1p1'
 USB_DEVICE_LOCATION = '/dev/sda1'
@@ -69,18 +70,14 @@ id   device
 def check_device_id(printer, g):
   """utility function to check to make sure one of the correct devices is being requested"""
   text = g.get_message()[len("M2X"):]
-
   if not text.strip():
     # printer.send_message(g.prot, "device id not specified")
     return None
-
   device_id = text.strip()
-
   if device_id not in ['/usb', '/sd', '/lcl']:
     printer.send_message(g.prot, "device id not recognized '{}'".format(device_id))
     printer.send_message(g.prot, "must be one of /usb, /sd or /lcl")
     return None
-
   return device_id
 
 
@@ -116,8 +113,9 @@ class M20(M2X):
     self.printer.send_message(g.prot, "Begin file list:")
     for root, directories, filenames in os.walk(list_location):
       for filename in filenames:
-        file_byte_count = os.stat(root + os.sep + filename).st_size
-        self.printer.send_message(g.prot, "{}/{} {}".format(device_id, filename, file_byte_count))
+        if not filename.startswith('.'):
+          file_byte_count = os.stat(root + os.sep + filename).st_size
+          self.printer.send_message(g.prot, "{}/{} {}".format(device_id, filename, file_byte_count))
     self.printer.send_message(g.prot, "End file list")
 
   def get_description(self):
@@ -146,7 +144,6 @@ Use ``M21`` to attach a device.
 
 class M21(M2X):
   def _mount(self, g, source, target, fstype=None, options=''):
-
     if not os.path.isdir(target):
       os.mkdir(target)
     if os.path.ismount(target):
@@ -159,29 +156,22 @@ class M21(M2X):
     return source, None
 
   def execute(self, g):
-
     device_id = check_device_id(self.printer, g)
     if not device_id:
       # default to trick OctoPrint into seeing all files listed as available for SD printing
       self.printer.send_message(g.prot, "SD card ok")
       return
-
     device_location, mount_location = None, None
-
     if device_id == '/usb':
       device_location, mount_location = self._mount(g, USB_DEVICE_LOCATION, USB_MOUNT_LOCATION)
-
     if device_id == '/sd':
       device_location, mount_location = self._mount(g, SD_DEVICE_1_LOCATION, SD_MOUNT_LOCATION)
       if not mount_location:
         device_location, mount_location = self._mount(g, SD_DEVICE_2_LOCATION, SD_MOUNT_LOCATION)
-
     if device_id == '/lcl':
       device_location, mount_location = None, LCL_MOUNT_LOCATION
-
     if not mount_location:
       self.printer.send_message(g.prot, "external memory location could not be attached")
-      return
 
   def get_description(self):
     return """Initialize external memory location"""
@@ -234,27 +224,21 @@ class M22(M2X):
 
 class M23(M2X):
   def execute(self, g):
-
     # TODO : what happens when this is called while a file is already being printed? different if machine is halted?
     logging.info("M23: starting gcode file processing")
-
     text = g.get_message()[len("M23"):]
-
     if not text.strip():
       self.printer.send_message(g.prot, "missing filename")
       return
-
     fn = text.strip()
     list_location = None
 
     if fn.startswith('/usb'):
       fn = fn.replace('/usb', USB_MOUNT_LOCATION)
       list_location = USB_MOUNT_LOCATION
-
     if fn.startswith('/sd'):
       fn = fn.replace('/sd', SD_MOUNT_LOCATION)
       list_location = SD_MOUNT_LOCATION
-
     if fn.startswith('/lcl'):
       fn = fn.replace('/lcl', LCL_MOUNT_LOCATION)
       list_location = LCL_MOUNT_LOCATION
@@ -273,9 +257,7 @@ class M23(M2X):
       return
 
     self.printer.sd_card_manager.load_file(fn)
-
     nl, nb = self.printer.sd_card_manager.get_file_size()
-
     self.printer.send_message(g.prot, "File opened:{} Size:{}".format(fn, nb))
     self.printer.send_message(g.prot, "File selected")
     logging.info("M23: finished gcode file processing")
@@ -298,48 +280,39 @@ class M23(M2X):
 class M24(GCodeCommand):
   def process_gcode(self, g):
     profile = cProfile.Profile()
-
     self.printer.sd_card_manager.set_status(True)
-
     profile.enable()
-
     for line in self.printer.sd_card_manager:
       line = line.strip()
       if not line or line.startswith(';'):
         continue
       file_g = Gcode({"message": line})
       self.printer.processor.enqueue(file_g)
-
     if self.printer.sd_card_manager.get_status():
-      logging.info("M24: file complete")
+      logging.info("M24: Print from file complete")
     self.printer.sd_card_manager.set_status(False)
 
     self.printer.send_message(g.prot, "Done printing file")
-
     profile.disable()
     s = StringIO.StringIO()
     sortby = 'cumulative'
     ps = pstats.Stats(profile, stream=s).sort_stats(sortby)
     ps.print_stats()
-    logging.error(s.getvalue())
+    logging.debug(s.getvalue())
+    self.printer.sd_card_manager.reset()
 
   def execute(self, g):
-
     fn = self.printer.sd_card_manager.get_file_name()
     active = self.printer.sd_card_manager.get_status()
-    logging.info("M24: current file is: '{}'".format(fn))
     if not active:
-      logging.info("M24: active file is '{}'".format(fn))
+      logging.info("M24: Printing file '{}'".format(fn))
       start_new_thread(self.process_gcode, (g, ))
-
       # allow some time for the new thread to start before we proceed
       counter = 0
       while (not active) and (counter < 10):
         sleep(0.1)
         counter += 1
-
     self.printer.path_planner.resume()
-
     self.printer.send_message(g.prot, "ok : M24 in progress")
 
   def get_description(self):
@@ -367,14 +340,11 @@ class M25(GCodeCommand):
 
 class M26(M2X):
   def execute(self, g):
-
     S = g.get_int_by_letter("S", 0)
     L = g.get_int_by_letter("L", 0)
-
     line_position, byte_position = self.printer.sd_card_manager.set_position(
         byte_position=S, line_position=L)
     size_lines, size_bytes = self.printer.sd_card_manager.get_file_size()
-
     message = "SD at line {}/{}, byte {}/{}".format(line_position, size_lines, byte_position,
                                                     size_bytes)
     self.printer.send_message(g.prot, message)
@@ -399,10 +369,13 @@ class M26(M2X):
 
 class M27(M2X):
   def execute(self, g):
-
     line_position, byte_position = self.printer.sd_card_manager.get_position()
     size_lines, size_bytes = self.printer.sd_card_manager.get_file_size()
     file_name = self.printer.sd_card_manager.get_file_name()
+
+    # avoid divide by zero error in octoprint ???
+    if byte_position == 0:
+      byte_position = 1
 
     # message to inform that we have completed the print
     active = self.printer.sd_card_manager.get_status()
@@ -414,6 +387,7 @@ class M27(M2X):
     self.printer.send_message(g.prot, message)
     logging.info(message)
     return
+
 
   def get_description(self):
     return """Report external file print status"""

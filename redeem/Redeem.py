@@ -24,45 +24,48 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
 import glob
 import logging
 import logging.handlers
-import os
-import os.path
-import signal
-import threading
-from threading import Thread
-import Queue
 import numpy as np
+import os
+import signal
 import sys
 
-from Mosfet import Mosfet
-from Stepper import *
-from TemperatureSensor import *
-from Fan import Fan
-from Servo import Servo
-from EndStop import EndStop
-from USB import USB
-from Pipe import Pipe
-from Ethernet import Ethernet
-from Extruder import Extruder, HBP
-from Cooler import Cooler
-from Path import Path
-from PathPlanner import PathPlanner
-from Gcode import Gcode
-from ColdEnd import ColdEnd
-from PruFirmware import PruFirmware
-from CascadingConfigParser import CascadingConfigParser
-from Printer import Printer
-from GCodeProcessor import GCodeProcessor
-from PluginsController import PluginsController
-from Delta import Delta
-from Enable import Enable
-from PWM import PWM
-from RotaryEncoder import *
-from FilamentSensor import *
-from Alarm import Alarm, AlarmExecutor
-from StepperWatchdog import StepperWatchdog
-from Key_pin import Key_pin, Key_pin_listener
-from Watchdog import Watchdog
-from six import iteritems
+from threading import Thread
+from threading import enumerate as enumerate_threads
+from .Alarm import Alarm, AlarmExecutor
+from .CascadingConfigParser import CascadingConfigParser
+from .ColdEnd import ColdEnd
+from .Cooler import Cooler
+from .Delta import Delta
+from .Enable import Enable
+from .EndStop import EndStop
+from .Ethernet import Ethernet
+from .Extruder import Extruder, HBP
+from .Fan import Fan
+from .FilamentSensor import *
+from .Gcode import Gcode
+from .GCodeProcessor import GCodeProcessor
+from .IOManager import IOManager
+from .Key_pin import Key_pin, Key_pin_listener
+from .Mosfet import Mosfet
+from .Path import Path
+from .PathPlanner import PathPlanner
+from .Pipe import Pipe
+from .PluginsController import PluginsController
+from .Printer import Printer
+from .PruFirmware import PruFirmware
+from .PWM import PWM
+from .RotaryEncoder import *
+from .Servo import Servo
+from .Stepper import *
+from .StepperWatchdog import StepperWatchdog
+from .TemperatureSensor import *
+from .USB import USB
+from .Watchdog import Watchdog
+from six import PY2, iteritems
+if PY2:
+  import Queue as queue
+else:
+  import queue
 
 # Global vars
 printer = None
@@ -490,7 +493,6 @@ class Redeem:
     """
     from __init__ import __version__
     logging.info("Redeem initializing {}".format(__version__))
-
     global printer
     printer = Printer()
     self.printer = printer
@@ -577,10 +579,11 @@ class Redeem:
     # Init the Paths
     printer.axis_config = printer.config.getint('Geometry', 'axis_config')
 
+    printer.endstop_io_manager = IOManager()
     # Init the end stops
     EndStop.inputdev = self.printer.config.get("Endstops", "inputdev")
     # Set up key listener
-    Key_pin.listener = Key_pin_listener(EndStop.inputdev)
+    Key_pin.listener = Key_pin_listener(EndStop.inputdev, printer.endstop_io_manager)
 
     homing_only_endstops = self.printer.config.get('Endstops', 'homing_only_endstops')
 
@@ -829,10 +832,10 @@ class Redeem:
         printer.filament_sensors.append(sensor)
 
     # Make a queue of commands
-    self.printer.commands = Queue.Queue(10)
+    self.printer.commands = queue.Queue(10)
 
     # Make a queue of commands that should not be buffered
-    self.printer.unbuffered_commands = Queue.Queue(10)
+    self.printer.unbuffered_commands = queue.Queue(10)
 
     # Bed compensation matrix
     printer.matrix_bed_comp = printer.load_bed_compensation_matrix()
@@ -951,12 +954,13 @@ class Redeem:
       printer.swd.start()
 
     # Set up communication channels
-    printer.comms["USB"] = USB(self.printer)
+    printer.comms_io_manager = IOManager()
+    printer.comms["USB"] = USB(self.printer, printer.comms_io_manager)
     printer.comms["Eth"] = Ethernet(self.printer)
-    printer.comms["octoprint"] = Pipe(printer, "octoprint")
-    printer.comms["toggle"] = Pipe(printer, "toggle")
-    printer.comms["testing"] = Pipe(printer, "testing")
-    printer.comms["testing_noret"] = Pipe(printer, "testing_noret")
+    printer.comms["octoprint"] = Pipe(printer, "octoprint", printer.comms_io_manager)
+    printer.comms["toggle"] = Pipe(printer, "toggle", printer.comms_io_manager)
+    printer.comms["testing"] = Pipe(printer, "testing", printer.comms_io_manager)
+    printer.comms["testing_noret"] = Pipe(printer, "testing_noret", printer.comms_io_manager)
     # Does not send "ok"
     printer.comms["testing_noret"].send_response = False
 
@@ -984,18 +988,18 @@ class Redeem:
     # Signal everything ready
     logging.info("Redeem ready")
 
-  def loop(self, queue, name):
+  def loop(self, the_queue, name):
     """ When a new gcode comes in, execute it """
     try:
       while RedeemIsRunning:
         try:
-          gcode = queue.get(block=True, timeout=1)
-        except Queue.Empty:
+          gcode = the_queue.get(block=True, timeout=1)
+        except queue.Empty:
           continue
         logging.debug("Executing " + gcode.code() + " from " + name + " " + gcode.message)
         self._execute(gcode)
         self.printer.reply(gcode)
-        queue.task_done()
+        the_queue.task_done()
         logging.debug("Completed " + gcode.code() + " from " + name + " " + gcode.message)
     except Exception:
       logging.exception("Exception in {} loop: ".format(name))
@@ -1028,18 +1032,21 @@ class Redeem:
       logging.debug("closing " + name)
       comm.close()
 
+    self.printer.comms_io_manager.stop()
+
     self.printer.enable.set_disabled()
     self.printer.swd.stop()
     Alarm.executor.stop()
     Key_pin.listener.stop()
+    self.printer.endstop_io_manager.stop()
     self.printer.watchdog.stop()
     self.printer.enable.set_disabled()
 
     # list all threads that are still running
-    # note: some of these maybe daemons
-    for t in threading.enumerate():
-      logging.debug("Thread " + t.name + " is still running")
-    logging.info("Redeem Exit Complete")
+    # note: some of these may be daemons
+    for t in enumerate_threads():
+      if t.name != "MainThread":
+        logging.debug("Thread " + t.name + " is still running")
 
   def _execute(self, g):
     """ Execute a G-code """
@@ -1085,7 +1092,7 @@ def main(config_location="/etc/redeem"):
   while RedeemIsRunning:
     signal.pause()
 
-  logging.info("Main thread terminating")
+  logging.info("Redeem Terminated")
 
 
 def profile(config_location="/etc/redeem"):

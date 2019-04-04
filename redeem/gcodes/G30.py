@@ -64,6 +64,7 @@ class G30(GCodeCommand):
     # values in config file are in metres, need to convert to millimetres
     offset_x = self.printer.config.getfloat('Probe', 'offset_x') * 1000
     offset_y = self.printer.config.getfloat('Probe', 'offset_y') * 1000
+    offset_z = self.printer.config.getfloat('Probe', 'offset_z') * 1000
 
     logging.debug("G30: probing from point (mm) : X{} Y{} Z{}".format(
         point["X"] + offset_x, point["Y"] + offset_y, point["Z"]))
@@ -78,9 +79,13 @@ class G30(GCodeCommand):
     self.printer.processor.resolve(G0)
     self.printer.processor.execute(G0)
     self.printer.path_planner.wait_until_done()
-    bed_dist = round(
-        self.printer.path_planner.probe(probe_length, probe_speed, probe_accel) * 1000.0,
-        3)    # convert to mm
+
+    bed_dist = self.printer.path_planner.probe(probe_length, probe_speed,
+                                               probe_accel) * 1000.0    # convert to mm
+    logging.info("G30: adjusting offset using Z-probe offset by " + str(offset_z))
+    bed_dist = bed_dist - offset_z    # apply z offset
+    bed_dist = round(bed_dist, 3)
+
     logging.debug("Bed dist: " + str(bed_dist) + " mm")
 
     self.printer.send_message(
@@ -167,6 +172,7 @@ class G30_1(GCodeCommand):
     # values in config file are in metres, need to convert to millimetres
     offset_x = self.printer.config.getfloat('Probe', 'offset_x') * 1000
     offset_y = self.printer.config.getfloat('Probe', 'offset_y') * 1000
+    offset_z = self.printer.config.getfloat('Probe', 'offset_z') * 1000
 
     logging.debug("G30.1: probing from point (mm) : X{} Y{} Z{}".format(
         point["X"] + offset_x, point["Y"] + offset_y, point["Z"]))
@@ -183,6 +189,8 @@ class G30_1(GCodeCommand):
     self.printer.path_planner.wait_until_done()
     bed_dist = self.printer.path_planner.probe(probe_length, probe_speed,
                                                probe_accel) * 1000.0    # convert to mm
+    logging.info("G30: adjusting offset using Z-probe offset by " + str(offset_z))
+    bed_dist = bed_dist - offset_z    # apply z offset
 
     # calculated required offset to make bed equal to Z0 or user's specified Z.
     # should be correct, assuming probe starts at Z(5), requested Z(0)  probe Z(-0.3), adjusted global Z should be 5.3

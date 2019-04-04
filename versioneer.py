@@ -296,9 +296,9 @@ class VersioneerConfig:
 def get_root():
   """Get the project root directory.
 
-    We require that all commands are run from the project root, i.e. the
-    directory that contains setup.py, setup.cfg, and versioneer.py .
-    """
+  We require that all commands are run from the project root, i.e. the
+  directory that contains setup.py, setup.cfg, and versioneer.py .
+  """
   root = os.path.realpath(os.path.abspath(os.getcwd()))
   setup_py = os.path.join(root, "setup.py")
   versioneer_py = os.path.join(root, "versioneer.py")
@@ -1108,10 +1108,10 @@ def git_versions_from_keywords(keywords, tag_prefix, verbose):
 def git_pieces_from_vcs(tag_prefix, root, verbose, run_command=run_command):
   """Get version from 'git describe' in the root of the source tree.
 
-    This only gets called if the git-archive 'subst' keywords were *not*
-    expanded, and _version.py hasn't already been rewritten with a short
-    version string, meaning we're inside a checked out source tree.
-    """
+  This only gets called if the git-archive 'subst' keywords were *not*
+  expanded, and _version.py hasn't already been rewritten with a short
+  version string, meaning we're inside a checked out source tree.
+  """
   GITS = ["git"]
   if sys.platform == "win32":
     GITS = ["git.cmd", "git.exe"]
@@ -1215,9 +1215,9 @@ def git_pieces_from_vcs(tag_prefix, root, verbose, run_command=run_command):
 def do_vcs_install(manifest_in, versionfile_source, ipy):
   """Git-specific installation logic for Versioneer.
 
-    For Git, this means creating/changing .gitattributes to mark _version.py
-    for export-subst keyword substitution.
-    """
+  For Git, this means creating/changing .gitattributes to mark _version.py
+  for export-subst keyword substitution.
+  """
   GITS = ["git"]
   if sys.platform == "win32":
     GITS = ["git.cmd", "git.exe"]
@@ -1253,10 +1253,10 @@ def do_vcs_install(manifest_in, versionfile_source, ipy):
 def versions_from_parentdir(parentdir_prefix, root, verbose):
   """Try to determine the version from the parent directory name.
 
-    Source tarballs conventionally unpack into a directory that includes both
-    the project name and a version string. We will also support searching up
-    two directory levels for an appropriately named parent directory
-    """
+  Source tarballs conventionally unpack into a directory that includes both
+  the project name and a version string. We will also support searching up
+  two directory levels for an appropriately named parent directory
+  """
   rootdirs = []
 
   for i in range(3):
@@ -1333,12 +1333,12 @@ def plus_or_dot(pieces):
 def render_pep440(pieces):
   """Build up version string, with post-release "local version identifier".
 
-    Our goal: TAG[+DISTANCE.gHEX[.dirty]] . Note that if you
-    get a tagged build and then dirty it, you'll get TAG+0.gHEX.dirty
+  Our goal: TAG[+DISTANCE.gHEX[.dirty]] . Note that if you
+  get a tagged build and then dirty it, you'll get TAG+0.gHEX.dirty
 
-    Exceptions:
-    1: no tags. git_describe was just HEX. 0+untagged.DISTANCE.gHEX[.dirty]
-    """
+  Exceptions:
+  1: no tags. git_describe was just HEX. 0+untagged.DISTANCE.gHEX[.dirty]
+  """
   if pieces["closest-tag"]:
     rendered = pieces["closest-tag"]
     if pieces["distance"] or pieces["dirty"]:
@@ -1357,9 +1357,9 @@ def render_pep440(pieces):
 def render_pep440_pre(pieces):
   """TAG[.post.devDISTANCE] -- No -dirty.
 
-    Exceptions:
-    1: no tags. 0.post.devDISTANCE
-    """
+  Exceptions:
+  1: no tags. 0.post.devDISTANCE
+  """
   if pieces["closest-tag"]:
     rendered = pieces["closest-tag"]
     if pieces["distance"]:
@@ -1373,13 +1373,13 @@ def render_pep440_pre(pieces):
 def render_pep440_post(pieces):
   """TAG[.postDISTANCE[.dev0]+gHEX] .
 
-    The ".dev0" means dirty. Note that .dev0 sorts backwards
-    (a dirty tree will appear "older" than the corresponding clean one),
-    but you shouldn't be releasing software with -dirty anyways.
+  The ".dev0" means dirty. Note that .dev0 sorts backwards
+  (a dirty tree will appear "older" than the corresponding clean one),
+  but you shouldn't be releasing software with -dirty anyways.
 
-    Exceptions:
-    1: no tags. 0.postDISTANCE[.dev0]
-    """
+  Exceptions:
+  1: no tags. 0.postDISTANCE[.dev0]
+  """
   if pieces["closest-tag"]:
     rendered = pieces["closest-tag"]
     if pieces["distance"] or pieces["dirty"]:
@@ -1400,11 +1400,11 @@ def render_pep440_post(pieces):
 def render_pep440_old(pieces):
   """TAG[.postDISTANCE[.dev0]] .
 
-    The ".dev0" means dirty.
+  The ".dev0" means dirty.
 
-    Exceptions:
-    1: no tags. 0.postDISTANCE[.dev0]
-    """
+  Exceptions:
+  1: no tags. 0.postDISTANCE[.dev0]
+  """
   if pieces["closest-tag"]:
     rendered = pieces["closest-tag"]
     if pieces["distance"] or pieces["dirty"]:
@@ -1422,11 +1422,11 @@ def render_pep440_old(pieces):
 def render_git_describe(pieces):
   """TAG[-DISTANCE-gHEX][-dirty].
 
-    Like 'git describe --tags --dirty --always'.
+  Like 'git describe --tags --dirty --always'.
 
-    Exceptions:
-    1: no tags. HEX[-dirty]  (note: no 'g' prefix)
-    """
+  Exceptions:
+  1: no tags. HEX[-dirty]  (note: no 'g' prefix)
+  """
   if pieces["closest-tag"]:
     rendered = pieces["closest-tag"]
     if pieces["distance"]:
@@ -1442,12 +1442,12 @@ def render_git_describe(pieces):
 def render_git_describe_long(pieces):
   """TAG-DISTANCE-gHEX[-dirty].
 
-    Like 'git describe --tags --dirty --always -long'.
-    The distance/hash is unconditional.
+  Like 'git describe --tags --dirty --always -long'.
+  The distance/hash is unconditional.
 
-    Exceptions:
-    1: no tags. HEX[-dirty]  (note: no 'g' prefix)
-    """
+  Exceptions:
+  1: no tags. HEX[-dirty]  (note: no 'g' prefix)
+  """
   if pieces["closest-tag"]:
     rendered = pieces["closest-tag"]
     rendered += "-%d-g%s" % (pieces["distance"], pieces["short"])
@@ -1462,12 +1462,12 @@ def render_git_describe_long(pieces):
 def render_pep440_branch_based(pieces):
   """Build up version string, with post-release "local version identifier".
 
-    Our goal: TAG[+DISTANCE.BRANCH_gHEX[.dirty]] . Note that if you
-    get a tagged build and then dirty it, you'll get TAG+0.BRANCH_gHEX.dirty
+  Our goal: TAG[+DISTANCE.BRANCH_gHEX[.dirty]] . Note that if you
+  get a tagged build and then dirty it, you'll get TAG+0.BRANCH_gHEX.dirty
 
-    Exceptions:
-    1: no tags. git_describe was just HEX. 0+untagged.DISTANCE.BRANCH_gHEX[.dirty]
-    """
+  Exceptions:
+  1: no tags. git_describe was just HEX. 0+untagged.DISTANCE.BRANCH_gHEX[.dirty]
+  """
   replacements = ([' ', '.'], ['(', ''], [')', ''], ['\\', '.'], ['/', '.'])
   branch_name = pieces.get('branch') or ''
   if branch_name:
@@ -1538,8 +1538,8 @@ class VersioneerBadRootError(Exception):
 def get_versions(verbose=False):
   """Get the project version from whatever source is available.
 
-    Returns dict with two keys: 'version' and 'full'.
-    """
+  Returns dict with two keys: 'version' and 'full'.
+  """
   if "versioneer" in sys.modules:
     # see the discussion in cmdclass.py:get_cmdclass()
     del sys.modules["versioneer"]
@@ -1623,9 +1623,9 @@ def get_version():
 def get_cmdclass(cmdclass=None):
   """Get the custom setuptools/distutils subclasses used by Versioneer.
 
-    If the package uses a different cmdclass (e.g. one from numpy), it
-    should be provide as an argument.
-    """
+  If the package uses a different cmdclass (e.g. one from numpy), it
+  should be provide as an argument.
+  """
   if "versioneer" in sys.modules:
     del sys.modules["versioneer"]
     # this fixes the "python setup.py develop" case (also 'install' and

@@ -17,13 +17,15 @@ Author: Elias Bakken
  You should have received a copy of the GNU General Public License
  along with Redeem.  If not, see <http://www.gnu.org/licenses/>.
 """
-from threading import Thread
-import time
 import logging
-
+import time
 from multiprocessing import JoinableQueue
-import Queue
-from six import iteritems
+from six import PY2, iteritems
+from threading import Thread
+if PY2:
+  import Queue as queue
+else:
+  import queue
 
 
 class Alarm:
@@ -175,7 +177,7 @@ class AlarmExecutor:
         alarm.execute()
         logging.debug("Alarm executed")
         self.queue.task_done()
-      except Queue.Empty:
+      except queue.Empty:
         continue
 
   def start(self):
@@ -185,7 +187,7 @@ class AlarmExecutor:
 
   def stop(self):
     if self.running:
-      logging.debug("Stoppping alarm executor")
+      logging.debug("Stopping alarm executor")
       self.running = False
       self.t.join()
     else:

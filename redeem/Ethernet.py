@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """
 Ethernet communication file for Replicape.
 
