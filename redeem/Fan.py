@@ -21,60 +21,65 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
  along with Redeem.  If not, see <http://www.gnu.org/licenses/>.
 """
 
-from Adafruit_I2C import Adafruit_I2C 
-import time
-import subprocess
-from PWM import PWM
 import logging
+import time
+from PWM import PWM
+from six import PY2
+
+if PY2:
+  range = xrange
+
 
 class Fan(PWM):
+  def __init__(self, channel):
+    """ Channel is the channel that the fan is on (0-7) """
+    self.channel = channel
 
-    def __init__(self, channel):
-        """ Channel is the channel that the fan is on (0-7) """
-        self.channel = channel
+  def set_PWM_frequency(self, value):
+    """ Set the amount of on-time from 0..1 """
+    self.pwm_frequency = int(value)
+    PWM.set_frequency(value)
 
-    def set_value(self, value):
-        """ Set the amount of on-time from 0..1 """
-        self.value = value
-        PWM.set_value(value, self.channel)
+  def set_value(self, value):
+    """ Set the amount of on-time from 0..1 """
+    self.value = value
+    PWM.set_value(value, self.channel)
 
+  def ramp_to(self, value, delay=0.01):
+    ''' Set the fan/light value to the given value, in degree, with the given speed in deg / sec '''
+    for w in range(int(self.value * 255.0), int(value * 255.0), (1 if value >= self.value else -1)):
+      logging.debug("Fan value: " + str(w))
+      self.set_value(w / 255.0)
+      time.sleep(delay)
+    self.set_value(value)
 
-    def ramp_to(self, value, delay=0.01):
-        ''' Set the fan/light value to the given value, in degree, with the given speed in deg / sec '''
-        for w in xrange(int(self.value*255.0), int(value*255.0), (1 if value>=self.value else -1)):
-            logging.debug("Fan value: "+str(w))
-            self.set_value(w/255.0)
-            time.sleep(delay)
-        self.set_value(value)
 
 if __name__ == '__main__':
-    import os
-    import logging
+  import os
+  import logging
 
-    logging.basicConfig(level=logging.DEBUG,
-                        format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
-                        datefmt='%m-%d %H:%M')
+  logging.basicConfig(
+      level=logging.DEBUG,
+      format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
+      datefmt='%m-%d %H:%M')
 
-    PWM.set_frequency(100)   
+  PWM.set_frequency(100)
 
-    fan7 = Fan(7) 
-    fan8 = Fan(8)
-    fan9 = Fan(9)
-    fan10 = Fan(10)
+  fan7 = Fan(7)
+  fan8 = Fan(8)
+  fan9 = Fan(9)
+  fan10 = Fan(10)
 
-
-    while 1:    
-        for i in xrange(1,100):
-            fan7.set_value(i/100.0)
-            fan8.set_value(i/100.0)
-            fan9.set_value(i/100.0)
-            fan10.set_value(i/100.0)
-            time.sleep(0.01)	
-        for i in xrange(100,1,-1):
-            fan7.set_value(i/100.0)
-            fan8.set_value(i/100.0)
-            fan9.set_value(i/100.0)
-            fan10.set_value(i/100.0)
-            time.sleep(0.01)
-
-
+  while 1:
+    for i in range(1, 100):
+      fan7.set_value(i / 100.0)
+      fan8.set_value(i / 100.0)
+      fan9.set_value(i / 100.0)
+      fan10.set_value(i / 100.0)
+      time.sleep(0.01)
+    for i in range(100, 1, -1):
+      fan7.set_value(i / 100.0)
+      fan8.set_value(i / 100.0)
+      fan9.set_value(i / 100.0)
+      fan10.set_value(i / 100.0)
+      time.sleep(0.01)

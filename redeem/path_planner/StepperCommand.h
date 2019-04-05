@@ -2,7 +2,6 @@
  This file is part of Redeem - 3D Printer control software
  
  Author: Mathieu Monney
- Website: http://www.xwaves.net
  License: GNU GPLv3 http://www.gnu.org/copyleft/gpl.html
  
  Redeem is free software: you can redistribute it and/or modify
@@ -27,15 +26,17 @@
 
 #define STEPPER_COMMAND_OPTION_SYNC_EVENT 1
 #define STEPPER_COMMAND_OPTION_SYNCWAIT_EVENT 3
+#define STEPPER_COMMAND_OPTION_CARRY_BLOCKED_STEPPERS 4
 
-typedef struct SteppersCommand {
-	uint8_t     step;                //Steppers are defined as 0b000HEZYX - A 1 for a stepper means we will do a step for this stepper
-    uint8_t     direction;           //Steppers are defined as 0b000HEZYX - Direction for each stepper
-    uint8_t     cancellableMask;     //If the endstop match the mask, all the move commands are canceled.
-    uint8_t     options;             //Options for the move.
-    uint32_t    delay;               //number of cycle to wait (this is the # of PRU click cycles)
-} SteppersCommand;
+struct SteppersCommand
+{
+    uint8_t step; //Steppers are defined as 0b000HEZYX - A 1 for a stepper means we will do a step for this stepper
+    uint8_t direction; //Steppers are defined as 0b000HEZYX - Direction for each stepper
+    uint8_t cancellableMask; //If the endstop match the mask, all the move commands are canceled.
+    uint8_t options; //Options for the move.
+    uint32_t delay; //number of cycle to wait (this is the # of PRU clock cycles)
+};
 
-static_assert(sizeof(SteppersCommand)==8,"Invalid stepper command size");
+static_assert(sizeof(SteppersCommand) == 8, "Invalid stepper command size");
 
 #endif

@@ -1,0 +1,7 @@
+scipy
+pytest
+mock
+sympy
+# future==0.16.0
+docutils
+sh

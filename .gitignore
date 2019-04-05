@@ -5,6 +5,9 @@ stl/
 *~.*
 *.*~
 *.pyc
+.cache/
+__pycache__/
+.pytest_cache/
 libs/PyBBIO
 libs/pypruss
 images/ubuntu/linux-dev
@@ -20,6 +23,8 @@ PathPlanner/PathPlanner/*.o
 PathPlanner/PathPlanner/*.dep
 PathPlanner/PathPlanner/PathPlannerNative_wrap.cpp
 PathPlanner/PathPlanner/PathPlannerNative.py
+path_planner/PathPlannerNative_wrap.h
+_PathPlannerNative.so
 
 # Ignore PyCharm settings
 /.idea
@@ -27,3 +32,12 @@ dist/
 Redeem.egg-info/
 build/
 sftp-config.json
+
+_build
+node_modules
+# editor temp files
+*.swp
+
+# virtual env
+venv/
+*.svg

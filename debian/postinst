@@ -1,5 +1,0 @@
-#!/bin/sh
-
-# Enable and start redeem.service
-systemctl enable redeem.service
-systemctl start redeem.service

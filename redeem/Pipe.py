@@ -1,7 +1,6 @@
-#!/usr/bin/env python
 """
 Pipe - This uses a virtual TTY for communicating with
-Toggler or similar front end.
+Toggle or similar front end.
 
 Author: Elias Bakken
 email: elias(dot)bakken(at)gmail(dot)com
@@ -29,81 +28,85 @@ import logging
 import subprocess
 import time
 import os
+import errno
+import fcntl
+import termios
 from Gcode import Gcode
 
 
 class Pipe:
+  def __init__(self, printer, prot, iomanager):
+    self.printer = printer
+    self.prot = prot
+    self.iomanager = iomanager
 
-    @staticmethod
-    def check_tty0tty():
-        return (find_executable("tty0tty") is not None)
+    (master_fd, slave_fd) = os.openpty()
+    slave = os.ttyname(slave_fd)
 
-    @staticmethod
-    def check_socat():
-        return (find_executable("socat") is not None)
+    master_flags = fcntl.fcntl(master_fd, fcntl.F_GETFL, 0)
+    fcntl.fcntl(master_fd, fcntl.F_SETFL, master_flags | os.O_NONBLOCK)
 
-    def __init__(self, printer, prot):
-        self.printer = printer
-        self.prot = prot
+    # switch to "raw" mode - these constants come from the manpage for termios under cfmakeraw()
+    master_attr = termios.tcgetattr(master_fd)
+    master_attr[0] &= ~(termios.IGNBRK | termios.BRKINT | termios.PARMRK | termios.ISTRIP
+                        | termios.INLCR | termios.IGNCR | termios.ICRNL | termios.IXON)
+    master_attr[1] &= ~termios.OPOST
+    master_attr[2] &= ~(termios.CSIZE | termios.PARENB)
+    master_attr[3] &= ~(termios.ECHO | termios.ECHONL | termios.ICANON | termios.ISIG
+                        | termios.IEXTEN)
+    master_attr[3] |= termios.CS8
+    termios.tcsetattr(master_fd, termios.TCSADRAIN, master_attr)
 
-        pipe_0 = "/dev/" + prot + "_0"
-        pipe_1 = "/dev/" + prot + "_1"
+    # Fun detail: master will always show as /dev/ptmx, but the kernel knows from
+    # the fd which PTY we're using. This means we have to use master_fd instead
+    # of opening master by name.
 
-        # Ensure tty0tty is installed and available in the PATH
-        if not Pipe.check_tty0tty() and not Pipe.check_socat():
-            logging.error("Neither tty0tty nor socat found! tty0tty or socat must be installed")
-            raise EnvironmentError("tty0tty and socat not found")
+    logging.info("Opened PTY for {} and got {}".format(prot, os.ttyname(slave_fd)))
 
-        if Pipe.check_tty0tty():
-            p = subprocess.Popen(["tty0tty", pipe_0, pipe_1],
-                                 stderr=subprocess.PIPE)
-            p.stderr.readline()
+    self.pipe_link = "/dev/" + prot + "_1"
 
-        elif Pipe.check_socat():
-            p = subprocess.Popen([
-                "socat", "-d", "-d", "-lf", "/var/log/redeem2"+self.prot, 
-                "pty,mode=777,raw,echo=0,link="+pipe_0,
-                "pty,mode=777,raw,echo=0,link="+pipe_1],
-                                 stderr=subprocess.PIPE)
-            while not os.path.exists(pipe_0):
-                time.sleep(0.1)
-        self.rd = open(pipe_0, "r")
-        self.wr = os.open(pipe_0, os.O_WRONLY)
-        logging.info("Pipe " + self.prot + " open. Use '" + pipe_1 + "' to "
-                     "communicate with it")
+    try:
+      os.unlink(self.pipe_link)
+    except OSError, e:
+      # file not found is fine to ignore - anythine else and we should log it
+      if e.errno != errno.ENOENT:
+        logging.error("Failed to unlink '{}': {}".format(self.pipe_link, e.strerror))
 
-        self.running = True
-        self.t = Thread(target=self.get_message, name="Pipe")
-        self.send_response = True
-        self.t.start()
+    logging.info("linking {}".format(self.pipe_link))
+    os.symlink(slave, self.pipe_link)
+    os.chmod(self.pipe_link, 0o666)
 
-    def get_message(self):
-        """ Loop that gets messages and pushes them on the queue """
-        while self.running:
-            r, w, x = select.select([self.rd], [], [], 1.0)
-            if r:
-                try:
-                    message = self.rd.readline().rstrip()                
-                    if len(message) > 0:
-                        g = Gcode({"message": message, "prot": self.prot})
-                        self.printer.processor.enqueue(g)
-                except IOError:
-                    logging.warning("Could not read from pipe")
+    logging.info("{} Pipe open. Use '{}' to communicate with it".format(self.prot, self.pipe_link))
 
-    def send_message(self, message):
-        if self.send_response:
-            #logging.debug("Pipe: "+str(message))
-            if message[-1] != "\n":
-                message += "\n"
-                try:
-                    os.write(self.wr, message)
-                except OSError:
-                    logging.warning("Unable to write to file. Closing down?")
+    self.rd = os.fdopen(master_fd, "r")
+    self.wr = os.fdopen(master_fd, "w")
 
+    self.send_response = True
+    self.iomanager.add_file(self.rd, self.get_message)
 
+  def get_message(self, flags):
+    try:
+      message = self.rd.readline().rstrip()
+      if len(message) > 0:
+        g = Gcode({"message": message, "prot": self.prot})
+        self.printer.processor.enqueue(g)
+    except IOError:
+      logging.warning("Could not read from {} pipe".format(self.prot))
 
-    def close(self):
-        self.running = False
-        self.t.join()
-        self.rd.close()
-        os.close(self.wr)
+  def send_message(self, message):
+    if self.send_response:
+      #logging.debug("Pipe: "+str(message))
+      if message[-1] != "\n":
+        message += "\n"
+        try:
+          self.wr.write(message)
+        except OSError:
+          logging.warning("Unable to write to {} pipe".format(self.prot))
+        except IOError as error:
+          if error.errno != errno.EAGAIN:    # if the output buffer is full, we're just going to drop messages
+            logging.warning("Failed to write to file: %s", error)
+
+  def close(self):
+    self.iomanager.remove_file(self.rd)
+    self.rd.close()
+    os.unlink(self.pipe_link)

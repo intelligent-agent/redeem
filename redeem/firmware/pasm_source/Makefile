@@ -1,4 +1,0 @@
-all:
-	gcc -Wall -D_UNIX_ pasm.c pasmpp.c pasmexp.c pasmop.c pasmdot.c pasmstruct.c pasmmacro.c -o ../pasm
-
-

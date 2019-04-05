@@ -17,50 +17,48 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
  You should have received a copy of the GNU General Public License
  along with Redeem.  If not, see <http://www.gnu.org/licenses/>.
 """
+from __future__ import absolute_import
 
-from GCodeCommand import GCodeCommand
 import logging
-
+from .GCodeCommand import GCodeCommand
 from redeem.Printer import Printer
+from six import iteritems
 
 
 class M206(GCodeCommand):
+  def _get_offset_str(self):
+    offsets = sorted(iteritems(self.printer.path_planner.center_offset))
+    offset_strs = ["{}: {}".format(k, 1000. * v) for k, v in offsets]
+    return ", ".join(offset_strs)
 
-    def _get_offset_str(self):
-        offsets = sorted(self.printer.path_planner.center_offset.iteritems())
-        offset_strs = ["{}: {}".format(k, 1000. * v) for k, v
-                       in offsets]
-        return ", ".join(offset_strs)
+  def execute(self, g):
+    offset = self.printer.path_planner.center_offset
+    if len(g.get_tokens()) == 0:
+      # print out current offset values
+      g.set_answer("ok " + self._get_offset_str())
+    else:
+      for axis in offset.keys():
+        if g.has_letter(axis):
+          val = g.get_float_by_letter(axis)
+          g.remove_token_by_letter(axis)
+          adj = val / 1000.
+          if self.printer.axis_config == Printer.AXIS_CONFIG_DELTA:
+            # for delta, it's more logical if positive values
+            # raise the head
+            offset[axis] -= adj
+          else:
+            # for others, just do the simplest thing
+            offset[axis] += adj
+          logging.info("M206: Updated offset for %s to %f", axis, offset[axis])
+      remaining = g.get_tokens()
+      for tok in remaining:
+        logging.warning("M206: Unknown axis: %s", tok[0])
 
-    def execute(self, g):
-        offset = self.printer.path_planner.center_offset
-        if len(g.get_tokens()) == 0:
-            # print out current offset values
-            g.set_answer("ok " + self._get_offset_str())
-        else:
-            for axis in offset.keys():
-                if g.has_letter(axis):
-                    val = float(g.get_value_by_letter(axis))
-                    g.remove_token_by_letter(axis)
-                    adj = val / 1000.
-                    if self.printer.axis_config == Printer.AXIS_CONFIG_DELTA:
-                        # for delta, it's more logical if positive values
-                        # raise the head
-                        offset[axis] -= adj
-                    else:
-                        # for others, just do the simplest thing
-                        offset[axis] += adj
-                    logging.info("M206: Updated offset for %s to %f",
-                                 axis, offset[axis])
-            remaining = g.get_tokens()
-            for tok in remaining:
-                logging.warning("M206: Unknown axis: %s", tok[0])
+  def get_description(self):
+    return "Set or get end stop offsets"
 
-    def get_description(self):
-        return "Set or get end stop offsets"
-    
-    def get_long_description(self):
-        return """
+  def get_long_description(self):
+    return """
 If no parameters are given, get the current end stop offsets.
 To set the offset, provide the axes and their offset relative to
 the current value. All values are in mm.

@@ -7,16 +7,17 @@ email: elias(dot)bakken(at)gmail(dot)com
 Website: http://www.thing-printer.com
 License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
 """
+from __future__ import absolute_import
 
-from GCodeCommand import GCodeCommand
+from .GCodeCommand import GCodeCommand
+
 
 class M108(GCodeCommand):
+  def execute(self, g):
+    self.printer.running_M116 = False
 
-    def execute(self, g):
-        self.printer.running_M116 = False
+  def get_description(self):
+    return "Break out of any running M116 loop"
 
-    def get_description(self):
-        return "Break out of any running M116 loop"
-        
-    def is_buffered(self):
-        return True
+  def is_buffered(self):
+    return True
