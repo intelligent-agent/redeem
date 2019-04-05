@@ -24,7 +24,7 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
 from threading import Thread
 import select
 import logging
-from Gcode import Gcode
+from .Gcode import Gcode
 
 
 class USB:

@@ -6,10 +6,11 @@ Author: Mathieu Monney
 email: zittix(at)xwaves(dot)net
 License: CC BY-SA: http://creativecommons.org/licenses/by-sa/2.0/
 """
+from __future__ import absolute_import
 
 import logging
 import threading
-from gcodes.GCodeCommand import GCodeCommand
+from .gcodes.GCodeCommand import GCodeCommand
 
 
 class SyncState:

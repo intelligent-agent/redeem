@@ -25,10 +25,10 @@ import logging
 import math
 import time
 from multiprocessing import JoinableQueue
-from PWM_pin import PWM_pin
-from ShiftRegister import ShiftRegister
 from six import PY2
 from threading import Thread
+from .PWM_pin import PWM_pin
+from .ShiftRegister import ShiftRegister
 if PY2:
   import Queue as queue
 else:
