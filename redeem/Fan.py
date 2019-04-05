@@ -20,11 +20,12 @@ License: GNU GPL v3: http://www.gnu.org/copyleft/gpl.html
  You should have received a copy of the GNU General Public License
  along with Redeem.  If not, see <http://www.gnu.org/licenses/>.
 """
+from __future__ import absolute_import
 
 import logging
 import time
-from PWM import PWM
 from six import PY2
+from .PWM import PWM
 
 if PY2:
   range = xrange
