@@ -80,11 +80,11 @@ class CascadingConfigParser(Parser):
         with open(path, "rb") as f:
           data = f.read(120)
           name = data[58:74].strip()
-          if name == "BB-BONE-REPLICAP":
+          if name == b"BB-BONE-REPLICAP":
             self.replicape_revision = data[38:42]
             self.replicape_data = data
             self.replicape_path = path
-          elif name[:13] == "BB-BONE-REACH":
+          elif name[:13] == b"BB-BONE-REACH":
             self.reach_revision = data[38:42]
             self.reach_data = data
             self.reach_path = path
