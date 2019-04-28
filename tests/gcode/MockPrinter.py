@@ -140,7 +140,7 @@ version = 1
 
     cls.R = Redeem(config_location=cls.temporary_config_directory)
     cls.printer = cls.R.printer
-    cls.printer.config.replicape_key = "TESTING_DUMMY_KEY"
+    cls.printer.config.set("System", "key", "TESTING_DUMMY_KEY")
 
     cls.setUpPatch()
 

@@ -27,7 +27,7 @@ class M109_Tests(MockPrinter):
     self.assertEqual(m116, "M116 T2 S234")    # S234 is redundant and does no harm. Let it be.
 
   def test_gcodes_M109_S234_reach_C(self):
-    self.printer.config.reach_revision = True
+    self.printer.config.set('Configuration', 'reach', "Mock")
     self.printer.current_tool = "C"
     self.execute_gcode("M109 S234")
 

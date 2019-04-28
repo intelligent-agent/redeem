@@ -36,7 +36,7 @@ class M116(GCodeCommand):
         has_parameter and heater_index != 0, has_parameter and heater_index != 1, has_parameter
         and heater_index != -1
     ]
-    if self.printer.config.reach_revision:
+    if self.printer.config.get('Configuration', 'reach') != "None":
       all_ok.extend([
           has_parameter and heater_index != 2, has_parameter and heater_index != 3, has_parameter
           and heater_index != 4
@@ -47,7 +47,7 @@ class M116(GCodeCommand):
       all_ok[1] |= self.printer.heaters['H'].is_target_temperature_reached()
       all_ok[2] |= self.printer.heaters['HBP'].is_target_temperature_reached()
 
-      if self.printer.config.reach_revision:
+      if self.printer.config.get('Configuration', 'reach') != "None":
         all_ok[3] |= self.printer.heaters['A'].is_target_temperature_reached()
         all_ok[4] |= self.printer.heaters['B'].is_target_temperature_reached()
         all_ok[5] |= self.printer.heaters['C'].is_target_temperature_reached()
@@ -80,7 +80,7 @@ class M116(GCodeCommand):
             " 0 - Extruder E\n"
             " 1 - Extruder H")
     # unittests and docs may not have printer set when looking for docs
-    if not self.printer or self.printer.config.reach_revision:
+    if not self.printer or self.printer.config.get('Configuration', 'reach') != "None":
       desc += (" 2 - Extruder A\n" " 3 - Extruder B\n" " 4 - Extruder C")
     return desc
 
