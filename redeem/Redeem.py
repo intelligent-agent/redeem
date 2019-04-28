@@ -33,8 +33,10 @@ from threading import Thread
 from threading import enumerate as enumerate_threads
 if PY2:
   import Queue as queue
+  from Queue import Empty as EmptyQueueException
 else:
   import queue
+  from queue import Empty as EmptyQueueException
 
 from .Alarm import Alarm, AlarmExecutor
 from .CascadingConfigParser import CascadingConfigParser
@@ -587,7 +589,7 @@ class Redeem:
       while RedeemIsRunning:
         try:
           gcode = the_queue.get(block=True, timeout=1)
-        except queue.Empty:
+        except EmptyQueueException:
           continue
         logging.debug("Executing " + gcode.code() + " from " + name + " " + gcode.message)
         self._execute(gcode)
