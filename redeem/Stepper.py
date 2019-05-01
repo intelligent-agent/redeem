@@ -130,6 +130,8 @@ D7 = CFG1-Z  = 0 (microstepping)
 
 
 class Stepper_00B1(Stepper):
+  revision = "B1"
+
   def __init__(self, stepPin, dirPin, faultPin, dac_channel, shiftreg_nr, name):
     Stepper.__init__(self, stepPin, dirPin, faultPin, dac_channel, shiftreg_nr, name)
     self.dac = PWM_DAC(dac_channel)
@@ -242,6 +244,8 @@ class Stepper_00B1(Stepper):
 
 
 class Stepper_00B2(Stepper_00B1):
+  revision = "B2"
+
   def __init__(self, stepPin, dirPin, faultPin, dac_channel, shiftreg_nr, name):
     Stepper_00B1.__init__(self, stepPin, dirPin, faultPin, dac_channel, shiftreg_nr, name)
     self.dac = PWM_DAC(dac_channel)
@@ -279,6 +283,8 @@ class Stepper_00B2(Stepper_00B1):
 
 
 class Stepper_00B3(Stepper_00B2):
+  revision = "B3"
+
   @classmethod
   def set_stepper_power_down(self, pd):
     ''' Enables stepper low current mode on all steppers '''
