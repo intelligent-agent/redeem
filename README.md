@@ -31,7 +31,7 @@ Umikaze (based on Ubuntu 18.04.2 LTS)
 
 ### Source install
 
-** WARNING **: The current `master` branch is considered stable, though not yet released while we integrate a few more features to release 2.2.1.
+**WARNING**: The current `master` branch is considered stable, though not yet released while we integrate a few more features to release 2.2.1.
 As such, please note that as of this latest change to the master branch, you should be building Redeem off a platform similar to that built by the [https://github.com/intelligent-agent/Umikaze](Umikaze) 
 [https://github.com/intelligent-agent/Umikaze/blob/master/Packages/install_redeem](Redeem build script).
 
