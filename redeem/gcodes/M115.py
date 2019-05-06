@@ -31,6 +31,7 @@ class M115(GCodeCommand):
     f.close()
     distro_name = l[0]
     distro_version = l[1]
+    python_version = os.sys.version.split(' ')[0]
     g.set_answer(
         "ok " \
         "PROTOCOL_VERSION:{} "\
@@ -42,6 +43,7 @@ class M115(GCodeCommand):
         "KERNEL:{} "\
         "DISTRIBUTION_NAME:{} "\
         "DISTRIBUTION_VERSION:{} "\
+        "PYTHON_VERSION:{} "\
         "EXTRUDER_COUNT:{}"\
         .format(
             protocol_version,
@@ -53,6 +55,7 @@ class M115(GCodeCommand):
             kernel,
             distro_name,
             distro_version,
+            python_version,
             extruder_count
         )
     )
