@@ -36,8 +36,8 @@ def find_revolve():
   try:
     with open(nvmem_path, "rb") as f:
       data = f.read(120)
-      name = data[5:16].strip()
-      if name == "335RVLV00A0":    # TODO what about this can be generally recognized?
+      name = data[5:12].strip()
+      if name == "335RVLV":
         revision = data[12:16]
         eeprom_data = data
         eeprom_path = nvmem_path
@@ -108,6 +108,10 @@ def build_revolve_printer(printer, revision):
   printer.end_stop_keycodes["Z2"] = 117
 
   spi = SPI.get_spi_bus_by_device("48030000.spi", 0)
+  spi0_1 = SPI.get_spi_bus_by_device("48030000.spi", 1)
+  # Init all thermistor connectors to not hav 5V out. Disable stepper B and C,
+  # disable servo 0 and 1
+  spi0_1.xfer([0x00])
 
   stepper_bank = StepperBankSpi(spi, 6)
 
