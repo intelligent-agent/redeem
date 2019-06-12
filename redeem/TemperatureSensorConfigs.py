@@ -5,8 +5,7 @@ Suggested temperature values for calculation of the coefficients:
 25, 150 and 250 C
 
 Use one of the following scripts to calcuate the coefficients:
-- http://www.thinksrs.com/downloads/programs/Therm%20Calc/NTCCalibrator/NTCcalculator.htm
-- https://github.com/MarlinFirmware/Marlin/blob/Development/Marlin/scripts/createTemperatureLookupMarlin.py
+- https://www.thinksrs.com/downloads/programs/therm%20calc/ntccalibrator/ntccalculator.html
 
 Derived in part from smoothieware.
 Source: https://github.com/Smoothieware/Smoothieware.
@@ -53,6 +52,8 @@ thermistors_shh = [
     ["HT100K3950", 4700, 0.7413760971e-3, 2.117947876e-4, 1.141950936e-7],
     # Semitec 104NT-4-R025H42G Thermistor
     ["Semitec-104NT4", 4700, 0.797110609710217e-3, 2.13433144381270e-4, 0.65338987554e-7],
+    # Murata NCP15WB473E03RC on board Revolve
+    ["NCP15WB473E03RC", 4700, 0.8914262105e-3, 2.187046919e-4, 0.8817909656e-7],
 ]
 """
 Configuration for PT100 sensors. The coefficients fit in the following formula:

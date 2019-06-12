@@ -210,8 +210,15 @@ class Redeem:
       self.printer.cold_ends.append(ColdEnd(path, "ds18b20-" + str(i)))
       logging.info("Found Cold end " + str(i) + " on " + path)
 
+    if printer.board == "revolve":
+      adc = self.printer.thermistor_inputs["BOARD"]
+      sensor = self.printer.config.get("Heaters", "sensor_BOARD")
+      self.printer.cold_ends.append(TemperatureSensor(adc, 'BOARD', sensor))
+
     # Make Mosfets, temperature sensors and extruders
     heaters = ["E", "H", "HBP"]
+    if printer.board == "revolve":
+      heaters = ["E", "H", "HBP", "A"]
     for e in heaters:
       # Thermistors
       adc = self.printer.thermistor_inputs[e]
