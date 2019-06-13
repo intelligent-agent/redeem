@@ -22,7 +22,7 @@ def probe_revolve(printer):
     return
 
   eeprom_path, eeprom_data, revision = results
-  revolve_key = get_revolve_key(eeprom_path, eeprom_data)
+  printer.key = get_revolve_key(eeprom_path, eeprom_data)
   build_revolve_printer(printer, revision)
 
 
