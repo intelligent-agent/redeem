@@ -65,6 +65,7 @@ from StepperWatchdog import StepperWatchdog
 from Key_pin import Key_pin, Key_pin_listener
 from Watchdog import Watchdog
 from six import iteritems
+from BoardSensors import CurrentSensor, VoltageSensor
 
 # Global vars
 printer = None
@@ -214,6 +215,13 @@ class Redeem:
       adc = self.printer.thermistor_inputs["BOARD"]
       sensor = self.printer.config.get("Heaters", "sensor_BOARD")
       self.printer.cold_ends.append(TemperatureSensor(adc, 'BOARD', sensor))
+
+      adc = self.printer.thermistor_inputs["U"]
+      self.printer.sensors.append(VoltageSensor(adc))
+
+      adc = self.printer.thermistor_inputs["I"]
+      self.printer.sensors.append(CurrentSensor(adc))
+
 
     # Make Mosfets, temperature sensors and extruders
     heaters = ["E", "H", "HBP"]

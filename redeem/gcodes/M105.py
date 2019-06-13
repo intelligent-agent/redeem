@@ -38,7 +38,11 @@ class M105(GCodeCommand):
 
     for c, cooler in enumerate(self.printer.cold_ends):
       temp = cooler.get_temperature()
-      answer += " C{0}:{1:.0f}".format(c, temp)
+      answer += " C{0}:{1:.1f}".format(c, temp)
+
+    for s, sensor in enumerate(self.printer.sensors):
+      value = sensor.get_value()
+      answer += " S{0}:{1:.1f}".format(s, value)
 
     g.set_answer(answer)
 

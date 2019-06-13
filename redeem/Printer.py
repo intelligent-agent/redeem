@@ -53,6 +53,7 @@ class Printer:
     self.end_stops = {}
     self.fans = []
     self.cold_ends = []
+    self.sensors = [] # Current, Voltage
     self.coolers = []
     self.comms = {}    # Communication channels
     self.path_planner = None

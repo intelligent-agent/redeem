@@ -144,6 +144,8 @@ def build_revolve_printer(printer, revision):
   printer.thermistor_inputs["A"] = "/sys/bus/iio/devices/iio:device0/in_voltage3_raw"
   printer.thermistor_inputs["HBP"] = "/sys/bus/iio/devices/iio:device0/in_voltage2_raw"
   printer.thermistor_inputs["BOARD"] = "/sys/bus/iio/devices/iio:device0/in_voltage4_raw"
+  printer.thermistor_inputs["I"] = "/sys/bus/iio/devices/iio:device0/in_voltage6_raw"
+  printer.thermistor_inputs["U"] = "/sys/bus/iio/devices/iio:device0/in_voltage7_raw"
 
   printer.fans.append(Fan(pwm.get_output_by_device("48302200.pwm", 0)))
   printer.fans.append(Fan(pwm.get_output_by_device("48302200.pwm", 1)))

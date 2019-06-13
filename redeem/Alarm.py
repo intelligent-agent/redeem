@@ -39,6 +39,7 @@ class Alarm:
   IMPOSSIBLE_MOVE_ATTEMPTED = 9
   STEPPER_FAULT = 10    # Error on a stepper
   ALARM_TEST = 11    # Testsignal, used during start-up
+  SENSOR_ERROR = 12
 
   printer = None
   executor = None
@@ -64,6 +65,9 @@ class Alarm:
       self.inform_listeners()
       Alarm.action_command("pause")
       Alarm.action_command("alarm_thermistor_error", self.message)
+    if self.type == Alarm.SENSOR_ERROR:
+      self.inform_listeners()
+      Alarm.action_command("alarm_sensor", self.message)
     elif self.type == Alarm.HEATER_TOO_COLD:
       self.stop_print()
       self.inform_listeners()
