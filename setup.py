@@ -84,30 +84,13 @@ setup(
     license="GPLv3",
     keywords="3d printer firmware",
     platforms=["BeagleBone"],
-    install_requires=[
-      'docutils==0.14',
-      'funcsigs==1.0.2',
-      'adafruit_gpio',
-      'Adafruit_BBIO',
-      'mock==2.0.0',
-      'pbr==4.2.0',
-      'py',
-      'pyusb==1.0.2',
-      'six>=1.11.0',
-      'sh',
-      'sympy',
-      'testfixtures==6.2.0',
-      'configobj==5.0.6',
-      'scipy',
-      'pytest==4.0.2',
-      'future>=0.16.0',
-      'evdev',
-    ],
     url=__url__,
     ext_modules=[pathplanner],
     entry_points= {
         'console_scripts': [
-            'redeem = redeem.Redeem:main'
+            'redeem = redeem.Redeem:main',
+            'redeem-version = redeem_version:get_version',
+            'redeem-update = redeem_update:main'
         ]
     },
 )

@@ -1,4 +1,22 @@
 --index-url https://pypi.python.org/simple/
 
+requests
+docutils==0.14
+funcsigs==1.0.2
+adafruit_gpio
+Adafruit_BBIO
+mock==2.0.0
+pbr==4.2.0
+py
+pyusb==1.0.2
+six>=1.11.0
+sh
+sympy
+testfixtures==6.2.0
+configobj==5.0.6
+scipy
+pytest==4.0.2
+future>=0.16.0
+evdev
 -e git+https://github.com/adafruit/Adafruit_Python_GPIO.git#egg=adafruit_gpio
 -e .
