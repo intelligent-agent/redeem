@@ -90,6 +90,8 @@ int main(void)
 
     g_stepsRemaining = 0;
 
+    uint8_t old_direction = 0;
+
     while (1)
     {
         volatile uint32_t* ddr_addr = *ddr_start;
@@ -121,36 +123,42 @@ int main(void)
 
                 // Handle steppers that have been inverted in the config
                 uint8_t direction = (curCommand->direction ^ DIRECTION_MASK) & 0xFF;
+                // dir_updates has a 1 for axes where the direction pin needs updating this loop.
+                uint8_t dir_updates = (direction ^ old_direction) & curCommand->step;
 
-                gpio0 = gpio1 = gpio2 = gpio3 = 0;
+                if(dir_updates)
+                {
+                    // Keep unchanged high signals unchanged. Set/leave everything else low except for new high signals.
+                    old_direction = (old_direction & ~dir_updates) | (direction & dir_updates);
+                    gpio0 = gpio1 = gpio2 = gpio3 = 0;
 
-                STEPPER_X_DIR_BANK |= ((direction >> 0) & 0x01) << STEPPER_X_DIR_PIN;
-                STEPPER_Y_DIR_BANK |= ((direction >> 1) & 0x01) << STEPPER_Y_DIR_PIN;
-                STEPPER_Z_DIR_BANK |= ((direction >> 2) & 0x01) << STEPPER_Z_DIR_PIN;
-                STEPPER_E_DIR_BANK |= ((direction >> 3) & 0x01) << STEPPER_E_DIR_PIN;
-                STEPPER_H_DIR_BANK |= ((direction >> 4) & 0x01) << STEPPER_H_DIR_PIN;
+                    STEPPER_X_DIR_BANK |= ((old_direction >> 0) & 0x01) << STEPPER_X_DIR_PIN;
+                    STEPPER_Y_DIR_BANK |= ((old_direction >> 1) & 0x01) << STEPPER_Y_DIR_PIN;
+                    STEPPER_Z_DIR_BANK |= ((old_direction >> 2) & 0x01) << STEPPER_Z_DIR_PIN;
+                    STEPPER_E_DIR_BANK |= ((old_direction >> 3) & 0x01) << STEPPER_E_DIR_PIN;
+                    //STEPPER_H_DIR_BANK |= ((direction >> 4) & 0x01) << STEPPER_H_DIR_PIN;
 #ifdef STEPPER_A_DIR_BANK
-                STEPPER_A_DIR_BANK |= ((direction >> 5) & 0x01) << STEPPER_A_DIR_PIN;
+                    STEPPER_A_DIR_BANK |= ((old_direction >> 5) & 0x01) << STEPPER_A_DIR_PIN;
 #endif
 #ifdef STEPPER_B_DIR_BANK
-                STEPPER_B_DIR_BANK |= ((direction >> 6) & 0x01) << STEPPER_B_DIR_PIN;
+                    STEPPER_B_DIR_BANK |= ((old_direction >> 6) & 0x01) << STEPPER_B_DIR_PIN;
 #endif
 #ifdef STEPPER_C_DIR_BANK
-                STEPPER_C_DIR_BANK |= ((direction >> 7) & 0x01) << STEPPER_C_DIR_PIN;
+                    STEPPER_C_DIR_BANK |= ((old_direction >> 7) & 0x01) << STEPPER_C_DIR_PIN;
 #endif
 
-                *GPIO0_SETDATAOUT = gpio0; // set the directions we need
-                *GPIO0_CLEARDATAOUT = gpio0 ^ GPIO0_DIR_MASK; // clear the directions we control but don't currently need
+                    *GPIO0_SETDATAOUT = gpio0; // set the directions we need
+                    *GPIO0_CLEARDATAOUT = gpio0 ^ GPIO0_DIR_MASK; // clear the directions we control but don't currently need
 
-                *GPIO1_SETDATAOUT = gpio1;
-                *GPIO1_CLEARDATAOUT = gpio1 ^ GPIO1_DIR_MASK;
+                    *GPIO1_SETDATAOUT = gpio1;
+                    *GPIO1_CLEARDATAOUT = gpio1 ^ GPIO1_DIR_MASK;
 
-                *GPIO2_SETDATAOUT = gpio2;
-                *GPIO2_CLEARDATAOUT = gpio2 ^ GPIO2_DIR_MASK;
+                    *GPIO2_SETDATAOUT = gpio2;
+                    *GPIO2_CLEARDATAOUT = gpio2 ^ GPIO2_DIR_MASK;
 
-                *GPIO3_SETDATAOUT = gpio3;
-                *GPIO3_CLEARDATAOUT = gpio3 ^ GPIO3_DIR_MASK;
-
+                    *GPIO3_SETDATAOUT = gpio3;
+                    *GPIO3_CLEARDATAOUT = gpio3 ^ GPIO3_DIR_MASK;
+                }
                 const uint32_t dirSetTime = PRU0_CTRL.CYCLE;
 
                 const uint32_t directionsAllowedMask = g_stepperMask & ~carriedBlockedSteppers;
@@ -166,14 +174,15 @@ int main(void)
                 if (curCommand->cancellableMask != 0
                     && (allDirectionsAllowed & curCommand->cancellableMask) == 0)
                 {
+                    // TODO Change the condition above back to 1 stepper stopped
                     // All of the steppers in cancellableMask aren't allowed to move - this means
                     // we need to cancel the move.
                     g_stepsRemaining += numCommands;
                     curCommand += numCommands;
                     numCommands = 0;
 
-                    (*events_counter)++;
-                    __asm("        LDI       R31.b0, 35"); // PRU0_ARM_INTERRUPT
+					(*events_counter)++;
+					armPru0Interrupt();
 
                     // Copy this pointer back so we can check it for DDR_MAGIC
                     ddr_addr = (uint32_t*)curCommand;
@@ -207,7 +216,7 @@ int main(void)
                 STEPPER_Y_STEP_BANK |= ((steps >> 1) & 0x01) << STEPPER_Y_STEP_PIN;
                 STEPPER_Z_STEP_BANK |= ((steps >> 2) & 0x01) << STEPPER_Z_STEP_PIN;
                 STEPPER_E_STEP_BANK |= ((steps >> 3) & 0x01) << STEPPER_E_STEP_PIN;
-                STEPPER_H_STEP_BANK |= ((steps >> 4) & 0x01) << STEPPER_H_STEP_PIN;
+                //STEPPER_H_STEP_BANK |= ((steps >> 4) & 0x01) << STEPPER_H_STEP_PIN;
 #ifdef STEPPER_A_STEP_BANK
                 STEPPER_A_STEP_BANK |= ((steps >> 5) & 0x01) << STEPPER_A_STEP_PIN;
 #endif
@@ -219,7 +228,10 @@ int main(void)
 #endif
 
                 // We may need to wait before stepping - if we don't, this will be a no-op
-                delay(dirSetTime + DELAY_BETWEEN_DIR_AND_STEP);
+                if(dir_updates)
+                {
+                    delay(dirSetTime + DELAY_BETWEEN_DIR_AND_STEP);
+                }
 
                 *GPIO0_SETDATAOUT = gpio0;
                 *GPIO1_SETDATAOUT = gpio1;
