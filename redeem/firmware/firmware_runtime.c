@@ -174,7 +174,6 @@ int main(void)
                 if (curCommand->cancellableMask != 0
                     && (allDirectionsAllowed & curCommand->cancellableMask) == 0)
                 {
-                    // TODO Change the condition above back to 1 stepper stopped
                     // All of the steppers in cancellableMask aren't allowed to move - this means
                     // we need to cancel the move.
                     g_stepsRemaining += numCommands;
@@ -216,7 +215,7 @@ int main(void)
                 STEPPER_Y_STEP_BANK |= ((steps >> 1) & 0x01) << STEPPER_Y_STEP_PIN;
                 STEPPER_Z_STEP_BANK |= ((steps >> 2) & 0x01) << STEPPER_Z_STEP_PIN;
                 STEPPER_E_STEP_BANK |= ((steps >> 3) & 0x01) << STEPPER_E_STEP_PIN;
-                //STEPPER_H_STEP_BANK |= ((steps >> 4) & 0x01) << STEPPER_H_STEP_PIN;
+                STEPPER_H_STEP_BANK |= ((steps >> 4) & 0x01) << STEPPER_H_STEP_PIN;
 #ifdef STEPPER_A_STEP_BANK
                 STEPPER_A_STEP_BANK |= ((steps >> 5) & 0x01) << STEPPER_A_STEP_PIN;
 #endif
