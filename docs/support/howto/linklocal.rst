@@ -27,7 +27,7 @@ network using that information.
 Note that if your
 computer may recognize the ethernet but not automatically set an IP that
 allows it to talk to the BBB - in which case you should setup a manual
-IP on that interface with the address 1.92.168.7.1 and netmask
+IP on that interface with the address 192.168.7.1 and netmask
 255.255.255.0
 
 If you have your BeagleBone plugged into the network, you can connect a
